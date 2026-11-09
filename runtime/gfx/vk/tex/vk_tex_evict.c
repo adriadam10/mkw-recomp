@@ -152,8 +152,11 @@ void destroy_tex(Tex *e) {
     if (e->released) nreleased--, rel_unlink(e);
     vk_mem_defer_use(e->use);   // MKW_GPU_GUARD: the image and its views
     vk_exec_image_gone(e->pub.image);
-    if (e->sparse) vk_sparse_destroy(e->pub.image);
+    // A sparse image also waits for its binds: they are queue operations the parts sent do not cover (vk_sparse.c).
+    uint64_t binds = e->sparse ? vk_sparse_destroy(e->pub.image) : 0, prev = 0;
+    if (binds) prev = vk_mem_defer_fence(0), vk_mem_defer_fence(prev > binds ? prev : binds);
     vk_defer_image(e->pub.image, e->alloc);
+    if (binds) vk_mem_defer_fence(prev);
     vk_mem_defer_use(0);
     free(e);
 }

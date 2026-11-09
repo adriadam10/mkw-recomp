@@ -84,6 +84,11 @@ typedef struct SparseImg {
     VkSparseImageMemoryRequirements tail_req;
     int tail_pending;                 // bound by the next flush
     uint32_t tail_written;            // levels outside the tiles a copy or pass wrote (bit per level), for the log
+    // The submission whose completion means every bind issued for s has run (vk_sparse_destroy). Binds are queue
+    // operations, not parts: a texture destroyed while idle waits only for the parts already sent (vk_tex_evict.c), and
+    // NVIDIA's kernel mapper then ran a queued bind of an image already destroyed: "Requested object not found" for
+    // pUnmap->hVirtualMemory in mem_mapper.c, and the device lost (620.70.06, RTX 5070 Ti, 09/11/2026).
+    uint64_t bind_fence;
 
     uint8_t *dirty;               // bound changed since the last flush; listed in dl
     uint32_t *dl;
@@ -376,6 +381,7 @@ static void tail_bind_now(VkCtx *c, SparseImg *s) {
                            .signalSemaphoreCount = 1, .pSignalSemaphores = &order_tl};
     VkResult r = vkQueueBindSparse(c->gfx_queue, 1, &bi, VK_NULL_HANDLE);
     bind_val = sig;
+    s->bind_fence = vk_sync_issued() + 2;   // the submission being recorded may have taken its wait already
     vk_queue_unlock();
     if (r != VK_SUCCESS) rt_fatal("vk: vkQueueBindSparse of the levels outside the tiles failed (%d)", (int)r);
     free(bb);
@@ -468,13 +474,15 @@ int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_
     return 1;
 }
 
-void vk_sparse_destroy(VkImage img) {
+uint64_t vk_sparse_destroy(VkImage img) {
+    uint64_t bind_fence = 0;
     plat_mutex_lock(&sp_lock);
     SparseImg **pp = &images;
     while (*pp && (*pp)->img != img) pp = &(*pp)->next;
     SparseImg *s = *pp;
     if (s) {
         *pp = s->next;
+        bind_fence = s->bind_fence;
         for (size_t i = 0; i < (size_t)s->layers * s->nblk; i++)
             if (s->bound[i]) slot_unref(s->bound[i]);
         if (s->ndl) ndirty--;   // binds not issued yet: the image goes away first
@@ -490,6 +498,7 @@ void vk_sparse_destroy(VkImage img) {
         n_images--;
     }
     plat_mutex_unlock(&sp_lock);
+    return bind_fence;
 }
 
 int vk_sparse_is(VkImage img) {
@@ -584,6 +593,7 @@ VkSparseOrder vk_sparse_order(uint64_t fence, int binds) {
         for (SparseImg *s = images; s; s = s->next) {
             if (!s->tail_pending) continue;
             tail_binds(s, &ib[ni], bb + nb, &ob[no], mb + nm);
+            s->bind_fence = fence;
             nb += (int)ib[ni].bindCount, nm += (int)ob[no].bindCount;
             if (ib[ni].bindCount) ni++;
             if (ob[no].bindCount) no++;
@@ -593,6 +603,7 @@ VkSparseOrder vk_sparse_order(uint64_t fence, int binds) {
         for (SparseImg *s = images; s; s = s->next) {
             if (!s->ndl) continue;
             ib[ni++] = (VkSparseImageMemoryBindInfo){.image = s->img, .bindCount = (uint32_t)s->ndl, .pBinds = bb + nb};
+            s->bind_fence = fence;   // submission `fence` waits for this bind (bind_sem, or order_tl)
             for (int k = 0; k < s->ndl; k++) bb[nb++] = make_bind(s, s->dl[k]), s->dirty[s->dl[k]] = 0;
             s->ndl = 0;
         }
@@ -613,7 +624,10 @@ VkSparseOrder vk_sparse_order(uint64_t fence, int binds) {
         if (on_) bind_val = sig;
         else binary_pending = 1;
         VkResult r = vkQueueBindSparse(c->gfx_queue, 1, &bi, VK_NULL_HANDLE);
-        if (r != VK_SUCCESS) rt_fatal("vk: vkQueueBindSparse of %d binds failed (%d)", nb, (int)r);
+        if (r != VK_SUCCESS) {
+            if (r == VK_ERROR_DEVICE_LOST) vk_exec_recent_log();
+            rt_fatal("vk: vkQueueBindSparse of %d binds failed (%d)", nb, (int)r);
+        }
         n_binds += nb;
         int64_t calls = 0;
         static int64_t ncalls;

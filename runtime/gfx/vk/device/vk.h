@@ -264,7 +264,7 @@ int vk_mem_virt_phys(uint64_t addr, uint64_t *phys);   // virtual pool page at a
 // and the wait and signal of that submission on the sparse order timeline.
 void vk_texture_report(uint64_t addr);   // MKW_CTL "tex ADDR": textures over addr (vk_texture.c)
 int vk_sparse_create(const VkImageCreateInfo *ci, const nvn_texdesc *d, uint64_t addr, uint64_t size, VkImage *img);
-void vk_sparse_destroy(VkImage img);
+uint64_t vk_sparse_destroy(VkImage img);   // the submission its binds are done by (0: none)
 int vk_sparse_is(VkImage img);   // 1: img is a sparse image made by vk_sparse_create
 void vk_sparse_remap(uint64_t addr, uint64_t size);
 // A copy or a pass wrote the region (w == 0: the whole level) of img: counted when img is sparse.
@@ -344,7 +344,7 @@ void vk_mem_recording(uint64_t fence);             // this thread records submis
                                                    // waits for the whole submission
 void vk_mem_defer_idle(int on);                    // around destroying what the submission being recorded does not use
 void vk_mem_defer_use(uint64_t use);               // around a deferred destruction: MKW_GPU_GUARD's last part using it
-void vk_mem_defer_fence(uint64_t fence);           // around a deferred destruction: wait for that submission (0: off)
+uint64_t vk_mem_defer_fence(uint64_t fence);       // returns the previous value; around a deferred destruction: wait for that submission (0: off)
 void vk_mem_collect(void);                         // frees what has completed
 typedef struct { uint64_t imported_pools, physical_pools, virtual_pools, import_failures, upload_batches; } VkMemStats;
 void vk_mem_stats(VkMemStats *s);

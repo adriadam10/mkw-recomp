@@ -353,7 +353,11 @@ static _Thread_local uint64_t defer_fence;   // vk_mem_defer_fence: the submissi
 void vk_mem_recording(uint64_t fence) { rec_fence = fence; }
 void vk_mem_defer_idle(int on) { idle_defer += on ? 1 : -1; }
 void vk_mem_defer_use(uint64_t use) { defer_use = vk_guard_on() ? use : 0; }
-void vk_mem_defer_fence(uint64_t fence) { defer_fence = fence; }
+uint64_t vk_mem_defer_fence(uint64_t fence) {
+    uint64_t prev = defer_fence;
+    defer_fence = fence;
+    return prev;
+}
 
 static void defer(int kind, uint64_t handle, VmaAllocation alloc) {
     plat_once(&cmd_once, cmd_init, NULL);
