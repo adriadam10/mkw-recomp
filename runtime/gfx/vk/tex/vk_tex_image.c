@@ -18,6 +18,26 @@
 #include "platform/platform.h"
 
 // ---------------------------------------------------------------- images
+// MKW_TEX_MAX=<texels> (default 1024 on Adreno, 0 = off elsewhere): 2D images of 8192 texels or more lose their top
+// levels until they fit. Turnip has no sparseResidencyImage2D, so the game's sparse terrain arrays (8192x8192x68) and
+// their 8192x8192 ASTC sources get all their memory: 5.5 GiB of textures at the first race (Odin 2, 10/11/2026) against
+// 1.7 GiB on a GPU with sparse images, and the render targets failed after them (black race). The game copies only
+// levels 3-11 into the arrays; their top levels were zero without sparse binding anyway. The image's level 0 is NVN level
+// drop (VkTexImage.drop); sampling picks its levels from the smaller size as on a smaller texture.
+static uint32_t tex_drop(VkImageType type, uint32_t w, uint32_t h, uint32_t levels, uint32_t samples) {
+    static int64_t limit = -1;
+    if (limit < 0) {
+        const char *e = cfg_get("MKW_TEX_MAX");
+        VkCtx *c = vk_ctx();
+        limit = e && *e ? atoll(e) : c && c->props.vendorID == 0x5143 ? 1024 : 0;
+        if (limit > 0) rt_log("vk: textures of 8192 texels or more cut to %lld (MKW_TEX_MAX)", (long long)limit);
+    }
+    uint32_t side = w > h ? w : h, drop = 0;
+    if (limit <= 0 || type != VK_IMAGE_TYPE_2D || samples > 1 || side < 8192) return 0;
+    while ((side >> drop) > (uint64_t)limit && drop + 1 < levels && drop < 15) drop++;
+    return drop;
+}
+
 static VkFormatFeatureFlags features_of(VkFormat f) {
     VkFormatProperties p;
     vkGetPhysicalDeviceFormatProperties(vk_ctx()->phys, f, &p);
@@ -387,6 +407,8 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
     if (levels > most) levels = most;
     uint32_t samples = d->samples > 1 ? (uint32_t)d->samples : 1;
     if (samples > 1) levels = 1;
+    uint32_t drop = tex_drop(type, w, h, levels, samples);
+    if (drop) w = umax(w >> drop, 1), h = umax(h >> drop, 1), levels -= drop;
     VkFormatFeatureFlags ff = features_of(f.vk);
     VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     int ds = f.depth || f.stencil;
@@ -507,6 +529,7 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
     p->usage = usage;
     p->aspect = aspect_of(&f);
     p->width = w, p->height = h, p->depth = depth, p->levels = levels, p->layers = layers, p->samples = samples;
+    p->drop = (uint8_t)drop;
     p->view_type = type == VK_IMAGE_TYPE_1D ? (d->target == NVN_TEXTURE_TARGET_1D_ARRAY ? VK_IMAGE_VIEW_TYPE_1D_ARRAY : VK_IMAGE_VIEW_TYPE_1D)
                  : type == VK_IMAGE_TYPE_3D ? VK_IMAGE_VIEW_TYPE_3D
                  : d->target == NVN_TEXTURE_TARGET_CUBEMAP && (flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? VK_IMAGE_VIEW_TYPE_CUBE

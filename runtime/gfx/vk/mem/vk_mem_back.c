@@ -132,6 +132,11 @@ int import_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
     // (Importing every CPU_NO_ACCESS pool too was tried, run82-run86: the pinned pages count in the process's memory
     // and it died sooner, frame 97-103 against 130.)
     if (shadow_on && shadow_pool(c, r, addr, size)) return 1;
+    if (!c->has_emh) {
+        rt_log("vk: pool %#llx+%#llx: no shadow and no VK_EXT_external_memory_host to import it", (unsigned long long)addr,
+               (unsigned long long)size);
+        return 0;
+    }
     if (shadow_on) rt_log("vk: pool %#llx+%#llx: imported instead", (unsigned long long)addr, (unsigned long long)size);
     if (!p_host_props)
         p_host_props = (PFN_vkGetMemoryHostPointerPropertiesEXT)vkGetDeviceProcAddr(c->device, "vkGetMemoryHostPointerPropertiesEXT");

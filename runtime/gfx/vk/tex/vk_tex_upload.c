@@ -185,13 +185,16 @@ static void upload(Tex *e) {
     int agpu = astc && vk_astc_gpu(),
         acheck = agpu && vk_astc_mode() == VK_ASTC_CHECK && (uint64_t)e->pub.width * e->pub.height * e->pub.layers * 4 <= (16ull << 20);
     uint32_t n = levels * layers, k = 0;
-    if (agpu && e->f.astc_bc7 == 1 && !acheck && !linear && vk_texpre_on() && upload_texpre(e, levels, layers)) goto counted;
+    uint32_t drop = e->pub.drop;   // NVN level = image level + drop
+    if (agpu && e->f.astc_bc7 == 1 && !acheck && !linear && !drop && vk_texpre_on() && upload_texpre(e, levels, layers))
+        goto counted;
     VkBufferImageCopy *rg = calloc(n, sizeof *rg);
     VkAstcRegion *ar = agpu ? calloc(n, sizeof *ar) : NULL;
     VkDeviceSize total = 0, decoded = 0;
     for (uint32_t lv = 0; lv < levels; lv++)
         for (uint32_t ly = 0; ly < layers; ly++) {
-            uint32_t w = mip(d->width, lv), h = one_d ? 1 : mip(d->height, lv), sl = is3d ? mip(d->depth, lv) : 1;
+            uint32_t w = mip(d->width, lv + drop), h = one_d ? 1 : mip(d->height, lv + drop),
+                     sl = is3d ? mip(d->depth, lv + drop) : 1;
             uint64_t texels = (uint64_t)w * h * sl, raw = (uint64_t)(w + bw - 1) / bw * bpb * ((h + bh - 1) / bh) * sl;
             uint64_t out = agpu ? raw : astc ? texels * 4 : rgb ? texels * (uint64_t)bpb / 3 * 4 : raw;
             rg[k++] = (VkBufferImageCopy){.bufferOffset = total, .imageSubresource = {e->pub.aspect, lv, ly, 1},
@@ -212,7 +215,7 @@ static void upload(Tex *e) {
             uint32_t rb = (w + bw - 1) / bw * (uint32_t)bpb, rows = (h + bh - 1) / bh;
             size_t raw = (size_t)rb * rows * sl;
             uint8_t *dst = stg + rg[k].bufferOffset, *tmp = (astc && !agpu) || rgb ? malloc(raw) : NULL;
-            if (nvn_deswizzle(d, lv, ly, t->mem, tmp ? tmp : dst, rb)) {
+            if (nvn_deswizzle(d, lv + drop, ly, t->mem, tmp ? tmp : dst, rb)) {
                 log_limited(&n_bad, "texture %#llx fmt %#x target %d: level %u layer %u has no CPU layout; uploaded as zeros",
                             (unsigned long long)e->pub.addr, d->format, d->target, lv, ly);
                 memset(tmp ? tmp : dst, 0, raw);
@@ -376,6 +379,19 @@ int storage_rewritten(const Tex *e, uint32_t since, uint32_t *now) {
     return vk_mem_changed(lo, hi - lo, since, now);
 }
 
+// Without a write watch (vk_mem_changed -1: a kernel without userfaultfd, as the Odin 2's SteamOS ARM 7.2) every check
+// uploaded the texture again: three 8192x8192 ASTC textures 627 times each at the first menus (run7, 10/11/2026), ~100
+// ms of every frame. The storage's hash, once per submission, tells a rewrite apart: 1 when it is unchanged since the
+// last upload (recorded there).
+static int same_storage(Tex *e) {
+    if (e->shash_epoch == submit_epoch) return 1;   // checked (and uploaded if needed) in this submission
+    e->shash_epoch = submit_epoch;
+    uint64_t h = vk_texpre_hash(e->t.mem, e->t.L.size);
+    if (h == e->shash) return 1;
+    e->shash = h;
+    return 0;
+}
+
 // A mirrored texture is uploaded on first use and again when its storage pages carry a newer write generation.
 void make_fresh(Tex *e) {
     if (!e->pub.mirrored || e->pub.gpu_owned) return;
@@ -389,7 +405,8 @@ void make_fresh(Tex *e) {
     int ch = vk_mem_changed(e->pub.addr, size, e->wgen, &now);
     e->wgen = now;
     e->last_ch = ch;
-    if (ch) upload(e);   // 1 written, -1 not tracked: both upload again
+    if (ch < 0 && e->t.mem && same_storage(e)) return;   // not tracked: the hash decides
+    if (ch) upload(e);   // 1 written, -1 not tracked and rewritten: both upload again
 }
 
 // make_fresh for draw bindings: the page check answers from this submission's write-watch snapshot (vk_memory.c
@@ -403,6 +420,7 @@ void make_fresh_snap(Tex *e) {
     e->wgen = now;
     if (!e->uploaded) { upload(e); return; }
     e->last_ch = ch;
+    if (ch < 0 && e->t.mem && same_storage(e)) return;   // not tracked: the hash decides
     if (ch) upload(e);
 }
 

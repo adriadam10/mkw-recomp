@@ -542,6 +542,16 @@ VkShaderModule make_module(const uint32_t *w, uint64_t words) {
     uint64_t fixed_n = 0;
     uint32_t *fixed = spirv_fixup(w, words, &fixed_n);
     if (fixed) w = fixed, words = fixed_n;
+    uint32_t from = 0, to = 0, smax = (uint32_t)vk_ctx()->props.limits.maxComputeSharedMemorySize;
+    uint32_t *clamped = spirv_clamp_shared(w, words, smax, &fixed_n, &from, &to);
+    if (clamped) {
+        static int logged;
+        if (logged++ < 8)
+            rt_log("vk_pipeline: compute shader declares %u bytes of shared memory, the device has %u: cut to %u", from,
+                   smax, to);
+        free(fixed);
+        fixed = clamped, w = fixed, words = fixed_n;
+    }
     VkShaderModuleCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = (size_t)words * 4, .pCode = w};
     VkShaderModule m = VK_NULL_HANDLE;
     VkResult r = vkCreateShaderModule(P.device, &ci, NULL, &m);

@@ -93,9 +93,10 @@ static int create_instance(void) {
     return 1;
 }
 
+// VK_EXT_external_memory_host is optional (has_emh): pools are shadowed by default and imported only when a shadow
+// does not fit (vk_mem_back.c import_pool). Turnip (Adreno, Mesa 25-27) does not offer it.
 static const char *const k_required_ext[] = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME, VK_EXT_DEPTH_CLIP_CONTROL_EXTENSION_NAME,
-    VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME};
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME, VK_EXT_DEPTH_CLIP_CONTROL_EXTENSION_NAME};
 
 // Name of the first missing required extension, or NULL.
 static const char *missing_required(VkPhysicalDevice pd) {
@@ -272,6 +273,12 @@ static int create_device(void) {
         ext[n_ext++] = VK_KHR_MAP_MEMORY_2_EXTENSION_NAME;
         CHAIN(placed, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAP_MEMORY_PLACED_FEATURES_EXT);
     }
+    if (has_ext(ep, ne, VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME)) {
+        g_vk.has_emh = 1;
+        ext[n_ext++] = VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME;
+    } else {
+        rt_log("vk: no VK_EXT_external_memory_host: a pool whose shadow does not fit cannot be imported");
+    }
     if (has_ext(ep, ne, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME)) { g_vk.has_memory_budget = 1; ext[n_ext++] = VK_EXT_MEMORY_BUDGET_EXTENSION_NAME; }
     if (has_ext(ep, ne, VK_AMD_BUFFER_MARKER_EXTENSION_NAME)) { g_vk.has_buffer_marker = 1; ext[n_ext++] = VK_AMD_BUFFER_MARKER_EXTENSION_NAME; }
     // The breadcrumbs' fallback where the buffer marker is missing (NVIDIA's drivers have both: GTX 1050 Ti on Windows,
@@ -371,8 +378,10 @@ static int create_device(void) {
 
     VkPhysicalDeviceExternalMemoryHostPropertiesEXT emh = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_HOST_PROPERTIES_EXT};
     VkPhysicalDeviceProperties2 p2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &emh};
-    vkGetPhysicalDeviceProperties2(g_vk.phys, &p2);
-    g_vk.min_imported_host_alignment = (uint32_t)emh.minImportedHostPointerAlignment;
+    if (g_vk.has_emh) {
+        vkGetPhysicalDeviceProperties2(g_vk.phys, &p2);
+        g_vk.min_imported_host_alignment = (uint32_t)emh.minImportedHostPointerAlignment;
+    }
     vk_caps_init(&g_vk);
 
     VmaAllocatorCreateInfo ai = {.physicalDevice = g_vk.phys, .device = g_vk.device, .instance = g_vk.instance,

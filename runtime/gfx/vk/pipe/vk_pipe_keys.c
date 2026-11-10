@@ -774,6 +774,12 @@ static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
                                                 .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = m, .pName = "main"},
                                       .layout = l->layout};
     pin_subgroup32(&ci.stage, &rqc, code, words);
+    if (!ci.stage.pNext && vk_caps.cs_wide) {   // vk_caps.c cs_wide: Adreno's wave limit for barriers
+        rqc = (VkPipelineShaderStageRequiredSubgroupSizeCreateInfo){
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
+            .requiredSubgroupSize = vk_caps.cs_wide};
+        ci.stage.pNext = &rqc;
+    }
     if (vk_ctx()->has_exec_stats) ci.flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
     if (vk_ctx()->has_exec_stats && cfg_get("MKW_SPEC_ISA")) ci.flags |= VK_PIPELINE_CREATE_CAPTURE_INTERNAL_REPRESENTATIONS_BIT_KHR;
     VkPipeline pipe = VK_NULL_HANDLE;

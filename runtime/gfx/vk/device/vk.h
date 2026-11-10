@@ -11,7 +11,7 @@
 #include "gfx.h"       // GfxShader, GfxShaderRes, GfxShaderAnswers (pipelines block)
 
 // Required (device choice fails without them): Vulkan 1.3; VK_KHR_swapchain, VK_KHR_push_descriptor,
-// VK_EXT_depth_clip_control, VK_EXT_external_memory_host; features timelineSemaphore, dynamicRendering,
+// VK_EXT_depth_clip_control (VK_EXT_external_memory_host when offered); features timelineSemaphore, dynamicRendering,
 // synchronization2, shaderStorageImageWriteWithoutFormat, depthClipControl, shaderInt64, samplerAnisotropy,
 // independentBlend, geometryShader, textureCompressionBC.
 // Optional (flag set in VkCtx when enabled): the has_* members.
@@ -42,6 +42,7 @@ typedef struct VkCtx {
         has_mesh,                           // VK_EXT_mesh_shader with taskShader and meshShader (MKW's 25 task/mesh)
         has_astc_ldr,                       // textureCompressionASTC_LDR (enabled when reported)
         has_calibrated,                     // VK_KHR_calibrated_timestamps, with MKW_TRACE_TL=1 only
+        has_emh,                            // VK_EXT_external_memory_host: pools imported when a shadow does not fit
         has_placed;                         // VK_EXT_map_memory_placed with unmap-reserve: pools as driver memory
                                             // mapped at their guest address (vk_memory.c placed_pool)
     // Feedback loops (maxwell.md 1.9, vk_exec_draw.c feedback_prepare): a draw samples a target of its open pass that
@@ -61,6 +62,7 @@ typedef struct {
     uint32_t sbuf_align;               // nonzero: storage buffers bind at their address rounded down to this
     uint32_t sg_size;                  // requiredSubgroupSize on sg_pin_stages (32)
     VkShaderStageFlags sg_pin_stages;  // 0: no pin, stages run at the device's subgroupSize
+    uint32_t cs_wide;                  // requiredSubgroupSize for game compute shaders without the pin (0: none)
     int gpl;                           // VK_EXT_graphics_pipeline_library enabled with fast linking (MKW_GPL=0: off)
     VkDriverId driver_id;              // VkPhysicalDeviceDriverProperties.driverID
 } VkCaps;
@@ -397,6 +399,8 @@ typedef struct {
     uint8_t fb_usage;              // created with ATTACHMENT_FEEDBACK_LOOP usage (VK_FEEDBACK_LAYOUT, attachable images)
     uint8_t listed;                // a render target whose MUTABLE_FORMAT lists its views' formats: format and twin
     VkFormat twin;                 // its sRGB / UNORM twin, the only other format a view of it may have (listed)
+    uint8_t drop;                  // NVN levels left out at the top (vk_tex_image.c tex_drop): image level = NVN level - drop;
+                                   // copies, uploads and render targets of a dropped level are skipped
     uint8_t fb_learned;            // a draw sampled it while it was a written attachment of the open pass: its passes
                                    // attach it in ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT (vk_exec.c vk_exec_pass_begin)
 } VkTexImage;

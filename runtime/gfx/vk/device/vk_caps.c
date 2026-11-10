@@ -93,6 +93,15 @@ void vk_caps_init(VkCtx *c) {
               want <= p13.maxSubgroupSize;
     vk_caps.sg_size = want;
     vk_caps.sg_pin_stages = pin ? p13.requiredSubgroupSizeStages & env_u32("MKW_VK_SUBGROUP_PIN_STAGES", ~0u) : 0;
+    // Adreno (Turnip): a compute shader with a workgroup barrier must fit all its waves at once, and deep branching
+    // (the branch stack) limits the waves an SP holds; the compiler then ends the process (ir3.c
+    // ir3_get_reg_independent_max_waves: "impossible to have enough concurrent waves", exit(1)), which MKW's translated
+    // shaders hit at the first race load. The widest wave halves the waves of a workgroup. MKW_VK_CS_SUBGROUP=<n>
+    // sets it on any device, 0 never.
+    uint32_t wide = env_u32("MKW_VK_CS_SUBGROUP", c->props.vendorID == 0x5143 ? p13.maxSubgroupSize : 0);
+    vk_caps.cs_wide = wide && f13.subgroupSizeControl && (p13.requiredSubgroupSizeStages & VK_SHADER_STAGE_COMPUTE_BIT) &&
+                      p13.minSubgroupSize <= wide && wide <= p13.maxSubgroupSize ? wide : 0;
+    if (vk_caps.cs_wide) rt_log("vk caps: compute shaders at subgroup size %u (MKW_VK_CS_SUBGROUP)", vk_caps.cs_wide);
 
     vk_caps.driver_id = drv.driverID;
     char dv[32];

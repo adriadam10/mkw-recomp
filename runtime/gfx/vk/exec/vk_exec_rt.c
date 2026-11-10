@@ -77,6 +77,14 @@ static void resolve_target(const tex_t *t, const view_t *v, int has_v, int depth
         return;
     }
     uint32_t level = has_v && v->set_levels ? v->base_level : 0;
+    if (img->drop) {   // vk_tex_image.c tex_drop
+        if (level < img->drop) {
+            exec_warn_once(W_LEVEL, "render target level %u of a texture with %u top levels left out: left out", level,
+                           img->drop);
+            return;
+        }
+        level -= img->drop;
+    }
     if (level >= img->levels) {
         exec_warn_once(W_LEVEL, "render target level %u of a %u-level texture: left out", level, img->levels);
         return;

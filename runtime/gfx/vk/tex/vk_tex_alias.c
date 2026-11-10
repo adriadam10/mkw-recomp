@@ -55,6 +55,14 @@ static int alias_copy(Tex *e, const Tex *src) {
     int reopen;
     VkCommandBuffer cb = vk_exec_inline_begin(&reopen);
     if (!cb) return 0;
+    if (e->pub.drop != src->pub.drop) {   // vk_tex_image.c tex_drop: the levels do not line up; not copied
+        static volatile int32_t n_drop;
+        if (plat_inc32(&n_drop) <= 8)
+            rt_log("vk: alias copy %#llx: levels dropped %u and %u differ: not copied", (unsigned long long)e->pub.addr,
+                   e->pub.drop, src->pub.drop);
+        vk_exec_inline_end(reopen);
+        return 1;
+    }
     int bw, bh, bpb = img_block(e, &bw, &bh);
     uint32_t levels = e->pub.levels < src->pub.levels ? e->pub.levels : src->pub.levels;
     uint32_t layers = e->pub.layers < src->pub.layers ? e->pub.layers : src->pub.layers, n = levels * layers, k = 0;

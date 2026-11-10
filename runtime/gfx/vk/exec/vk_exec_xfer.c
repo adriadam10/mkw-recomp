@@ -491,6 +491,10 @@ static int sub_resolve(const tex_t *t, const view_t *v, int has_v, const NVNcopy
     }
     s->level = has_v && v->set_levels ? v->base_level : 0;
     s->layer0 = has_v && v->set_layers ? v->min_layer : 0;
+    if (img->drop) {   // vk_tex_image.c tex_drop: the level is not in the image
+        if (s->level < img->drop) return 0;
+        s->level -= img->drop;
+    }
     uint32_t lw = max1(img->width >> s->level), lh = max1(img->height >> s->level);
     s->x = r->xoffset, s->y = r->yoffset, s->z = r->zoffset;
     s->nz = r->depth > 0 ? (uint32_t)r->depth : 1;

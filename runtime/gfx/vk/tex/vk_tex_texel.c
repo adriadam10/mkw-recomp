@@ -73,6 +73,11 @@ int image_texels(Tex *e, const Region *g, const NVNcopyRegion *r, uint8_t *mem, 
         log_limited(&n_ds, "texels of packed depth-stencil format %#x are not copied", e->t.d.format);
         return 0;
     }
+    Region gd;   // vk_tex_image.c tex_drop: image level = NVN level - drop
+    if (e->pub.drop) {
+        if (g->level < e->pub.drop) return write;   // a write to a level the image leaves out: done; a read: nothing
+        gd = *g, gd.level -= e->pub.drop, g = &gd;
+    }
     if (g->level >= e->pub.levels) return 0;
     uint32_t w = (uint32_t)r->width, h = (uint32_t)r->height;
     int rgb = e->f.expand_rgb, astc = e->f.astc_bw != 0, agpu = astc && write && vk_astc_gpu();
@@ -246,10 +251,11 @@ static void write_back(Tex *e) {
     uint32_t levels = linear ? 1 : e->pub.levels, layers = linear || is3d ? 1 : e->pub.layers;
     for (uint32_t lv = 0; lv < levels; lv++)
         for (uint32_t ly = 0; ly < layers; ly++) {
-            view_t v = {.set_levels = 1, .set_layers = 1, .base_level = (uint8_t)lv, .min_layer = (uint16_t)ly};
-            NVNcopyRegion r = {.width = (int)mip(d->width, lv),
-                               .height = d->target == 0 || d->target == 3 ? 1 : (int)mip(d->height, lv),
-                               .depth = is3d ? (int)mip(d->depth, lv) : 1};
+            uint32_t nl = lv + e->pub.drop;   // the NVN level of image level lv
+            view_t v = {.set_levels = 1, .set_layers = 1, .base_level = (uint8_t)nl, .min_layer = (uint16_t)ly};
+            NVNcopyRegion r = {.width = (int)mip(d->width, nl),
+                               .height = d->target == 0 || d->target == 3 ? 1 : (int)mip(d->height, nl),
+                               .depth = is3d ? (int)mip(d->depth, nl) : 1};
             Region g;
             if (!region_of(&e->t, &v, &r, 0, 0, &g)) continue;
             uint8_t *buf = malloc(g.img * (size_t)g.nz);

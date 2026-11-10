@@ -40,6 +40,8 @@ typedef struct Tex {
     uint8_t listed;               // in owned[]
     uint32_t wt_n;                // WriteTexels into the storage since the last upload
     struct Tex *rel_prev, *rel_next;   // while released: the list of released entries, oldest first
+    uint64_t shash;               // XXH3 of the storage at the last upload (same_storage: no write watch)
+    uint32_t shash_epoch;         // submit_epoch of the last hash check
     uint8_t sparse;               // a Vulkan sparse image whose tiles follow the game's MapVirtual (vk_sparse.c)
     uint64_t use;                 // MKW_GPU_GUARD: newest submission part that looked it up (vk_guard_note)
 } Tex;

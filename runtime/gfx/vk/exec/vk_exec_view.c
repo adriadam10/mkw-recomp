@@ -279,8 +279,14 @@ static VkImageView get_view(VkExec *ex, const VkTexImage *img, const view_t *v, 
     }
     if (!ok) return VK_NULL_HANDLE;
     uint32_t l0 = hv && v->set_levels ? v->base_level : 0;
+    uint32_t nl = hv && v->set_levels && v->nlevels ? v->nlevels : 0;
+    if (img->drop) {   // vk_tex_image.c tex_drop: NVN levels to image levels; a view of dropped levels starts at 0
+        uint32_t end = nl ? l0 + nl : 0;
+        l0 = l0 > img->drop ? l0 - img->drop : 0;
+        if (end) nl = end > img->drop + l0 ? end - img->drop - l0 : 1;
+    }
     if (l0 >= img->levels) return VK_NULL_HANDLE;
-    uint32_t nl = hv && v->set_levels && v->nlevels ? v->nlevels : img->levels - l0;
+    if (!nl) nl = img->levels - l0;
     if (l0 + nl > img->levels) nl = img->levels - l0;
     if (storage) nl = 1;
     // MKW_TEX_QUALITY=half|quarter (Graphics tab; "full" by default): sampled views of
