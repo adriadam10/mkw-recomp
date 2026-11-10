@@ -29,9 +29,12 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
         # zig cc turns -O1 into -O2 with both vectorizers, keeps frame pointers, adds debug info and UBSan, and spells
         # the CPU its own way: 182 126 instructions on a chunk clang -O1 makes in 150 969. With these, 150 745 (the
         # rest is LLVM 22 against 23), as SavageWindRecomp's GAMELIB_ZIGFLAGS (runtime/gamebuild.c, MIT).
+        # AArch64: zig ignores -ffixed-x18 without a word (mkwgame.so used x18 73 079 times and crashed at the first
+        # preemption, Odin 2, 10/11/2026); its CPU feature reserve_x18 keeps the register out.
         flags = [f.replace("-march=x86-64-v3", "-mcpu=x86_64_v3")
-                 .replace("-march=armv8.2-a+fp16+rcpc+dotprod+crc", "-mcpu=generic+v8_2a+fullfp16+rcpc+dotprod+crc")
-                 for f in flags]  # fmt: skip
+                 .replace("-march=armv8.2-a+fp16+rcpc+dotprod+crc",
+                          "-mcpu=generic+v8_2a+fullfp16+rcpc+dotprod+crc+reserve_x18")
+                 for f in flags if f != "-ffixed-x18"]  # fmt: skip
         flags += ["-Xclang", "-O1", "-fno-vectorize", "-fno-slp-vectorize", "-fomit-frame-pointer", "-g0",
                   "-fno-sanitize=all"]  # fmt: skip
     srcs = sorted(p for mod in build.MODULES for p in (gen / mod).glob("*.c"))

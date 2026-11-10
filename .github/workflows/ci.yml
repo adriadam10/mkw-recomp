@@ -69,6 +69,27 @@ jobs:
       - name: Runtime and launcher (no game)
         run: uv run tools/build/build.py --dist --runtime-only
 
+  linux-aarch64:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Tools
+        run: pacman -Syu --noconfirm --needed git clang lld llvm ninja make cmake pkgconf expat binutils uv python
+      - uses: actions/checkout@v5
+      - name: VMA header
+        run: |
+          mkdir -p scratchpad/vma
+          curl -sSfL -o scratchpad/vma/vk_mem_alloc.h "$VMA_URL"
+          echo "$VMA_SHA256  scratchpad/vma/vk_mem_alloc.h" | sha256sum -c -
+      - uses: actions/cache@v4
+        with:
+          path: build/sysroot-aarch64
+          key: sysroot-aarch64-${{ hashFiles('tools/build/sysroot.py') }}
+      - name: Debian 11 arm64 sysroot
+        run: uv run tools/build/sysroot.py --arch aarch64
+      - name: Runtime and launcher for AArch64 (no game)
+        run: uv run tools/build/build.py --dist --runtime-only --arch aarch64 --sysroot build/sysroot-aarch64
+
   windows:
     runs-on: ubuntu-latest
     container: archlinux:latest

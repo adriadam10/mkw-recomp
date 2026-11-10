@@ -10,8 +10,11 @@ sysroot the release links against (tools/build/sysroot.py), which lets it start 
 packing follows totk-pc-recomp's tools/make_release_linux.py (MIT): appimagetool and the static type-2 runtime from
 release tags (no libfuse2 needed on the player's system), pinned by sha256.
 
-Usage: uv run tools/build/release.py --target linux|windows --version 0.1.0
-       writes build/release/mkw-recomp-<version>-x86_64.AppImage or mkw-recomp-<version>-windows-x64.zip
+AArch64 (--target linux-aarch64): the same AppImage from build/dist/linux-aarch64 and the Debian 11 arm64 sysroot
+(sysroot.py --arch aarch64), packed with this machine's appimagetool and the aarch64 type-2 runtime.
+
+Usage: uv run tools/build/release.py --target linux|linux-aarch64|windows --version 0.1.0
+       writes build/release/mkw-recomp-<version>-x86_64.AppImage, -aarch64.AppImage or -windows-x64.zip
 """
 
 import argparse
@@ -24,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dist import WIN_DLLS, fetch  # noqa: E402
-from sysroot import SYSROOT  # noqa: E402
+import sysroot  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "build/release"
@@ -33,11 +36,13 @@ PINS = {
                      "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"),
     "runtime": ("https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64",
                 "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"),
+    "runtime-aarch64": ("https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-aarch64",
+                        "00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444"),
 }  # fmt: skip
 # Libraries every desktop has and the AppImage must take from it: glibc, the Vulkan loader (it finds the system's
 # drivers), libgcc_s and libstdc++ (the sysroot's is older than any desktop's, and Mesa's drivers need the newer one).
 SYSTEM_LIBS = {"libc.so.6", "libm.so.6", "libdl.so.2", "libpthread.so.0", "librt.so.1", "ld-linux-x86-64.so.2",
-               "libvulkan.so.1", "libgcc_s.so.1", "libstdc++.so.6"}  # fmt: skip
+               "ld-linux-aarch64.so.1", "libvulkan.so.1", "libgcc_s.so.1", "libstdc++.so.6"}  # fmt: skip
 # The licence files of the libraries bundled (the sysroot's, Debian's copyright files) and of the static zstd.
 LICENSES = {"SDL3": "usr/local/share/doc/SDL3/LICENSE.txt", "libopus": "usr/share/doc/libopus0/copyright",
             "libvpx": "usr/share/doc/libvpx6/copyright", "zstd": "usr/local/share/doc/zstd/LICENSE"}  # fmt: skip
@@ -77,10 +82,11 @@ def needed(elf: Path) -> list[str]:
 
 
 def find_lib(name: str) -> Path:
-    for d in ("usr/local/lib", "usr/lib/x86_64-linux-gnu", "lib/x86_64-linux-gnu"):
-        if (SYSROOT / d / name).exists():
-            return (SYSROOT / d / name).resolve()
-    sys.exit(f"{name}: not in {SYSROOT} (built with build.py --sysroot?)")
+    root, triple = sysroot.SYSROOT, sysroot.TRIPLE
+    for d in ("usr/local/lib", f"usr/lib/{triple}", f"lib/{triple}"):
+        if (root / d / name).exists():
+            return (root / d / name).resolve()
+    sys.exit(f"{name}: not in {root} (built with build.py --sysroot?)")
 
 
 def bundle_libs(exe: Path, lib: Path) -> None:
@@ -111,15 +117,15 @@ def licenses(dst: Path) -> None:
     dst.mkdir()
     shutil.copy2(ROOT / "LICENSE", dst / "mkw-recomp-LICENSE")
     for name, rel in LICENSES.items():
-        shutil.copy2(SYSROOT / rel, dst / f"{name}-copyright")
+        shutil.copy2(sysroot.SYSROOT / rel, dst / f"{name}-copyright")
 
 
-def linux(dist: Path, version: str) -> Path:
+def linux(dist: Path, version: str, arch: str = "x86_64") -> Path:
     exe = dist / "mkw"
     glibc = subprocess.run(["objdump", "-T", str(exe)], capture_output=True, text=True, check=True).stdout
     newest = max((tuple(map(int, v.split("."))) for v in set(_glibc_versions(glibc))), default=(0, 0))
     if newest > (2, 31):  # built against the machine's glibc: the AppImage would need that glibc or newer
-        sys.exit(f"{exe} needs glibc {'.'.join(map(str, newest))}: build.py --sysroot build/sysroot")
+        sys.exit(f"{exe} needs glibc {'.'.join(map(str, newest))}: build.py --sysroot {sysroot.SYSROOT}")
     app = OUT / "AppDir"
     shutil.rmtree(app, ignore_errors=True)
     app.mkdir(parents=True)
@@ -133,12 +139,13 @@ def linux(dist: Path, version: str) -> Path:
     (app / "mkw-recomp.desktop").write_text(DESKTOP)
     subprocess.run([sys.executable, str(ROOT / "tools/build/icon.py"), str(app / "mkw-recomp.png")], check=True)
     (app / ".DirIcon").symlink_to("mkw-recomp.png")
-    tool, runtime = fetch(*PINS["appimagetool"]), fetch(*PINS["runtime"])
+    # this machine's appimagetool packs either architecture; the runtime is the target's
+    tool, runtime = fetch(*PINS["appimagetool"]), fetch(*PINS["runtime" if arch == "x86_64" else f"runtime-{arch}"])
     tool.chmod(0o755)
-    out = OUT / f"mkw-recomp-{version}-x86_64.AppImage"
+    out = OUT / f"mkw-recomp-{version}-{arch}.AppImage"
     # appimagetool is an AppImage itself: extracted and run, no FUSE in a container. Into a .part then renamed: an
     # AppImage of the same name still mounted (a test of it) made mksquashfs fail with "Text file busy" (09/11/2026).
-    env = dict(os.environ, ARCH="x86_64", APPIMAGE_EXTRACT_AND_RUN="1")
+    env = dict(os.environ, ARCH=arch, APPIMAGE_EXTRACT_AND_RUN="1")
     part = out.with_name(out.name + ".part")
     subprocess.run([str(tool), "--no-appstream", "--runtime-file", str(runtime), str(app), str(part)], env=env,
                    check=True)  # fmt: skip
@@ -170,14 +177,19 @@ def windows(dist: Path, version: str) -> Path:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--target", choices=("linux", "windows"), default="linux")
+    ap.add_argument("--target", choices=("linux", "linux-aarch64", "windows"), default="linux")
     ap.add_argument("--version", required=True, help="the release's version, e.g. 0.1.0 (the tag without its v)")
     args = ap.parse_args()
     dist = ROOT / "build/dist" / args.target
     if not (dist / "setup").is_dir():
         sys.exit(f"{dist}/setup missing: uv run tools/build/dist.py --target {args.target} first")
     OUT.mkdir(parents=True, exist_ok=True)
-    out = (linux if args.target == "linux" else windows)(dist, args.version)
+    if args.target == "windows":
+        out = windows(dist, args.version)
+    else:
+        arch = "aarch64" if args.target == "linux-aarch64" else "x86_64"
+        sysroot.use_arch(arch)
+        out = linux(dist, args.version, arch)
     print(f"{out}: {out.stat().st_size / 2**20:.0f} MiB")
 
 

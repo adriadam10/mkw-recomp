@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import platform
 import tarfile
 import tempfile
 import urllib.request
@@ -41,6 +42,12 @@ PINS = {  # tool: (package path under REDIST, sha256), from NVIDIA's redistrib_1
                      "8ac63f4079c47707ec958af3a97ceeb18194e16827a2766058f5872f6c3412ae"),
         "ptxas": ("cuda_nvcc/linux-x86_64/cuda_nvcc-linux-x86_64-12.8.93-archive.tar.xz",
                   "9961b3484b6b71314063709a4f9529654f96782ad39e72bf1e00f070db8210d3"),
+    },
+    "linux-aarch64": {  # NVIDIA's "sbsa" packages: the same tools for AArch64 Linux
+        "nvdisasm": ("cuda_nvdisasm/linux-sbsa/cuda_nvdisasm-linux-sbsa-12.8.90-archive.tar.xz",
+                     "250ae30e878b0c4c1553e7c7f28c2c763902c807b5f493ebc16e6e10c71213f2"),
+        "ptxas": ("cuda_nvcc/linux-sbsa/cuda_nvcc-linux-sbsa-12.8.93-archive.tar.xz",
+                  "dc0b713ce69fd921aa53ac68610717d126fc273a3c554b0465cf44d7e379f467"),
     },
     "windows": {
         "nvdisasm": ("cuda_nvdisasm/windows-x86_64/cuda_nvdisasm-windows-x86_64-12.8.90-archive.zip",
@@ -84,7 +91,8 @@ def tool(name: str, cache: Path) -> Path:
     exe = cache / "bin" / (name + ".exe" if WINDOWS else name)
     if exe.is_file():
         return exe
-    rel, want = PINS["windows" if WINDOWS else "linux"][name]
+    host = "windows" if WINDOWS else "linux-aarch64" if platform.machine() in ("aarch64", "arm64") else "linux"
+    rel, want = PINS[host][name]
     archive = fetch(rel, want, cache)
     exe.parent.mkdir(parents=True, exist_ok=True)
     if WINDOWS:

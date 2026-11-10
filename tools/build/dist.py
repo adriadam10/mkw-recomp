@@ -15,7 +15,8 @@ Layout of build/dist/<target>/ (after build.py --dist):
     setup/lib/crt/                  (Windows) zig's C runtime for the target, prebuilt, and link.json: windows_crt()
 The desktop shortcut is the start screen's (a .desktop on Linux, a .lnk on Windows: platform.h).
 
-Usage: uv run tools/build/dist.py [--target linux|windows] [--check]
+Usage: uv run tools/build/dist.py [--target linux|linux-aarch64|windows] [--check]
+       linux-aarch64: the AArch64 Linux package (after build.py --dist --arch aarch64), assembled on any machine.
        --check: list what would be fetched and copied, change nothing.
 """
 
@@ -23,6 +24,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -60,6 +62,28 @@ PINS = {
                       "fa7018298629fc429971fffd6ecba3d27a7b02e4e890d6a93ea01ffebe8cb745"),
         "libgcc": (CONDA + "linux-64/libgcc-16.2.0-ha9f2e26_7.conda",
                    "e031634c3a928f9594eba868bc46ef5230d6571a364a0c63215b06c4563bfcea"),
+    },
+    "linux-aarch64": {
+        "python": (PBS + "cpython-3.14.10%2B20261026-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
+                   "90f48337bc3dd4ae6eda81e001e4c981236d403b6b5a07778bbdf94ee423dc00"),
+        "zig": ("https://ziglang.org/download/0.17.1/zig-aarch64-linux-0.17.1.tar.xz",
+                "a1546d5646eb184437918d6635ca6b762a0e889eac09cef720ee7a1ed3fe7795"),
+        "numpy": (PYPI + "63/d6/34b0a2b0741386a63025a65a2c09caaaaaad6d0ca95b66cd65c30dd7fcb5/"
+                  "numpy-2.5.4-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+                  "4054173604cd8658796053f1f3bc0befb68ec1c0762c57fdad61e199256a8617"),
+        "lz4": (PYPI + "67/79/a4e91872ab60f5e89bfad3e996ea7dc74a30f27253faf95865771225ccba/"
+                "lz4-4.4.5-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+                "3b84a42da86e8ad8537aabef062e7f661f4a877d1c74d65606c49d835d36d668"),
+        "shaderc": (CONDA + "linux-aarch64/shaderc-2026.4-h2d14b02_1.conda",
+                    "ec6a66f8c593745e8f4aca9ba0400e7a43fdd1a36257fdb4464c083075770259"),
+        "glslang": (CONDA + "linux-aarch64/glslang-16.6.0-ha162a40_0.conda",
+                    "095a5c3efa9f5e473899cbf36463f9024b02f0763321cfd605d289516b2dee39"),
+        "spirv-tools": (CONDA + "linux-aarch64/spirv-tools-2026.4-hde6636f_2.conda",
+                        "d058bbe500b0ef6c894762a459b51cf538d8012c1083b1fa373b3a9432f91f91"),
+        "libstdcxx": (CONDA + "linux-aarch64/libstdcxx-16.2.0-hef695bb_7.conda",
+                      "b241a3acfa9cdb1359112864a1241225533c92642de3000d52ae65ef5d3a9786"),
+        "libgcc": (CONDA + "linux-aarch64/libgcc-16.2.0-h205dda4_7.conda",
+                   "eae7a3449d5a3b5351c5427137c076cc3fc826645c7bfc42dc10772b783826f1"),
     },
     "windows": {
         "python": (PBS + "cpython-3.14.10%2B20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
@@ -99,8 +123,9 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def fetch(url: str, want: str) -> Path:
-    path = DL / url.rsplit("/", 1)[1].replace("%2B", "+")
+def fetch(url: str, want: str, name: str = "") -> Path:
+    """url into build/dist/dl (as name when given: files of the same name from different places), checked."""
+    path = DL / (name or url.rsplit("/", 1)[1].replace("%2B", "+"))
     if not path.is_file():
         print(f"get {url}", flush=True)
         part = path.with_suffix(path.suffix + ".part")
@@ -194,7 +219,7 @@ def copy_sources(src_root: Path) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--target", choices=("linux", "windows"), default="linux")
+    ap.add_argument("--target", choices=tuple(PINS), default="linux")
     ap.add_argument("--check", action="store_true", help="list what would be fetched and copied; change nothing")
     args = ap.parse_args()
     out = ROOT / "build/dist" / args.target
@@ -205,7 +230,8 @@ def main() -> None:
         print("sources:", " ".join(SOURCES))
         return
     if not exe.is_file():
-        sys.exit(f"{exe} missing: uv run tools/build/build.py --dist --target {args.target} first")
+        how = "--arch aarch64" if args.target == "linux-aarch64" else f"--target {args.target}"
+        sys.exit(f"{exe} missing: uv run tools/build/build.py --dist {how} first")
     DL.mkdir(parents=True, exist_ok=True)
     pins = PINS[args.target]
     got = {name: fetch(url, want) for name, (url, want) in pins.items()}
@@ -235,7 +261,8 @@ def main() -> None:
     copy_sources(setup / "src")
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file() and not p.is_symlink())
     print(f"{out}: {size / 2**20:.0f} MiB")
-    if args.target == "linux":  # the package's tools run here: a quick proof before a setup relies on them
+    if args.target == "linux" or (args.target == "linux-aarch64" and platform.machine() in ("aarch64", "arm64")):
+        # the package's tools run here: a quick proof before a setup relies on them
         subprocess.run([str(setup / "python/bin/python3"), "-I", "-c", "import numpy, lz4.block"], check=True)
         subprocess.run([str(setup / "zig/zig"), "version"], check=True)
 
