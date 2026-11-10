@@ -309,9 +309,9 @@ _Thread_local uint64_t td_stat[7];
 
 static void tex_lock_once(int *locked) {
     if (*locked) return;
-    uint64_t t = pd_on ? __rdtsc() : 0;
+    uint64_t t = pd_on ? plat_cycles() : 0;
     vk_texture_lock(), *locked = 1;
-    if (pd_on) td_stat[6] += __rdtsc() - t;
+    if (pd_on) td_stat[6] += plat_cycles() - t;
 }
 
 // locked: whether this thread holds the texture lock; taken here when a lookup needs it, released by the caller.
@@ -326,7 +326,7 @@ static void tex_info(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage,
         if (ru_cap) ru_note_tex(h, image, storage);
         return;
     }
-    uint64_t th = pd_on ? __rdtsc() : 0;
+    uint64_t th = pd_on ? plat_cycles() : 0;
     uint32_t gen = vk_texture_slots_gen(), ep = vk_texture_epoch(), sg = vk_sampler_gen();   // before any lookup
     typeof(TD[0]) *m = &TD[(h * 0x9E3779B97F4A7C15ull ^ (uint64_t)r->type << 7 ^ (uint64_t)separate) >> 51];
     if (m->valid && m->h == h && m->type == r->type && m->separate == separate && m->sgen == sg &&
@@ -357,17 +357,17 @@ static void tex_info(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage,
                 rt_fatal("vk_exec: texture descriptor memo of handle %#llx type %#x differs from a lookup",
                          (unsigned long long)h, r->type);
         }
-        if (pd_on) td_stat[5] += __rdtsc() - th;
+        if (pd_on) td_stat[5] += plat_cycles() - th;
         return;
     }
     uint64_t tok = token_of(h);   // before the lookup
     td_stat[2]++;
-    uint64_t t0 = pd_on ? __rdtsc() : 0;
+    uint64_t t0 = pd_on ? plat_cycles() : 0;
     tex_lock_once(locked);
     tex_info_full(ex, r, h, storage, separate, out, &image);
     vk_exec_dc_read(image);
     if (ru_cap) ru_note_tex(h, image, 0);
-    if (pd_on) td_stat[4] += __rdtsc() - t0;
+    if (pd_on) td_stat[4] += plat_cycles() - t0;
     *m = (typeof(*m)){.h = h, .tok = tok, .gen = gen, .epoch = ep, .sgen = sg, .type = r->type,
                       .separate = (uint8_t)separate, .valid = 1, .image = image, .out = *out};
 }
@@ -639,7 +639,7 @@ static void write_set(const VkPipeInfo *info, uint32_t s, VkDescriptorSet set, c
 static _Thread_local uint64_t br_t;
 _Thread_local uint64_t br_tsc[BR_N];
 static _Thread_local int br_on;
-#define BR_MARK(i) do { if (br_on) { uint64_t t_ = __rdtsc(); br_tsc[i] += t_ - br_t; br_t = t_; } } while (0)
+#define BR_MARK(i) do { if (br_on) { uint64_t t_ = plat_cycles(); br_tsc[i] += t_ - br_t; br_t = t_; } } while (0)
 
 typedef struct { VkWriteDescriptorSet w[MAX_BINDINGS]; VkDescSlot d[MAX_DESC]; VkBufferView bv[MAX_DESC]; } DrawBRA;
 static _Thread_local DrawBRA *dtl_bra;
@@ -790,7 +790,7 @@ static int ubo_rebind(VkExec *ex, const VkPipeInfo *info) {
 
 void bind_resources(VkExec *ex, const VkPipeInfo *info) {
     br_on = (rt_trace & RT_TRACE_DRAW) != 0;
-    if (br_on) br_t = __rdtsc();
+    if (br_on) br_t = plat_cycles();
     VkWriteDescriptorSet *w = BRA.w;
     VkDescSlot *d = BRA.d;
     VkBufferView *bv = BRA.bv;

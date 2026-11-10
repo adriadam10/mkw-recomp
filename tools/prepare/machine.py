@@ -38,7 +38,7 @@ def default_cc(game: Path, target: str) -> list[str]:
         if not (lib / "std/std.zig").is_file():
             raise Failed(f"{lib} is incomplete: extract the release again")
         os.environ["ZIG_LIB_DIR"] = str(lib)
-        return [str(zig), "cc", "-target", "x86_64-windows-gnu" if target == "windows" else "x86_64-linux-gnu"]
+        return [str(zig), "cc", "-target", "x86_64-windows-gnu" if target == "windows" else f"{build.ARCH}-linux-gnu"]
     return ["clang"]
 
 

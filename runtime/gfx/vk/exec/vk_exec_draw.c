@@ -429,11 +429,11 @@ static int pipe_memo_on(void) {
 
 static _Thread_local uint64_t pd_t;
 _Thread_local uint64_t pd_tsc[PD_N], pd_n;
-#define PD_MARK(i) do { if (pd_on) { uint64_t t_ = __rdtsc(); pd_tsc[i] += t_ - pd_t; pd_t = t_; } } while (0)
+#define PD_MARK(i) do { if (pd_on) { uint64_t t_ = plat_cycles(); pd_tsc[i] += t_ - pd_t; pd_t = t_; } } while (0)
 
 int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) {
     pd_on = (rt_trace & RT_TRACE_DRAW) != 0;
-    if (pd_on) pd_t = __rdtsc(), pd_n++;
+    if (pd_on) pd_t = plat_cycles(), pd_n++;
     if (ex->render_disabled) {
         if (vk_cond_trace > 0) {
             int has_vs;

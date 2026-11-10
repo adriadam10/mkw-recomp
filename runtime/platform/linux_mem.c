@@ -2,6 +2,9 @@
 #ifndef _GNU_SOURCE   // build.py passes it on Linux
 #define _GNU_SOURCE
 #endif
+#if defined(__aarch64__)
+#include <asm/sigcontext.h>
+#endif
 #include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -268,16 +271,45 @@ void plat_mem_watch_hook(int (*fn)(uint64_t addr, uint64_t rip)) { watch_fn = fn
 _Thread_local int plat_fault_write;        // platform.h
 _Thread_local uint64_t plat_fault_pc, plat_fault_ret;
 
+#if defined(__aarch64__)
+// x86's page fault error code from the ESR the kernel puts in the signal frame (an esr_context record): 2 a write
+// (data abort with WnR), 16 an instruction fetch (instruction abort). A leaf's caller and a wild call's return address
+// are in x30 there, not on the stack.
+static long fault_err(const ucontext_t *u) {
+    const unsigned char *p = u->uc_mcontext.__reserved, *end = p + sizeof u->uc_mcontext.__reserved;
+    while (p + sizeof(struct _aarch64_ctx) <= end) {
+        const struct _aarch64_ctx *h = (const struct _aarch64_ctx *)p;
+        if (!h->magic || !h->size) break;
+        if (h->magic == ESR_MAGIC) {
+            uint64_t esr = ((const struct esr_context *)h)->esr, ec = esr >> 26;
+            if (ec == 0x20 || ec == 0x21) return 16;
+            if ((ec == 0x24 || ec == 0x25) && (esr & (1u << 6))) return 2;
+            return 0;
+        }
+        p += h->size;
+    }
+    return 0;
+}
+#define UC_PC(u) ((u)->uc_mcontext.pc)
+#define UC_SP(u) ((u)->uc_mcontext.sp)
+#define UC_RET(u) ((u)->uc_mcontext.regs[30])
+#else
+static long fault_err(const ucontext_t *u) { return u->uc_mcontext.gregs[REG_ERR]; }
+#define UC_PC(u) ((u)->uc_mcontext.gregs[REG_RIP])
+#define UC_SP(u) ((u)->uc_mcontext.gregs[REG_RSP])
+#define UC_RET(u) (*(const uint64_t *)(uintptr_t)(u)->uc_mcontext.gregs[REG_RSP])
+#endif
+
 static void fault_handler(int sig, siginfo_t *si, void *uc) {
     ucontext_t *u = uc;
-    long err = u->uc_mcontext.gregs[REG_ERR];
+    long err = fault_err(u);
     if (sig == SIGSEGV && watch_fn && (err & 2) &&
-        watch_fn((uint64_t)(uintptr_t)si->si_addr, (uint64_t)u->uc_mcontext.gregs[REG_RIP]))
+        watch_fn((uint64_t)(uintptr_t)si->si_addr, (uint64_t)UC_PC(u)))
         return;
-    plat_fault_write = (err & 2) != 0, plat_fault_pc = (uint64_t)u->uc_mcontext.gregs[REG_RIP];   // for the hook
-    plat_fault_ret = *(const uint64_t *)(uintptr_t)u->uc_mcontext.gregs[REG_RSP];   // a leaf (libc memcpy): its caller
+    plat_fault_write = (err & 2) != 0, plat_fault_pc = (uint64_t)UC_PC(u);   // for the hook
+    plat_fault_ret = (uint64_t)UC_RET(u);   // a leaf (libc memcpy): its caller
     if (sig == SIGSEGV && fault_hook && fault_hook((uint64_t)(uintptr_t)si->si_addr)) return;   // reads too: traps
-    uintptr_t rip = (uintptr_t)u->uc_mcontext.gregs[REG_RIP];
+    uintptr_t rip = (uintptr_t)UC_PC(u);
     Dl_info at = {0}, self = {0};
     // Ours: this executable, the game code library (mkwgame.so), or no module at all (a jump to a wild address)
     int in_module = dladdr((void *)rip, &at) != 0, ours_exe = 0, ours_game = 0;
@@ -291,8 +323,12 @@ static void fault_handler(int sig, siginfo_t *si, void *uc) {
                        : sig == SIGILL ? "illegal instruction" : "arithmetic exception",
                        (uint32_t)sig, rip, in_module ? rip - (uintptr_t)at.dli_fbase : rip, -1, 0,
                        !in_module ? "no module" : ours_exe ? "mkw" : "mkwgame", 0};
-        uintptr_t sp = (uintptr_t)u->uc_mcontext.gregs[REG_RSP];   // a wild call left its return address there
+#if defined(__aarch64__)
+        if (!in_module) c.ret = (uintptr_t)UC_RET(u);   // a wild call left its return address in x30
+#else
+        uintptr_t sp = (uintptr_t)UC_SP(u);   // a wild call left its return address there
         if (!in_module && sp && !(sp & 7) && plat_mem_readable(sp, 8)) c.ret = *(const uintptr_t *)sp;
+#endif
         if (sig == SIGSEGV || sig == SIGBUS)
             c.access = (err & 16) ? 8 : (err & 2) ? 1 : 0, c.addr = (uint64_t)(uintptr_t)si->si_addr;
         crash_fn(&c);

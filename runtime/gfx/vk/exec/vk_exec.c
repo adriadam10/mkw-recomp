@@ -399,7 +399,7 @@ static const char *opx_name(int i) {
 
 void vk_exec_op_timing_log(void) {
     if (op_timing <= 0) return;
-    uint64_t t = __rdtsc(), ns = kern_now_ns(), span = op_t0 ? t - op_t0 : 0, all = 0;
+    uint64_t t = plat_cycles(), ns = kern_now_ns(), span = op_t0 ? t - op_t0 : 0, all = 0;
     double us_per_tick = span ? (double)(ns - op_ns0) / 1e3 / (double)span : 0;   // the TSC's rate, from this span
     op_t0 = t, op_ns0 = ns;
     int ord[OPX_N];
@@ -590,7 +590,7 @@ static void walk(VkExec *ex, const op_hdr *h, int depth) {
         if (h->size < sizeof *h || (h->size & 7) || h->op >= OP_COUNT_)
             rt_fatal("vk: corrupt command record at %p: op %u size %u", (const void *)h, h->op, h->size);
         const void *a = nvn_op_payload(h);
-        uint64_t c0 = op_timing ? __rdtsc() : 0;
+        uint64_t c0 = op_timing ? plat_cycles() : 0;
         int drew = 0;
         switch (h->op) {
         case OP_END: return;
@@ -604,7 +604,7 @@ static void walk(VkExec *ex, const op_hdr *h, int depth) {
         }
         if (op_timing && h->op != OP_CALL) {
             int k = op_hit ? op_hit : (int)h->op;
-            uint64_t dt = __rdtsc() - c0;
+            uint64_t dt = plat_cycles() - c0;
             op_tsc[k] += dt, op_cnt[k]++, op_hit = 0;
             if (drew && op_dump) fprintf(op_dump, "%llu %llu %d %llu\n", (unsigned long long)op_sub,
                                          (unsigned long long)x_pos, k, (unsigned long long)dt);
@@ -612,9 +612,9 @@ static void walk(VkExec *ex, const op_hdr *h, int depth) {
         // After a draw or dispatch only: asked after every op once past split_n, the part's clock check (maybe_split)
         // took 22 % of the race's wall clock (rt-h5: 1.4 million calls of 0.36 us).
         if (drew && ++split_draws >= split_n) {
-            uint64_t s0 = op_timing ? __rdtsc() : 0;
+            uint64_t s0 = op_timing ? plat_cycles() : 0;
             maybe_split(ex);
-            if (op_timing) op_tsc[OPX_SPLIT] += __rdtsc() - s0, op_cnt[OPX_SPLIT]++;
+            if (op_timing) op_tsc[OPX_SPLIT] += plat_cycles() - s0, op_cnt[OPX_SPLIT]++;
         }
         h = nvn_op_next(h);
     }
@@ -692,19 +692,19 @@ int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint64_t 
     x_cur = x_here_ex = ex;
     x_pos = 0;
     nqs = 0, qs_cur = 0;   // queue states live within one submission (queue_switch)
-    uint64_t b0 = op_timing > 0 ? __rdtsc() : 0;
+    uint64_t b0 = op_timing > 0 ? plat_cycles() : 0;
     if (n && rec_diff_on > 0) rec_diff_begin();
     if (n) ru_submission(ex);
     if (n) vk_mem_mirror_begin(), vk_usnap_begin(handles, n, fence);
     if (pt_on < 0) pt_on = vk_pt_on();
     if (pt_on > 0 && n) vk_pt_submit_begin(ex->cb);
-    if (op_timing > 0) op_tsc[OPX_BEGIN] += __rdtsc() - b0, op_cnt[OPX_BEGIN]++;
+    if (op_timing > 0) op_tsc[OPX_BEGIN] += plat_cycles() - b0, op_cnt[OPX_BEGIN]++;
     for (int i = 0; i < n; i++)
         if (!handles[i]) rt_fatal("vk: command handle %d of a submission is null", i);
     if (n && vk_exec_par(ex, handles, n, op_timing > 0 || pt_on > 0)) part_start = ex->recorded;   // chunks submitted
     else
         for (int i = 0; i < n; i++) walk(ex, nvn_op_first(handles[i]), 0);
-    b0 = op_timing > 0 ? __rdtsc() : 0;
+    b0 = op_timing > 0 ? plat_cycles() : 0;
     vk_exec_pass_end(ex);
     x_cur = x_here_ex = NULL;
     if (ex->recorded) vk_exec_barrier(ex);   // later submissions see this one's writes
@@ -713,7 +713,7 @@ int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint64_t 
     if (n && rec_diff_on > 0) rec_diff_end();
     views_release(ex);
     ex->cb = VK_NULL_HANDLE;
-    if (op_timing > 0) op_tsc[OPX_END] += __rdtsc() - b0, op_cnt[OPX_END]++;
+    if (op_timing > 0) op_tsc[OPX_END] += plat_cycles() - b0, op_cnt[OPX_END]++;
     if (sl0 && nsublog < SUBLOG_N)
         sublog[nsublog++] = (typeof(sublog[0])){(uint32_t)((sl0 - sublog_t0) / 1000), (uint32_t)((kern_now_ns() - sl0) / 1000),
                                                 (uint32_t)(vk_exec_frame.draws_seen - sld), plat_thread_id()};

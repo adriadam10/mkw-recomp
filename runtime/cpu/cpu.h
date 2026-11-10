@@ -43,19 +43,23 @@ void rt_udf(Cpu *c, uint64_t pc) __attribute__((noreturn));
 #define RT_TICK_NS 32u
 uint64_t rt_ticks(void);
 
-#if defined(__aarch64__)
-static inline uint64_t rt_get_fpcr(void) { uint64_t v; __asm__ volatile("mrs %0, fpcr" : "=r"(v)); return v; }
-static inline uint64_t rt_get_fpsr(void) { uint64_t v; __asm__ volatile("mrs %0, fpsr" : "=r"(v)); return v; }
-static inline void rt_set_fpcr(uint64_t v) { __asm__ volatile("msr fpcr, %0" :: "r"(v)); }
-static inline void rt_set_fpsr(uint64_t v) { __asm__ volatile("msr fpsr, %0" :: "r"(v)); }
-static inline void rt_fpcr_sync(const Cpu *c) { (void)c; }
-#else
-// Host FP state is not the guest's here: code lifted with --simd=c keeps FPCR/FPSR in Cpu (c->fpcr, zeroed
-// with the Cpu), so the host-side reset in thread start-up has nothing to do.
+// Host FP state is not the guest's: code lifted with --simd=c keeps FPCR/FPSR in Cpu (c->fpcr, zeroed with the
+// Cpu), so the host-side reset in thread start-up has nothing to do. Every host, AArch64 too, runs the --simd=c code.
 static inline uint64_t rt_get_fpcr(void) { return 0; }
 static inline uint64_t rt_get_fpsr(void) { return 0; }
 static inline void rt_set_fpcr(uint64_t v) { (void)v; }
 static inline void rt_set_fpsr(uint64_t v) { (void)v; }
+#if defined(__aarch64__)
+// The host FPCR of a thread running guest code mirrors c->fpcr's FZ (bit 24 on both; the host's FZ flushes inputs and
+// results as the guest's does) with RMode = nearest; the slow paths of runtime/simd.h switch RMode around one
+// operation, as on x86. Set wherever FPCR or the host FP context changes (see the x86 note below).
+static inline void rt_fpcr_sync(const Cpu *c) {
+    uint64_t cur, want;
+    __asm__ volatile("mrs %0, fpcr" : "=r"(cur));
+    want = (cur & ~((1ull << 24) | (3ull << 22))) | (c->fpcr & (1ull << 24));
+    if (cur != want) __asm__ volatile("msr fpcr, %0" ::"r"(want));
+}
+#else
 // The MXCSR of a host thread running guest code mirrors c->fpcr: FTZ|DAZ = FPCR.FZ, RC = nearest (FPCR.RMode takes
 // the slow paths of runtime/simd.h, which switch RC around one operation). The FP helpers rely on it without checking,
 // so it is set wherever FPCR or the host FP context changes: MSR FPCR (recomp/lifter.py), rt_call (thread and fiber
@@ -361,8 +365,7 @@ static inline uint32_t sdiv32(uint32_t a, uint32_t b) {
     return (uint32_t)((int32_t)a / (int32_t)b);
 }
 
-// Portable FP/SIMD helpers for code lifted with --simd=c (default off AArch64; gen.py includes simd.h itself
-// in that mode, so AArch64 hosts can build it too).
-#if !defined(__cplusplus) && !defined(__aarch64__)
+// Portable FP/SIMD helpers for code lifted with --simd=c (gen.py includes simd.h itself as well).
+#if !defined(__cplusplus)
 #include "simd.h"
 #endif

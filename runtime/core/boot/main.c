@@ -19,6 +19,10 @@
 // Also here: the runtime services the generated code calls besides rt_dispatch and rt_svc (rt_brk, rt_udf,
 // rt_ticks, the function profiler hook), logging, SHA-256, and the crash reporter (a vectored exception handler that
 // names the lifted function, the guest registers and the guest frame-pointer chain).
+#if defined(__aarch64__)
+#include <asm/hwcap.h>
+#include <sys/auxv.h>
+#endif
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -268,10 +272,19 @@ static volatile int host_probe_hits;
 static void host_probe(Cpu *c) { host_probe_hits++; c->x[0] = 42; }
 
 static void check_cpu(void) {
+#if defined(__aarch64__)
+    // tools/build/build.py ARCH_FLAGS: ARMv8.2 with LSE atomics, FP16, RCpc, dot product and CRC32
+    unsigned long hw = getauxval(AT_HWCAP);
+    int ok = (hw & HWCAP_ATOMICS) && (hw & HWCAP_FPHP) && (hw & HWCAP_ASIMDHP) && (hw & HWCAP_LRCPC) &&
+             (hw & HWCAP_ASIMDDP) && (hw & HWCAP_CRC32);
+    printf("cpu: ARMv8.2 (LSE, FP16, RCpc, DotProd, CRC32) %s\n", ok ? "present" : "MISSING");
+    CHECK(ok, "the lifted code is built for ARMv8.2 with LSE, FP16, RCpc, DotProd and CRC32");
+#else
     __builtin_cpu_init();
     int ok = __builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma") && __builtin_cpu_supports("bmi2");
     printf("cpu: x86-64-v3 (AVX2, FMA, BMI2) %s\n", ok ? "present" : "MISSING");
     CHECK(ok, "the lifted code is built for x86-64-v3");
+#endif
 }
 
 // Layout: ascending, no overlap, below 2^39, and inside the window mem_init reserved.

@@ -20,7 +20,6 @@
 // Entries live in an arena per submission and move to the current one when hit; those not hit for RU_GENS
 // submissions go.
 #include <stddef.h>
-#include <x86intrin.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +27,7 @@
 #include "cfg.h"
 #include "host.h"
 #include "tex.h"
+#include "platform/platform.h"
 #include "vk.h"
 #include "vk_draw_internal.h"
 #include "vk_rec_reuse.h"
@@ -500,8 +500,8 @@ static uint32_t tex_ep[1u << 20];
 
 // The hit: texture checks, the window up to the draw, the sets, the draw.
 static int replay_hit(VkExec *ex, RuEnt *e) {
-    uint64_t c = __rdtsc();
-#define LAP(i) (RS2.lap[i] += __rdtsc() - c, c = __rdtsc())
+    uint64_t c = plat_cycles();
+#define LAP(i) (RS2.lap[i] += plat_cycles() - c, c = plat_cycles())
     const RuTex *t = E_TEX(e);
     if (e->ntex) {
         uint32_t ep = vk_texture_epoch();
@@ -567,17 +567,17 @@ static int sets_possible(VkExec *ex, const RuEnt *e) {
 int ru_draw(VkExec *ex, uint32_t op, const void *payload) {
     if (!active(ex)) return 0;
     size_t bytes = op == OP_DRAW ? sizeof(p_draw) : sizeof(p_draw_idx);
-    uint64_t k0 = __rdtsc();
+    uint64_t k0 = plat_cycles();
     uint64_t key = draw_key(ex, op, payload, bytes);
     int any;
     RuEnt *e = lookup(ex, key, &any);
-    RS2.klap += __rdtsc() - k0;
+    RS2.klap += plat_cycles() - k0;
     CAPX.check = NULL;
-    uint64_t t0 = __rdtsc();
+    uint64_t t0 = plat_cycles();
     int valid = e && still_valid(e);
-    RS2.vlap[0] += __rdtsc() - t0;
+    RS2.vlap[0] += plat_cycles() - t0;
     valid = valid && ru_on != 4 && sets_possible(ex, e);
-    RS2.tsc[0] += __rdtsc() - t0;
+    RS2.tsc[0] += plat_cycles() - t0;
     if (valid) {
         if (ru_on == 2) {   // check: replay it as usual below and compare
             CAPX.check = e;
@@ -585,9 +585,9 @@ int ru_draw(VkExec *ex, uint32_t op, const void *payload) {
             RuEnt *copy = e->gen == cur_gen ? NULL : arena_alloc(e->size);
             if (copy) memcpy(copy, e, e->size), copy->gen = cur_gen, put(copy), e = copy;
             RS2.hits++;
-            t0 = __rdtsc();
+            t0 = plat_cycles();
             int r = replay_hit(ex, e);
-            RS2.tsc[1] += __rdtsc() - t0;
+            RS2.tsc[1] += plat_cycles() - t0;
             return r;
         }
     } else if (!e) {
@@ -615,7 +615,7 @@ int ru_draw(VkExec *ex, uint32_t op, const void *payload) {
     if (!rec_cap_begin(ex->cb, &CAPX.win)) return RS2.nocap++, 0;
     ru_cap = &CAPX;
     RS2.armed++;
-    RS2.alap += __rdtsc() - k0;
+    RS2.alap += plat_cycles() - k0;
     return 0;
 }
 
@@ -638,10 +638,10 @@ void ru_draw_end(VkExec *ex) {
     RuCap *c = ru_cap;
     if (!c) return;
     ru_cap = NULL;
-    uint64_t t0 = __rdtsc();
+    uint64_t t0 = plat_cycles();
     int ok = rec_cap_end();
     ru_store_end(ex, c, ok);
-    RS2.slap += __rdtsc() - t0;
+    RS2.slap += plat_cycles() - t0;
 }
 
 static void ru_store_end(VkExec *ex, RuCap *c, int ok) {

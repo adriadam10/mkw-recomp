@@ -22,6 +22,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -32,9 +33,26 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "runtime"
 GAME = Path(os.environ.get("MKW_GAME", ROOT / "game"))
 WIN = ROOT / "build/win"  # tools/build/windeps.py
+# The CPU the game and runtime are built for. x86-64: AVX2 (x86-64-v3). AArch64: ARMv8.2 with the extensions of every
+# Cortex-A76-class core or newer (Snapdragon 8cx/8 Gen 1+, Raspberry Pi 5, Apple M): LSE atomics, FP16, RCpc, dot
+# product, CRC32. The lifted code also leaves x18 alone there: kern_ap_stub (runtime/core/kernel/kernel_preempt.c)
+# returns through it.
+ARCH_FLAGS = {"x86_64": ["-march=x86-64-v3"], "aarch64": ["-march=armv8.2-a+fp16+rcpc+dotprod+crc"]}
+GEN_ARCH_FLAGS = {"x86_64": [], "aarch64": ["-ffixed-x18"]}
+HOST_ARCH = {"amd64": "x86_64", "x64": "x86_64", "arm64": "aarch64"}.get(platform.machine().lower(),
+                                                                          platform.machine().lower())  # fmt: skip
+ARCH = HOST_ARCH if HOST_ARCH in ARCH_FLAGS else "x86_64"
 GEN_FLAGS = ["-O1", "-fno-strict-aliasing", "-Wno-return-type", "-Wno-unused-label", "-fvisibility=hidden",
-             "-march=x86-64-v3"]  # fmt: skip
-RT_FLAGS = ["-O2", "-g", "-Wall", "-fno-strict-aliasing", "-march=x86-64-v3"]
+             *ARCH_FLAGS[ARCH], *GEN_ARCH_FLAGS[ARCH]]  # fmt: skip
+RT_FLAGS = ["-O2", "-g", "-Wall", "-fno-strict-aliasing", *ARCH_FLAGS[ARCH]]
+
+
+def set_arch(arch: str) -> None:
+    """Builds for arch from here on (GEN_FLAGS, RT_FLAGS and game_id() follow; the lists change in place)."""
+    global ARCH
+    ARCH = arch
+    GEN_FLAGS[5:] = [*ARCH_FLAGS[arch], *GEN_ARCH_FLAGS[arch]]
+    RT_FLAGS[4:] = ARCH_FLAGS[arch]
 MODULES = ("main", "subsdk0", "sdk")
 
 
@@ -159,7 +177,8 @@ RT_EXPORTS = ("rt_dispatch", "rt_svc", "rt_udf", "rt_ticks", "rt_spin_gate", "fn
 
 
 def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: Path | None,
-               runtime_only: bool = False, ld_extra: list[str] | None = None) -> str:  # fmt: skip
+               runtime_only: bool = False, ld_extra: list[str] | None = None,
+               sys_flags: list[str] | None = None) -> str:  # fmt: skip
     """dist: the player's build into that folder, the runtime (mkw, mkw.exe) and the game code apart (mkwgame.so,
     mkwgame.dll); else build/mkw with the game code linked in. runtime_only (with dist): the runtime alone, what a
     release ships and the CI builds, without the game's generated C."""
@@ -180,9 +199,9 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
     cc = f"ccache {target.cc}" if os.environ.get("MKW_CCACHE", "1") != "0" and shutil.which("ccache") else target.cc
     lines = [
         f"builddir = {out}",
-        f"genflags = {' '.join(GEN_FLAGS + pic)} -I{RUNTIME / 'cpu'}",
+        f"genflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} -I{RUNTIME / 'cpu'}",
         f"rtflags = {' '.join(RT_FLAGS + target.rt_flags + rt_extra)} {gid} {inc} -I{gen} -I{out / 'rt'} -I{target.vma}",
-        f"tabflags = {' '.join(GEN_FLAGS + pic)} {gid} {inc} -I{gen}",
+        f"tabflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} {gid} {inc} -I{gen}",
         f"ldflags = {' '.join(link_flags)}",
         (
             f"rule cc\n  command = {cc} $genflags -MD -MF $out.d -c $in -o $out\n  depfile = $out.d\n  deps = gcc"
@@ -201,7 +220,8 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
             "  depfile = $out.d\n  deps = gcc\n  description = cc $in"
         ),
         f"rule ar\n  command = rm -f $out && {target.ar} rcs $out $in\n  description = ar $out",
-        (f"rule solink\n  command = {target.cc} -shared -fuse-ld=lld -o $out $in $solibs\n  description = link $out"),
+        (f"rule solink\n  command = {target.cc} {' '.join(sys_flags or [])} -shared -fuse-ld=lld -o $out $in $solibs"
+         "\n  description = link $out"),
         (
             f"rule link\n  command = {target.cxx} $ldflags -o $out $in {' '.join(target.link_libs)}"
             "\n  description = link $out"
@@ -257,6 +277,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--gen", type=Path, default=ROOT / "build/generated")
     ap.add_argument("--target", choices=("linux", "windows"), default="linux")
+    ap.add_argument("--arch", choices=tuple(ARCH_FLAGS), default=ARCH, help="Linux: the CPU (default: this machine's)")
     ap.add_argument("--out", type=Path, help="object directory (default build/obj, build/obj-win for windows)")
     ap.add_argument(
         "--dist", action="store_true",
@@ -284,13 +305,18 @@ def main() -> None:
     if args.runtime_only and not args.dist:
         ap.error("--runtime-only needs --dist")
     target = WINDOWS if args.target == "windows" else LINUX
+    if args.arch != "x86_64" and target is WINDOWS:
+        ap.error("--target windows is x86_64 only")
+    set_arch(args.arch)
     if args.sysroot and target is WINDOWS:
         ap.error("--sysroot is for Linux")
     # zstd and xxhash.h of the sysroot sit in its usr/local (tools/build/sysroot.py), whose include clang already reads
-    sys_flags = ["--target=x86_64-linux-gnu", f"--sysroot={args.sysroot.resolve()}"] if args.sysroot else []
+    sys_flags = [f"--target={ARCH}-linux-gnu", f"--sysroot={args.sysroot.resolve()}"] if args.sysroot else []
     sys_ld = [*sys_flags, f"-L{args.sysroot.resolve()}/usr/local/lib"] if args.sysroot else []
-    dist = ROOT / "build/dist" / args.target if args.dist else None
-    args.out = args.out or ROOT / ("build/obj" + ("-dist" if dist else "") + ("-win" if target is WINDOWS else ""))
+    cross = ARCH != HOST_ARCH and target is LINUX   # another CPU's build: its own dist and object folders
+    dist = ROOT / "build/dist" / (args.target + (f"-{ARCH}" if cross else "")) if args.dist else None
+    args.out = args.out or ROOT / ("build/obj" + ("-dist" if dist else "") + ("-win" if target is WINDOWS else "")
+                                   + (f"-{ARCH}" if cross else ""))  # fmt: skip
     for tool in (target.cc, target.cxx, "ninja", target.ar):
         if not shutil.which(tool):
             sys.exit(f"{tool} not found" + (" (uv run tools/build/windeps.py)" if target is WINDOWS else ""))
@@ -310,7 +336,7 @@ def main() -> None:
         (dist / "mkwgame.id").write_text(game_id())
     fp = ["-fno-omit-frame-pointer", "-mno-omit-leaf-frame-pointer"] if args.frame_pointers else []
     (args.out / "build.ninja").write_text(
-        ninja_file(target, args.gen, args.out, fp + sys_flags, dist, args.runtime_only, sys_ld)
+        ninja_file(target, args.gen, args.out, fp + sys_flags, dist, args.runtime_only, sys_ld, sys_flags)
     )
     if target is LINUX and not dist:
         write_compile_db(args.out / "build.ninja")

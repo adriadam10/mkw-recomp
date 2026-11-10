@@ -74,6 +74,21 @@ void plat_yield(void);                    // gives the rest of the time slice to
 static inline void plat_pause(void) {     // spin-wait hint
 #if defined(__x86_64__) || defined(_M_X64)
     _mm_pause();
+#elif defined(__aarch64__)
+    __asm__ volatile("yield");
+#endif
+}
+// A cheap cycle-like counter for diagnostic timings (ratios between parts of one operation): the TSC on x86-64, the
+// generic timer's virtual count on AArch64 (CNTVCT_EL0, tens of MHz: coarser, the same use).
+static inline uint64_t plat_cycles(void) {
+#if defined(__x86_64__) || defined(_M_X64)
+    return __rdtsc();
+#elif defined(__aarch64__)
+    uint64_t v;
+    __asm__ volatile("isb\n\tmrs %0, cntvct_el0" : "=r"(v));
+    return v;
+#else
+    return 0;
 #endif
 }
 

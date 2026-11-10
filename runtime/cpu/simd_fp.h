@@ -134,7 +134,7 @@ SN T FN(slow)(Cpu *c, int op, T a, T b, T d) {
     uint64_t fpcr = c->fpcr;
     if (fpcr & FPCR_FZ) a = FN(flush)(a), b = FN(flush)(b), d = FN(flush)(d);
     if (FMINMAX(op)) return FN(minmax)(c, op, a, b);
-    unsigned old = simd_rm_enter(fpcr);
+    simd_fpstate old = simd_rm_enter(fpcr);
     volatile T va = a, vb = b, vd = d;
     volatile T vr = op == FOP_RSQRTS ? FN(rsqrts)(va, vb) : FCALC(op, va, vb, vd, K);
     T r = vr;
@@ -187,7 +187,11 @@ SI VTU FN(vsel)(VTS m, VTU x, VTU y) { return (x & (VTU)m) | (y & ~(VTU)m); }
 
 SI VT FN(vflush)(VT a) {
     VTU u = (VTU)a;
+#if defined(__aarch64__)
+    __asm__("" : "+w"(u));
+#else
     __asm__("" : "+x"(u));
+#endif
     VTU mag = u & ~((VTU){} + SGN);
     VTS den = (mag != 0) & ((u & EXPM) == 0);
     return (VT)FN(vsel)(den, u & SGN, u);
@@ -285,7 +289,7 @@ SI uint64_t FN(toint)(Cpu *c, T x, int rm, int fbits, int ib, int uns) {
 // ---- integer -> FP (SCVTF/UCVTF, fixed point), rounded in the FPCR mode
 SN T FN(fromint_slow)(Cpu *c, uint64_t v, int ib, int uns, int fbits) {
 #pragma STDC FENV_ACCESS ON
-    unsigned old = simd_rm_enter(c->fpcr);
+    simd_fpstate old = simd_rm_enter(c->fpcr);
     volatile uint64_t vv = v;
     volatile T r;
     if (uns) r = ib == 32 ? (T)(uint32_t)vv : (T)vv;

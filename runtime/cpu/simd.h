@@ -10,7 +10,9 @@
 // correctly rounded (build x86 with -mfma).
 #pragma once
 #include <fenv.h>
+#if defined(__x86_64__)
 #include <immintrin.h>
+#endif
 #include <math.h>
 
 #include "cpu.h"
@@ -211,8 +213,29 @@ SI int simd_fe_mode(uint64_t fpcr) {
     return m[(fpcr >> 22) & 3];
 }
 
+#if defined(__aarch64__)
+// FPCR.RMode (bits 22-23) is the guest's own encoding on an AArch64 host; msr fpcr only on change.
+#define SIMD_RM_MASK (3ull << 22)
+typedef uint64_t simd_fpstate;   // the host FPCR
+SI uint64_t simd_fpcr_get(void) { uint64_t v; __asm__ volatile("mrs %0, fpcr" : "=r"(v)); return v; }
+SI void simd_fpcr_set(uint64_t v) { __asm__ volatile("msr fpcr, %0" ::"r"(v)); }
+SI uint64_t simd_rm_set_rc(uint64_t cur, uint64_t rm) {
+    if ((cur & SIMD_RM_MASK) != rm) simd_fpcr_set((cur & ~SIMD_RM_MASK) | rm);
+    return cur;
+}
+// Set the host RMode from FPCR.RMode; returns the previous host FPCR.
+SI uint64_t simd_rm_enter(uint64_t fpcr) { return simd_rm_set_rc(simd_fpcr_get(), fpcr & SIMD_RM_MASK); }
+// Force toward-zero.
+SI void simd_rm_rz(void) { simd_rm_set_rc(simd_fpcr_get(), SIMD_RM_MASK); }
+// Restore the RMode saved by simd_rm_enter, only if it changed.
+SI void simd_rm_leave(uint64_t old) {
+    uint64_t cur = simd_fpcr_get();
+    if ((cur & SIMD_RM_MASK) != (old & SIMD_RM_MASK)) simd_fpcr_set((cur & ~SIMD_RM_MASK) | (old & SIMD_RM_MASK));
+}
+#else
 // MXCSR rounding control (bits 13-14) without fesetround's x87 + SSE double write; ldmxcsr only on change.
 #define SIMD_RC_MASK 0x6000u
+typedef unsigned simd_fpstate;   // the host MXCSR
 SI unsigned simd_rm_set_rc(unsigned cur, unsigned rc) {
     if ((cur & SIMD_RC_MASK) != rc) _mm_setcsr((cur & ~SIMD_RC_MASK) | rc);
     return cur;
@@ -225,10 +248,12 @@ SI unsigned simd_rm_enter(uint64_t fpcr) {
 // Force toward-zero.
 SI void simd_rm_rz(void) { simd_rm_set_rc(_mm_getcsr(), 0x6000u); }
 // Restore the MXCSR saved by simd_rm_enter, only if it changed.
-SI void simd_rm_leave(unsigned old) {
+SI void simd_rm_leave(simd_fpstate old) {
     unsigned cur = _mm_getcsr();
     if ((cur & SIMD_RC_MASK) != (old & SIMD_RC_MASK)) _mm_setcsr((cur & ~SIMD_RC_MASK) | (old & SIMD_RC_MASK));
 }
+
+#endif
 
 // The thread's MXCSR mirrors the guest FPCR.FZ with RC = nearest whenever guest code runs (cpu.h rt_fpcr_sync), so
 // plain host FP gives the ARM result unless FPCR.RMode asks for directed rounding, which the slow paths handle.
