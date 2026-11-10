@@ -432,7 +432,11 @@ extern "C" int launcher_run(void) {
             if (e.type == SDL_EVENT_QUIT) L.result = LAUNCHER_QUIT;
             if (e.type == SDL_EVENT_KEY_DOWN && e.key.scancode == SDL_SCANCODE_F11 && !e.key.repeat)
                 SDL_SetWindowFullscreen(L.win, !(SDL_GetWindowFlags(L.win) & SDL_WINDOW_FULLSCREEN));
-            if (!L.shot_at) ImGui_ImplSDL3_ProcessEvent(&e);
+            if (L.shot_at) continue;
+            // The mouse comes in window units, the interface is laid out in pixels (DisplaySize below): on a scaled
+            // display (Wayland 1.85x) the pointer would land at 1/1.85 of its place.
+            SDL_ConvertEventToRenderCoordinates(L.ren, &e);
+            ImGui_ImplSDL3_ProcessEvent(&e);
         }
         int pw, ph;
         SDL_GetCurrentRenderOutputSize(L.ren, &pw, &ph);
