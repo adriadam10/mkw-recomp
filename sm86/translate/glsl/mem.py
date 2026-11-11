@@ -381,11 +381,11 @@ class MemOps:
             if n == RZ:
                 return ""
             self.regs.add(n)
-            w, sh, (bits, signed) = f"smem[{addr} >> 2]", f"int(({addr} & 3u) * 8u)", sub
+            w, sh, (bits, signed) = f"SMEM({addr} >> 2)", f"int(({addr} & 3u) * 8u)", sub
             v = f"uint(bitfieldExtract(int({w}), {sh}, {bits}))" if signed else f"bitfieldExtract({w}, {sh}, {bits})"
             return f"r{n} = {v};"
         for k in range(words):
-            w = f"smem[({addr} >> 2) + {k}u]"
+            w = f"SMEM(({addr} >> 2) + {k}u)"
             if i.op == "LDS":
                 n = i.v("Rd")
                 if n != RZ:

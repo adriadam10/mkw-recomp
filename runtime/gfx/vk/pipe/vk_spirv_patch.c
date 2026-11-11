@@ -326,9 +326,12 @@ uint32_t *spirv_alpha_test(const uint32_t *w, uint64_t n, int func, float ref, u
 // smem, sized from the program's control section) shrinks so the module fits; NULL when it fits or the layout is not
 // the translator's. MKW declares 48 KiB in 168 compute programs; Adreno 7xx has 32 KiB, and Turnip's compiler ends the
 // process on such a shader (ir3.c ir3_get_reg_independent_max_waves: no workgroup fits, "impossible to have enough
-// concurrent waves", exit(1)). Accesses past the new end are undefined, as they would be on the console past 48 KiB:
-// the 168 index smem by the thread's global index (gl_WorkGroupID.x * 64 + local, times 48 bytes), so only dispatches
-// of more groups than fit reach past it.
+// concurrent waves", exit(1)). The 168 index smem by the thread's global index (gl_WorkGroupID.x * 64 + local, times
+// 48 bytes, up to 1024 items), so every workgroup past the 10th reaches past the cut end: undefined on Adreno, where it
+// hits other workgroups' memory (flashing blue lines in races). The translator indexes such arrays modulo a sentinel
+// constant (SMEM_WRAP_SENTINEL), set here to the words kept: each workgroup's 3 KiB window then wraps inside the array.
+#define SMEM_WRAP_SENTINEL 0x7ffe5a3bu
+
 uint32_t *spirv_clamp_shared(const uint32_t *w, uint64_t n, uint32_t limit, uint64_t *out_n, uint32_t *from,
                              uint32_t *to) {
     enum { OP_TYPE_BOOL = 20, OP_TYPE_ARRAY = 28, OP_TYPE_STRUCT = 30, SC_WORKGROUP = 4 };
@@ -385,6 +388,12 @@ uint32_t *spirv_clamp_shared(const uint32_t *w, uint64_t n, uint32_t limit, uint
             o[on++] = 4u << 16 | SPV_OP_CONSTANT, o[on++] = arr_elem[big], o[on++] = bound, o[on++] = keep;
             memcpy(o + on, w + i, l * 4);
             o[on + 3] = bound;
+        } else if (op == SPV_OP_CONSTANT && l == 4 && w[i + 1] < bound && is_u32[w[i + 1]] &&
+                   w[i + 3] == SMEM_WRAP_SENTINEL) {
+            // the translator indexes a shared array over 32 KiB modulo this constant (glsl/common.py
+            // SMEM_WRAP_SENTINEL): make it the words kept, so a workgroup's window wraps inside the cut array
+            memcpy(o + on, w + i, l * 4);
+            o[on + 3] = keep;
         } else {
             memcpy(o + on, w + i, l * 4);
         }

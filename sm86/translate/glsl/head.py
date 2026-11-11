@@ -1,7 +1,7 @@
 """SM86 -> GLSL: the declarations before main() (version, extensions, helper functions, inputs and outputs,
 resource bindings and their reflection) and the task/mesh wrappers around the translated body."""
 
-from glsl.common import HMMA_FN, LDSM_FN, LOP3_FN, MOVM_FN, NMINMAX_FN, PRMT_FN, SHFL_FN, WARP_DEFS
+from glsl.common import HMMA_FN, LDSM_FN, LOP3_FN, MOVM_FN, NMINMAX_FN, PRMT_FN, SHFL_FN, SMEM_PORTABLE_WORDS, SMEM_WRAP_SENTINEL, WARP_DEFS
 from glsl.thread import ThreadOps
 
 
@@ -54,6 +54,13 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
     if b.uses_shared:
         words = (shape[3] + 3) // 4 if shape and shape[3] else 16384
         head += [f"const uint SMEM_WORDS = {words}u;", "shared uint smem[SMEM_WORDS];"]
+        if words > SMEM_PORTABLE_WORDS:
+            # Over 32 KiB, more than some GPUs have (Adreno): the runtime then cuts smem and sets SMEM_WRAP (a
+            # sentinel constant it looks for) to the words kept, so each workgroup's window wraps inside the cut
+            # array instead of reaching past it (vk_spirv_patch.c spirv_clamp_shared).
+            head += [f"const uint SMEM_WRAP = {SMEM_WRAP_SENTINEL:#x}u;", "#define SMEM(i) smem[(i) % SMEM_WRAP]"]
+        else:
+            head.append("#define SMEM(i) smem[i]")
         if b.uses_ldsm:
             head.append(LDSM_FN)
     if b.uses_hmma:

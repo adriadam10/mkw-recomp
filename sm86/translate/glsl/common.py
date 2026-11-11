@@ -8,6 +8,11 @@
 # ballots and lane masks take its 32-bit word, reductions are clustered by 32. On 32-wide subgroups (RADV, ANV and
 # NVIDIA, pinned by the back end) it is the plain subgroup. Without it, lanes 32 and up of Adreno's waves shuffled from
 # the first warp and ballots lost them: blue vertical lines in the race (Odin 2, Turnip, 11/11/2026).
+# Shared memory past this many words (32 KiB) is cut on some GPUs; such programs index it through SMEM_WRAP, a
+# constant with this value that the runtime rewrites (vk_spirv_patch.c SMEM_WRAP_SENTINEL, keep the two equal).
+SMEM_PORTABLE_WORDS = 8192
+SMEM_WRAP_SENTINEL = 0x7FFE5A3B
+
 WARP_DEFS = """#define WLANE (gl_SubgroupInvocationID & 31u)
 #define WWORD (gl_SubgroupInvocationID >> 5)
 #define wshuffle(v, s) subgroupShuffle((v), (gl_SubgroupInvocationID & ~31u) | ((s) & 31u))
@@ -35,12 +40,12 @@ SHFL_FN = """uint shfl(uint v, uint src, uint c, uint mode, out bool ok) {
 # LDSM.16.M88 / MT88 as PTX ldmatrix.sync.aligned.m8n8.shared.b16 lays it out (PTX ISA, "Warp-level matrix load
 # instruction: ldmatrix"): lanes 8i..8i+7 hold the row addresses of matrix i; lane t receives row t/4, columns
 # 2(t%4) and 2(t%4)+1 as one register, or with .trans (MT88) those of the transposed matrix.
-LDSM_FN = """uint smem16(uint b) { return (smem[b >> 2] >> ((b & 2u) * 8u)) & 0xffffu; }
+LDSM_FN = """uint smem16(uint b) { return (SMEM(b >> 2) >> ((b & 2u) * 8u)) & 0xffffu; }
 uint ldsm(uint a, uint i, bool trans) {
     uint lane = WLANE, r = lane >> 2, q = lane & 3u;
     uint p = wshuffle(a, i * 8u + r), c0 = wshuffle(a, i * 8u + 2u * q),
          c1 = wshuffle(a, i * 8u + 2u * q + 1u);
-    return trans ? smem16(c0 + 2u * r) | (smem16(c1 + 2u * r) << 16) : smem[(p >> 2) + q];
+    return trans ? smem16(c0 + 2u * r) | (smem16(c1 + 2u * r) << 16) : SMEM((p >> 2) + q);
 }"""
 
 # MOVM.16.MT88 as PTX movmatrix.sync.aligned.m8n8.trans.b16: lane t holds row t/4, columns 2(t%4) and 2(t%4)+1 of an
