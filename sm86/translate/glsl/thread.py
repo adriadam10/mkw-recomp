@@ -18,8 +18,10 @@ class ThreadOps:
         a, c = self.src_f(i, "a"), self.src_f(i, "c")
         return self.dst_f(i, f"({a} * vec4(1.0, 1.0, -1.0, 0.0)[{k}] + {c} * vec4(1.0, -1.0, 1.0, 1.0)[{k}])")
 
-    REDUX: ClassVar[dict[str, str]] = {"SUM": "subgroupAdd", "MIN": "subgroupMin", "MAX": "subgroupMax",
-                                       "AND": "subgroupAnd", "OR": "subgroupOr", "XOR": "subgroupXor"}  # fmt: skip
+    # Clustered by 32: one warp of a wider subgroup (common.WARP_DEFS)
+    REDUX: ClassVar[dict[str, str]] = {"SUM": "subgroupClusteredAdd", "MIN": "subgroupClusteredMin",
+                                       "MAX": "subgroupClusteredMax", "AND": "subgroupClusteredAnd",
+                                       "OR": "subgroupClusteredOr", "XOR": "subgroupClusteredXor"}  # fmt: skip
 
     def redux(self, i: Insn) -> str:
         """REDUX: a reduction over the active lanes into a uniform register (unsigned unless .S32)."""
@@ -28,14 +30,15 @@ class ThreadOps:
             raise Unsupported(f"REDUX.{op}")
         self.uses_subgroup = self.uses_arith = True
         a = self.src_u(i, "a")
-        e = f"uint({self.REDUX[op]}(int({a})))" if i.sym("sz") == "S32" else f"{self.REDUX[op]}({a})"
+        e = f"uint({self.REDUX[op]}(int({a}), 32u))" if i.sym("sz") == "S32" else f"{self.REDUX[op]}({a}, 32u)"
         return self.dst(i, e)
 
     SR: ClassVar[dict[str, str]] = {
         "SR_TID.X": "gl_LocalInvocationID.x", "SR_TID.Y": "gl_LocalInvocationID.y", "SR_TID.Z": "gl_LocalInvocationID.z",
         "SR_CTAID.X": "gl_WorkGroupID.x", "SR_CTAID.Y": "gl_WorkGroupID.y", "SR_CTAID.Z": "gl_WorkGroupID.z",
-        "SR_LANEID": "gl_SubgroupInvocationID", "SR_LTMASK": "gl_SubgroupLtMask.x", "SR_LEMASK": "gl_SubgroupLeMask.x",
-        "SR_GTMASK": "gl_SubgroupGtMask.x", "SR_GEMASK": "gl_SubgroupGeMask.x", "SR_EQMASK": "gl_SubgroupEqMask.x",
+        "SR_LANEID": "WLANE", "SR_LTMASK": "gl_SubgroupLtMask[WWORD]", "SR_LEMASK": "gl_SubgroupLeMask[WWORD]",
+        "SR_GTMASK": "gl_SubgroupGtMask[WWORD]", "SR_GEMASK": "gl_SubgroupGeMask[WWORD]",
+        "SR_EQMASK": "gl_SubgroupEqMask[WWORD]",
         "SRZ": "0u", "SR255": "0u",
     }  # fmt: skip
 
@@ -44,7 +47,7 @@ class ThreadOps:
         sr = next((n for n in names if n in self.SR), None)
         if sr is None:
             raise Unsupported(f"{i.op} {'/'.join(names)}")
-        self.uses_subgroup |= "Subgroup" in self.SR[sr]
+        self.uses_subgroup |= "WLANE" in self.SR[sr] or "WWORD" in self.SR[sr]
         if i.op == "S2UR":
             n = i.v("URd")
             if n == URZ:
@@ -117,7 +120,7 @@ class ThreadOps:
 
     def match(self, i: Insn) -> str:
         """MATCH.ANY: the mask of the active lanes whose Ra equals this lane's; MATCH.ALL: the active mask and Pu set
-        when every active lane holds the same Ra, else 0 and Pu clear. Subgroups of 32, as the other warp ops."""
+        when every active lane holds the same Ra, else 0 and Pu clear. Per warp of 32 lanes (common.WARP_DEFS)."""
         if i.sym("sz") not in ("U32", "U64"):
             raise Unsupported(f"MATCH.{i.sym('sz')}")
         self.uses_subgroup = True
@@ -125,14 +128,20 @@ class ThreadOps:
         if i.sym("sz") == "U64":
             a = f"uvec2({a}, {self.src_u_hi(i, 'a')})"
         if i.sym("op") == "ALL":
-            out = [f"bool meq = subgroupAllEqual({a}); uint mm = meq ? subgroupBallot(true).x : 0u;"]
+            self.uses_arith = True  # clustered min and max: equal when every active lane of the warp holds the same
+            eq = "all(equal(mlo, mhi))" if "uvec2" in a else "mlo == mhi"
+            t = "uvec2" if "uvec2" in a else "uint"
+            out = [
+                f"{t} mv = {a}, mlo = subgroupClusteredMin(mv, 32u), mhi = subgroupClusteredMax(mv, 32u);",
+                f"bool meq = {eq}; uint mm = meq ? wballot(true) : 0u;",
+            ]
             if i.v("Pu", PT) != PT:
                 out.append(f"p{i.v('Pu')} = meq;")
         else:
             out = [
                 f"{'uvec2' if 'uvec2' in a else 'uint'} mv = {a}; uint mm = 0u;",
-                "for (uint k = 0u; k < 32u; k++) if (subgroupShuffle(mv, k) == mv) mm |= 1u << k;",
-                "mm &= subgroupBallot(true).x;",
+                "for (uint k = 0u; k < 32u; k++) if (wshuffle(mv, k) == mv) mm |= 1u << k;",
+                "mm &= wballot(true);",
             ]
         if n != RZ:
             self.regs.add(n)
@@ -143,9 +152,12 @@ class ThreadOps:
         """VOTE(U).ALL/ANY/EQ: the ballot of Pp to Rd (URd), the vote to Pu (UPu)."""
         self.uses_subgroup = True
         p = pred(i.v("Pp"), i.v("Pp@not"))
-        v = {"ALL": f"subgroupAll({p})", "ANY": f"subgroupAny({p})", "EQ": f"subgroupAllEqual({p})"}.get(
-            i.sym("voteop")
-        )
+        # Over the lane's warp of 32 (common.WARP_DEFS): from its ballot word and that of the active lanes
+        v = {
+            "ALL": f"(wballot({p}) == wballot(true))",
+            "ANY": f"(wballot({p}) != 0u)",
+            "EQ": f"(wballot({p}) == 0u || wballot({p}) == wballot(true))",
+        }.get(i.sym("voteop"))
         if v is None:
             raise Unsupported(f"{i.op}.{i.sym('voteop')}")
         out = []
@@ -153,7 +165,7 @@ class ThreadOps:
         d = i.v(f"{u}Rd")
         if d != (URZ if u else RZ):
             (self.uregs if u else self.regs).add(d)
-            out.append(f"{'ur' if u else 'r'}{d} = subgroupBallot({p}).x;")
+            out.append(f"{'ur' if u else 'r'}{d} = wballot({p});")
         pu = i.v(f"{u}Pu")
         if pu != PT:
             out.append(f"{'up' if u else 'p'}{pu} = {v};")

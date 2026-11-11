@@ -1,7 +1,7 @@
 """SM86 -> GLSL: the declarations before main() (version, extensions, helper functions, inputs and outputs,
 resource bindings and their reflection) and the task/mesh wrappers around the translated body."""
 
-from glsl.common import HMMA_FN, LDSM_FN, LOP3_FN, MOVM_FN, NMINMAX_FN, PRMT_FN, SHFL_FN
+from glsl.common import HMMA_FN, LDSM_FN, LOP3_FN, MOVM_FN, NMINMAX_FN, PRMT_FN, SHFL_FN, WARP_DEFS
 from glsl.thread import ThreadOps
 
 
@@ -42,8 +42,10 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
             "#extension GL_KHR_shader_subgroup_vote : require",
             "#extension GL_KHR_shader_subgroup_shuffle : require",
         ]
-        if b.uses_arith:
+        if b.uses_arith:  # REDUX and MATCH.ALL, clustered by the warp's 32 lanes
             head.append("#extension GL_KHR_shader_subgroup_arithmetic : require")  # fmt: skip
+            head.append("#extension GL_KHR_shader_subgroup_clustered : require")
+        head.append(WARP_DEFS)
     if stage == "cs":
         # Workgroup and shared memory size from the program's control section (compute_shape). They were
         # specialization constants that no back end set: every dispatch ran 1x1x1 groups until 31/10/2026.
