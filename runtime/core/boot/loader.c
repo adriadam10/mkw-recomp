@@ -328,7 +328,16 @@ static Res resolve(Mod *m, uint32_t si, int jump) {
     Res *cache = jump ? &m->res_jump[si] : &m->res_plain[si];
     if (cache->kind != RES_UNSET) return *cache;
     const char *name = sym_name(m, si);
-    uint64_t guest = sym_defined(m, si) ? m->pub.base + m->syms[si].value : find_symbol(name, NULL);
+    // A module's reference to a symbol it defines itself binds, as rtld does, to the first definition in load order
+    // when the symbol is global with default visibility: main's operator new/delete (sead's heaps) stand in for the
+    // sdk's own, and a singleton two modules share is one object. 1.8.0's sdk has 62 such references (operator
+    // new/delete, RTTI, movie::detail::HeapMemoryManager's instance); binding them to its own definitions made the
+    // sdk's operator delete(void *, size_t), which main imports, free sead's blocks with the SDK heap
+    // (CentralHeap::Free: NotNMallocPtrError at the first file load). Local and hidden/protected symbols stay local.
+    int own = sym_defined(m, si);
+    int interposable = own && (m->syms[si].info >> 4) != 0 && (m->syms[si].other & 3) == 0;
+    uint64_t first = interposable ? find_symbol(name, NULL) : 0;
+    uint64_t guest = own ? (first ? first : m->pub.base + m->syms[si].value) : find_symbol(name, NULL);
     GuestFn f;
     Res r;
     if (jump && (f = hostfn_observer(name))) {
