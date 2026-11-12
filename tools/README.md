@@ -14,6 +14,7 @@ default, or `MKW_GAME=<dir>`, with `exefs/` and `romfs/` inside) and write to `b
 | [github/](github/README.md) | Issue moderation: release and GPU labels, missing logs, known errors, replies that close |
 | [gpu/](gpu/README.md) | NVN2 functions: which ones the game uses, their address in the driver and object sizes |
 | [imagen/](imagen/README.md) | Flight recorder thumbnails, contact sheets and image comparison |
+| [nup/](nup/README.md) | .nup packages (a55uka/nup v1): the single-file dumps into `exefs/` + `romfs/` |
 | [romfs/](romfs/README.md) | RomFS overlays: the game's internal resolutions |
 | [prepare/](prepare/README.md) | Builds the game on the player's machine from their copy (started by the start screen) |
 | [run/](run/README.md) | Game runs (live with a control channel, to the race, under perf) and diagnostics: stacks, memory |
