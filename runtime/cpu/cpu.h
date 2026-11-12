@@ -339,6 +339,12 @@ static inline uint64_t clz64(uint64_t v) { return v ? __builtin_clzll(v) : 64; }
 static inline uint32_t clz32(uint32_t v) { return v ? __builtin_clz(v) : 32; }
 static inline uint64_t cls64(uint64_t v) { return clz64(v ^ (uint64_t)((int64_t)v >> 1)) - 1; }
 static inline uint32_t cls32(uint32_t v) { return clz32(v ^ (uint32_t)((int32_t)v >> 1)) - 1; }
+// PACGA's 32-bit code (lifter.py): a fixed mix of the value and the modifier. Real pointer authentication uses a key
+// the console never reveals; the game only compares codes it computed itself, so any deterministic function works.
+static inline uint32_t rt_pacga(uint64_t v, uint64_t mod) {
+    uint64_t h = (v ^ (mod * 0x9E3779B97F4A7C15ull)) * 0xC2B2AE3D27D4EB4Full;
+    return (uint32_t)((h ^ h >> 29) >> 32);
+}
 static inline uint64_t rbit64(uint64_t v) { return __builtin_bitreverse64(v); }
 static inline uint32_t rbit32(uint32_t v) { return __builtin_bitreverse32(v); }
 static inline uint32_t rev16_32(uint32_t v) { return ((v & 0x00ff00ffu) << 8) | ((v >> 8) & 0x00ff00ffu); }

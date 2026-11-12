@@ -127,6 +127,15 @@ class SimdC:
 
     # ------------------------------------------------------------ top level
 
+    def fp16_misc2(self, w):
+        """AdvSIMD two-register miscellaneous (FP16): FABS and FNEG only, the sign bit of each 16-bit lane, exact with
+        no half-precision arithmetic (MKW 1.8.0's sdk has four FNEG v.8h, the first FP16 vector instructions met)."""
+        Q, U, opc, n, d = bits(w, 30, 1), bits(w, 29, 1), bits(w, 12, 5), bits(w, 5, 5), bits(w, 0, 5)
+        if opc != 0b01111:
+            raise Unsupported('fp16 misc')
+        x = VQ('vu16', Q, n)
+        return VWr('vu16', Q, d, f'{x} ^ (uint16_t)0x8000' if U else f'{x} & (uint16_t)0x7fff')
+
     def dp(self, w, pc):
         op0, op1, op2, op3 = bits(w, 28, 4), bits(w, 23, 2), bits(w, 19, 4), bits(w, 10, 9)
         if op0 == 0b0100 and not (op1 & 2) and (op2 & 7) == 5 and (op3 & 0b110000011) == 0b10:
@@ -166,6 +175,8 @@ class SimdC:
                 return self.three_diff(w)
             if not (op1 & 2) and (op2 & 7) == 4 and (op3 & 0b110000011) == 0b10:
                 return self.misc2(w)
+            if op1 == 1 and op2 == 0b1111 and (op3 & 0b110000011) == 0b10:
+                return self.fp16_misc2(w)
             if not (op1 & 2) and (op2 & 7) == 6 and (op3 & 0b110000011) == 0b10:
                 return self.across(w)
             if op1 == 2 and op2 == 0 and (op3 & 1):

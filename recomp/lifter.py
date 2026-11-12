@@ -699,6 +699,11 @@ class Lifter:
                     return Insn('op', self.sc.crc(w))
                 gprs = [(p, r) for p, r in ((0, rd), (5, rn), (16, rm)) if r != 31]
                 return Insn('asm', asm=AsmInsn(w, set(), gprs))
+            if opcode == 12 and sf:  # PACGA Xd, Xn, Xm|SP: a 32-bit code in the top half, the low half 0
+                # PAC* and AUT* are the identity here, so only the game's own use of the code matters: it compares one
+                # with one computed again from the same values (MKW 1.8.0's sdk, 58 sites); any fixed function of both
+                # does (cpu.h rt_pacga).
+                return Insn('op', set_reg(1, rd, f'((uint64_t)rt_pacga({R(1, rn)}, {R(1, rm, sp=True)}) << 32)'))
             a, b = R(sf, rn), R(sf, rm)
             expr = {
                 2: f'udiv{size}({a}, {b})',
