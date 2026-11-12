@@ -1,6 +1,6 @@
 // The game's zstd decoder on the host's libzstd. Most RomFS files are zstd frames, many with a dictionary; the decoder
 // is BSD zstd linked into main. The patch set "zstd" (recomp/patches-mkw.txt) sends both calls of MKW's
-// ZSTD_decompressMultiFrame (main+0x407e00) to the host function below, on the patch page (totk-pc-recomp also patched
+// ZSTD_decompressMultiFrame (1.0.0: main+0x407e00) to the host function below, on the patch page (totk-pc-recomp also patched
 // ZSTD_decompress_usingDDict; MKW reaches it through MultiFrame). Lifted, the decoder ran its literal and match copies
 // as chains of small functions with the registers in Cpu (run50: 18.5 % of the CPU); here they decode in native code.
 //
@@ -20,9 +20,11 @@
 
 #include "cfg.h"
 #include "host.h"
+#include "version.h"
 #include "platform/platform.h"
 
-#define GUEST_MULTIFRAME 0x7000407e00ull   // MKW 1.0.0 main: ZSTD_decompressMultiFrame (recomp/patches-mkw.txt "zstd")
+// ZSTD_decompressMultiFrame (1.0.0: main+0x407e00, 1.8.0: main+0xe2280; version.c, the patch set "zstd")
+#define GUEST_MULTIFRAME rt_main_addr(rt_version()->zstd_multiframe)
 #define HOST_MULTIFRAME 0xff0   // offsets in the patch page
 #define AWAY_BYTES (64u << 10)
 #define MAX_DICT (64u << 20)
@@ -240,7 +242,7 @@ static void host_multiframe(Cpu *c) { decode(c, c->x[5], c->x[6], c->x[7], GUEST
 // +0x2c i32 staged bytes, +0x30 guest DCtx. The guest DCtx keeps only its next input size (+0x7068) up to date, the
 // one field the game reads. Streams the host could not take (a DDict it cannot copy, a full table) stay in the guest
 // decoder from their first chunk to the end; so does every stream in check mode.
-#define GUEST_STREAM 0x70006532b4ull   // MKW 1.0.0 main (recomp/patches-mkw.txt "zstd")
+#define GUEST_STREAM rt_main_addr(rt_version()->zstd_stream)   // 1.0.0: main+0x6532b4, 1.8.0: main+0xdeca0
 #define HOST_STREAM 0xfe0
 #define NSTREAM 64
 #define DCTX_EXPECTED 0x7068

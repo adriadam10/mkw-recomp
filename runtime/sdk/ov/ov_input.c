@@ -543,3 +543,41 @@ HOST_OVERRIDE("_ZN2nn3hid6detail22GetSixAxisSensorStatesEPiPNS0_18SixAxisSensorS
               ov_six_states);
 HOST_OVERRIDE("_ZN2nn3hid6detail21GetSixAxisSensorStateEPNS0_18SixAxisSensorStateERKNS0_19SixAxisSensorHandleE",
               ov_six_state);
+
+// ---- 1.8.0's mouse APIs (none in 1.0.0): the Joy-Con 2 as a mouse (Jcms) and a USB mouse (Nmouse). A PC is a
+// console with neither attached: Jcms handles exist but report no samples, and there is no mouse. Their SDK versions
+// open the hid server through sm (svc 0x1f, IPC), which this runtime does not have: the first 1.8.0 boot stopped in
+// nn::hid::InitializeJcms (main+0x412728).
+static void ov_mouse_nothing(Cpu *c) { ret_x(c, 0); }
+// JcmsHandle GetJcmsHandle(const NpadId &, const JcmsType &): a u32 (main+0x2590f30 stores w0); id << 8 | type
+static void ov_jcms_handle(Cpu *c) {
+    const uint32_t *id = arg_p(c, 0);
+    const uint8_t *type = arg_p(c, 1);
+    ret_x(c, (id ? *id : 0) << 8 | (type ? *type : 0));
+}
+// int GetNmouseStates(int *count, NmouseState *, int max, NmouseHandle): no samples
+static void ov_nmouse_states(Cpu *c) {
+    int32_t *count = arg_p(c, 0);
+    if (count) *count = 0;
+    ret_x(c, 0);
+}
+// void GetNmouseTypeSet(BitFlagSet<32, NmouseType> *, NmouseHandle): no type
+static void ov_nmouse_types(Cpu *c) {
+    uint32_t *set = arg_p(c, 0);
+    if (set) *set = 0;
+}
+HOST_OVERRIDE("_ZN2nn3hid14InitializeJcmsEPvm", ov_mouse_nothing);
+HOST_OVERRIDE("_ZN2nn3hid12FinalizeJcmsEv", ov_mouse_nothing);
+HOST_OVERRIDE("_ZN2nn3hid13GetJcmsHandleERKjRKNS0_8JcmsTypeE", ov_jcms_handle);
+HOST_OVERRIDE("_ZN2nn3hid9StartJcmsERKNS0_10JcmsHandleE", ov_mouse_nothing);
+HOST_OVERRIDE("_ZN2nn3hid8StopJcmsERKNS0_10JcmsHandleE", ov_mouse_nothing);
+HOST_OVERRIDE("_ZN2nn3hid13GetJcmsStatesEPNS0_9JcmsStateEiRKNS0_10JcmsHandleE", ov_mouse_nothing);   // 0 samples
+HOST_OVERRIDE("_ZN2nn3hid16InitializeNmouseEPvmii", ov_mouse_nothing);
+HOST_OVERRIDE("_ZN2nn3hid14FinalizeNmouseEv", ov_mouse_nothing);
+HOST_OVERRIDE("_ZN2nn3hid16GetNmouseHandlesEPNS0_12NmouseHandleEij", ov_mouse_nothing);   // 0 mice
+HOST_OVERRIDE("_ZN2nn3hid15GetNmouseStatesEPiPNS0_11NmouseStateEiNS0_12NmouseHandleE", ov_nmouse_states);
+HOST_OVERRIDE("_ZN2nn3hid16GetNmouseTypeSetEPNS_4util10BitFlagSetILi32ENS0_10NmouseTypeEEENS0_12NmouseHandleE",
+              ov_nmouse_types);
+HOST_OVERRIDE("_ZN2nn3hid19EnableNmousePointerENS0_12NmouseHandleEb", ov_mouse_nothing);
+HOST_OVERRIDE("_ZN2nn3hid22SetNmousePointerRangesEii", ov_mouse_nothing);
+HOST_OVERRIDE("_ZN2nn3hid24SetNmousePointerPositionENS0_12NmouseHandleEii", ov_mouse_nothing);

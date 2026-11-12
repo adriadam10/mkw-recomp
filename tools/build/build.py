@@ -39,7 +39,13 @@ WIN = ROOT / "build/win"  # tools/build/windeps.py
 GEN_FLAGS = ["-O1", "-fno-strict-aliasing", "-Wno-return-type", "-Wno-unused-label", "-fvisibility=hidden",
              "-march=x86-64-v3"]  # fmt: skip
 RT_FLAGS = ["-O2", "-g", "-Wall", "-fno-strict-aliasing", "-march=x86-64-v3"]
-MODULES = ("main", "subsdk0", "sdk")
+sys.path.insert(0, str(ROOT / "recomp"))
+from versions import detect as detect_version  # noqa: E402  (the game version of a dump: patches, RtGame.version)
+
+
+def gen_modules(gen: Path) -> list[str]:
+    """The modules the generator wrote, in layout order (1.0.0: main, subsdk0, sdk; 1.8.0 adds subsdk1)."""
+    return [m["name"] for m in json.loads((gen / "layout.json").read_text())]
 
 
 @dataclass(frozen=True)
@@ -127,11 +133,11 @@ def module_glue(gen: Path, exefs: Path, library: bool) -> str:
             "#define X(i, n, e, d) {#n, e, d},", "    RT_PATCH_SETS(X)", "#undef X", "};", "#else",
             "#define RT_PATCH_COUNT 0", "#define RT_PATCH_PAGE 0", "static const RtPatchSet *const patch_sets = 0;",
             "#endif", "",
-            # 100: MKW 1.0.0, the version the menu shows
+            # RtGame.version: recomp/versions.py's number for the dump (100: 1.0.0, 180: 1.8.0)
             "volatile int g_fnprof;", "uint8_t rt_patch_on[RT_MAX_PATCH_SETS];", "",
             "static const RtGame game = {RT_GAME_ABI, RT_GAME_ID, modules, sizeof modules / sizeof *modules,",
             "                            exefs_sha256, sizeof exefs_sha256 / sizeof *exefs_sha256, patch_sets,",
-            "                            RT_PATCH_COUNT, RT_PATCH_PAGE, 100, &g_fnprof, rt_patch_on};", "",
+            f"                            RT_PATCH_COUNT, RT_PATCH_PAGE, {detect_version(exefs).number}, &g_fnprof, rt_patch_on}};", "",
             "RT_GAME_EXPORT const RtGame *mkwgame_tables(void) { return &game; }" if library
             else "const RtGame *rt_game_builtin(void) { return &game; }", ""]  # fmt: skip
     return "\n".join(out)
@@ -214,7 +220,7 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         f"rule icon\n  command = {sys.executable} $in $out\n  description = icon $out",
     ]
     libs = []
-    for mod in () if runtime_only else MODULES:
+    for mod in () if runtime_only else gen_modules(gen):
         objs = []
         for src in sorted((gen / mod).glob("*.c")):
             obj = out / mod / (src.stem + ".o")

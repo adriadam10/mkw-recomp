@@ -5,7 +5,7 @@ this file says how to work by them without wasting runs.
 
 ## What this is
 
-A static recompilation of Mario Kart World 1.0.0 (Switch 2) to x86-64: the game's AArch64 code becomes C
+A static recompilation of Mario Kart World 1.0.0 and 1.8.0 (Switch 2) to x86-64: the game's AArch64 code becomes C
 ([recomp/](recomp/README.md)), the runtime ([runtime/](runtime/README.md)) replaces the console (kernel, SDK by
 function name, NVN2 over Vulkan), and the game's SM86 shaders become SPIR-V offline ([sm86/](sm86/README.md)). Every
 folder has a README that names each file: read it before opening the code. The open work is in

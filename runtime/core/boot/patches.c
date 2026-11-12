@@ -21,6 +21,7 @@
 #include "gfx.h"
 #include "hacks.h"
 #include "host.h"
+#include "version.h"
 
 #define OUTPUT_SIZE 0xfd0   // patch page offset of the output size (recomp/patches-mkw.txt, set output)
 #define SHADOW_HOST 0xfc0   // patch page offset of host_shadow_rb (set shadow)
@@ -30,12 +31,18 @@
 #define ASPECT_HOST 0xf80        // patch page offset of host_aspect (set aspect)
 #define UI_PROJ_HOST 0xf70       // patch page offset of host_ui_proj (set aspect)
 #define UI_ROWS_HOST 0xf60       // patch page offset of host_ui_rows (set aspect)
-#define GUEST_RENDERBUFFER_CREATE 0x7000233358ull   // MKW 1.0.0 main: gsys RenderBuffer creation
-#define GUEST_RB_ALLOCATOR_INIT 0x70008eb6b0ull     // render-buffer allocator setup (main+0x37b520 allocates from it)
-#define GUEST_RB_POOL_NEW 0x700067aa40ull           // operator new(size, heap, alignment), as the allocator calls it
-#define GUEST_RB_POOL_INIT 0x70008eb9dcull          // one pool of that allocator (object, added, slot, 7, ...)
-#define GUEST_RANDOM_CTOR_LR 0x7000922088ull        // sead::Random::Random, after its GetSystemTick call
-#define GUEST_RANDOM_CTOR2_LR 0x70015585a8ull       // another Random constructor, the same
+#define CAMERA_EVENT_HOST 0xf50  // patch page offset of host_camera_event (set camera, 1.8.0)
+// The guest functions the sets call or recognise, per game version (version.h; 1.0.0: main+0x233358 RenderBuffer
+// creation, main+0x8eb6b0 the render-buffer allocator setup that main+0x37b520 allocates from, main+0x67aa40 operator
+// new(size, heap, alignment), main+0x8eb9dc one pool of that allocator, main+0x922088 and main+0x15585a8 two
+// sead::Random constructors after their GetSystemTick call). A set whose sites are not in the version's patch table
+// never runs these.
+#define GUEST_RENDERBUFFER_CREATE rt_main_addr(rt_version()->rb_create)
+#define GUEST_RB_ALLOCATOR_INIT rt_main_addr(rt_version()->rb_alloc_init)
+#define GUEST_RB_POOL_NEW rt_main_addr(rt_version()->rb_pool_new)
+#define GUEST_RB_POOL_INIT rt_main_addr(rt_version()->rb_pool_init)
+#define GUEST_RANDOM_CTOR_LR rt_main_addr(rt_version()->random_ctor_lr)
+#define GUEST_RANDOM_CTOR2_LR rt_main_addr(rt_version()->random_ctor2_lr)
 
 // The shadow set: MKW_SHADOW_SIZE (Graphics tab) in place of the cascaded shadow map size the game picks (3072 docked,
 // 2048 handheld). Only a square buffer of 512 or more is resized: what the site's caller (main+0x22d45c) creates.
@@ -182,7 +189,7 @@ static int is_16x9(const float *m) {
 // covers the canvas, 1920x1080 layout units (the projection: 45 degrees at a distance of 1303.68 is 1080 high); *tx:
 // its x on the canvas, 0 from its middle. Returns -1 when x22 and x23 are not such a pane.
 static int ui_full_screen(const Cpu *c, float *tx) {
-    int text = c->x[30] == 0x7000000000ull + 0x169aeb4;
+    int text = rt_version()->ui_text_lr && c->x[30] == rt_main_addr(rt_version()->ui_text_lr);
     uint64_t mtx = text ? c->x[21] + 0x70 : c->x[23], size = text ? c->x[21] + 0x50 : c->x[22], pane = mtx - 0x70;
     *tx = 0;
     if (size != mtx - 0x20 || (mtx & 3) || mtx < 0x70 || !plat_mem_readable(pane, 0xa0)) return -1;
@@ -233,8 +240,19 @@ static void host_ui_rows(Cpu *c) {
     memcpy(&c->v[2], m, 16), memcpy(&c->v[3], m + 4, 16);
 }
 
+static int has_set(const RtGame *g, const char *name) {
+    for (int i = 0; i < g->npatch_sets; i++)
+        if (!strcmp(g->patch_sets[i].name, name)) return 1;
+    return 0;
+}
+
 static void aspect_set(const RtGame *g) {
-    aspect_out = aspect_of();
+    // Without the set (a game version whose sites are not found yet) the picture stays 16:9: a wider output alone
+    // would stretch the game's 16:9 cameras.
+    aspect_out = has_set(g, "aspect") ? aspect_of() : 0;
+    if (!aspect_out && strcmp(cfg_value("MKW_ASPECT"), "16:9") && !has_set(g, "aspect"))
+        rt_log("patches: MKW_ASPECT %s has no effect on game version %s (no aspect set)", cfg_value("MKW_ASPECT"),
+               rt_version()->display);
     aspect_scale = aspect_out / (16.0f / 9);
     gfx_aspect_set(aspect_out);
     for (int i = 0; i < g->npatch_sets; i++)
@@ -303,6 +321,31 @@ void rt_patches_init(void) {
     frame_rate_init(g->patch_page);
 }
 
+// The camera set (recomp/patches-mkw-180.txt): the console with no camera attached. main+0xcdebc0, which opens the
+// camera service, does not run; in place of main+0xcdc560, which attaches that service's event to the
+// SystemEventType at x0, the event is a real one that never fires, and the global the service object lives in
+// (version.c camera_service) gets a stand-in whose every request fails as a camera that is not there: result
+// 0x7c4 (module 452, the camera's, description 3) for slot 0xd8, which main+0x25a680 asks at boot and passes over, and
+// 0x5c4 (description 2), which the session functions main+0x1c6b630..0x1c6c270 pass over, for the rest.
+#define CAMERA_SLOTS 64
+static uint64_t camera_absent_fn, camera_unavailable_fn;
+static void camera_absent(Cpu *c) { ret_x(c, 0x7c4); }
+static void camera_unavailable(Cpu *c) { ret_x(c, 0x5c4); }
+static void host_camera_event(Cpu *c) {
+    static uint64_t create;
+    if (!create && !(create = ldr_symbol("_ZN2nn2os17CreateSystemEventEPNS0_15SystemEventTypeENS0_14EventClearModeEb")))
+        rt_fatal("patches: nn::os::CreateSystemEvent not found");
+    uint64_t ev = c->x[0], at = rt_main_addr(rt_version()->camera_service);
+    if (at && !*(uint64_t *)(uintptr_t)at) {
+        uint64_t *obj = mem_kernel_alloc(16 + 8 * CAMERA_SLOTS, 16), *vt = obj + 2;
+        for (int i = 0; i < CAMERA_SLOTS; i++) vt[i] = i == 0xd8 / 8 ? camera_absent_fn : camera_unavailable_fn;
+        obj[0] = (uint64_t)(uintptr_t)vt;
+        *(uint64_t *)(uintptr_t)at = (uint64_t)(uintptr_t)obj;
+        rt_log("patches: no camera: the camera service is a stand-in whose requests fail (MKW_CAMERA_SKIP)");
+    }
+    rt_call(c, create, 3, ev, 0, 0);
+}
+
 void zstd_patch_hosts(uint64_t page);   // ov_zstd.c
 
 void rt_patch_hosts(void) {
@@ -315,6 +358,11 @@ void rt_patch_hosts(void) {
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_PROJ_HOST, host_ui_proj);
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_ROWS_HOST, host_ui_rows);
     if (g->npatch_sets) frame_rate_host(g->patch_page);
+    if (g->npatch_sets) rt_register_host(g->patch_page + CAMERA_EVENT_HOST, host_camera_event);
+    if (rt_version()->camera_service) {
+        camera_absent_fn = hostfn_register("camera: absent", camera_absent);
+        camera_unavailable_fn = hostfn_register("camera: unavailable", camera_unavailable);
+    }
 }
 
 void rt_patch_switch(int set, int on) {

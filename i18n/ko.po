@@ -1618,8 +1618,8 @@ msgid "Back"
 msgstr "뒤로"
 
 msgctxt "UI_LAUNCH_FILES_READY"
-msgid "Game files ready (version 1.0.0)"
-msgstr "게임 파일 준비 완료(버전 1.0.0)"
+msgid "Game files ready (version 1.0.0 or 1.8.0)"
+msgstr "게임 파일 준비 완료(버전 1.0.0/1.8.0)"
 
 msgctxt "UI_LAUNCH_FILES_MISSING"
 msgid "Game files not set up"
@@ -1631,12 +1631,12 @@ msgstr "게임 폴더"
 
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0, dumped "
-"from your console (the exefs and romfs folders). The setup checks its version, builds the game "
-"code on this computer and translates the shaders."
+"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
+"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
+"game code on this computer and translates the shaders."
 msgstr ""
-"이 게임은 포트에 포함되어 있지 않습니다. 본인의 콘솔에서 덤프한 Mario Kart World 1.0.0 사본(exefs와 romfs 폴더)이 필요합니다. 설정 과정에서 "
-"버전을 확인하고, 이 컴퓨터에서 게임 코드를 빌드하고, 셰이더를 변환합니다."
+"이 게임은 포트에 포함되어 있지 않습니다. 본인의 콘솔에서 덤프한 Mario Kart World 1.0.0/1.8.0 사본(exefs와 romfs 폴더)이 필요합니다. 설정 "
+"과정에서 버전을 확인하고, 이 컴퓨터에서 게임 코드를 빌드하고, 셰이더를 변환합니다."
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -1700,8 +1700,9 @@ msgstr "%s 파일이 암호화되어 있습니다. 게임의 exefs를 복호화�
 
 #. %s: the build id of the player's exefs/main (hexadecimal).
 msgctxt "UI_SETUP_ERR_VERSION"
-msgid "the game is not Mario Kart World 1.0.0 (build id %s): only 1.0.0 is supported"
-msgstr "게임이 Mario Kart World 1.0.0이 아닙니다 (빌드 ID %s). 1.0.0만 지원됩니다"
+msgid ""
+"the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
+msgstr "게임이 Mario Kart World 1.0.0/1.8.0이 아닙니다 (빌드 ID %s). 1.0.0/1.8.0만 지원됩니다"
 
 #. %s: how many files the player's RomFS has.
 msgctxt "UI_SETUP_ERR_ROMFS"

@@ -41,7 +41,7 @@ NEW_LABELS = {
 TEXT = {
     "empty": "This issue has no details to act on, so it is closed. Please open a new one with the "
     "[bug report form]({repo_url}/issues/new?template=bug_report.yml) and attach `logs/mkw.log`.",
-    "game": "Only Mario Kart World 1.0.0 dumped from your own console is supported; issues about obtaining the game, "
+    "game": "Only Mario Kart World 1.0.0 or 1.8.0 dumped from your own console is supported; issues about obtaining the game, "
     "its files or keys are closed.",
     "logs": "Thanks for the report. To find the cause we need the log: please attach `logs/mkw.log` from the game "
     "folder (or `logs/setup.log` if the setup failed) by dragging it into a comment. Without it this issue is closed "

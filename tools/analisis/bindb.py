@@ -1,4 +1,5 @@
-"""Build build/bindb.sqlite: functions, symbols, imports, calls, data references and strings of main, sdk and subsdk0.
+"""Build build/bindb.sqlite: functions, symbols, imports, calls, data references and strings of every module of the ExeFS
+(main, subsdk0, sdk; 1.8.0 adds subsdk1).
 
 Why: answering "who calls this", "what does this function use", "where is this string used" from a database costs a
 few lines of output; reading disassembly costs thousands. Addresses are the ones the generator and the runtime use
@@ -34,9 +35,9 @@ from layout import layout
 from module import Module
 from nso import R_AARCH64_ABS64, R_AARCH64_GLOB_DAT, R_AARCH64_JUMP_SLOT, R_AARCH64_RELATIVE
 from nvn2_procs import procs
+from versions import modules as exefs_modules
 
 DEFAULT_EXEFS = Path(os.environ.get("MKW_GAME", "game")) / "exefs"
-MODULES = ("main", "sdk", "subsdk0")
 LOOKAHEAD = 4  # instructions after an ADRP searched for the ADD/LDR that completes the address
 STRING = re.compile(rb"[\x20-\x7e\t\n]{4,}\x00")
 
@@ -160,7 +161,7 @@ def build(exefs: Path, out: Path) -> None:
     out.unlink(missing_ok=True)
     db = sqlite3.connect(out)
     db.executescript(SCHEMA)
-    mods = {name: Module(name, exefs / name, bases[name], simd="c") for name in MODULES}
+    mods = {name: Module(name, exefs / name, bases[name], simd="c") for name in exefs_modules(exefs)}
     names = {s[0] for m in mods.values() for s in m.nso.syms if s[0]}
     pretty = demangle(sorted(names))
     exported = {}  # symbol name -> absolute address, to resolve imports across modules

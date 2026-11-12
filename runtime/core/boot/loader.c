@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "version.h"
 #include "host.h"
 #include "gamelib.h"
 #include "platform/platform.h"
@@ -666,7 +667,10 @@ int probe_loader(void) {
     const RtConfig *cfg = rt_config();
     hostfn_add_override(PROBE_SYMBOL, probe_override);
     ldr_load(cfg->exefs);
-    if (nmods != (int)(sizeof expect / sizeof *expect)) {
+    // The reference numbers are 1.0.0's; another version's are printed, not compared.
+    int ref = rt_version()->number == 100;
+    if (!ref) printf("probe-loader: no reference numbers for game version %s: printed, not checked\n", rt_version()->display);
+    if (ref && nmods != (int)(sizeof expect / sizeof *expect)) {
         printf("probe-loader: FAILED (%d modules, expected 3)\n", nmods);
         return 1;
     }
@@ -682,6 +686,7 @@ int probe_loader(void) {
                "%u\n", m->pub.name, (unsigned long long)m->pub.base, (unsigned long long)m->pub.size, m->init_off,
                (unsigned long long)(m->pub.init_array_size / 8), (unsigned long long)m->pub.init_array_size,
                m->imports, to, m->weak_unresolved);
+        if (!ref) continue;
         CHECK(!strcmp(m->pub.name, expect[i].name), "module %d is %s", i, m->pub.name);
         CHECK(m->imports == expect[i].imports && m->weak_unresolved == expect[i].weak &&
               !memcmp(m->import_to, expect[i].to, sizeof m->import_to), "%s import table differs from MKW 1.0.0's",
@@ -698,8 +703,8 @@ int probe_loader(void) {
                (unsigned long long)m->kinds[K_ABS64], (unsigned long long)m->kinds[K_GLOB_DAT],
                (unsigned long long)m->kinds[K_JUMP_SLOT], (unsigned long long)total,
                (unsigned long long)m->sym_import, (unsigned long long)m->sym_own);
-        CHECK(!memcmp(m->kinds, expect[i].kinds, sizeof m->kinds) && total == expect[i].total &&
-              m->sym_import == expect[i].sym_import && m->sym_own == expect[i].sym_own,
+        CHECK(!ref || (!memcmp(m->kinds, expect[i].kinds, sizeof m->kinds) && total == expect[i].total &&
+              m->sym_import == expect[i].sym_import && m->sym_own == expect[i].sym_own),
               "%s relocations differ from MKW 1.0.0's", m->pub.name);
     }
     printf("constructors:\n");

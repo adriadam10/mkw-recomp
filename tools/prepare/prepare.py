@@ -7,7 +7,8 @@ order follows totk-pc-recomp's installer (docs/installer.md, MIT): check before 
 cancelled or failed run resumes from the last finished step.
 
 Steps, into --game (the folder of mkw / mkw.exe):
-  check     exefs/main is MKW 1.0.0 (NSO build id), the RomFS has at least 95 % of its 205 660 files
+  check     exefs/main is a version of MKW the port knows (NSO build id, recomp/versions.py: 1.0.0, 1.8.0), the RomFS
+            has at least 95 % of that version's files (1.0.0: 205 660)
   exefs     exefs/ copied (40 MB)
   romfs     romfs/ copied (23 GB), or --romfs link: its path written to mkw.ini (romfs = ...)
   generate  recomp/gen.py: the game code as C, in <game>/setup-work
@@ -62,8 +63,7 @@ from machine import (
 import update  # (ca_file)
 
 PREP_VERSION = 1  # bump when a step's output changes meaning: every step runs again
-MAIN_BUILD_ID = "9e244438c3d8ef1c"  # MKW 1.0.0 exefs/main, the first 8 bytes of the NSO build id at 0x40
-ROMFS_FILES = 205_660  # files of the 1.0.0 RomFS (06/11/2026)
+from versions import Version, detect, main_build_id  # (build build.py put recomp/ on the path)
 ROMFS_MARGIN = 0.95  # a few short still passes: some dumping tools skip empty files
 STEPS = ("check", "exefs", "romfs", "generate", "compile", "shaders", "warm", "cleanup")
 WARM_SECONDS = 60  # the driver cache is saved every 20 s and the pipeline keys every 2 (vk_pipeline.c, vk_pipe_keys.c)
@@ -88,19 +88,22 @@ def count_files(top: Path, enough: int) -> int:
     return n
 
 
-def check(src: Path) -> tuple[Path, Path]:
+def check(src: Path) -> tuple[Path, Path, Version]:
     exefs, romfs = find_game(src)
-    head = (exefs / "main").read_bytes()[:0x48]
-    if head[:4] != b"NSO0":
-        raise Failed(f"{exefs / 'main'} is not an NSO: decrypted exefs needed", "encrypted", str(exefs / "main"))
-    got = head[0x40:0x48].hex()
-    if got != MAIN_BUILD_ID:
-        raise Failed(f"exefs/main is not Mario Kart World 1.0.0 (build id {got})", "version", got)
-    need = int(ROMFS_FILES * ROMFS_MARGIN)
+    try:
+        got = main_build_id(exefs)
+    except ValueError:
+        raise Failed(f"{exefs / 'main'} is not an NSO: decrypted exefs needed", "encrypted", str(exefs / "main")) from None
+    try:
+        v = detect(exefs)
+    except ValueError as e:
+        raise Failed(str(e), "version", got) from None
+    need = int(v.romfs_files * ROMFS_MARGIN)
     n = count_files(romfs, need)
     if n < need:
-        raise Failed(f"the RomFS has {n} files, 1.0.0 has {ROMFS_FILES}: an incomplete copy", "romfs", str(n))
-    return exefs, romfs
+        raise Failed(f"the RomFS has {n} files, {v.name} has {v.romfs_files}: an incomplete copy", "romfs", str(n))
+    emit("version", v.name)
+    return exefs, romfs, v
 
 
 # ---- copies
@@ -156,10 +159,10 @@ def run(cmd: list[str], env: dict[str, str] | None = None, progress_prefix: str 
         raise Failed(f"{Path(cmd[1] if len(cmd) > 1 else cmd[0]).name} failed: {' / '.join(tail)}")
 
 
-def generate(exefs: Path, work: Path, jobs: int) -> None:
+def generate(exefs: Path, work: Path, jobs: int, v: Version) -> None:
     gen = work / "generated"
     run([sys.executable, str(ROOT / "recomp/gen.py"), "--exefs", str(exefs), "--out", str(gen), "--jobs", str(jobs),
-         "--patches", str(ROOT / "recomp/patches-mkw.txt")])  # fmt: skip
+         "--patches", str(v.patches)])  # fmt: skip
 
 
 def code_key(files: list[Path]) -> str:
@@ -171,7 +174,7 @@ def code_key(files: list[Path]) -> str:
     return h.hexdigest()[:16]
 
 
-GENERATOR = [*sorted((ROOT / "recomp").glob("*.py")), ROOT / "recomp/patches-mkw.txt"]
+GENERATOR = [*sorted((ROOT / "recomp").glob("*.py")), *sorted((ROOT / "recomp").glob("patches-mkw*.txt"))]  # each version's table
 COMPILER = [*GENERATOR, ROOT / "tools/build/build.py", Path(__file__).with_name("gamecode.py")]
 
 
@@ -300,13 +303,13 @@ def main() -> None:
     try:
         emit("step", "check")
         cc = args.cc.split() if args.cc else default_cc(game, args.target)
-        exefs_src, romfs_src = check(src)
+        exefs_src, romfs_src, version = check(src)
         romfs = game / "romfs" if args.romfs == "copy" else romfs_src
         keys = {
             "exefs": str(exefs_src),
             "romfs": f"{args.romfs} {romfs_src}",
-            "generate": f"{build.game_id()} {exefs_src} {code_key(GENERATOR)}",
-            "compile": f"{build.game_id()} {exefs_src} {args.target} {code_key(COMPILER)}",
+            "generate": f"{build.game_id()} {exefs_src} {version.name} {code_key(GENERATOR)}",
+            "compile": f"{build.game_id()} {exefs_src} {version.name} {args.target} {code_key(COMPILER)}",
             "shaders": f"{exefs_src} {romfs_src} {translator_key()}",
             "warm": f"{build.game_id()} {romfs_src}",
         }
@@ -327,12 +330,12 @@ def main() -> None:
                 copy_tree(exefs_src, game / "exefs", sum(1 for p in exefs_src.iterdir() if p.is_file()))
             elif step == "romfs":
                 if args.romfs == "copy":
-                    copy_tree(romfs_src, romfs, ROMFS_FILES)
+                    copy_tree(romfs_src, romfs, version.romfs_files)
                     ini_set(game / "mkw.ini", "romfs", "romfs")
                 else:
                     ini_set(game / "mkw.ini", "romfs", str(romfs_src))
             elif step == "generate":
-                generate(game / "exefs", work, jobs)
+                generate(game / "exefs", work, jobs, version)
             elif step == "compile":
                 compile_game(game, game / "exefs", work, cc, args.target, jobs)
             elif step == "shaders":

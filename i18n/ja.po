@@ -1602,8 +1602,8 @@ msgid "Back"
 msgstr "もどる"
 
 msgctxt "UI_LAUNCH_FILES_READY"
-msgid "Game files ready (version 1.0.0)"
-msgstr "ゲームファイルの準備完了（バージョン 1.0.0）"
+msgid "Game files ready (version 1.0.0 or 1.8.0)"
+msgstr "ゲームファイルの準備完了（バージョン 1.0.0/1.8.0）"
 
 msgctxt "UI_LAUNCH_FILES_MISSING"
 msgid "Game files not set up"
@@ -1615,12 +1615,12 @@ msgstr "ゲームフォルダー"
 
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0, dumped "
-"from your console (the exefs and romfs folders). The setup checks its version, builds the game "
-"code on this computer and translates the shaders."
+"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
+"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
+"game code on this computer and translates the shaders."
 msgstr ""
 "このポートにゲーム本体は含まれていません。お持ちのSwitch 2からダンプしたMario Kart World "
-"1.0.0（exefsとromfsフォルダー）が必要です。準備では、バージョンの確認、このコンピューター上でのゲームコードのビルド、シェーダーの変換を行います。"
+"1.0.0/1.8.0（exefsとromfsフォルダー）が必要です。準備では、バージョンの確認、このコンピューター上でのゲームコードのビルド、シェーダーの変換を行います。"
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -1684,8 +1684,9 @@ msgstr "%sは暗号化されています。ゲームのexefsは復号されて�
 
 #. %s: the build id of the player's exefs/main (hexadecimal).
 msgctxt "UI_SETUP_ERR_VERSION"
-msgid "the game is not Mario Kart World 1.0.0 (build id %s): only 1.0.0 is supported"
-msgstr "Mario Kart World 1.0.0ではありません（build id %s）。対応しているのは1.0.0のみです"
+msgid ""
+"the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
+msgstr "Mario Kart World 1.0.0/1.8.0ではありません（build id %s）。対応しているのは1.0.0/1.8.0のみです"
 
 #. %s: how many files the player's RomFS has.
 msgctxt "UI_SETUP_ERR_ROMFS"

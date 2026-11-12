@@ -17,18 +17,17 @@
 #include "nvn_api.h"
 #include "vk.h"
 #include "platform/platform.h"
+#include "version.h"
 
 #define SYM_INIT_START "_ZN2nn4init5StartEmmPFvvES2_S2_"
-// MKW 1.0.0's first nvnBootstrapLoader call (main+0xcf3a5c) (graphics bring-up in main+0xcf39b4). MKW does
-// not call SetFocusHandlingMode before it (its calls sit at main+0x1d5a44 and main+0xc782e0), so that checkpoint is
-// only logged when it comes.
-#define NVN_RET 0xcf3a60ull   // return address: the call (bl) sits at main+0xcf3a5c
+// The first nvnBootstrapLoader call (version.c nvn_ret: 1.0.0 main+0xcf3a5c in the graphics bring-up main+0xcf39b4,
+// 1.8.0 main+0xdd07c8 in main+0xdd0720). MKW 1.0.0 does not call SetFocusHandlingMode before it (its calls sit at
+// main+0x1d5a44 and main+0xc782e0), so that checkpoint is only logged when it comes.
 #define CTOR_DONE 2                      // a module's constructor flag after its DT_INIT ran the init_array
 
-// The init_array sizes of MKW 1.0.0 (DT_INIT_ARRAYSZ, measured by --probe-loader); a different count means a
-// different game build.
-typedef struct { const char *name; uint64_t entries; } InitCount;
-static const InitCount expected_inits[] = {{"main", 2866}, {"subsdk0", 4}, {"sdk", 86}};
+// The init_array sizes of the game version (version.c inits: DT_INIT_ARRAYSZ, measured by --probe-loader on 1.0.0,
+// read from the NSOs for 1.8.0); a different count means a different game build. Every module of the version runs
+// its DT_INIT, in load order (1.8.0: main, subsdk0, subsdk1, sdk).
 
 static volatile int32_t inits_done, checkpoint_seen;
 uint64_t rt_guest_start_ns;
@@ -68,7 +67,9 @@ static void cb_loader_ready(Cpu *c) {
 // afterwards (MacNativeGames loader.c:458-462).
 static void cb_module_inits(Cpu *c) {
     if (plat_cas32(&inits_done, 0, 0)) rt_fatal("boot: module constructors requested twice");
-    for (unsigned k = 0; k < sizeof expected_inits / sizeof *expected_inits; k++) {
+    const RtInitCount *expected_inits = rt_version()->inits;
+    int nmods = 0;
+    for (unsigned k = 0; k < RT_MAX_MODULES && expected_inits[k].name; k++, nmods++) {
         const RtLoaded *m = module_named(expected_inits[k].name);
         uint64_t entries = m->init_array_size / 8;
         if (!m->init) rt_fatal("boot: %s has no DT_INIT", m->name);
@@ -81,6 +82,8 @@ static void cb_module_inits(Cpu *c) {
             rt_fatal("boot: %s has %llu init_array entries, this game version has %llu", m->name, (unsigned long long)entries,
                      (unsigned long long)expected_inits[k].entries);
     }
+    if (nmods != ldr_count())
+        rt_fatal("boot: %d modules loaded, game version %s has %d", ldr_count(), rt_version()->display, nmods);
     plat_xchg32(&inits_done, 1);
 }
 
@@ -108,9 +111,10 @@ void rt_boot_event(const char *what, Cpu *c, const char *detail) {
         return;
     }
     if (!strcmp(what, "nvn")) {
-        if (ret != main_mod->base + NVN_RET)
+        uint64_t nvn_ret = rt_version()->nvn_ret;
+        if (ret != main_mod->base + nvn_ret)
             rt_fatal("boot: first NVN call %s(\"%s\") from %s, expected main+%#llx", "nvnBootstrapLoader", detail, at,
-                     (unsigned long long)NVN_RET);
+                     (unsigned long long)nvn_ret);
         if (!plat_cas32(&inits_done, 0, 0)) rt_fatal("boot: first NVN call before DT_INIT");
         rt_logf("boot: first NVN call nvnBootstrapLoader(\"%s\") from main+%#llx\n", detail,
                (unsigned long long)(ret - main_mod->base));

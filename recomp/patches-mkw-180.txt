@@ -1,0 +1,134 @@
+# Code patches of MKW 1.8.0 (exefs/main build id d00e4f399e411d06; recomp/versions.py). The same sets as
+# recomp/patches-mkw.txt (1.0.0), found again in this executable; that file says what each set does and why.
+# Sets of 1.0.0 not here yet: aspect, shadow and seed (their switches have no effect on 1.8.0).
+#
+# Spin waits (tools/cpu/spin_waits.py --modules main,subsdk0,subsdk1,sdk, 11/11/2026).
+# main: 81 spin waits
+spin main e9a08 e9a08 e9a0c   # 2 instructions; loads
+spin main ed2e4 ed358   # 17 instructions; stc
+spin main 45c71c 45c724   # 3 instructions; loads
+spin main 45e230 45e238   # 3 instructions; loads
+spin main 45e9d0 45e9d8   # 3 instructions; loads
+spin main 46020c 460214   # 3 instructions; loads
+spin main 46032c 460334   # 3 instructions; loads
+spin main 460a20 460a28   # 3 instructions; loads
+spin main 464f4c 464f54   # 3 instructions; loads
+spin main 465068 465070   # 3 instructions; loads
+spin main 465760 465768   # 3 instructions; loads
+spin main 466580 466588   # 3 instructions; loads
+spin main 4671b0 4671b8   # 3 instructions; loads
+spin main 478088 4780d8   # 7 instructions; loads
+spin main 4780e4 478134   # 7 instructions; loads
+spin main 47813c 47818c   # 7 instructions; loads
+spin main 564880 564a6c   # 10 instructions; loads
+spin main 707e54 707e74 707ea0 707f30 707f70   # 19 instructions; loads
+spin main 709884 7098d4 709900 709a3c   # 16 instructions; loads
+spin main 70994c 70996c 709998 7099e0   # 16 instructions; loads
+spin main 7ef934 7ef940   # 4 instructions; loads
+spin main 7f73e4 7f743c   # 14 instructions; loads
+spin main a19cac a19cd4   # 3 instructions; loads
+spin main a5ac10 a5acac   # 23 instructions; loads
+spin main a5b2f0 a5b38c   # 23 instructions; loads
+spin main de16bc de16c4   # 3 instructions; loads
+spin main de2bf0 de2bf8   # 3 instructions; loads
+spin main eddb8c eddbc4   # 5 instructions; loads
+spin main ffeca0 ffecb8   # 7 instructions; loads
+spin main 1095060 1095194   # 17 instructions; loads
+spin main 109e04c 109e064 109e080   # 13 instructions; loads
+spin main 1153fc8 115407c   # 19 instructions; stc
+spin main 1615634 1615648 1615688   # 10 instructions; loads
+spin main 16b1440 16b14a4   # 9 instructions; loads
+spin main 16c1104 16c115c   # 14 instructions; loads
+spin main 170005c 17001b4 17001bc 17001c4   # 13 instructions; stc
+spin main 1716080 1716090   # 5 instructions; loads
+spin main 1891ea4 1891eb0   # 4 instructions; loads
+spin main 1a049ec 1a04a00   # 6 instructions; loads
+spin main 1a8c028 1a8c0c4   # 6 instructions; loads
+spin main 1ae2228 1ae22c4   # 6 instructions; loads
+spin main 1b542e8 1b542f4 1b54310   # 11 instructions; loads
+spin main 1b56540 1b5654c 1b56554   # 6 instructions; loads
+spin main 1b5662c 1b56638 1b56640   # 6 instructions; loads
+spin main 1b727c0 1b727fc 1b72864   # 18 instructions; loads
+spin main 1b838ac 1b838bc   # 5 instructions; loads
+spin main 2251424 2251460   # 10 instructions; loads
+spin main 249696c 2496994   # 3 instructions; loads
+spin main 262d1c8 262d1f0   # 3 instructions; loads
+spin main 2663ae0 2663ae8   # 3 instructions; loads
+spin main 2695a44 2695a5c   # 7 instructions; loads
+spin main 26f6fe4 26f702c   # 3 instructions; loads
+spin main 27004fc 2700564   # 8 instructions; loads
+spin main 2700648 27006b0   # 8 instructions; loads
+spin main 270cfd8 270cff8   # 4 instructions; loads
+spin main 270d0bc 270d0dc   # 4 instructions; loads
+spin main 28cbf60 28cbf68   # 3 instructions; loads
+spin main 28cd130 28cd138   # 3 instructions; loads
+spin main 28cd618 28cd620   # 3 instructions; loads
+spin main 28cdff0 28cdff8   # 3 instructions; loads
+spin main 28ce0ac 28ce0b4   # 3 instructions; loads
+spin main 28ce138 28ce140   # 3 instructions; loads
+spin main 28ce838 28ce840   # 3 instructions; loads
+spin main 28ce920 28ce928   # 3 instructions; loads
+spin main 28cf0f4 28cf0fc   # 3 instructions; loads
+spin main 28cf224 28cf22c   # 3 instructions; loads
+spin main 28cf328 28cf330   # 3 instructions; loads
+spin main 28cf510 28cf518   # 3 instructions; loads
+spin main 28cf608 28cf610   # 3 instructions; loads
+spin main 28d0aec 28d0af4   # 3 instructions; loads
+spin main 28d0bb0 28d0bb8   # 3 instructions; loads
+spin main 28d0d38 28d0d40   # 3 instructions; loads
+spin main 28d2444 28d244c   # 3 instructions; loads
+spin main 28d24f8 28d2500   # 3 instructions; loads
+spin main 28d34e4 28d34ec   # 3 instructions; loads
+spin main 28d35b4 28d35bc   # 3 instructions; loads
+spin main 28d752c 28d7534   # 3 instructions; loads
+spin main 28d7d98 28d7da0   # 3 instructions; loads
+spin main 28d7e28 28d7e30   # 3 instructions; loads
+spin main 28e382c 28e3838 28e3878   # 20 instructions; loads
+spin main 2979400 2979404   # 2 instructions; loads
+# subsdk0: 2 spin waits
+spin subsdk0 80f40 80f4c   # 4 instructions; loads
+spin subsdk0 82384 82394   # 5 instructions; loads
+# subsdk1: 10 spin waits
+spin subsdk1 14160 14210 14250 14268   # 16 instructions; loads
+spin subsdk1 1c880 1c8a8   # 11 instructions; loads
+spin subsdk1 1cad4 1caf8   # 10 instructions; loads
+spin subsdk1 386a0 386d0   # 5 instructions; loads
+spin subsdk1 38724 387a4   # 5 instructions; loads
+spin subsdk1 3bf88 3bfa8   # 9 instructions; loads
+spin subsdk1 3c008 3c028   # 9 instructions; loads
+spin subsdk1 3f640 3f644   # 2 instructions; loads
+spin subsdk1 3f670 3f6f0   # 11 instructions; loads
+spin subsdk1 21350c 213514   # 3 instructions; loads
+# sdk: 4 spin waits
+spin sdk 27aa30 27aa38   # 3 instructions; loads
+spin sdk 349840 349850   # 5 instructions; loads
+spin sdk 5ce968 5ce980   # 7 instructions; loads
+spin sdk 70c68c 70c7b8 70c7c8   # 32 instructions; loads
+
+# zstd on the host's libzstd (runtime/sdk/ov/ov_zstd.c). main+0xe2280 is ZSTD_decompressMultiFrame: the only function
+# with both frame magics (0xfd2fb528, 0x184d2a50); main+0xe1c60, the one-shot wrapper (0xd0 bytes, the call at +0x94 as
+# 1.0.0's main+0x407d34), and main+0xf0a10 call it.
+set zstd MKW_ZSTD_NATIVE 1
+site zstd main e1cf4 94000163 94dc3cbf   # bl ZSTD_decompressMultiFrame -> host_multiframe (patch page + 0xff0)
+site zstd main f0c34 97ffc593 94dc00ef   # same
+# The loads stream: main+0xdeca0 (stream, src, size, ddict), the same object layout as 1.0.0's main+0x6532b4 (state
+# byte, +0x10 room, +0x14 left, +0x20 staging, +0x28/+0x2c staging size and bytes, +0x30 DCtx), feeds chunks to
+# ZSTD_decompressContinue (main+0xdf000, reads the DCtx's +0x7068); its only call is from main+0xdec20.
+site zstd main dec5c 94000011 94dc48e1   # bl main+0xdeca0 -> host_stream (patch page + 0xfe0)
+
+# The game's output size: 2560 | 1440 << 32 built in x10 in main+0xb879f0 (the only mov #0xa00 / movk #0x5a0, lsl #32
+# pair of main), as in 1.0.0's GraphicsSystem constructor. x10 is not read between the two.
+set output MKW_OUTPUT_PATCH 0
+site output main b87b9c d281400a @page:x10 f947e94a   # mov x10, #0xa00 -> adrp x10, page; ldr x10, [x10, #0xfd0]
+site output main b87ba8 f2c0b40a d503201f            # movk x10, #0x5a0, lsl #32 -> nop
+
+# No camera (new in 1.8.0, GameChat's USB camera): main+0xcdebc0 opens the camera service (nn::camera::sdk::
+# CreateCameraContext, then CMIF requests on the handle it returns) and aborts when that fails; this runtime has no
+# console services. Its caller main+0xcdc2f0 ignores its result, and the camera functions it sets up only run once a
+# chat turns a camera on (nn::chat never starts here, runtime/sdk/ov/ov_chat.c): skipping the call leaves the game as on
+# a console with no camera attached. MKW_CAMERA_SKIP=0 runs it (and stops at the abort).
+set camera MKW_CAMERA_SKIP 1
+site camera main cdc344 94000a1f d503201f   # bl main+0xcdebc0 -> nop
+# The next call, main+0xcdc560, asks the camera service (the object main+0xcdebc0 made) for its event and attaches it
+# to the SystemEventType at x0 (x19+0x180): host_camera_event (patches.c) makes that a real event that never fires.
+site camera main cdc34c 94000085 94ac5301   # bl main+0xcdc560 -> host_camera_event (patch page + 0xf50)

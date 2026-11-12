@@ -1,8 +1,9 @@
 // nn::codec's video decoder API (VP9) and nn::syncpt's sync point events, replaced by name on the host with libvpx.
 //
-// MKW plays its movies (romfs/Movie/*.webm: ad boards, cup openings) through its own player in main (main+0x19e5860
-// and the per-codec wrappers main+0x19e7830..0x19e8110), which calls the SDK's video API
-// directly; TotK went through movie::Decoder instead. The SDK's version talks to the gsv / vdecsvc
+// MKW 1.0.0 plays its movies (romfs/Movie/*.webm: ad boards, cup openings) through its own player in main
+// (main+0x19e5860 and the per-codec wrappers main+0x19e7830..0x19e8110), which calls the SDK's video API
+// directly; TotK went through movie::Decoder instead, and so does MKW 1.8.0 (subsdk0's movie library, with the newer
+// names of the API registered at the end of this file). The SDK's version talks to the gsv / vdecsvc
 // services, which this runtime does not have (no emulation below the API).
 //
 // What the player does (measured in its code):
@@ -514,10 +515,11 @@ static void ov_vp9_release(Cpu *c) {
 }
 
 // Result GetVp9DecoderOutputBufferProperties(u16 *w, u16 *h, u16 *, u16 *, ColorSpace *, TimeSpan *pts, bool *eos,
-// Vp9DecoderType *, unsigned slot)
-static void ov_vp9_props(Cpu *c) {
-    Dec *d = dec_of(c, 7);
-    uint32_t slot = (uint32_t)arg_x(c, 8);
+// Vp9DecoderType *, unsigned slot); 1.8.0's SDK has no ColorSpace * (cs < 0): every later argument moves up one.
+static void vp9_props(Cpu *c, int cs) {
+    int k = cs < 0 ? -1 : 0;
+    Dec *d = dec_of(c, 7 + k);
+    uint32_t slot = (uint32_t)arg_x(c, 8 + k);
     plat_mutex_lock(&lock);
     const Frame *f = slot < MAX_SLOTS ? frame_of(d, d->slot_ord[slot]) : NULL;
     uint16_t w = f ? f->w : 0, h = f ? f->h : 0;
@@ -525,10 +527,56 @@ static void ov_vp9_props(Cpu *c) {
           (unsigned long long)(slot < MAX_SLOTS ? d->slot_ord[slot] : 0), f ? "decoded" : "missing");
     *(uint16_t *)arg_p(c, 0) = w, *(uint16_t *)arg_p(c, 1) = h;
     *(uint16_t *)arg_p(c, 2) = w, *(uint16_t *)arg_p(c, 3) = h;
-    *(uint32_t *)arg_p(c, 4) = 0;
-    *(int64_t *)arg_p(c, 5) = f ? f->pts : 0;
-    *(uint8_t *)arg_p(c, 6) = f ? f->eos : 0;
+    if (cs >= 0) *(uint32_t *)arg_p(c, cs) = 0;
+    *(int64_t *)arg_p(c, 5 + k) = f ? f->pts : 0;
+    *(uint8_t *)arg_p(c, 6 + k) = f ? f->eos : 0;
     plat_mutex_unlock(&lock);
+    ret_x(c, 0);
+}
+static void ov_vp9_props(Cpu *c) { vp9_props(c, 4); }
+static void ov_vp9_props_180(Cpu *c) { vp9_props(c, -1); }
+
+// ---- 1.8.0's SDK: the movie library of subsdk0 (movie::detail, subsdk0+0xf770..0xff80) plays the movies instead of
+// main's own player, through newer names of the same calls; what they do here is the same.
+// Result InitializeVp9DecoderByRemoteMemory(Vp9DecoderType *, size_t, u16 w, u16 h, unsigned, in, out, OutputMode)
+static void ov_vp9_init_remote(Cpu *c) { vp9_init(c, arg_p(c, 0), (uint16_t)arg_x(c, 2), (uint16_t)arg_x(c, 3)); ret_x(c, 0); }
+// SystemEventType *GetVp9DecoderSubmissionReadyEvent(Vp9DecoderType *): the event itself (subsdk0+0x3430 keeps x0)
+static void ov_vp9_ready_event_180(Cpu *c) { ret_x(c, dec_of(c, 0)->ready_ev); }
+
+// Result ReadDecoderOutputImageRgba(const PoolType *, unsigned index, u16 x, u16 y, u16 w, u16 h, void *out,
+// size_t pitch, size_t size): the movie library's RGBA mode (its pool's format 2, subsdk0+0xf918: pitch w * 4). The
+// NV12 frame to RGBA8 with BT.709's limited-range matrix, the one VP9 movies are made with.
+static uint8_t clamp8(int v) { return (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v); }
+static void ov_read_rgba(Cpu *c) {
+    uint64_t pool = arg_x(c, 0);
+    uint32_t x0 = (uint16_t)arg_x(c, 2), y0 = (uint16_t)arg_x(c, 3), w = (uint16_t)arg_x(c, 4), h = (uint16_t)arg_x(c, 5);
+    uint8_t *out = arg_p(c, 6);
+    uint64_t pitch = arg_x(c, 7), size = arg_x(c, 8);
+    plat_mutex_lock(&lock);
+    int slot;
+    Dec *d = pool_owner(pool, &slot);
+    const Frame *f = d ? frame_of(d, d->slot_ord[slot]) : NULL;
+    TRACE(T_READ, "pool %#llx %ux%u at %u,%u: %s; rgba %p pitch %llu size %llu", (unsigned long long)pool, w, h, x0, y0,
+          !d ? "no decoder" : f ? "frame" : "no frame", (void *)out, (unsigned long long)pitch, (unsigned long long)size);
+    if (size) memset(out, 0, size);
+    if (f && f->w >= 1280) movie_at = frame_step_ticks() + 1;
+    if (f && f->w && f->h) {
+        uint32_t cw = (f->w + 1) / 2 * 2;
+        const uint8_t *uv = f->nv12 + (size_t)f->w * f->h;
+        for (uint32_t y = 0; y < h && y0 + y < f->h && (y + 1) * pitch <= size; y++) {
+            uint8_t *o = out + y * pitch;
+            const uint8_t *ly = f->nv12 + (size_t)(y0 + y) * f->w, *lc = uv + (size_t)((y0 + y) / 2) * cw;
+            for (uint32_t x = 0; x < w && x0 + x < f->w; x++) {
+                int Y = (ly[x0 + x] - 16) * 298, U = lc[(x0 + x) & ~1u] - 128, V = lc[(x0 + x) | 1u] - 128;
+                o[4 * x + 0] = clamp8((Y + 459 * V + 128) >> 8);
+                o[4 * x + 1] = clamp8((Y - 55 * U - 136 * V + 128) >> 8);
+                o[4 * x + 2] = clamp8((Y + 541 * U + 128) >> 8);
+                o[4 * x + 3] = 255;
+            }
+        }
+    }
+    plat_mutex_unlock(&lock);
+    if (size) nvn_guest_written((uintptr_t)out, size);   // as ov_read_nv12: the write watch does not see host writes
     ret_x(c, 0);
 }
 
@@ -611,6 +659,34 @@ HOST_OVERRIDE("_ZN2nn5codec20InitializeAv1DecoderEPNS0_14Av1DecoderTypeEmmttjNS0
 HOST_OVERRIDE("_ZN2nn5codec20InitializeVp8DecoderEPNS0_14Vp8DecoderTypeEmmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatE", ov_other_codec);
 HOST_OVERRIDE("_ZN2nn5codec20InitializeAv1DecoderEPNS0_14Av1DecoderTypeEPvmmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatE", ov_other_codec);
 HOST_OVERRIDE("_ZN2nn5codec20InitializeVp8DecoderEPNS0_14Vp8DecoderTypeEPvmmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatE", ov_other_codec);
+// bool nn::gs::TryWaitNativeSync(const NativeSyncHandle &) and nn::syncpt::sdk::TryWaitSyncPoint(const
+// SyncPointHandle &): 1.8.0's movie library polls an acquired frame's handle ({decoder id, frame ordinal}, as
+// ov_vp9_acquire hands it out) instead of waiting on its event; the SDK's versions reach the gs driver (a null pointer
+// from sdk+0x5ca424). Done when that frame is decoded, or its decoder is gone.
+static void ov_sync_trywait(Cpu *c) {
+    const uint64_t *h = arg_p(c, 0);
+    plat_mutex_lock(&lock);
+    Dec *d = dec_by_id((uint32_t)h[0]);
+    int done = !d || d->decoded >= h[1];
+    plat_mutex_unlock(&lock);
+    ret_x(c, done);
+}
+HOST_OVERRIDE("_ZN2nn2gs17TryWaitNativeSyncERKNS0_16NativeSyncHandleE", ov_sync_trywait);
+HOST_OVERRIDE("_ZN2nn6syncpt3sdk16TryWaitSyncPointERKNS1_15SyncPointHandleE", ov_sync_trywait);
+// 1.8.0's SDK (the movie library of subsdk0)
+HOST_OVERRIDE("_ZN2nn5codec25MakeDecodeImagePreferenceEttNS0_24VideoDecoderOutputFormatENS0_15ImageTilingModeE", ov_make_pref);
+HOST_OVERRIDE("_ZN2nn5codec26InitializeDecoderImagePoolEPNS0_25VideoDecoderImagePoolTypeEPvmRKNS0_27VideoDecoderImagePreferenceEj", ov_pool_init);
+HOST_OVERRIDE("_ZN2nn5codec26ReadDecoderOutputImageRgbaEPKNS0_25VideoDecoderImagePoolTypeEjttttPvmm", ov_read_rgba);
+HOST_OVERRIDE("_ZN2nn5codec36InitializeVp9DecoderByTransferMemoryEPNS0_14Vp9DecoderTypeEPvmmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatENS0_22VideoDecoderOutputModeE", ov_vp9_init_work);
+HOST_OVERRIDE("_ZN2nn5codec34InitializeVp9DecoderByRemoteMemoryEPNS0_14Vp9DecoderTypeEmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatENS0_22VideoDecoderOutputModeE", ov_vp9_init_remote);
+HOST_OVERRIDE("_ZN2nn5codec33GetVp9DecoderSubmissionReadyEventEPNS0_14Vp9DecoderTypeE", ov_vp9_ready_event_180);
+HOST_OVERRIDE("_ZN2nn5codec35GetVp9DecoderOutputBufferPropertiesEPtS1_S1_S1_PNS_8TimeSpanEPbPNS0_14Vp9DecoderTypeEj", ov_vp9_props_180);
+HOST_OVERRIDE("_ZN2nn5codec37InitializeH264DecoderByTransferMemoryEPNS0_15H264DecoderTypeEPvmmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatENS0_22VideoDecoderOutputModeEPKvm", ov_other_codec);
+HOST_OVERRIDE("_ZN2nn5codec35InitializeH264DecoderByRemoteMemoryEPNS0_15H264DecoderTypeEmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatENS0_22VideoDecoderOutputModeEPKvm", ov_other_codec);
+HOST_OVERRIDE("_ZN2nn5codec36InitializeAv1DecoderByTransferMemoryEPNS0_14Av1DecoderTypeEPvmmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatENS0_22VideoDecoderOutputModeE", ov_other_codec);
+HOST_OVERRIDE("_ZN2nn5codec34InitializeAv1DecoderByRemoteMemoryEPNS0_14Av1DecoderTypeEmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatENS0_22VideoDecoderOutputModeE", ov_other_codec);
+HOST_OVERRIDE("_ZN2nn5codec36InitializeVp8DecoderByTransferMemoryEPNS0_14Vp8DecoderTypeEPvmmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatENS0_22VideoDecoderOutputModeE", ov_other_codec);
+HOST_OVERRIDE("_ZN2nn5codec34InitializeVp8DecoderByRemoteMemoryEPNS0_14Vp8DecoderTypeEmttjNS0_23VideoDecoderInputFormatENS0_24VideoDecoderOutputFormatENS0_22VideoDecoderOutputModeE", ov_other_codec);
 HOST_OVERRIDE("_ZN2nn6syncpt3sdk20CreateSyncPointEventEPNS1_18SyncPointEventTypeE", ov_sp_create);
 HOST_OVERRIDE("_ZN2nn6syncpt3sdk21DestroySyncPointEventEPNS1_18SyncPointEventTypeE", ov_sp_destroy);
 HOST_OVERRIDE("_ZN2nn6syncpt3sdk25InitializeMultiWaitHolderEPNS_2os19MultiWaitHolderTypeEPNS1_18SyncPointEventTypeE", ov_sp_holder);

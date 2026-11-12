@@ -194,7 +194,7 @@ def everywhere(romfs: Path, exefs: Path, everything: bool = False):
 
     tops = [romfs] if everything else [romfs / d for d in SHADER_DIRS]
     files = [str(p) for top in tops for p in top.rglob("*") if p.is_file() and "Shader" not in p.parts]
-    files += [str(exefs / m) for m in ("main", "sdk", "subsdk0")]
+    files += [str(p) for p in sorted(exefs.glob("*")) if p.name in ("main", "sdk") or p.name.startswith("subsdk")]
     with ProcessPoolExecutor(os.cpu_count()) as pool:
         for found in pool.map(scan_one, files, chunksize=64):
             yield from found

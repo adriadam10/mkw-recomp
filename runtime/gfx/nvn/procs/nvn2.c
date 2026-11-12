@@ -2,7 +2,7 @@
 //
 // Two kinds:
 // - ProgramBuilder accessors are plain loads and stores on an object only the game touches, so the proc address handed
-//   out is the driver's own (recompiled) function, read from the sdk's proc table (nvn2_sdk_proc; offsets of MKW 1.0.0,
+//   out is the driver's own (recompiled) function, read from the sdk's proc table (nvn2_sdk_proc; offsets of each game version's sdk,
 //   as tools/gpu/nvn2_procs.py reads them). Device, queue and window objects hold the front's own state, so their new
 //   functions are host functions here.
 // - HDR, ray tracing and fast-clear registration are optional console features, off (README "Decisiones"): their
@@ -18,11 +18,15 @@
 #include "platform.h"
 #include "sha256.h"
 #include "nvn_tex.h"
+#include "version.h"
 
-#define SDK_NAME_POOL 0xb74c26ull      // names without "nvn", sorted (sdk+0x5b5a70, adrp/add x25)
-#define SDK_NAME_OFFSETS 0xb79b90ull   // u32 per entry (adrp/add x24)
-#define SDK_LAST_INDEX 0x2b9           // highest index of the driver's binary search
-#define SDK_POINTERS 0xd95168ull       // u64 per entry, relocated by the loader (sdk+0x5ffad0)
+// The driver's proc table, per sdk build (version.c, the rows of tools/gpu/nvn2_procs.py TABLES): the names without
+// "nvn", sorted, as u32 offsets from the name pool, the highest index of the driver's binary search, and the u64
+// pointers, relocated by the loader (1.0.0: sdk+0xb74c26, 0xb79b90, 0x2b9, 0xd95168 from sdk+0x5b5a70 and 0x5ffad0).
+#define SDK_NAME_POOL (rt_version()->sdk_name_pool)
+#define SDK_NAME_OFFSETS (rt_version()->sdk_name_offsets)
+#define SDK_LAST_INDEX (rt_version()->sdk_last_index)
+#define SDK_POINTERS (rt_version()->sdk_pointers)
 
 static uint64_t sdk_base(void) {
     for (int i = 0; i < ldr_count(); i++)
@@ -278,6 +282,11 @@ NVN2_IGNORED(nvnCommandBufferPopDebugGroupGraphics)
 NVN2_IGNORED(nvnCommandBufferPopDebugGroupCompute)
 NVN2_IGNORED(nvnCommandBufferInsertDebugMarkerGraphics)
 NVN2_IGNORED(nvnCommandBufferInsertDebugMarkerCompute)
+// New in 1.8.0's sdk (tools/gpu/gen_nvn2_procs.py): scheduling hints for the console's GPU, nothing a Vulkan queue
+// takes. The other procs new there keep their weak stub, which stops with the proc's name if the game calls it.
+NVN2_IGNORED(nvnCommandBufferSetGraphicsWorkloadPriority)
+NVN2_IGNORED(nvnCommandBufferSetComputeWorkloadPriority)
+NVN2_IGNORED(nvnCommandBufferSetResourceOccupancy)
 NVN2_IGNORED(nvnMultisampleStateSetCoverageTruncationEnable)
 NVN_API(nvnMultisampleStateGetCoverageTruncationEnable) { ret_x(c, 0); }
 // Variable rate shading (optional, off)
@@ -441,3 +450,53 @@ NVN_API(nvnDeviceGenerateDebugDomainId) {
     (void)c;
     ret_x(c, (uint64_t)plat_inc32(&next));
 }
+
+// ---------- Native images (NVN2 in 1.8.0's sdk): a texture over an image another service owns, here the GameChat
+// cameras (main+0xd32270: 384x216 RGBA8 sRGB, three per camera, from nn::chat::Get*CameraImageHandle). The game calls
+// these driver exports by name, not through GetProcAddress, and aborts when Initialize fails (main+0xd32338). No chat
+// is ever started (ov_chat.c), so each image is a texture of the camera's size with no storage, never sampled. The
+// handle carries that size (ov_chat.c: width << 16 | height).
+typedef struct { uint32_t magic, format, perm, handle; } nimage_t;
+void nvnp_nvnTextureInitialize(Cpu *c);   // nvn_api_obj.c
+#define NIMAGE_MAGIC 0x474d494eu   // "NIMG"
+static void nimg_defaults(Cpu *c) { memset(arg_p(c, 0), 0, sizeof(nimage_t)); }
+static void nimg_device(Cpu *c) { (void)c; }
+static void nimg_format(Cpu *c) { ((nimage_t *)arg_p(c, 0))->format = (uint32_t)arg_x(c, 1); }
+static void nimg_perm(Cpu *c) { ((nimage_t *)arg_p(c, 0))->perm = (uint32_t)arg_x(c, 1); }
+static void nimg_handle(Cpu *c) { ((nimage_t *)arg_p(c, 0))->handle = (uint32_t)arg_x(c, 1); }
+// NVNboolean nvnNativeImageInitialize(NVNnativeImage *, const NVNnativeImageBuilder *)
+static void nimg_init(Cpu *c) {
+    nimage_t *o = arg_p(c, 0);
+    *o = *(const nimage_t *)arg_p(c, 1);
+    o->magic = NIMAGE_MAGIC;
+    ret_x(c, 1);
+}
+static void nimg_fini(Cpu *c) { ((nimage_t *)arg_p(c, 0))->magic = 0; }
+// NVNboolean nvnTextureInitializeFromNativeImage(NVNtexture *, NVNnativeImage *): the front's own texture initialize
+// with a builder of that size and format and no storage.
+static void nimg_texture(Cpu *c) {
+    const nimage_t *n = arg_p(c, 1);
+    if (n->magic != NIMAGE_MAGIC) rt_fatal("nvn2: TextureInitializeFromNativeImage with an uninitialized native image");
+    static tex_builder_t b;   // the game thread only; Initialize copies it
+    memset(&b, 0, sizeof b);
+    b.d.swizzle_r = 2, b.d.swizzle_g = 3, b.d.swizzle_b = 4, b.d.swizzle_a = 5;
+    b.d.target = NVN_TEXTURE_TARGET_2D;
+    b.d.width = n->handle >> 16 ? n->handle >> 16 : 1;
+    b.d.height = n->handle & 0xffff ? n->handle & 0xffff : 1;
+    b.d.depth = b.d.levels = 1;
+    b.d.format = (int)n->format;
+    uint64_t x1 = c->x[1];
+    c->x[1] = (uint64_t)(uintptr_t)&b;
+    nvnp_nvnTextureInitialize(c);   // ret_x: 1
+    c->x[1] = x1;
+}
+HOST_OVERRIDE("_Z32nvnNativeImageBuilderSetDefaultsP21NVNnativeImageBuilder", nimg_defaults);
+HOST_OVERRIDE("_Z30nvnNativeImageBuilderSetDeviceP21NVNnativeImageBuilderP9NVNdevice", nimg_device);
+HOST_OVERRIDE("_Z30nvnNativeImageBuilderSetFormatP21NVNnativeImageBuilder9NVNformat", nimg_format);
+HOST_OVERRIDE("_Z40nvnNativeImageBuilderSetMemoryPermissionP21NVNnativeImageBuilder30NVNnativeImageMemoryPermission",
+              nimg_perm);
+HOST_OVERRIDE("_Z41nvnNativeImageBuilderSetNativeImageHandleP21NVNnativeImageBuilderN2nn2gs17NativeImageHandleE",
+              nimg_handle);
+HOST_OVERRIDE("_Z24nvnNativeImageInitializeP14NVNnativeImagePK21NVNnativeImageBuilder", nimg_init);
+HOST_OVERRIDE("_Z22nvnNativeImageFinalizeP14NVNnativeImage", nimg_fini);
+HOST_OVERRIDE("_Z35nvnTextureInitializeFromNativeImageP10NVNtextureP14NVNnativeImage", nimg_texture);

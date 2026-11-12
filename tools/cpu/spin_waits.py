@@ -408,12 +408,12 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--exefs', type=Path, required=True)
     ap.add_argument('--patches', type=Path, help='patch table whose sites stay out of regions')
-    ap.add_argument('--modules', default='main,subsdk0,sdk')
+    ap.add_argument('--modules', default='', help='default: every module of the ExeFS')
     args = ap.parse_args()
     sys.setrecursionlimit(20000)
     mods = layout(args.exefs)
     table = patches.load(args.patches, mods) if args.patches else patches.Table()
-    for name in args.modules.split(','):
+    for name in args.modules.split(',') if args.modules else [n for n, _, _ in mods]:
         n = Nso(str(args.exefs / name))
         img = bytes(n.image)
         touched = set(table.sites.get(name, {}))

@@ -32,6 +32,11 @@ all = ["is not Mario Kart World 1.0.0 (build id"]
 what = "the game copy is not version 1.0.0 (usually an update merged into the dump)"
 
 [[signature]]
+issue = 18
+all = ["is not a known version of Mario Kart World"]
+what = "the game copy is neither 1.0.0 nor 1.8.0 (another update merged into the dump)"
+
+[[signature]]
 issue = 83
 all = ["reading address 0xd8", "f_7002637e5c"]
 what = "the game window lost the focus during the boot, and the game read a manager it had not made yet"

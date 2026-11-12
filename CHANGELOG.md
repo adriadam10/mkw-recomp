@@ -4,6 +4,38 @@ Each version's section is that release's notes: `tools/build/notes.py` puts it i
 updating, known issues, reporting) for the GitHub release. A section has a summary paragraph, `### Changes` (each with
 its issue, #N), `### Tested` (what was run from the packages before publishing) and optionally `### Known issues`.
 
+## Unreleased
+
+Mario Kart World 1.8.0: the setup takes a 1.8.0 dump as well as 1.0.0 and builds that version.
+
+### Changes
+
+- **Game version 1.8.0** (#19): the setup recognises the dump by its `exefs/main` build id (`recomp/versions.py`) and
+  generates the game with that version's patch table (`recomp/patches-mkw-180.txt`: its spin waits, the native zstd
+  decoder and the output size); the runtime takes that version's fixed addresses from one table
+  (`runtime/core/boot/version.c`): the frame update and game clock (Settings > Screen > Frame rate), the zstd
+  functions, the NVN2 driver's proc table and its `nvnDeviceGetInteger` answers (API 231.39), the boot checkpoint and
+  the constructors of the new `subsdk1` module. The lifter learnt PACGA and FP16 FNEG/FABS, which 1.8.0's sdk uses.
+  On 1.8.0 the ultrawide aspect, the shadow map size and the fixed seed have no effect yet.
+- 1.8.0's first runs (11/11/2026, RTX 4070 Laptop, Windows): what stopped it, in order.
+  - The loader bound a module's references to symbols it defines itself to its own copy; rtld binds them to the first
+    definition in load order, so main's operator new/delete (sead's heaps) stand in for the sdk's. 1.8.0's main imports
+    the sdk's sized operator delete, which freed sead's blocks into the SDK heap (CentralHeap::Free).
+  - New SDK APIs the game calls at boot, which open console services: the Joy-Con 2 mouse and USB mouse (`nn::hid`
+    Jcms/Nmouse: none attached), GameChat (`nn::chat`: never started), its camera images (`nvnNativeImage*`: textures
+    with no storage), the USB camera (patch set `camera`: the service is a stand-in whose requests fail as a missing
+    camera), and the HDR metadata and VRR of `nn::vi` that the HDR support does not take (no VRR).
+  - The movies go through subsdk0's movie library in 1.8.0, with the newer `nn::codec` names, an RGBA read and
+    `nn::gs::TryWaitNativeSync`.
+  - The shader translator's indirect-branch lookup raised on an instruction without a destination register (DEPBAR.LE
+    before a BRX): two of 1.8.0's pixel shaders had no SPIR-V, and the GPU faulted (instruction pointer invalid) at
+    their first draw.
+  - A fatal stop at a guest instruction (undefined, brk) logs the guest's frame chain.
+
+### Tested
+
+- 1.8.0 on Windows (RTX 4070 Laptop, driver 610.47): boot, movies, the title, 7 minutes at ~0.95x without a stop, from
+  a build of this tree (not yet from a release package).
 ## 0.1.9
 
 HDR on HDR screens, the menus in 19 languages and the game itself in Catalan, Galician and Basque, 5.1 sound, and

@@ -177,3 +177,22 @@ HOST_OVERRIDE("_ZN2nn2vi21QueryDisplayHdrStatusEPbPNS0_15HdrOutputFormatEPtPKNS0
 HOST_OVERRIDE("_ZN2nn2vi25QueryDisplayHdrPaperWhiteEPtPKNS0_7DisplayE", ov_hdr_paper_white);
 HOST_OVERRIDE("_ZN2nn2vi52SetLayerNextHdrStandardContentLuminanceRangeMetadataEPNS0_5LayerEtt", ov_hdr_standard);
 HOST_OVERRIDE("_ZN2nn2vi52SetLayerNextHdrExtendedContentLuminanceRangeMetadataEPNS0_5LayerEtt", ov_hdr_extended);
+
+// ---- the rest of nn::vi's HDR metadata and VRR that 1.8.0 calls: the SDK's versions reach the vi2 layer object
+// behind nn::vi::Layer, which the layer made above does not have (1.8.0: a call through a null pointer from
+// main+0x959a44). The gamut, tone-mapping and Bezier metadata describe the game's next frame for the console's
+// display pipeline, which the HDR10 swapchain does not take; VRR: a display without it.
+static void ov_vi_nothing(Cpu *c) { ret_x(c, 0); }
+// Result QueryDisplayVrrSupported(bool *, const Display *)
+static void ov_vi_vrr(Cpu *c) {
+    uint8_t *b = arg_p(c, 0);
+    if (b) *b = 0;
+    ret_x(c, 0);
+}
+HOST_OVERRIDE("_ZN2nn2vi24QueryDisplayVrrSupportedEPbPKNS0_7DisplayE", ov_vi_vrr);
+HOST_OVERRIDE("_ZN2nn2vi23SetDisplayVrrCapabilityEPNS0_7DisplayEb", ov_vi_nothing);
+HOST_OVERRIDE("_ZN2nn2vi28SetLayerExtendedSwapIntervalEPNS0_5LayerEii", ov_vi_nothing);
+HOST_OVERRIDE("_ZN2nn2vi30ClearLayerExtendedSwapIntervalEPNS0_5LayerE", ov_vi_nothing);
+HOST_OVERRIDE("_ZN2nn2vi35SetLayerNextHdrContentGamutMetadataEPNS0_5LayerENS0_15HdrContentGamutE", ov_vi_nothing);
+HOST_OVERRIDE("_ZN2nn2vi39SetLayerNextHdrAdjustableBezierMetadataEPNS0_5LayerEfff", ov_vi_nothing);
+HOST_OVERRIDE("_ZN2nn2vi39SetLayerNextHdrToSdrToneMappingMetadataEPNS0_5LayerENS0_14HdrToneMappingE", ov_vi_nothing);

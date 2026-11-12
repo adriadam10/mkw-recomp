@@ -2,16 +2,18 @@
 #include <string.h>
 
 #include "host.h"
+#include "version.h"
 
-// The dump has no control.nacp, which the SDK reads the version from: MKW 1.0.0, the copy this build targets.
-#define DISPLAY_VERSION "1.0.0"
+// The dump has no control.nacp, which the SDK reads the version from: the version of the copy the game code was
+// generated from (version.c).
 
 // void nn::oe::GetDisplayVersion(DisplayVersion *out): char[16]
 static void ov_display_version(Cpu *c) {
     char *out = arg_p(c, 0);
     if (!out) return;
+    const char *v = rt_version()->display;
     memset(out, 0, 16);
-    memcpy(out, DISPLAY_VERSION, sizeof DISPLAY_VERSION);
+    memcpy(out, v, strlen(v) < 15 ? strlen(v) : 15);
 }
 
 // int nn::oe::GetCurrentGraphicsScale(): 10, 20 or 30 (eden-nx2 NX2_NOTES.md row 15); 10 until the scale is measured.

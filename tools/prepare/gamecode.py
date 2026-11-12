@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]  # the repository, or the package's setup/src
 sys.path.insert(0, str(ROOT / "tools/build"))
-import build  # (GEN_FLAGS, MODULES, module_glue, game_id: the same game code as build.py --dist)
+import build  # (GEN_FLAGS, gen_modules, module_glue, game_id: the same game code as build.py --dist)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from machine import Failed, crt_link, emit, package_dir
@@ -32,7 +32,7 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
         flags = [f.replace("-march=x86-64-v3", "-mcpu=x86_64_v3") for f in flags]
         flags += ["-Xclang", "-O1", "-fno-vectorize", "-fno-slp-vectorize", "-fomit-frame-pointer", "-g0",
                   "-fno-sanitize=all"]  # fmt: skip
-    srcs = sorted(p for mod in build.MODULES for p in (gen / mod).glob("*.c"))
+    srcs = sorted(p for mod in build.gen_modules(gen) for p in (gen / mod).glob("*.c"))
     obj.mkdir(parents=True, exist_ok=True)
     (obj / "modules.c").write_text(build.module_glue(gen, exefs, True))
     gid = f'-DRT_GAME_ID="{build.game_id()}"'

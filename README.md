@@ -2,7 +2,7 @@
 
 # mkw-recomp
 
-A static recompilation of *Mario Kart World* (Nintendo Switch 2, version 1.0.0) into a native PC program for Linux and
+A static recompilation of *Mario Kart World* (Nintendo Switch 2, versions 1.0.0 and 1.8.0) into a native PC program for Linux and
 Windows. It needs your own copy of the game, dumped from your own console: nothing of the game is in this repository
 or in its releases.
 
@@ -40,8 +40,9 @@ The main open work, in order; the details are in [docs/roadmap.md](docs/roadmap.
   validation errors.
 - **Every menu checked** against the console: mode, character and vehicle select are next.
 - **No GPU hangs** and less GPU memory, then loading without stutter and a Linux package for non-rolling distributions.
-- **Later game versions** (1.8.0 and others): planned after 1.0.0. Each is a different executable to recompile, and
-  since the game cannot be shared, it needs a contributor who owns that version ([#19](https://github.com/adriadam10/mkw-recomp/issues/19)).
+- **Later game versions**: 1.8.0 is set up from its own dump (first support, 11/11/2026: the ultrawide aspect, the
+  shadow map size and the fixed seed are 1.0.0 only for now). Each version is a different executable to recompile,
+  and since the game cannot be shared, it needs a contributor who owns that version ([#19](https://github.com/adriadam10/mkw-recomp/issues/19)).
 
 \* Measured on 09/11/2026 on our test machine: Radeon 660M APU (Ryzen 5 7535HS), Linux, 720p internal resolution.
 
@@ -64,7 +65,8 @@ but does not shorten them.
   <img src="docs/images/launcher-main.png" width="400" alt="The start screen once the game is set up">
 </p>
 
-1. Dump Mario Kart World 1.0.0 from your Switch 2 (`exefs/` and `romfs/`, decrypted).
+1. Dump Mario Kart World 1.0.0 or 1.8.0 from your Switch 2 (`exefs/` and `romfs/`, decrypted; 1.8.0 with the update
+   merged into the base game's RomFS).
 2. Download the launcher for your system from [Releases](https://github.com/adriadam10/mkw-recomp/releases): on Linux
    the `.AppImage` (it keeps the game it builds in `~/.local/share/mkw-recomp`; glibc 2.31 or newer: Debian 11,
    Ubuntu 20.04, SteamOS and later), on Windows the `.zip`, unpacked into a folder. Either needs about 30 GB free.
@@ -84,7 +86,7 @@ Linux, with `uv`, `clang`, `lld`, `ninja`, SDL3, Opus, libvpx, zstd, xxHash, the
 `MKW_GAME=<dir>`, then from the repo root:
 
 ```sh
-uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt
+uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt
 uv run tools/shaders/extract.py && uv run tools/shaders/translate.py
 uv run tools/build/build.py              # build/mkw; --target windows builds mkw.exe with llvm-mingw
 build/mkw
