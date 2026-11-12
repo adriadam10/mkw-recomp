@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "tools/prepare"))
 import prepare  # noqa: E402
 import spec  # noqa: E402
 import update  # noqa: E402
+from versions import VERSIONS  # noqa: E402  (build.py, imported by prepare, put recomp/ on the path)
 
 ODD = "Recomp C ñ"  # a space and an accent, as the players' folders have
 
@@ -91,3 +92,17 @@ def test_find_game_packages(tmp_path: Path) -> None:
     (tmp_path / "g.zip").write_bytes(b"PK\x03\x04" + bytes(60))
     with pytest.raises(prepare.Failed):
         prepare.find_game(tmp_path / "g.zip")
+
+
+@pytest.mark.parametrize("name", ["1.0.0", "1.8.0"])
+def test_check_package_source(tmp_path: Path, name: str) -> None:
+    # the setup from a .nup: check() reads exefs/main and the RomFS's file count from the package's table of
+    # contents (nothing extracted) and picks the version row (recomp/versions.py) by the build id
+    import test_nup
+
+    v = {x.name: x for x in VERSIONS}[name]
+    need = int(v.romfs_files * prepare.ROMFS_MARGIN)
+    main = b"NSO0" + b"\x00" * (0x40 - 4) + bytes.fromhex(v.main_build_id)
+    p = test_nup.write_nup(tmp_path, [test_nup.pkg(1, 0xE0000, 0x0400C3F00006E000, exefs=[("main", main, 0)],
+                                                      romfs=[(f"f{i}", b"", 0) for i in range(need)], flags=1)])
+    assert prepare.check(p, tmp_path) == (p, p, v)
