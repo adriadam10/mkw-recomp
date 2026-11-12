@@ -328,7 +328,9 @@ def brx_targets(insns: list[Insn], c1: bytes) -> set[int]:
         if i.op not in ("BRX", "BRXU"):
             continue
         ra, off = (i.v("URa"), i.sv("UR_offset")) if i.op == "BRXU" else (i.v("Ra"), i.sv("Ra_offset"))
-        src = next((p for p in reversed(insns[:k]) if p.v("Rd", None) == ra), None) if i.op == "BRX" else None
+        # the latest writer of Ra; an instruction without Rd (DEPBAR.LE in two of 1.8.0's programs) writes none.
+        # p.v("Rd", None) raised there: a default of None is "no default" for v()
+        src = next((p for p in reversed(insns[:k]) if "Rd" in p.f and p.v("Rd") == ra), None) if i.op == "BRX" else None
         iv = next((v for n, v in src.f.items() if n.startswith("ConstBankAddress")), None) if src and src.op == "LDC" else None
         if not iv or next(v for _, v in iv.slot_values) != 1:
             return pcs
