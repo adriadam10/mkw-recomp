@@ -19,6 +19,7 @@
 #include "input.h"
 #include "ov.h"
 #include "platform/platform.h"
+#include "steam_rpt.h"
 #include "ui/menu/menu.h"
 #include "ui_text.h"
 
@@ -173,7 +174,11 @@ static void ov_controller_support(Cpu *c) {
     plat_mutex_unlock(&lock);
     rt_log("hid: controller applet asks for %d-%d players, %d with a controller: %d players%s", arg[0], arg[1], have,
            players, players ? "" : " (connect more controllers: the game takes it as closed)");
-    if (!players) {   // the game goes back to its title without a word (#106, #160): say why on screen
+    // Remote Play Together (steam/steam_rpt.h): picking local multiplayer opens the Steam invite list. It does not wait
+    // here for the guests: the game thread blocked in the applet would present no frame, so neither the overlay nor
+    // the guests' stream would move; the player picks the mode again once the friends' controllers are in.
+    if (steam_rpt_multiplayer(lo, have)) {
+    } else if (!players) {   // the game goes back to its title without a word (#106, #160): say why on screen
         char text[256];
         snprintf(text, sizeof text, menu_text(UI_NOTICE_PADS_MISSING), lo, have);
         menu_notice(text, 8);

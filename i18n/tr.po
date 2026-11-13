@@ -2350,3 +2350,18 @@ msgstr "%s: klavye için boş oyuncu yok"
 msgctxt "UI_NOTICE_RPT_FAILED"
 msgid "Remote Play Together is off: %s"
 msgstr "Remote Play Together kapalı: %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_INVITE"
+msgid ""
+"%d players need a controller each: %d connected. Steam's invite list is open: once your friends' "
+"controllers are in, pick the mode again."
+msgstr ""
+"%d oyuncunun her birine bir kumanda gerekiyor: %d bağlı. Steam davet listesi açık: arkadaşlarının "
+"kumandaları gelince modu yeniden seç."
+
+msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
+msgid ""
+"The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
+msgstr ""
+"Steam arayüzü açılmadı: oyunu Steam'den başlat veya bir misafir bağlantısı gönder (menü > Oyun)."

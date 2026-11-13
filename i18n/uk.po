@@ -2356,3 +2356,18 @@ msgstr "%s: немає вільного гравця для клавіатури
 msgctxt "UI_NOTICE_RPT_FAILED"
 msgid "Remote Play Together is off: %s"
 msgstr "Remote Play Together вимкнено: %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_INVITE"
+msgid ""
+"%d players need a controller each: %d connected. Steam's invite list is open: once your friends' "
+"controllers are in, pick the mode again."
+msgstr ""
+"%d гравцям потрібно по контролеру: під'єднано %d. Список запрошень Steam відкрито: коли "
+"контролери друзів під'єднаються, виберіть режим знову."
+
+msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
+msgid ""
+"The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
+msgstr ""
+"Оверлей Steam не відкрився: запустіть гру зі Steam або надішліть гостьове посилання (меню > Гра)."

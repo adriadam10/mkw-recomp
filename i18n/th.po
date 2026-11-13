@@ -2236,3 +2236,100 @@ msgstr ""
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "บันทึกโปรไฟล์ไม่ได้ (ดูสาเหตุในบันทึก)"
+#. A product name: keep it as Steam shows it in your language.
+msgctxt "UI_MENU_GROUP_RPT"
+msgid "Steam Remote Play Together"
+msgstr "Steam Remote Play Together"
+
+msgctxt "UI_MENU_RPT_INVITE"
+msgid "Invite friends"
+msgstr "เชิญเพื่อน"
+
+msgctxt "UI_MENU_RPT_INVITE_DESC"
+msgid ""
+"Opens Remote Play Together in the Steam overlay. Friends who join see and hear the game; each "
+"one's controller, or keyboard, becomes the next free player."
+msgstr ""
+"เปิด Remote Play Together ในโอเวอร์เลย์ของ Steam เพื่อนที่เข้าร่วมจะเห็นและได้ยินเกม "
+"คอนโทรลเลอร์หรือคีย์บอร์ดของแต่ละคนจะเป็นผู้เล่นที่ว่างถัดไป"
+
+msgctxt "UI_MENU_RPT_LINK"
+msgid "Copy guest link"
+msgstr "คัดลอกลิงก์ผู้เยี่ยมชม"
+
+msgctxt "UI_MENU_RPT_LINK_DESC"
+msgid ""
+"Copies a link that lets anyone join from a browser or the Steam Link app, without being your "
+"Steam friend."
+msgstr ""
+"คัดลอกลิงก์ที่ทุกคนใช้เข้าร่วมได้จากเบราว์เซอร์หรือแอป Steam Link โดยไม่ต้องเป็นเพื่อนใน Steam"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CONNECTED"
+msgid "%d connected"
+msgstr "เชื่อมต่อ %d คน"
+
+msgctxt "UI_MENU_RPT_NO_OVERLAY"
+msgid "no Steam overlay"
+msgstr "ไม่มีโอเวอร์เลย์ Steam"
+
+msgctxt "UI_MENU_RPT_WAITING"
+msgid "waiting for Steam"
+msgstr "กำลังรอ Steam"
+
+#. steam_appid and mkw.ini are a setting and a file name: keep them.
+msgctxt "UI_MENU_RPT_NEED_APPID"
+msgid "Needs steam_appid in mkw.ini"
+msgstr "ต้องตั้ง steam_appid ใน mkw.ini"
+
+msgctxt "UI_MENU_RPT_AT_START"
+msgid "Starts with the game"
+msgstr "เริ่มพร้อมกับเกม"
+
+msgctxt "UI_MENU_RPT_FAILED"
+msgid "Steam is not available: see the log"
+msgstr "ใช้ Steam ไม่ได้: ดูบันทึก"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_JOINED"
+msgid "%s joined Remote Play Together"
+msgstr "%s เข้าร่วม Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_LEFT"
+msgid "%s left Remote Play Together"
+msgstr "%s ออกจาก Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_PAD"
+msgid "A Remote Play guest's controller is player %d"
+msgstr "คอนโทรลเลอร์ของผู้เยี่ยมชม Remote Play คือผู้เล่น %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_KEYBOARD"
+msgid "%s plays on the keyboard as player %d"
+msgstr "%s เล่นด้วยคีย์บอร์ดเป็นผู้เล่น %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FULL"
+msgid "%s: no free player for the keyboard"
+msgstr "%s: ไม่มีผู้เล่นว่างสำหรับคีย์บอร์ด"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FAILED"
+msgid "Remote Play Together is off: %s"
+msgstr "Remote Play Together ปิดอยู่: %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_INVITE"
+msgid ""
+"%d players need a controller each: %d connected. Steam's invite list is open: once your friends' "
+"controllers are in, pick the mode again."
+msgstr ""
+"ผู้เล่น %d คนต้องมีคอนโทรลเลอร์คนละตัว: เชื่อมต่อแล้ว %d ตัว รายการเชิญของ Steam เปิดอยู่ "
+"เมื่อคอนโทรลเลอร์ของเพื่อนเข้ามาแล้ว ให้เลือกโหมดอีกครั้ง"
+
+msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
+msgid ""
+"The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
+msgstr "โอเวอร์เลย์ Steam ไม่เปิด: เริ่มเกมจาก Steam หรือส่งลิงก์ผู้เยี่ยมชม (เมนู > เกม)"

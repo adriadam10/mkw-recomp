@@ -2278,3 +2278,15 @@ msgstr "%s: 키보드에 쓸 빈 플레이어가 없습니다"
 msgctxt "UI_NOTICE_RPT_FAILED"
 msgid "Remote Play Together is off: %s"
 msgstr "Remote Play Together 꺼짐: %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_INVITE"
+msgid ""
+"%d players need a controller each: %d connected. Steam's invite list is open: once your friends' "
+"controllers are in, pick the mode again."
+msgstr "플레이어 %d명에게 각각 컨트롤러가 필요합니다. 연결됨: %d개. Steam 초대 목록을 열었습니다. 친구의 컨트롤러가 들어오면 모드를 다시 선택하세요."
+
+msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
+msgid ""
+"The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
+msgstr "Steam 오버레이가 열리지 않았습니다. Steam에서 게임을 시작하거나 게스트 링크를 보내세요 (메뉴 > 게임)."

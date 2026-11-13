@@ -76,6 +76,29 @@ void steam_rpt_request_link(void) {
     plat_xchg32(&req_link, 1);
 }
 
+int steam_rpt_multiplayer(int need, int have) {
+    if (need < 2 || steam_rpt_state() != STEAM_RPT_READY) return 0;
+    // auto (default): the invite list opens while no guest has joined yet or controllers are missing; once friends are
+    // in and every player has a controller, picking the mode again starts it without the overlay in the way
+    const char *mode = cfg_get("MKW_STEAM_INVITE");
+    if (mode && !strcmp(mode, "off")) return 0;
+    int missing = have < need, always = mode && !strcmp(mode, "always");
+    if (!missing && !always && steam_rpt_guests() > 0) return 0;
+    // The game asks again at once when the player picks the mode again: one overlay for a burst of requests
+    static volatile int32_t last_s;
+    int32_t now_s = (int32_t)(plat_now_ns() / 1000000000ull), was = plat_xchg32(&last_s, now_s);
+    if (!was || now_s - was >= 3) {
+        rt_log("steam: local multiplayer for %d players, %d with a controller: opening the Remote Play Together invite "
+               "list", need, have);
+        steam_rpt_invite();
+    }
+    if (!missing) return 0;
+    char text[256];
+    snprintf(text, sizeof text, menu_text(UI_NOTICE_RPT_INVITE), need, have);
+    menu_notice(text, 10);
+    return 1;
+}
+
 int steam_rpt_take_link(char *out, size_t cap) {
     int32_t s = plat_cas32(&link_state, 0, 0);
     if (s == LINK_REFUSED) { plat_cas32(&link_state, LINK_NONE, LINK_REFUSED); return -1; }
@@ -193,6 +216,7 @@ static void requests(void) {
         plat_xchg32(&invite_failed, 1);
         rt_log("steam: the overlay did not open (Steam overlay off, or mkw not started from Steam); the guest link works "
                "without it");
+        menu_notice(menu_text(UI_NOTICE_RPT_NO_OVERLAY), 10);
     }
     if (plat_xchg32(&req_link, 0) && !api.send_invite(rp, 0)) {   // 0, an invalid friend: a link for anyone
         plat_xchg32(&link_state, LINK_REFUSED);

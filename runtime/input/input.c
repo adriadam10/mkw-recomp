@@ -139,25 +139,36 @@ static int pad_is_open(SDL_JoystickID id) {
 }
 
 // Remote Play Together (steam/steam_rpt.c): a guest's controller reaches the host as a Steam virtual gamepad, which SDL
-// lists once steam_rpt_start allowed them. Steam does not say whose a virtual gamepad is, but the ones already there
-// while no guest is connected are the host's own controllers through Steam Input, often next to the same controller
-// seen directly: they never become another player, and stand in for player 1 only when no other gamepad is connected.
-// Under lock.
-enum { HOST_VIRTUAL_MAX = 16 };
-static SDL_JoystickID host_virtual[HOST_VIRTUAL_MAX];
-static int n_host_virtual;
+// lists once steam_rpt_start allowed them. Steam does not say whose a virtual gamepad is, but the ones there while no
+// guest is connected are the host's own controllers through Steam Input, often next to the same controller seen
+// directly: they never become another player, and stand in for player 1 only when no other gamepad is connected.
+// A virtual gamepad is only called the host's after VIRTUAL_SETTLE_MS without a guest: Steam may list a guest's
+// controller a moment before its session callback reaches steam_rpt.c, and a pad called the host's stays so. Under lock.
+enum { VIRTUAL_MAX = 16, VIRTUAL_SETTLE_MS = 2000 };
+static struct { SDL_JoystickID id; uint64_t seen_ms; int host; } virt_pads[VIRTUAL_MAX];   // host: -1 not yet known
+static int n_virt_pads;
 
 static int steam_virtual(SDL_JoystickID id) {
     return SDL_GetGamepadVendorForID(id) == STEAM_VENDOR_ID && SDL_GetGamepadProductForID(id) == STEAM_VIRTUAL_PAD_ID;
 }
 
-// 1 for a host's virtual gamepad (remembered the first time it is seen with no guest connected), 0 for any other.
+// 1 for a host's virtual gamepad, 0 for a guest's, -1 while it is too early to tell (the pad waits for a later scan).
 static int host_pad(SDL_JoystickID id, int guests) {
-    for (int i = 0; i < n_host_virtual; i++)
-        if (host_virtual[i] == id) return 1;
-    if (guests) return 0;
-    if (n_host_virtual < HOST_VIRTUAL_MAX) host_virtual[n_host_virtual++] = id;
-    return 1;
+    uint64_t now = plat_now_ms();
+    int i = 0;
+    while (i < n_virt_pads && virt_pads[i].id != id) i++;
+    if (i == n_virt_pads) {
+        if (n_virt_pads == VIRTUAL_MAX) {   // forget the oldest decided entry: its pad is long gone or long open
+            memmove(&virt_pads[0], &virt_pads[1], sizeof virt_pads[0] * (VIRTUAL_MAX - 1));
+            i = --n_virt_pads;
+        }
+        virt_pads[n_virt_pads++] = (typeof(virt_pads[0])){id, now, -1};
+    }
+    if (virt_pads[i].host < 0) {
+        if (guests) virt_pads[i].host = 0;
+        else if (now - virt_pads[i].seen_ms >= VIRTUAL_SETTLE_MS) virt_pads[i].host = 1;
+    }
+    return virt_pads[i].host;
 }
 
 static void pad_adopt(void);
@@ -182,7 +193,9 @@ static void scan_pads(void) {
     for (int i = 0; ids && i < n; i++) {
         if (pad_is_open(ids[i])) continue;
         int virt = steam && steam_virtual(ids[i]);
-        int host_only = virt && host_pad(ids[i], guests);
+        int whose = virt ? host_pad(ids[i], guests) : 0;
+        if (whose < 0) continue;                      // not known yet: the next scan, a second later, decides
+        int host_only = whose == 1;
         if (host_only && (pad || direct)) continue;   // the host's controller is already player 1, or will be
         int p = 0;
         while (p < INPUT_MAX_PLAYERS && (p ? extra[p] != NULL || remote_on[p] : pad != NULL)) p++;

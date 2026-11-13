@@ -54,6 +54,13 @@ Menu (F1) > Game > **Steam Remote Play Together**:
 - **Copy guest link**: a link to send to anyone. They open it in a browser or the Steam Link app, no Steam friendship
   or account needed. The link is also written to the log.
 
+**Picking local multiplayer** (2, 3 or 4 players) opens Steam's Remote Play Together invite list by itself, as long
+as no friend has joined yet or there are fewer controllers than players. With too few controllers the game goes back
+to its menu, as it does without Steam, and a notice says how many are missing: once your friends' controllers are in,
+pick the mode again. The game does not wait inside its controller screen, because the picture (and with it the overlay
+and your friends' stream) would freeze meanwhile. `steam_invite = always` in `mkw.ini` opens the list every time,
+`steam_invite = off` never.
+
 When a guest joins, a notice says so. Their controller becomes the next free player (a notice says which). A guest
 without a controller gets a player at the first key they press, and plays with the same keys as you (WASD, Space,
 Shift...; Settings > Controls). Then choose the number of players in the game as usual: the game needs one controller
@@ -69,11 +76,13 @@ per player.
 - On Linux under Wayland, if guests see "Steam not launched with -pipewire", start Steam with `steam -pipewire` (or
   `-pipewire-dmabuf` when guests get a black picture).
 - The App ID is read at start: changing it needs a restart of the game.
+- A device loss with "instruction pointer invalid" in the log on NVIDIA cards is the port's known issue #22, with or
+  without Steam; `skip_programs` in `mkw.ini` helps find its cause (CHANGELOG, 0.1.10).
 
 ## Tested
 
 Against Valve's SDK 1.65 library and a mock of Steam built from Valve's headers, with SDL virtual gamepads standing in
 for the guests' controllers (13/11/2026): start-up, every symbol bound (Linux and Windows libraries), guests joining and
 leaving, a guest's controller as player 2 with the host's Steam Input twin left out, a guest keyboard as player 3, the
-guest link, a missing overlay, and each failure (no library, no Steam, wrong App ID). A real session with friends over
-Steam has not been run yet.
+guest link, a missing overlay, and each failure (no library, no Steam, wrong App ID). Picking local multiplayer with too few controllers opens the invite list (13/11/2026, against the mock).
+A real session with friends over Steam has not been run yet.
