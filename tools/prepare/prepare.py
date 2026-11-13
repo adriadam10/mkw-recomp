@@ -44,7 +44,7 @@ def _early_log() -> None:
     to it: a setup that sat at 0 % CPU before writing a line left no log at all, so nothing said where it waited
     (#251, Windows, 0.1.10). Rewritten at every setup; main() keeps writing to the same file."""
     try:
-        game = Path(sys.argv[sys.argv.index("--game") + 1]).resolve()  # as main()'s, so it keeps this file
+        game = Path(sys.argv[sys.argv.index("--game") + 1]).absolute()  # as main()'s, so it keeps this file
         (game / "logs").mkdir(parents=True, exist_ok=True)
         sys.stderr = open(game / "logs/setup.log", "w", encoding="utf-8", buffering=1)  # noqa: SIM115
     except ValueError, IndexError, OSError:
@@ -397,7 +397,9 @@ def main() -> None:
     own_children()
     if ca := update.ca_file():  # spec.py downloads NVIDIA's redistributables with this Python (issue #102, NixOS)
         os.environ["SSL_CERT_FILE"] = ca
-    game = args.game.resolve()
+    # Keep the launcher's accepted spelling: resolving a short symlink/junction can expand beyond the runtime's
+    # directory limit, making warm-up reject the very installation this setup just built.
+    game = args.game.absolute()
     runtime = args.runtime.resolve() if args.runtime else game
     state = load_state(game)
     if not args.source:  # the last setup's; before 0.1.5 the state kept them only in its keys

@@ -76,6 +76,20 @@ def test_resume_without_earlier_setup(tmp_path: Path) -> None:
     assert p.returncode == 2 and "error source" in p.stdout, p.stdout
 
 
+@pytest.mark.skipif(os.name == "nt", reason="creating directory symlinks requires Windows privileges")
+def test_early_setup_log_preserves_alias(tmp_path: Path) -> None:
+    target, alias, source = tmp_path / "real", tmp_path / "Game link ñ", tmp_path / "empty dump"
+    target.mkdir()
+    source.mkdir()
+    alias.symlink_to(target, target_is_directory=True)
+    p = run_prepare("--game", str(alias), "--source", str(source))
+    assert p.returncode == 1 and "error nogame" in p.stdout, p.stdout + p.stderr
+    log = (alias / "logs/setup.log").read_text(encoding="utf-8")
+    # main() must keep _early_log's file open under the same alias, retaining startup diagnostics and its timer.
+    assert "setup: started, Python" in log
+    assert "setup: " in log and str(alias) in log
+
+
 def test_versions() -> None:
     assert update.version_key("0.1.2-12-g1c15097") == (0, 1, 2)
     assert update.version_key("v0.1.10") > update.version_key("0.1.9")
@@ -140,6 +154,47 @@ def test_warm_uses_launcher_with_selected_installation(tmp_path: Path, monkeypat
     assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw"))]
     assert kwargs["env"]["MKW_GAME_DIR"] == str(game)
     assert kwargs["env"]["MKW_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="creating directory symlinks requires Windows privileges")
+def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    target = tmp_path / "real"
+    for _ in range(6):
+        target /= "deep" * 40
+    target.mkdir(parents=True)
+    assert len(str(target).encode()) > 768
+    alias = tmp_path / "Game link ñ"
+    alias.symlink_to(target, target_is_directory=True)
+    runtime, source = tmp_path / "launcher", tmp_path / "dump"
+    calls = []
+    process = SimpleNamespace(terminate=lambda: None, wait=lambda timeout: 0)
+
+    def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append((argv, kwargs))
+        return process
+
+    monkeypatch.setattr(prepare, "own_children", lambda: None)
+    monkeypatch.setattr(prepare.update, "ca_file", lambda: None)
+    monkeypatch.setattr(prepare, "STEPS", ("check", "warm"))
+    monkeypatch.setattr(prepare, "check", lambda *args: (source / "exefs", source / "romfs",
+                                                       SimpleNamespace(name="test")))
+    monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
+    monkeypatch.setattr(prepare.subprocess, "Popen", start)
+    monkeypatch.setattr(sys, "argv", ["prepare.py", "--game", str(alias), "--runtime", str(runtime),
+                                      "--source", str(source)])
+    # main opens its setup log on stderr. Restore pytest's capture stream after exercising the real argument path
+    # and warm-up environment; only the game check and game process are synthetic.
+    original_stderr = sys.stderr
+    monkeypatch.setattr(sys, "stderr", original_stderr)
+    try:
+        prepare.main()
+    finally:
+        if sys.stderr is not original_stderr:
+            sys.stderr.close()
+    argv, kwargs = calls[0]
+    assert argv == [str(runtime / "mkw")]
+    assert kwargs["env"]["MKW_GAME_DIR"] == str(alias)
+    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
 
 
 def test_unpack_uses_launcher_not_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

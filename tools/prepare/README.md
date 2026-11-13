@@ -3,6 +3,8 @@
 The launcher passes `--game DIR` for the chosen installation and `--runtime DIR` for the directory containing
 `mkw`/`mkw.exe`. The package's tools stay in `setup/` beside the executable; compiled code, prepared files,
 `setup-state.json`, logs and settings go into the installation. Without `--runtime`, it defaults to `--game`.
+The installation path is made absolute without resolving symlinks or junctions, so setup and warm-up retain the
+directory spelling accepted by the launcher, even when the underlying canonical path exceeds the runtime's limit.
 
 | Script | What it does | Usage |
 |---|---|---|
