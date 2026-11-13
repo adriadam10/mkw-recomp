@@ -462,6 +462,15 @@ static const char *section_of(const char *key) {
     return NULL;
 }
 
+static void put_value(Out *o, const CfgEntry *e) {
+    // Keep the in-memory path literal. The parser trims whitespace outside quotes, then removes just the outer
+    // quotes: paths ending in spaces/tabs, and literal quotes or backslashes inside them, must survive a restart.
+    int quote = !strcmp(e->key, "GAME_DIR");
+    if (quote) puts_(o, "\"");
+    puts_(o, e->value);
+    if (quote) puts_(o, "\"");
+}
+
 // "key = value" + eol for entry e (key lower-case)
 static void put_entry(Out *o, const CfgEntry *e, const char *eol) {
     char k[64];
@@ -469,7 +478,7 @@ static void put_entry(Out *o, const CfgEntry *e, const char *eol) {
     for (char *p = k; *p; p++) *p = (char)tolower((unsigned char)*p);
     puts_(o, k);
     puts_(o, " = ");
-    puts_(o, e->value);
+    put_value(o, e);
     puts_(o, eol);
 }
 
@@ -554,7 +563,7 @@ int cfg_save_to(const char *path) {
             while (kn && (s[kn - 1] == ' ' || s[kn - 1] == '\t')) kn--;
             put(&o, s, kn);
             puts_(&o, " = ");
-            puts_(&o, entries[replace[i]].value);
+            put_value(&o, &entries[replace[i]]);
             int had_eol = len && s[len - 1] == '\n';
             if (had_eol) puts_(&o, eol);
         } else {
@@ -603,6 +612,17 @@ int cfg_save_to(const char *path) {
 }
 
 static char ini_path[PLAT_PATH_MAX * 3], launcher_ini[PLAT_PATH_MAX * 3], game_dir[PLAT_PATH_MAX * 2];
+static int game_dir_invalid;
+
+static int resolve_game_dir(const char *path, char *out, size_t cap) {
+    if (!path || !*path || strchr(path, '\n')) return 0;
+    const char *cut = plat_last_sep(launcher_ini);
+    int absolute = path[0] == '/' || path[0] == '\\' || path[1] == ':';
+    if (!absolute && !cut) return 0;
+    int n = absolute ? snprintf(out, cap, "%s", path)
+                     : snprintf(out, cap, "%.*s/%s", (int)(cut - launcher_ini), launcher_ini, path);
+    return n >= 0 && n <= CFG_GAME_DIR_MAX && (size_t)n < cap;
+}
 
 static int find_ini(void) {
     if (ini_path[0]) return 1;
@@ -631,14 +651,24 @@ const char *cfg_game_dir(void) {
     return game_dir;
 }
 
+int cfg_game_dir_invalid(void) { return game_dir_invalid; }
+
 // Save pending settings to the current installation first. Only the selector belongs beside the launcher; the
 // caller restarts it after success so no DLL, shader cache or settings from the old installation survive the switch.
 int cfg_select_game_dir(const char *path) {
-    if (cfg_from_env("MKW_GAME_DIR") || !path || !*path || !cfg_save()) return 0;
+    cfg_game_dir();
+    if (cfg_from_env("MKW_GAME_DIR")) return 0;
+    char resolved[CFG_GAME_DIR_MAX + 1];
+    game_dir_invalid = !resolve_game_dir(path, resolved, sizeof resolved);
+    if (game_dir_invalid) {
+        rt_log("cfg: game directory rejected: maximum %d UTF-8 bytes, no newlines", CFG_GAME_DIR_MAX);
+        return 0;
+    }
+    if (!cfg_save()) return 0;
     int i = 0, old_n = n_entries;
     while (i < n_entries && strcmp(entries[i].key, "GAME_DIR")) i++;
     CfgEntry old = i < n_entries ? entries[i] : (CfgEntry){0};
-    cfg_set("MKW_GAME_DIR", path);
+    cfg_set("MKW_GAME_DIR", resolved);
     if (cfg_save_to(launcher_ini)) return 1;
     // A failed selector write must not leak into the current installation on the next settings save.
     if (i < old_n) entries[i] = old;
@@ -667,12 +697,12 @@ void cfg_init(void) {
     load_ini();
     const char *selected = cfg_get("MKW_GAME_DIR");
     if (selected && *selected) {
-        char dir[sizeof game_dir];
-        int absolute = selected[0] == '/' || selected[0] == '\\' || selected[1] == ':';
-        int n = absolute ? snprintf(dir, sizeof dir, "%s", selected)
-                         : snprintf(dir, sizeof dir, "%s/%s", game_dir, selected);
-        if (n < 0 || (size_t)n >= sizeof dir) rt_fatal("game directory path is too long");
-        if (strcmp(game_dir, dir)) {
+        char dir[CFG_GAME_DIR_MAX + 1];
+        game_dir_invalid = !resolve_game_dir(selected, dir, sizeof dir);
+        if (game_dir_invalid) {
+            rt_log("cfg: invalid game directory: maximum %d UTF-8 bytes, no newlines; using %s", CFG_GAME_DIR_MAX,
+                   game_dir);
+        } else if (strcmp(game_dir, dir)) {
             snprintf(game_dir, sizeof game_dir, "%s", dir);
             snprintf(ini_path, sizeof ini_path, "%s/mkw.ini", game_dir);
             // Each installation keeps its own RomFS path and settings. The launcher ini holds the selection only.

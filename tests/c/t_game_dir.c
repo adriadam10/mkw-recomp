@@ -51,6 +51,10 @@ void *plat_lib_sym(void *lib, const char *name) { (void)lib; (void)name; return 
 
 int main(int argc, char **argv) {
     exe = argv[0];
+    if (argc > 1 && !strcmp(argv[1], "limit")) {
+        printf("limit=%d\n", CFG_GAME_DIR_MAX);
+        return 0;
+    }
     // Discovery happens before mem_init/cfg_init in a player's build.
     printf("ready=%d\n", rt_game_present());
     printf("dir=%s\n", cfg_game_dir());
@@ -63,6 +67,8 @@ int main(int argc, char **argv) {
     if (argc > 2) {
         fail_selector = !strcmp(argv[1], "fail");
         printf("selected=%d\n", cfg_select_game_dir(argv[2]));
+        printf("invalid=%d\n", cfg_game_dir_invalid());
+        printf("value=%s\n", cfg_get("MKW_GAME_DIR") ? cfg_get("MKW_GAME_DIR") : "");
         if (fail_selector) {
             cfg_set("MKW_VOLUME", "37");
             return cfg_save() ? 0 : 1;

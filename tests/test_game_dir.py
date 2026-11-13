@@ -92,3 +92,78 @@ def test_failed_selection_keeps_current_installation(launcher: Path, tmp_path: P
     result = probe(launcher)
     assert result["dir"] == str(game) and result["volume"] == "37"
     assert "game_dir" not in (game / "mkw.ini").read_text()
+
+
+def nested_path(base: Path, size: int) -> Path:
+    """A real POSIX path with the requested UTF-8 byte length, with each component below NAME_MAX."""
+    path = base
+    while size - len(str(path).encode()) > 201:
+        path /= "x" * 200
+    remaining = size - len(str(path).encode()) - 1
+    assert remaining > 0
+    return path / ("ñ" * (remaining // 2) + "x" * (remaining % 2))
+
+
+@pytest.mark.parametrize("ending", [" ", "\t", "  \t", '" ', '\\ '])
+def test_selection_preserves_whitespace(launcher: Path, tmp_path: Path, ending: str) -> None:
+    for name in ("First", "Second"):
+        game = installation(tmp_path / (name + ending))
+        result = probe(launcher, "select", str(game))
+        assert result["selected"] == "1" and result["value"] == str(game)
+        assert f'game_dir = "{game}"\n' in (launcher.parent / "mkw.ini").read_text()
+        assert probe(launcher)["dir"] == str(game)
+        assert probe(launcher)["ready"] == "1"
+
+
+@pytest.mark.parametrize("size", [1155, 2048])
+def test_rejected_directory_does_not_replace_selection(launcher: Path, tmp_path: Path, size: int) -> None:
+    game = installation(tmp_path / "Current")
+    probe(launcher, "select", str(game))
+    selector = (launcher.parent / "mkw.ini").read_bytes()
+    long_path = nested_path(tmp_path, size)
+    long_path.mkdir(parents=True)
+    result = probe(launcher, "select", str(long_path))
+    assert result["selected"] == "0" and result["invalid"] == "1"
+    assert (launcher.parent / "mkw.ini").read_bytes() == selector
+    assert probe(launcher)["dir"] == str(game)
+
+
+def test_supported_path_boundary_and_relative_resolution(launcher: Path) -> None:
+    limit = int(probe(launcher, "limit")["limit"])
+    game = nested_path(launcher.parent, limit)
+    game.parent.mkdir(parents=True)
+    installation(game)
+    assert len(str(game)) < limit  # bytes, rather than Unicode characters, determine the limit
+    assert probe(launcher, "select", str(game))["selected"] == "1"
+    assert probe(launcher)["dir"] == str(game)
+    assert probe(launcher)["ready"] == "1"
+    too_long = str(game) + "x"
+    relative = os.path.relpath(too_long, launcher.parent)
+    assert len(relative.encode()) < limit
+    assert probe(launcher, "select", relative)["invalid"] == "1"
+    assert probe(launcher)["dir"] == str(game)
+
+
+def test_invalid_saved_directory_allows_recovery(launcher: Path, tmp_path: Path) -> None:
+    invalid = nested_path(tmp_path, 2048)
+    ini = launcher.parent / "mkw.ini"
+    ini.write_text(f'game_dir = "{invalid}"\n')
+    assert probe(launcher)["dir"] == str(launcher.parent)
+    game = installation(tmp_path / "Recovered")
+    assert probe(launcher, "select", str(game))["selected"] == "1"
+    assert probe(launcher)["dir"] == str(game)
+
+
+@pytest.mark.parametrize("path", ["/" + "x" * 1154, "/games/Line\nbreak"])
+def test_invalid_selection_does_not_create_selector(launcher: Path, path: str) -> None:
+    result = probe(launcher, "select", path)
+    assert result["selected"] == "0" and result["invalid"] == "1"
+    assert result["value"] == ""
+    assert not (launcher.parent / "mkw.ini").exists()
+
+
+def test_relative_selection_is_saved_as_supported_absolute_path(launcher: Path) -> None:
+    game = installation(launcher.parent / "Relative installation ")
+    result = probe(launcher, "select", "Relative installation ")
+    assert result["selected"] == "1" and result["value"] == str(game)
+    assert probe(launcher)["dir"] == str(game)

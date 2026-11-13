@@ -3,6 +3,8 @@
 The start screen, before the game, and the setup of the game files. **Game files → Choose game folder** selects a new
 or existing installation and reopens the launcher with it. Prepared files, mods, saves, settings and caches use that folder;
 the executable, setup tools and updates stay beside the launcher. Choosing a folder does not move existing files.
+An unsupported path shows an error without changing the current installation. The full resolved path can contain at
+most 768 UTF-8 bytes; paths ending in spaces or tabs are preserved.
 
 | File | What it is |
 |---|---|

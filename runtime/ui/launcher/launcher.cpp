@@ -561,6 +561,11 @@ static void page_files(float w, float h) {
     ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_GAME_DIR_HELP));
     if (cfg_from_env("MKW_GAME_DIR"))
         ImGui::TextDisabled("%s MKW_GAME_DIR", menu_text(UI_MENU_SET_BY_ENV));
+    if (cfg_game_dir_invalid()) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextColored(col4(LOOK_BAD), menu_text(UI_LAUNCH_GAME_DIR_INVALID), CFG_GAME_DIR_MAX);
+        ImGui::PopTextWrapPos();
+    }
     if (!cfg_last_save_ok()) ImGui::TextColored(col4(LOOK_BAD), "%s", menu_text(UI_MENU_SAVE_FAILED));
     // the groups apart: more space between them than inside one
     ImGui::Dummy(ImVec2(0, 8 * L.scale));

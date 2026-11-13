@@ -3,6 +3,11 @@
 The runtime's common pieces: the `host.h` interface, settings (`cfg`), commands to a running game, system info, hashing
 and UTF-16.
 
+Game folder selections are resolved relative to the launcher and limited to `CFG_GAME_DIR_MAX` (768 UTF-8 bytes),
+leaving 256 bytes in the smallest runtime buffers for derived paths. Unsupported paths are rejected before saving;
+an invalid saved selection falls back to the launcher folder so the chooser remains available. The selector is quoted
+in `mkw.ini` to preserve trailing spaces and tabs; its in-memory value stays a literal path.
+
 | File | What it is |
 |---|---|
 | `host.h` | The runtime's common interface |

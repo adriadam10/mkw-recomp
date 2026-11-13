@@ -126,6 +126,7 @@ static int spirv_complete(const uint32_t *w, uint64_t n) {
 // <game dir>/spirv/<key>.spv and .res.json, key = nvn2_program_key(control, code): every program the game ships was
 // translated offline, so play never translates. MKW_SPIRV names another directory.
 static char prepared_dir[PATH_CAP];
+_Static_assert(CFG_GAME_DIR_MAX + 256 <= PATH_CAP, "game directory must leave room for derived shader paths");
 
 static void prepared_init(void *param) {
     (void)param;
