@@ -5,6 +5,8 @@ or existing installation and reopens the launcher with it. Prepared files, mods,
 the executable, setup tools and updates stay beside the launcher. Choosing a folder does not move existing files.
 An unsupported path shows an error without changing the current installation. The full resolved path can contain at
 most 768 UTF-8 bytes; paths ending in spaces or tabs are preserved.
+On Windows it must also fit 131 UTF-16 units, leaving space for generated files below `MAX_PATH`; the error message
+shows this platform-specific limit. Unsupported stored paths fall back to the launcher folder for recovery.
 
 | File | What it is |
 |---|---|

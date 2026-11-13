@@ -13,13 +13,16 @@ void cfg_init(void);
 // UTF-8 bytes, excluding NUL. Shader directories, loader paths and profile/mount roots have 1024-byte buffers;
 // leave 256 bytes for /spirv, /exefs/main.npdm, warm-up profiles, save transaction roots and child filenames.
 enum { CFG_GAME_DIR_MAX = 768 };
+// Win32 paths still use MAX_PATH without long-path opt-in. Reserve 128 UTF-16 units for nested prepared filenames,
+// save paths and atomic-write suffixes, plus the terminating NUL (260 - 128 - 1 = 131 for the installation root).
+enum { CFG_GAME_DIR_WIN32_MAX = 260 - 128 - 1 };
 // Absolute installation directory chosen by MKW_GAME_DIR or the launcher's mkw.ini; otherwise beside mkw.
 // Stable after cfg_init. Saves, prepared game files and caches live here; tools and updates stay beside mkw.
 const char *cfg_game_dir(void);
 // Launcher thread only: save the current settings and remember a new directory beside mkw. Restart after success.
 // An environment override prevents changes. Returns 0 on an unsupported resolved path, a write failure or an override.
 int cfg_select_game_dir(const char *path);
-// Last selection/startup rejected a path (too many UTF-8 bytes, or a newline that the ini cannot represent).
+// Last selection/startup rejected a path (byte/Win32 length limits, or a newline the ini cannot represent).
 // An invalid stored selection falls back to the executable's folder so the chooser remains usable.
 int cfg_game_dir_invalid(void);
 

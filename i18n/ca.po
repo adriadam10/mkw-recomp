@@ -1739,6 +1739,13 @@ msgid ""
 "and contains no line breaks."
 msgstr ""
 
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GAME_DIR_INVALID_WIN32"
+msgid ""
+"This game folder could not be selected. On Windows, choose a folder without line breaks whose "
+"full path is at most %d UTF-16 units to leave room for the game's files."
+msgstr ""
+
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
 "The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "

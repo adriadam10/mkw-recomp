@@ -563,7 +563,11 @@ static void page_files(float w, float h) {
         ImGui::TextDisabled("%s MKW_GAME_DIR", menu_text(UI_MENU_SET_BY_ENV));
     if (cfg_game_dir_invalid()) {
         ImGui::PushTextWrapPos(0);
+#ifdef _WIN32
+        ImGui::TextColored(col4(LOOK_BAD), menu_text(UI_LAUNCH_GAME_DIR_INVALID_WIN32), CFG_GAME_DIR_WIN32_MAX);
+#else
         ImGui::TextColored(col4(LOOK_BAD), menu_text(UI_LAUNCH_GAME_DIR_INVALID), CFG_GAME_DIR_MAX);
+#endif
         ImGui::PopTextWrapPos();
     }
     if (!cfg_last_save_ok()) ImGui::TextColored(col4(LOOK_BAD), "%s", menu_text(UI_MENU_SAVE_FAILED));

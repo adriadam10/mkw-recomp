@@ -14,6 +14,9 @@
 #include "cfg.h"
 #include "host.h"
 #include "platform/platform.h"
+#ifdef _WIN32
+#include "utf16.h"
+#endif
 
 #define PREFIX "MKW_"
 #define PREFIX_LEN (sizeof PREFIX - 1)
@@ -621,7 +624,15 @@ static int resolve_game_dir(const char *path, char *out, size_t cap) {
     if (!absolute && !cut) return 0;
     int n = absolute ? snprintf(out, cap, "%s", path)
                      : snprintf(out, cap, "%.*s/%s", (int)(cut - launcher_ini), launcher_ini, path);
-    return n >= 0 && n <= CFG_GAME_DIR_MAX && (size_t)n < cap;
+    if (n < 0 || n > CFG_GAME_DIR_MAX || (size_t)n >= cap) return 0;
+#ifdef _WIN32
+    // The manifest does not opt into long paths, and Win32 length counts UTF-16 units rather than UTF-8 bytes.
+    // The byte limit above guarantees this conversion fits without truncating; include room for derived paths.
+    // https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+    uint16_t wide[CFG_GAME_DIR_MAX + 1];
+    if (utf8_to_utf16(out, wide, CFG_GAME_DIR_MAX + 1) > CFG_GAME_DIR_WIN32_MAX) return 0;
+#endif
+    return 1;
 }
 
 static int find_ini(void) {
@@ -661,7 +672,11 @@ int cfg_select_game_dir(const char *path) {
     char resolved[CFG_GAME_DIR_MAX + 1];
     game_dir_invalid = !resolve_game_dir(path, resolved, sizeof resolved);
     if (game_dir_invalid) {
+#ifdef _WIN32
+        rt_log("cfg: game directory rejected: maximum %d UTF-16 units, no newlines", CFG_GAME_DIR_WIN32_MAX);
+#else
         rt_log("cfg: game directory rejected: maximum %d UTF-8 bytes, no newlines", CFG_GAME_DIR_MAX);
+#endif
         return 0;
     }
     if (!cfg_save()) return 0;
@@ -700,8 +715,13 @@ void cfg_init(void) {
         char dir[CFG_GAME_DIR_MAX + 1];
         game_dir_invalid = !resolve_game_dir(selected, dir, sizeof dir);
         if (game_dir_invalid) {
+#ifdef _WIN32
+            rt_log("cfg: invalid game directory: maximum %d UTF-16 units, no newlines; using %s",
+                   CFG_GAME_DIR_WIN32_MAX, game_dir);
+#else
             rt_log("cfg: invalid game directory: maximum %d UTF-8 bytes, no newlines; using %s", CFG_GAME_DIR_MAX,
                    game_dir);
+#endif
         } else if (strcmp(game_dir, dir)) {
             snprintf(game_dir, sizeof game_dir, "%s", dir);
             snprintf(ini_path, sizeof ini_path, "%s/mkw.ini", game_dir);

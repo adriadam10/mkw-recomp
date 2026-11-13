@@ -7,6 +7,9 @@ Game folder selections are resolved relative to the launcher and limited to `CFG
 leaving 256 bytes in the smallest runtime buffers for derived paths. Unsupported paths are rejected before saving;
 an invalid saved selection falls back to the launcher folder so the chooser remains available. The selector is quoted
 in `mkw.ini` to preserve trailing spaces and tabs; its in-memory value stays a literal path.
+Windows also limits resolved installation roots to 131 UTF-16 units, reserving 128 units plus the NUL below
+`MAX_PATH` for derived shader/overlay filenames, saves and atomic-write suffixes. This does not depend on a registry
+long-path opt-in. ASCII and BMP characters use one unit; supplementary characters use two.
 
 | File | What it is |
 |---|---|
