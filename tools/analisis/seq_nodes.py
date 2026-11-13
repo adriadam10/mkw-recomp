@@ -27,7 +27,7 @@ def main() -> None:
     db = sqlite3.connect("build/bindb.sqlite")
     rows = db.execute(
         "select s.text, f.addr from str s join ref r on r.target = s.addr join func f on f.addr = r.func "
-        "where s.module = 'main' and s.text like 'AIGlobalSeq%' and f.end - f.addr = 12"
+        "where s.module = 'main' and s.text like 'AIGlobalSeq%' and f.end - f.addr in (12, 16)"
     ).fetchall()
     getters = {addr - BASE: text.removeprefix("AIGlobalSeq") for text, addr in rows}
     m = Module("main", Path(os.environ.get("MKW_GAME", "game")) / "exefs/main", 0)
