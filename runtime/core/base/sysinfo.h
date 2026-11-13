@@ -12,8 +12,8 @@ extern "C" {
 int sysinfo_text(char *buf, size_t n);
 // The CPU's brand string ("AMD Ryzen 7 7800X3D 8-Core Processor"); "" when the CPU has none.
 void sysinfo_cpu_name(char *out, size_t n);
-// The folder with the log: the folder of logs\mkw.log when this run writes it, else of the file stderr goes to, else
-// of mkw. 0 on failure.
+// The folder with the log: this run's log folder, else the file stderr goes to, else logs/ in the selected
+// installation (also holds setup.log). 0 on failure, including an output buffer too small for the full path.
 int sysinfo_log_folder(char *out, size_t n);
 
 #ifdef __cplusplus

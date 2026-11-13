@@ -9,6 +9,7 @@
 #include "cfg.h"
 #include "gamelib.h"
 #include "platform/platform.h"
+#include "sysinfo.h"
 
 static const char *exe;
 static int fail_selector;
@@ -48,11 +49,24 @@ int plat_file_write_atomic(const char *path, const void *data, size_t size) {
 const RtGame *rt_game_builtin(void) { return NULL; }
 void *plat_lib_open(const char *path) { (void)path; return NULL; }
 void *plat_lib_sym(void *lib, const char *name) { (void)lib; (void)name; return NULL; }
+const char *rt_log_path(void) { return getenv("TEST_LOG_PATH"); }
+int plat_stderr_path(char *out, size_t cap) {
+    const char *path = getenv("TEST_STDERR_PATH");
+    return path && snprintf(out, cap, "%s", path) < (int)cap;
+}
 
 int main(int argc, char **argv) {
     exe = argv[0];
     if (argc > 1 && !strcmp(argv[1], "limit")) {
         printf("limit=%d\n", CFG_GAME_DIR_MAX);
+        return 0;
+    }
+    if (argc > 1 && !strcmp(argv[1], "logs")) {
+        char folder[PLAT_PATH_MAX * 3] = "";
+        size_t cap = argc > 2 ? strtoul(argv[2], NULL, 10) : sizeof folder;
+        if (cap > sizeof folder) return 2;
+        printf("ok=%d\n", sysinfo_log_folder(folder, cap));
+        printf("folder=%s\n", folder);
         return 0;
     }
     // Discovery happens before mem_init/cfg_init in a player's build.

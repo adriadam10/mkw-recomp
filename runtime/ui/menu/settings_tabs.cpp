@@ -429,14 +429,14 @@ static void tab_advanced(float scale) {
     row_set_or_not("MKW_TRACE", UI_MENU_TRACE, UI_MENU_TRACE_DESC, "perf");
     opt_toggle("MKW_FLIGHT", UI_MENU_FLIGHT, UI_MENU_FLIGHT_DESC);
     opt_slider("MKW_FLIGHT_SPIKE_MS", UI_MENU_FLIGHT_SPIKE_MS, 20, 1000, UI_MENU_FLIGHT_SPIKE_MS_DESC, 10, "%.0f");
-    static char rec_path[600];   // the recording goes beside the log
+    static char rec_path[PLAT_PATH_MAX * 3 + 32];   // the recording goes beside the log
     if (!rec_path[0]) {
-        char dir[512];
+        char dir[PLAT_PATH_MAX * 3];
         snprintf(rec_path, sizeof rec_path, "%s/input-record.txt", sysinfo_log_folder(dir, sizeof dir) ? dir : ".");
     }
     row_set_or_not("MKW_INPUT_RECORD", UI_MENU_INPUT_RECORD, UI_MENU_INPUT_RECORD_DESC, rec_path);
     if (opt_button("##open_log", UI_MENU_OPEN_LOG, UI_MENU_OPEN_LOG_DESC, action_value(log_note, UI_MENU_OPEN_LOG))) {
-        char dir[512];
+        char dir[PLAT_PATH_MAX * 3];
         bool ok = sysinfo_log_folder(dir, sizeof dir) && plat_open_folder(dir);
         if (!ok) action_done(log_note, false);   // success shows as the opened folder
     }

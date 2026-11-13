@@ -25,12 +25,13 @@ def game_dir_probe(tmp_path_factory: pytest.TempPathFactory) -> Path:
     inc = [f"-I{ROOT / 'runtime'}", f"-I{ROOT / 'runtime/cpu'}", f"-I{ROOT / 'runtime/core/base'}",
            f"-I{ROOT / 'runtime/core/boot'}"]
     subprocess.run([cc, *inc, str(ROOT / "tests/c/t_game_dir.c"), str(ROOT / "runtime/core/base/cfg.c"),
+                    str(ROOT / "runtime/core/base/sysinfo_log.c"),
                     str(ROOT / "runtime/core/boot/gamelib.c"), "-o", str(exe)], check=True)  # fmt: skip
     return exe
 
 
 def probe(exe: Path, *args: str, **overrides: str) -> dict[str, str]:
-    env = {k: v for k, v in os.environ.items() if not k.startswith("MKW_")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("MKW_", "TEST_LOG_", "TEST_STDERR_"))}
     env.update(overrides)
     p = subprocess.run([str(exe), *args], env=env, check=True, capture_output=True, text=True)
     return dict(line.split("=", 1) for line in p.stdout.splitlines())
@@ -167,3 +168,45 @@ def test_relative_selection_is_saved_as_supported_absolute_path(launcher: Path) 
     result = probe(launcher, "select", "Relative installation ")
     assert result["selected"] == "1" and result["value"] == str(game)
     assert probe(launcher)["dir"] == str(game)
+
+
+def test_log_folder_follows_installation(launcher: Path, tmp_path: Path) -> None:
+    assert probe(launcher, "logs") == {"ok": "1", "folder": str(launcher.parent / "logs")}
+    game = installation(tmp_path / "External installation ñ ")
+    probe(launcher, "select", str(game))
+    assert probe(launcher, "logs") == {"ok": "1", "folder": str(game / "logs")}
+
+
+def test_log_folder_supports_long_installation_path(launcher: Path) -> None:
+    limit = int(probe(launcher, "limit")["limit"])
+    game = nested_path(launcher.parent, limit)
+    game.parent.mkdir(parents=True)
+    installation(game)
+    probe(launcher, "select", str(game))
+    assert probe(launcher, "logs") == {"ok": "1", "folder": str(game / "logs")}
+
+
+@pytest.mark.parametrize(("log", "redirected", "folder"), [
+    ("/captures/game.log", "/redirected/run.log", "/captures"),
+    (None, "/redirected/run.log", "/redirected"),
+    (r"C:\captures\game.log", None, r"C:\captures"),
+    ("/game.log", None, "/"),
+    (r"C:\game.log", None, "C:\\"),
+])
+def test_log_folder_preserves_active_destination(
+    launcher: Path, tmp_path: Path, log: str | None, redirected: str | None, folder: str
+) -> None:
+    game = installation(tmp_path / "External installation")
+    probe(launcher, "select", str(game))
+    overrides = {}
+    if log:
+        overrides["TEST_LOG_PATH"] = log
+    if redirected:
+        overrides["TEST_STDERR_PATH"] = redirected
+    assert probe(launcher, "logs", **overrides) == {"ok": "1", "folder": folder}
+
+
+@pytest.mark.parametrize("active_log", [False, True])
+def test_log_folder_rejects_truncated_path(launcher: Path, active_log: bool) -> None:
+    overrides = {"TEST_LOG_PATH": "/a/long/log/path/run.log"} if active_log else {}
+    assert probe(launcher, "logs", "8", **overrides)["ok"] == "0"

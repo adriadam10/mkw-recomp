@@ -29,17 +29,6 @@ void sysinfo_cpu_name(char *out, size_t n) {
 #endif
 }
 
-int sysinfo_log_folder(char *out, size_t n) {
-    const char *log = rt_log_path();
-    if (log) snprintf(out, n, "%s", log);
-    else if (!plat_stderr_path(out, n) && !plat_exe_path(out, n)) return 0;
-    char *s = strrchr(out, '\\'), *f = strrchr(out, '/');
-    if (f > s) s = f;
-    if (!s) return 0;
-    *s = 0;
-    return 1;
-}
-
 typedef struct { char *buf; size_t n, at; } Out;
 
 static void put(Out *o, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
