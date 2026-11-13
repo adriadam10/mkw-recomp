@@ -21,6 +21,19 @@ from machine import Failed, crt_link, emit, package_dir
 LINK_TIMEOUT = 30 * 60  # far past a slow link: only a hung linker (issue #2: "stuck" after the last object)
 
 
+def write_link_response(rsp: Path, objects: list[Path], windows_quoting: bool) -> None:
+    """Objects passed to the linker without the process command line's length limit."""
+    # as_posix converts native Windows separators only: a backslash in a POSIX folder name is a literal character.
+    # lld-link and the package's zig cc (0.17.1, also on Linux) preserve ordinary backslashes inside quotes;
+    # the POSIX clang driver consumes backslash escapes there. Real linker regressions cover both grammars.
+    paths = [o.as_posix() for o in objects]
+    if windows_quoting:
+        lines = [subprocess.list2cmdline([p]) for p in paths]
+    else:
+        lines = ['"' + p.replace("\\", "\\\\").replace('"', '\\"') + '"' for p in paths]
+    rsp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str, jobs: int) -> None:
     gen, obj = work / "generated", work / "obj"
     windows = target == "windows"
@@ -80,11 +93,11 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
             emit("progress", done, total)
         if probe:
             probe.result()
-    objs = [str(o) for _, o, _ in jobs_c]
+    objs = [o for _, o, _ in jobs_c]
     for stale in set(obj.glob("*.o")) - {o for _, o, _ in jobs_c}:  # chunks an earlier version had
         stale.unlink()
         stale.with_suffix(".key").unlink(missing_ok=True)
-    rsp.write_text("\n".join(f'"{o}"' for o in objs).replace("\\", "/"))
+    write_link_response(rsp, objs, windows or Path(cc[0]).stem == "zig")
     t0 = time.monotonic()
     try:
         r = subprocess.run(link or [*cc, "-shared", "-o", str(part), f"@{rsp}", *extra], capture_output=True,

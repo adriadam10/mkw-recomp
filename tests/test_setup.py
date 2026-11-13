@@ -7,6 +7,7 @@ Usage: uv run pytest tests
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "sm86/spec"))
 sys.path.insert(0, str(ROOT / "tools/prepare"))
 import prepare  # noqa: E402
+import gamecode  # noqa: E402
 import spec  # noqa: E402
 import update  # noqa: E402
 
@@ -195,6 +197,37 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
     assert argv == [str(runtime / "mkw")]
     assert kwargs["env"]["MKW_GAME_DIR"] == str(alias)
     assert kwargs["env"]["MKW_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
+
+
+@pytest.mark.parametrize("driver", ["clang", "lld-link", "zig"])
+@pytest.mark.parametrize("name", ["Space and ñ", 'Quote" ñ', "Backslash\\ ñ", 'Both" \\ ñ '])
+def test_link_response_preserves_paths(tmp_path: Path, driver: str, name: str) -> None:
+    windows = driver == "lld-link"
+    if os.name == "nt" and (not windows or any(c in name for c in '\\"') or name.endswith(" ")):
+        pytest.skip("POSIX linker or directory name")
+    cc = shutil.which("clang")
+    linker = shutil.which(driver)
+    if not linker and driver == "zig":
+        packaged = ROOT / "build/dist/linux/setup/zig/zig"
+        linker = str(packaged) if packaged.is_file() else None
+    if not cc or not linker:
+        pytest.skip("clang and the requested linker are needed (zig may come from the local release package)")
+    folder = tmp_path / name
+    folder.mkdir()
+    src, obj, rsp = folder / "stub.c", folder / "stub.o", folder / "link.rsp"
+    src.write_text("int response_file_probe(void) { return 7; }\n")
+    flags = ["--target=x86_64-windows-gnu"] if windows else ["-fPIC"]
+    subprocess.run([cc, *flags, "-c", str(src), "-o", str(obj)], check=True)
+    gamecode.write_link_response(rsp, [obj], windows or driver == "zig")
+    lib = folder / ("stub.dll" if windows else "stub.so")
+    args = ([linker, "/dll", "/noentry", "/export:response_file_probe", f"/out:{lib}", f"@{rsp}"] if windows
+            else [linker, *(["cc"] if driver == "zig" else []), "-shared", "-o", str(lib), f"@{rsp}"])
+    # Reuse Zig's compiler runtime across cases; the response file and object paths remain different each time.
+    env = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(tmp_path.parent / "setup-link-zig-cache"),
+               ZIG_LOCAL_CACHE_DIR=str(tmp_path / "zig-local-cache"))
+    p = subprocess.run(args, env=env, capture_output=True, text=True, timeout=120)
+    assert p.returncode == 0, p.stderr
+    assert lib.is_file()
 
 
 def test_unpack_uses_launcher_not_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

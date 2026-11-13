@@ -5,6 +5,8 @@ The launcher passes `--game DIR` for the chosen installation and `--runtime DIR`
 `setup-state.json`, logs and settings go into the installation. Without `--runtime`, it defaults to `--game`.
 The installation path is made absolute without resolving symlinks or junctions, so setup and warm-up retain the
 directory spelling accepted by the launcher, even when the underlying canonical path exceeds the runtime's limit.
+The compile step writes UTF-8 linker response files with POSIX or Windows quoting as appropriate, preserving literal
+quotes and backslashes in POSIX installation paths instead of treating them as separators.
 
 | Script | What it does | Usage |
 |---|---|---|
