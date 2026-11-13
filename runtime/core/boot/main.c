@@ -518,6 +518,15 @@ static void portable_paths(RtConfig *c) {
 // build/mkw with --launcher. --play, MKW_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
 // MKW_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
 // gone).
+// Steam launch options `"...\\mkw.exe" %command%` on a Steam game (docs/remote-play.md: RetroArch's, the App ID of
+// Remote Play Together) start mkw as that game, with its overlay and Steam Input, and append the game's own program:
+// with SteamAppId set (Steam started us), an argument that is not an option and names an existing file is that
+// program, and is skipped.
+static int steam_command_arg(const char *arg) {
+    const char *app = getenv("SteamAppId");
+    return app && *app && strncmp(arg, "--", 2) && plat_file_exists(arg);
+}
+
 static int want_launcher(int argc, char **argv) {
     const char *done = getenv("MKW_LAUNCHED"), *off = getenv("MKW_NO_LAUNCHER");
     if ((done && *done) || (off && !strcmp(off, "1"))) return 0;
@@ -528,7 +537,8 @@ static int want_launcher(int argc, char **argv) {
         else if (!strcmp(argv[i], "--exefs") || !strcmp(argv[i], "--romfs") || !strcmp(argv[i], "--nup") ||
                  !strcmp(argv[i], "--profile"))
             i++;
-        else return 0;   // --play, a mode, --seconds: straight in
+        else if (steam_command_arg(argv[i])) {
+        } else return 0;   // --play, a mode, --seconds: straight in
     }
     return asked || !rt_game_builtin();
 }
@@ -622,6 +632,8 @@ int main(int argc, char **argv) {
             cfg.shot = argv[i];
         } else if (!mode && !strncmp(argv[i], "--", 2)) {
             mode = argv[i];
+        } else if (steam_command_arg(argv[i])) {
+            rt_logf("boot: started by Steam's %%command%%: %s left out\n", argv[i]);
         } else {
             return usage(argv[0]);
         }

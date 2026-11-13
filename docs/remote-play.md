@@ -38,10 +38,16 @@ It is off by default and changes nothing until you set it up.
 
    or set the environment variable `MKW_STEAM_APPID=1118310`.
 
-3. **Start the game from Steam** (recommended): Steam > Games > Add a Non-Steam Game to My Library, pick `mkw` /
-   `mkw.exe`, and play it from there. The Steam overlay (Shift+Tab), and with it the **Invite friends** button, only
-   works when Steam started the game. Started any other way, everything else still works: the guest link, and inviting
-   from your Steam friends list (right-click a friend > Remote Play Together).
+3. **Start the game from Steam, as the App ID's game** (needed for your friends' controllers). Started from its
+   folder, mkw runs as the App ID and invitations work, but Steam does not hand the guests' controllers to it: Steam
+   gives them to a game through its overlay, and only loads that into games it starts. A Non-Steam Game shortcut does
+   not work either: Steam then runs mkw as the shortcut, which has no Remote Play Together. Instead, let Steam start mkw
+   in place of the App ID's own program:
+   - install the App ID's game in Steam (RetroArch, free);
+   - right-click it > Properties > General > Launch options, and enter the path of `mkw.exe` in quotes followed by
+     `%command%`, for example `"C:\Users\you\Downloads\mkw-recomp\mkw.exe" %command%`;
+   - press Play on it. Steam starts `mkw.exe` with the game's program as its last argument, which mkw leaves out (the
+     log says `boot: started by Steam's %command%`). Empty the launch options to get the real game back.
 
 The log says `steam: running as App ID ...; Remote Play Together ready`. When something is missing, a notice at the
 top of the picture says why, and the log has the line `steam: Remote Play Together is off: ...`.
