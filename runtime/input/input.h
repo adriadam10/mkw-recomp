@@ -16,6 +16,16 @@ void input_block(int on);
 enum { INPUT_MAX_PLAYERS = 8 };
 uint32_t input_player_mask(void);   // bit k: player k + 1 has a controller; bit 0 always (the keyboard)
 void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
+// Remote keyboards (steam/steam_rpt.c: a Steam Remote Play Together guest's keys): a player 2-8 fed by keys instead of
+// a gamepad, through the keyboard table of input_map.c. input_remote_attach takes the first player with neither a
+// gamepad nor a remote keyboard, -1 when none is free; input_remote_key holds or releases a key (input_map.h KEY_*);
+// input_remote_detach frees the player. Any thread.
+int input_remote_attach(void);
+void input_remote_detach(int player);
+void input_remote_key(int player, int key, int down);
+// The key id (input_map.h KEY_*) of a USB HID keyboard usage (page 7: SDL scancodes, Steam Remote Play's scancodes);
+// 0 for a usage without one. Any thread.
+int input_key_of_usb(int usage);
 // The in-game menu (ui/menu/menu.h): input_menu(1) when it opens (input_poll reports nothing, the cursor is released), (0) when
 // it closes (nothing until every button and stick direction is released). Independent of input_block.
 void input_menu(int open);

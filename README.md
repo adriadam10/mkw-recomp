@@ -136,6 +136,8 @@ Beyond the console, all optional and off (or at the console's value) by default:
   steering, vibration strength; local multiplayer with one controller each.
   Switch 2 controllers (Pro Controller, Joy-Con, GameCube) work over Bluetooth and, on Linux, over USB; on Windows
   USB needs a one-time driver step, below.
+- **Steam Remote Play Together**: friends far away join local multiplayer through Steam, with their controller or
+  keyboard ([docs/remote-play.md](docs/remote-play.md)).
 - **Hacks**: turbo (hold or toggle F2), skip movies, unlock everything, the same randomness every time, straight to
   time trial or free roam.
 - **Languages**: the menus in 20 languages; the game itself also in Catalan, Galician and Basque.

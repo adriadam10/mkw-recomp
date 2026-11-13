@@ -215,7 +215,16 @@ typedef enum {
     // CONFIRM "... %s ..." (the name)
     UI_LAUNCH_PLAYERS, UI_LAUNCH_PLAYER, UI_PLAYER_NOTE, UI_PLAYER_NAME_HINT, UI_PLAYER_CHOOSE, UI_PLAYER_CHOSEN,
     UI_PLAYER_NEW, UI_PLAYER_REMOVE, UI_PLAYER_CONFIRM, UI_PLAYER_FAILED,
-    UI_MENU_LAST_ID = UI_PLAYER_FAILED,
+    // Steam Remote Play Together (steam/steam_rpt.c), the Game tab's group: the buttons; CONNECTED "%d connected" (the
+    // guests) beside Invite; the notes of a greyed-out group (no App ID, the start screen, Steam not available)
+    UI_MENU_GROUP_RPT, UI_MENU_RPT_INVITE, UI_MENU_RPT_INVITE_DESC, UI_MENU_RPT_LINK, UI_MENU_RPT_LINK_DESC,
+    UI_MENU_RPT_CONNECTED, UI_MENU_RPT_NO_OVERLAY, UI_MENU_RPT_WAITING,
+    UI_MENU_RPT_NEED_APPID, UI_MENU_RPT_AT_START, UI_MENU_RPT_FAILED,
+    // notices: JOINED / LEFT "%s" (the guest's name); PAD "%d" (the player); KEYBOARD "%s ... %d"; FULL "%s";
+    // FAILED "%s" (Steam's reason, in English)
+    UI_NOTICE_RPT_JOINED, UI_NOTICE_RPT_LEFT, UI_NOTICE_RPT_PAD, UI_NOTICE_RPT_KEYBOARD, UI_NOTICE_RPT_FULL,
+    UI_NOTICE_RPT_FAILED,
+    UI_MENU_LAST_ID = UI_NOTICE_RPT_FAILED,
     UI_TEXT_COUNT
 } UiTextId;
 

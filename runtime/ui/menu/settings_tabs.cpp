@@ -18,6 +18,7 @@ extern "C" {
 #include "input.h"
 #include "input_map.h"
 #include "platform/platform.h"
+#include "steam_rpt.h"
 #include "sysinfo.h"
 #include "ui/menu/menu.h"
 #include "ui_text.h"
@@ -254,10 +255,55 @@ static void tab_graphics(float scale) {
     opt_end();
 }
 
+// Steam Remote Play Together (steam/steam_rpt.h): invite through the Steam overlay or copy a guest link. Greyed out with
+// the reason when Steam is not running for the game; the App ID itself is steam_appid in mkw.ini (docs/remote-play.md).
+static void rows_remote_play(void) {
+    static char value[64];
+    static uint64_t link_until;   // "Copied" or "did not work" beside Copy guest link until then
+    static int link_ok;
+    opt_group(UI_MENU_GROUP_RPT);
+    int st = steam_rpt_state();
+    UiTextId why = st == STEAM_RPT_OFF ? UI_MENU_RPT_NEED_APPID : st == STEAM_RPT_IDLE ? UI_MENU_RPT_AT_START
+                                                                                        : UI_MENU_RPT_FAILED;
+    const char *invite_value = "";
+    if (st == STEAM_RPT_READY && steam_rpt_invite_failed()) invite_value = menu_text(UI_MENU_RPT_NO_OVERLAY);
+    else if (st == STEAM_RPT_READY && steam_rpt_guests()) {
+        snprintf(value, sizeof value, menu_text(UI_MENU_RPT_CONNECTED), steam_rpt_guests());
+        invite_value = value;
+    }
+    if (st != STEAM_RPT_READY) opt_disable_next(why);
+    if (opt_button("##rpt_invite", UI_MENU_RPT_INVITE, UI_MENU_RPT_INVITE_DESC, invite_value) && st == STEAM_RPT_READY)
+        steam_rpt_invite();
+
+    // the link comes in a Steam callback a moment after the request; it is copied here, on the menu's thread
+    static char link[1024];
+    int got = steam_rpt_take_link(link, sizeof link);
+    if (got) {
+        link_ok = got > 0 && plat_clipboard_set(link);
+        link_until = plat_now_ns() + 3000000000ull;
+    }
+    static uint64_t wait_until;   // "waiting for Steam" until the link comes, 10 s at most
+    if (got) wait_until = 0;
+    if (wait_until && plat_now_ns() > wait_until) {
+        wait_until = 0;
+        link_ok = 0;
+        link_until = plat_now_ns() + 3000000000ull;
+    }
+    const char *link_value = wait_until ? menu_text(UI_MENU_RPT_WAITING)
+                           : plat_now_ns() < link_until ? menu_text(link_ok ? UI_MENU_COPY_INFO_DONE : UI_MENU_ACTION_FAILED)
+                                                        : "";
+    if (st != STEAM_RPT_READY) opt_disable_next(why);
+    if (opt_button("##rpt_link", UI_MENU_RPT_LINK, UI_MENU_RPT_LINK_DESC, link_value) && st == STEAM_RPT_READY) {
+        steam_rpt_request_link();
+        wait_until = plat_now_ns() + 10000000000ull;
+    }
+}
+
 static void tab_game(float scale) {
     opt_begin("##game", scale);
     row_game_lang();
     opt_toggle("MKW_LAN", UI_MENU_LAN, UI_MENU_LAN_DESC);   // sdk/ov/ov_socket.c, the lan set of recomp/patches-mkw.txt
+    rows_remote_play();
     opt_end();
 }
 

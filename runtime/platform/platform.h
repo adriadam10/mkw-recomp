@@ -414,6 +414,13 @@ int plat_url_scheme(const char *scheme, const char *label, const char *exe, cons
 // in the system directories only. NULL when missing.
 void *plat_lib_open(const char *name);
 void *plat_lib_sym(void *lib, const char *name);
+// The process's signal handlers before a library that may install its own crash handler starts (Steam's client at
+// SteamAPI_Init, steam/steam_rpt.c), and back after it: the runtime's fault handler (linux_mem.c) must keep SIGSEGV.
+// plat_handlers_restore puts back every handler that changed, frees h and returns how many. Windows: nothing to do,
+// the runtime's vectored handlers run before any filter a library sets (NULL, 0).
+typedef struct PlatHandlers PlatHandlers;
+PlatHandlers *plat_handlers_save(void);
+int plat_handlers_restore(PlatHandlers *h);
 
 // ---- machine load for the performance overlay (perfmon.c's sampling thread; each call can take milliseconds). A number
 // the system does not give is -1.

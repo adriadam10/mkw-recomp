@@ -2,7 +2,7 @@
 
 | File | What it is |
 |---|---|
-| `input.c`, `input.h`, `input_map.*` | Controller state and remapping; one gamepad per player for local multiplayer (`MKW_VIRTUAL_PADS=N` adds N virtual SDL gamepads to try it without controllers); the last device used (keyboard or controller, for the button icons) |
+| `input.c`, `input.h`, `input_map.*` | Controller state and remapping; one gamepad per player for local multiplayer (`MKW_VIRTUAL_PADS=N` adds N virtual SDL gamepads to try it without controllers); remote keyboards as players 2-8 and the Steam virtual gamepads of Remote Play Together guests ([steam/](../steam/README.md)); the last device used (keyboard or controller, for the button icons) |
 | `input_script.*` | Button script (`MKW_INPUT_SCRIPT`; a `p<N> ` prefix presses for player N, also through `ctl press`; paused while an `MKW_SEQ_HOLD` phase lasts; a `<phase>+<ticks> BUTTON` line counts from the start of that phase, with `MKW_SEQ_WATCH=1`); the A button of `MKW_SKIP_MOVIES` (`core/hacks/skip.c`) and `MKW_CTL` presses |
 | `input_sdl.*`, `input_wsys.h` | SDL3 back end |
 | `motion_fusion.c` | Gyro and accelerometer |

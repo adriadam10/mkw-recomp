@@ -15,6 +15,7 @@ behind that code was seen there, not in MKW.
 | [sdk/](sdk/README.md) | `nn::*` functions replaced by name: system, files and RomFS, video, software keyboard |
 | [audio/](audio/README.md) | The SDK's audio renderer and its effects |
 | [input/](input/README.md) | Controllers, keyboard, mouse, gyro |
+| [steam/](steam/README.md) | Steam Remote Play Together (off unless `steam_appid` is set): guests' controllers and keyboards as players |
 | [gfx/](gfx/README.md) | NVN over Vulkan: API front end (`nvn/`) and back end (`vk/`) |
 | [platform/](platform/README.md) | Operating system layer: `linux.c`, `win32.c` |
 | [ui/](ui/README.md) | Menu and overlay (Dear ImGui) |
