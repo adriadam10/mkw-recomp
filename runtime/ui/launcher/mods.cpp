@@ -24,7 +24,7 @@ void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 static struct {
     Mod mods[MODS_MAX];
     int n;
-    char exe_dir[PLAT_PATH_MAX];
+    char exe_dir[PLAT_PATH_MAX];   // setup tools only; all installation data uses cfg_game_dir()
     // import
     SDL_Thread *thread;
     SDL_Process *proc;
@@ -50,7 +50,7 @@ static struct {
 
 static void set_enabled(const char *name, int on);
 
-static void rebuild_path(char *out, size_t cap) { snprintf(out, cap, "%s/mods/.rebuild", G.exe_dir); }
+static void rebuild_path(char *out, size_t cap) { snprintf(out, cap, "%s/mods/.rebuild", cfg_game_dir()); }
 
 static void mark_rebuild(const char *name) {
     for (int i = 0; i < G.n; i++)
@@ -184,8 +184,8 @@ ModsState mods_state(void) {
     return s;
 }
 
-static void mods_dir(const char *exe_dir, char *out, size_t cap) {
-    snprintf(out, cap, "%s/mods", exe_dir);
+static void mods_dir(char *out, size_t cap) {
+    snprintf(out, cap, "%s/mods", cfg_game_dir());
 }
 
 // The value of "key" in {"a": 1, "key": value, ...} (mod.json's flat top level): a number, true/false or "string".
@@ -232,8 +232,7 @@ static void json_switches(const char *json, Mod *m) {
     }
 }
 
-static int list_cb(const char *name, int kind, uint64_t, void *ctx) {
-    char (*exe)[PLAT_PATH_MAX] = (char (*)[PLAT_PATH_MAX])ctx;
+static int list_cb(const char *name, int kind, uint64_t, void *) {
     if (name[0] == '.') return 1;   // .merged and the like are the menu's own, not mods
     if (kind != PLAT_FS_DIR || G.n >= MODS_MAX) return 1;
     if (strlen(name) >= MOD_NAME_MAX) return 1;   // import.py caps names at 64; not ours
@@ -242,7 +241,7 @@ static int list_cb(const char *name, int kind, uint64_t, void *ctx) {
     snprintf(m->name, sizeof m->name, "%s", name);
     snprintf(m->title, sizeof m->title, "%s", name);
     char meta[PLAT_PATH_MAX * 2 + 32], json[4096];
-    snprintf(meta, sizeof meta, "%s/mods/%s/mod.json", *exe, name);
+    snprintf(meta, sizeof meta, "%s/mods/%s/mod.json", cfg_game_dir(), name);
     PlatFile *f = plat_fs_open(meta, 0, NULL);
     if (f) {
         int64_t n = plat_file_pread(f, json, sizeof json - 1, 0);
@@ -278,7 +277,7 @@ static int list_cb(const char *name, int kind, uint64_t, void *ctx) {
 }
 
 static void remove_tree(const char *path);
-static void conflicts_load(const char *exe_dir);   // .merged/conflicts.json, defined below
+static void conflicts_load(void);   // .merged/conflicts.json, defined below
 // rewrite mods/choices.json, optionally setting one pick or dropping a mod's picks (defined below)
 static void rewrite_choices(const char *archive, const char *inner, const char *winner, const char *drop_mod);
 void mods_merge_start(const char *exe_dir);        // merge worker, defined below (public: mods.h)
@@ -298,8 +297,8 @@ void mods_refresh(const char *exe_dir) {
     if (exe_dir != G.exe_dir) snprintf(G.exe_dir, sizeof G.exe_dir, "%s", exe_dir);   // not a self-copy (UB)
     G.n = 0;
     char dir[PLAT_PATH_MAX];
-    mods_dir(G.exe_dir, dir, sizeof dir);
-    if (plat_dir_exists(dir)) plat_fs_list(dir, list_cb, &G.exe_dir);
+    mods_dir(dir, sizeof dir);
+    if (plat_dir_exists(dir)) plat_fs_list(dir, list_cb, nullptr);
     // plat_fs_list order is the filesystem's; keep the page stable
     for (int i = 0; i < G.n; i++)
         for (int j = i + 1; j < G.n; j++)
@@ -309,7 +308,7 @@ void mods_refresh(const char *exe_dir) {
                 G.mods[j] = t;
             }
     for (int i = 0; i < G.n; i++) G.mods[i].enabled = mod_enabled(G.mods[i].name);
-    conflicts_load(exe_dir);
+    conflicts_load();
 }
 
 // Every scanned mod's switches off, then the enabled mods' on, in MODS order (later mods win shared keys).
@@ -372,7 +371,7 @@ void mods_set_exefs(const char *path) {
 }
 
 // the game's exefs, for the build id an import checks (the same resolution the game itself uses)
-static void exefs_root(const char *exe_dir, char *out, size_t cap) {
+static void exefs_root(char *out, size_t cap) {
     if (g_exefs_override[0]) {
         snprintf(out, cap, "%s", g_exefs_override);
         return;
@@ -381,10 +380,10 @@ static void exefs_root(const char *exe_dir, char *out, size_t cap) {
     if (e && *e)
         snprintf(out, cap, "%s", e);
     else
-        snprintf(out, cap, "%s/exefs", exe_dir);
+        snprintf(out, cap, "%s/exefs", cfg_game_dir());
 }
 
-static void romfs_root(const char *exe_dir, char *out, size_t cap) {
+static void romfs_root(char *out, size_t cap) {
     if (g_romfs_override[0]) {
         snprintf(out, cap, "%s", g_romfs_override);
         return;
@@ -393,7 +392,7 @@ static void romfs_root(const char *exe_dir, char *out, size_t cap) {
     if (linked && *linked)
         snprintf(out, cap, "%s", linked);
     else
-        snprintf(out, cap, "%s/romfs", exe_dir);
+        snprintf(out, cap, "%s/romfs", cfg_game_dir());
 }
 
 void mods_toggle(const char *name, int on) { set_enabled(name, on); mods_merge_start(G.exe_dir); }
@@ -410,7 +409,7 @@ void mods_delete(const char *name) {
         return;
     }
     char path[PLAT_PATH_MAX * 2];
-    snprintf(path, sizeof path, "%s/mods/%s", G.exe_dir, name);
+    snprintf(path, sizeof path, "%s/mods/%s", cfg_game_dir(), name);
     rt_log("mods: delete %s", path);
     mark_rebuild(name);   // before the folder goes: its mod.json says whether it changed the code
     remove_tree(path);
@@ -460,13 +459,13 @@ static int rm_cb(const char *name, int kind, uint64_t, void *ctx) {
     return 1;
 }
 
-// Our own imports only, under <exe>/mods: depth-first, then the mod folder itself. Bounded on
+// Our own imports only, under <game>/mods: depth-first, then the mod folder itself. Bounded on
 // purpose: a bad path here once emptied every mod, so it now refuses anything but one folder
 // directly inside mods/ (and logs every refusal).
 static void remove_tree(const char *path) {
     char root[PLAT_PATH_MAX * 2 + 16];
-    snprintf(root, sizeof root, "%s/mods/", G.exe_dir);
-    // only a folder strictly inside <exe>/mods: never the mods dir itself, never the exe dir, whatever we were handed
+    snprintf(root, sizeof root, "%s/mods/", cfg_game_dir());
+    // only a folder strictly inside <game>/mods: never the mods dir itself, never the game dir, whatever we were handed
     if (!path || strncmp(path, root, strlen(root)) != 0) {
         rt_log("mods: refusing to delete %s (outside %s)", path ? path : "(null)", root);
         return;
@@ -641,17 +640,17 @@ void mods_import_start(const char *exe_dir) {
     }
     // the loose RomFS the manifest's original hashes come from: link mode's path, else the copied one
     char romfs[PLAT_PATH_MAX * 2];
-    romfs_root(exe_dir, romfs, sizeof romfs);
+    romfs_root(romfs, sizeof romfs);
     char exefs[PLAT_PATH_MAX * 2];
-    exefs_root(exe_dir, exefs, sizeof exefs);
+    exefs_root(exefs, sizeof exefs);
     const char *kind = G.pick_is_zip ? "--zip" : "--folder";
     // the name and the variant are optional: each pair only when it has a value
-    const char *args[16] = {python, "-I", script, "--game", exe_dir, "--romfs", romfs, "--exefs", exefs, kind, G.pick};
+    const char *args[16] = {python, "-I", script, "--game", cfg_game_dir(), "--romfs", romfs, "--exefs", exefs, kind, G.pick};
     int na = 11;
     if (G.name[0]) args[na++] = "--name", args[na++] = G.name;
     if (G.variant[0]) args[na++] = "--variant", args[na++] = G.variant;
     args[na] = nullptr;
-    rt_log("mods: %s %s --game %s %s %s%s%s", python, script, exe_dir, kind, G.pick,
+    rt_log("mods: %s %s --game %s %s %s%s%s", python, script, cfg_game_dir(), kind, G.pick,
            G.name[0] ? " --name " : "", G.name[0] ? G.name : "");
     G.proc = SDL_CreateProcess(args, true);
     if (!G.proc) {
@@ -741,11 +740,11 @@ void mods_merge_start(const char *exe_dir) {
         return;
     }
     char romfs[PLAT_PATH_MAX * 2], mods[4096], choices[PLAT_PATH_MAX * 2];
-    romfs_root(exe_dir, romfs, sizeof romfs);
+    romfs_root(romfs, sizeof romfs);
     const char *list = cfg_get("MKW_MODS");
     snprintf(mods, sizeof mods, "%s", list ? list : "");
-    snprintf(choices, sizeof choices, "%s/mods/choices.json", exe_dir);
-    const char *args[] = {python, "-I", script, "--game", exe_dir, "--romfs", romfs,
+    snprintf(choices, sizeof choices, "%s/mods/choices.json", cfg_game_dir());
+    const char *args[] = {python, "-I", script, "--game", cfg_game_dir(), "--romfs", romfs,
                           "--enable", mods, "--choices", choices, nullptr};
     rt_log("mods: merge %s", mods);
     G.mproc = SDL_CreateProcess(args, true);
@@ -790,10 +789,10 @@ static int json_string(const char **pp, const char *key, char *out, size_t cap) 
     return n > 0;
 }
 
-static void conflicts_load(const char *exe_dir) {
+static void conflicts_load(void) {
     G.nconflicts = 0;
     char path[PLAT_PATH_MAX * 2], json[65536];
-    snprintf(path, sizeof path, "%s/mods/.merged/conflicts.json", exe_dir);
+    snprintf(path, sizeof path, "%s/mods/.merged/conflicts.json", cfg_game_dir());
     PlatFile *f = plat_fs_open(path, 0, NULL);
     if (!f) return;
     int64_t n = plat_file_pread(f, json, sizeof json - 1, 0);
@@ -851,7 +850,7 @@ const ModConflict *mods_conflict_at(int i) { return i >= 0 && i < G.nconflicts ?
 // Rewritten from the conflicts list with one change, then re-merged.
 static void rewrite_choices(const char *archive, const char *inner, const char *winner, const char *drop_mod) {
     char cpath[PLAT_PATH_MAX * 2], out[8192];
-    snprintf(cpath, sizeof cpath, "%s/mods/choices.json", G.exe_dir);
+    snprintf(cpath, sizeof cpath, "%s/mods/choices.json", cfg_game_dir());
     int n = snprintf(out, sizeof out, "[\n");
     int first = 1;
     for (int i = 0; i < G.nconflicts && n < (int)sizeof out - 192; i++) {
@@ -923,11 +922,11 @@ void mods_merge_sync(const char *exe_dir) {
         return;
     }
     char romfs[PLAT_PATH_MAX * 2], mods[4096], choices[PLAT_PATH_MAX * 2];
-    romfs_root(exe_dir, romfs, sizeof romfs);
+    romfs_root(romfs, sizeof romfs);
     const char *list = cfg_get("MKW_MODS");
     snprintf(mods, sizeof mods, "%s", list ? list : "");
-    snprintf(choices, sizeof choices, "%s/mods/choices.json", exe_dir);
-    const char *args[] = {python, "-I", script, "--game", exe_dir, "--romfs", romfs,
+    snprintf(choices, sizeof choices, "%s/mods/choices.json", cfg_game_dir());
+    const char *args[] = {python, "-I", script, "--game", cfg_game_dir(), "--romfs", romfs,
                           "--enable", mods, "--choices", choices, nullptr};
     rt_log("mods: merge at Play %s", mods);
     SDL_Process *proc = SDL_CreateProcess(args, false);   // output inherits ours: the log shows it

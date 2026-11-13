@@ -58,7 +58,7 @@ typedef struct {
 
 const RtGame *rt_game(void);           // the tables in use; fatal when there are none
 const RtGame *rt_game_builtin(void);   // the linked ones (modules.c), NULL in the player's build (gamelib.c loads them)
-int rt_game_present(void);             // linked tables, or a library beside the executable built for this runtime
+int rt_game_present(void);             // linked tables, or a library in the selected game folder built for this runtime
 void rt_fnprof_set(int on);            // the function-entry hook of the generated code on or off
 
 #if defined(_WIN32)

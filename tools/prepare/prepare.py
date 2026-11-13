@@ -1,12 +1,12 @@
 """Set the game up on the player's machine from their own copy: check it, copy it, build the game code, translate the
-shaders and write the 720p resolution overlay, into the folder of the executable.
+shaders into the player's chosen installation folder.
 
 Why: nothing of the game ships with the port. The start screen (runtime/ui/launcher/launcher.cpp) runs this with the Python of
 the player's package and shows its progress; the same steps run from a source checkout with the system's tools. The
 order follows totk-pc-recomp's installer (docs/installer.md, MIT): check before writing, one key per step so a
 cancelled or failed run resumes from the last finished step.
 
-Steps, into --game (the folder of mkw / mkw.exe):
+Steps, into --game (by default the folder of mkw / mkw.exe):
   check     exefs/main is a version of MKW the port knows (NSO build id, recomp/versions.py: 1.0.0, 1.8.0), the RomFS
             has at least 95 % of that version's files (1.0.0: 205 660)
   exefs     exefs/ copied (40 MB)
@@ -28,7 +28,7 @@ translated text per code with the detail inside: source (no earlier setup to rep
 gone: moved or renamed, #188), nogame (the folder, without exefs/main and romfs/), encrypted (exefs/main, not an NSO), version (main's build id), romfs (its file count), failed
 (a tool's English message) and io (the system's); logs/setup.log gets the English message whole.
 
-Usage: python prepare.py --source DIR|FILE.nup --game DIR [--romfs copy|link] [--jobs N] [--cc CMD] [--glslc PATH]
+Usage: python prepare.py --source DIR|FILE.nup --game DIR [--runtime DIR] [--romfs copy|link] [--jobs N]
                          [--target linux|windows]
 Without --source (the launcher after an update, tools/prepare/update.py): the copy and the RomFS mode of the last
 setup in --game, from its setup-state.json; only the steps whose key changed run again.
@@ -105,10 +105,10 @@ def is_nx(path: Path) -> bool:
         return False
 
 
-def unpack(game: Path, pkg: Path, dest: Path | str, *prefixes: str) -> str:
+def unpack(runtime: Path, pkg: Path, dest: Path | str, *prefixes: str) -> str:
     """Files of a packed dump (.nup or .nx) under dest as loose files, by the runtime: only those under the prefixes
     ("exefs", "romfs/Mals"). Returns its "unpack: N files, B bytes" line (the log lines come first); dest "-" counts only."""
-    exe = game / ("mkw.exe" if os.name == "nt" else "mkw")
+    exe = runtime / ("mkw.exe" if os.name == "nt" else "mkw")
     p = subprocess.Popen([str(exe), "--unpack", str(pkg), str(dest), *prefixes], stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, text=True)  # fmt: skip
     head, tail = "", []
@@ -124,11 +124,11 @@ def unpack(game: Path, pkg: Path, dest: Path | str, *prefixes: str) -> str:
     return head
 
 
-def loose_romfs(game: Path, romfs: Path, work: Path, *dirs: str) -> Path:
+def loose_romfs(runtime: Path, romfs: Path, work: Path, *dirs: str) -> Path:
     """romfs as a folder with at least dirs in it: itself when loose, else those dirs unpacked from the package."""
     if not romfs.is_file():
         return romfs
-    unpack(game, romfs, work / "pack", *(f"romfs/{d}" for d in dirs))
+    unpack(runtime, romfs, work / "pack", *(f"romfs/{d}" for d in dirs))
     return work / "pack" / "romfs"
 
 
@@ -155,10 +155,11 @@ def count_files(top: Path, enough: int) -> int:
     return n
 
 
-def check(src: Path, game: Path) -> tuple[Path, Path, Version]:
+def check(src: Path, game: Path, runtime: Path | None = None) -> tuple[Path, Path, Version]:
+    runtime = runtime or game
     exefs, romfs = find_game(src)
     if is_nx(exefs):  # a .nx package: its exefs/main through the runtime
-        unpack(game, exefs, game / "setup-work/pack", "exefs/main")
+        unpack(runtime, exefs, game / "setup-work/pack", "exefs/main")
         main = game / "setup-work/pack/exefs/main"
         head, where = main.read_bytes()[:0x48], f"{exefs}::exefs/main"
     elif exefs.is_file():  # a .nup package
@@ -178,7 +179,7 @@ def check(src: Path, game: Path) -> tuple[Path, Path, Version]:
         raise Failed(str(e), "version", got) from None
     need = int(v.romfs_files * ROMFS_MARGIN)
     if is_nx(romfs):
-        n = int(unpack(game, romfs, "-", "romfs").split()[1])
+        n = int(unpack(runtime, romfs, "-", "romfs").split()[1])
     else:
         n = len(Nup(romfs).files("romfs")) if romfs.is_file() else count_files(romfs, need)
     if n < need:
@@ -334,13 +335,13 @@ def shaders(exefs: Path, romfs: Path, game: Path, work: Path, glslc: str, jobs: 
         p.unlink()
 
 
-def warm(game: Path, work: Path) -> None:
+def warm(game: Path, work: Path, runtime: Path | None = None) -> None:
     """The game run once to its title, so the first real start finds pipeline-cache.bin and pipeline-keys.bin. Its
     saves go to a scratch profile: the player's first start stays a first start. The window opens without taking focus
     and without sound; the run is ended after WARM_SECONDS."""
-    exe = game / ("mkw.exe" if os.name == "nt" else "mkw")
+    exe = (runtime or game) / ("mkw.exe" if os.name == "nt" else "mkw")
     env = dict(os.environ, MKW_LAUNCHED="1", MKW_ASSUME_FOCUS="1", MKW_AUDIO="none",
-               MKW_PROFILE_DIR=str(work / "warm-profile"))  # fmt: skip
+               MKW_GAME_DIR=str(game), MKW_PROFILE_DIR=str(work / "warm-profile"))  # fmt: skip
     p = subprocess.Popen([str(exe)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for t in range(WARM_SECONDS):
         if p.poll() is not None:
@@ -382,7 +383,8 @@ def main() -> None:
         type=Path,
         help="the folder with the player's exefs/ and romfs/, or their .nup package (default: the last's)",
     )
-    ap.add_argument("--game", type=Path, required=True, help="the folder of mkw / mkw.exe")
+    ap.add_argument("--game", type=Path, required=True, help="the game installation folder")
+    ap.add_argument("--runtime", type=Path, help="the folder of mkw / mkw.exe (default: --game)")
     ap.add_argument("--romfs", choices=("copy", "link"), help="(default: the last setup's, else copy)")
     ap.add_argument("--jobs", type=int, default=0, help="parallel jobs (default: from cores and memory)")
     ap.add_argument("--cc", help="the C compiler command (default: the package's zig cc, else clang)")
@@ -396,6 +398,7 @@ def main() -> None:
     if ca := update.ca_file():  # spec.py downloads NVIDIA's redistributables with this Python (issue #102, NixOS)
         os.environ["SSL_CERT_FILE"] = ca
     game = args.game.resolve()
+    runtime = args.runtime.resolve() if args.runtime else game
     state = load_state(game)
     if not args.source:  # the last setup's; before 0.1.5 the state kept them only in its keys
         done_exefs = Path(state["done"]["exefs"]) if "exefs" in state["done"] else None
@@ -441,7 +444,7 @@ def main() -> None:
     try:
         emit("step", "check")
         cc = args.cc.split() if args.cc else default_cc(game, args.target)
-        exefs_src, romfs_src, version = check(src, game)
+        exefs_src, romfs_src, version = check(src, game, runtime)
         romfs = game / "romfs" if args.romfs == "copy" else romfs_src
         # The version (from exefs/main's build id) says which game a step built from; the folder only matters to the
         # steps that copy from it or point mkw.ini at it. With the folder in every key, moving or renaming it redid
@@ -483,7 +486,7 @@ def main() -> None:
             if step == "exefs":
                 if is_nx(exefs_src):
                     clear_dir(game / "exefs", exefs_src)
-                    unpack(game, exefs_src, game, "exefs")
+                    unpack(runtime, exefs_src, game, "exefs")
                 elif exefs_src.is_file():
                     nup = Nup(exefs_src)
                     nup.extract("exefs", game / "exefs", lambda d, t: emit("progress", d, t))
@@ -494,7 +497,7 @@ def main() -> None:
             elif step == "romfs":
                 if args.romfs == "copy" and is_nx(romfs_src):
                     clear_dir(romfs, romfs_src)
-                    unpack(game, romfs_src, game, "romfs")
+                    unpack(runtime, romfs_src, game, "romfs")
                     ini_set(game / "mkw.ini", "romfs", "romfs")
                 elif args.romfs == "copy" and romfs_src.is_file():
                     nup = Nup(romfs_src)
@@ -512,17 +515,17 @@ def main() -> None:
                 compile_game(game, game / "exefs", work, cc, args.target, jobs)
             elif step == "shaders":
                 # extract.py reads a .nup itself; a .nx's shader archives are unpacked first
-                src_romfs = loose_romfs(game, romfs, work, "Shader", *SHADER_DIRS) if is_nx(romfs) else romfs
+                src_romfs = loose_romfs(runtime, romfs, work, "Shader", *SHADER_DIRS) if is_nx(romfs) else romfs
                 shaders(game / "exefs", src_romfs, game, work, glslc, args.jobs or shader_jobs(), cc)
             elif step == "warm":
-                warm(game, work)
+                warm(game, work, runtime)
             elif step == "cleanup":
                 for p in work.glob("*"):
                     if p.is_dir() and p.name != "obj":
                         shutil.rmtree(p, ignore_errors=True)
                 # the languages the game does not ship (ca, gl, eu), from this version's translations (the step runs
                 # at every setup, so an update brings its new texts); about a second
-                game_texts.build_all(game, loose_romfs(game, romfs, work, "Mals"))
+                game_texts.build_all(game, loose_romfs(runtime, romfs, work, "Mals"))
                 shutil.rmtree(work / "pack", ignore_errors=True)
             state["done"][step] = key
             save_state(game, state)

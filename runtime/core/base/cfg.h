@@ -1,4 +1,4 @@
-// Settings: the MKW_* environment variables, with mkw.ini next to mkw behind them.
+// Settings: the MKW_* environment variables, with the selected installation's mkw.ini behind them.
 #pragma once
 
 // getenv for a setting: the environment variable when set, else the mkw.ini key (the name without "MKW_", any
@@ -6,8 +6,16 @@
 // is kept). A name without the MKW_ prefix goes to getenv unchanged. Safe from any thread once cfg_init has returned.
 const char *cfg_get(const char *name);
 
-// Reads mkw.ini once, from mem_init after the address space is claimed and before any setting is read. Logs the file, its key count, unknown keys and environment overrides.
+// Reads mkw.ini once, before settings are read. The external game library needs the installation path before
+// mem_init can claim its address space. Logs the file, its key count, unknown keys and environment overrides.
 void cfg_init(void);
+
+// Absolute installation directory chosen by MKW_GAME_DIR or the launcher's mkw.ini; otherwise beside mkw.
+// Stable after cfg_init. Saves, prepared game files and caches live here; tools and updates stay beside mkw.
+const char *cfg_game_dir(void);
+// Launcher thread only: save the current settings and remember a new directory beside mkw. Restart after success.
+// An environment override prevents changes. Returns 0 on a write failure or an environment override.
+int cfg_select_game_dir(const char *path);
 
 // Replaces the loaded keys with those of the file at path (tests). 1 when the file was read, 0 when missing.
 // Not thread-safe: nothing else may call cfg_get meanwhile.
@@ -21,7 +29,7 @@ void cfg_set(const char *name, const char *value);
 unsigned cfg_version(void);
 // 1 when the environment sets name: cfg_set cannot change what cfg_get returns (the menu greys the setting out).
 int cfg_from_env(const char *name);
-// Writes the keys cfg_set changed since the last save into mkw.ini next to mkw (cfg_save_to: the file at path).
+// Writes the keys cfg_set changed since the last save into the installation's mkw.ini (cfg_save_to: file at path).
 // Only those lines change: the last line of a changed key gets the new value, a missing key goes under its section
 // (after the commented example line of the key when the section has one; the section is added at the end of the file
 // when missing), comments and every other line stay byte for byte. 1 on success or with nothing to write.

@@ -6,9 +6,11 @@ Usage: uv run pytest tests
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -35,14 +37,15 @@ def run_prepare(*args: str) -> subprocess.CompletedProcess:
                           capture_output=True, text=True, timeout=60)  # fmt: skip
 
 
-def test_resume_without_source(tmp_path: Path) -> None:
+@pytest.mark.parametrize("external", [False, True])
+def test_resume_without_source(tmp_path: Path, external: bool) -> None:
     game = tmp_path / ODD / "game"
     game.mkdir(parents=True)
     copy = tmp_path / ODD / "copy"
     copy.mkdir()
     state = {"version": 1, "done": {"exefs": str(copy / "exefs"), "romfs": f"link {copy / 'romfs'}"}}
     (game / "setup-state.json").write_text(json.dumps(state))
-    p = run_prepare("--game", str(game))
+    p = run_prepare("--game", str(game), *(["--runtime", str(tmp_path / "Launcher ñ")] if external else []))
     # the last setup's copy, whole: check fails on its missing files, naming the folder with its space
     assert "step check" in p.stdout, p.stdout + p.stderr
     assert str(copy) in p.stdout, p.stdout
@@ -100,6 +103,59 @@ def test_package_sources_import(tmp_path: Path) -> None:
     p = subprocess.run([sys.executable, "-I", str(tmp_path / "src/tools/prepare/prepare.py"), "--help"],
                        capture_output=True, text=True, timeout=60)  # fmt: skip
     assert p.returncode == 0, p.stderr
+
+
+def test_package_tools_stay_beside_launcher(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "tools/build"))
+    import dist  # noqa: PLC0415
+
+    setup = tmp_path / ODD / "launcher/setup"
+    dist.copy_sources(setup / "src")
+    code = """
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import machine
+assert machine.package_dir(Path(sys.argv[2])) == Path(sys.argv[3])
+"""
+    p = subprocess.run([sys.executable, "-I", "-c", code, str(setup / "src/tools/prepare"),
+                        str(tmp_path / "Other installation ñ"), str(setup)],
+                       capture_output=True, text=True, timeout=60)  # fmt: skip
+    assert p.returncode == 0, p.stderr
+
+
+def test_warm_uses_launcher_with_selected_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    game, runtime = tmp_path / ODD / "game", tmp_path / "launcher"
+    calls = []
+    process = SimpleNamespace(terminate=lambda: None, wait=lambda timeout: 0)
+
+    def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append((argv, kwargs))
+        return process
+
+    monkeypatch.setattr(prepare.subprocess, "Popen", start)
+    monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
+    prepare.warm(game, game / "setup-work", runtime)
+    argv, kwargs = calls[0]
+    assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw"))]
+    assert kwargs["env"]["MKW_GAME_DIR"] == str(game)
+    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
+
+
+def test_unpack_uses_launcher_not_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    runtime, game = tmp_path / ODD / "launcher", tmp_path / "installation"
+    calls = []
+    process = SimpleNamespace(stdout=["unpack: 1 files, 64 bytes\n"], wait=lambda: 0)
+
+    def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append(argv)
+        return process
+
+    monkeypatch.setattr(prepare.subprocess, "Popen", start)
+    package = tmp_path / "Dump ñ.nx"
+    assert prepare.unpack(runtime, package, game, "exefs") == "unpack: 1 files, 64 bytes"
+    assert calls == [[str(runtime / ("mkw.exe" if os.name == "nt" else "mkw")),
+                      "--unpack", str(package), str(game), "exefs"]]
 
 
 def test_find_game_packages(tmp_path: Path) -> None:

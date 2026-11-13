@@ -1,5 +1,5 @@
 // The Mods page of the start screen (ui/launcher/launcher.cpp draws it): the player's Switch-style mods in
-// <exe>/mods, imported from a zip or a folder by tools/mod/import.py. Enabling a mod takes effect at the next start:
+// <game>/mods, imported from a zip or a folder by tools/mod/import.py. Enabling a mod takes effect at the next start:
 // its romfs/ overlays the game's (runtime/sdk/fs/romfs.c reads the MODS list) and its mod.json switches are set into
 // the config, which is how a ported code mod's patch sets turn on (patches stay compiled in; the menu only flips
 // their switches). A port declares them bare in "switches" ({"CLASSICGP_MAPLINES": "1"}); the page adds the MKW_
@@ -35,7 +35,7 @@ typedef struct {
     char error[512];         // the detail after the code
 } ModsState;
 
-// Scans <exe>/mods (missing is fine: no mods). The list stays sorted; enabled flags re-read every call.
+// Scans <game>/mods (missing is fine: no mods). The list stays sorted; enabled flags re-read every call.
 void mods_refresh(const char *exe_dir);
 void mods_poll(void);
 // A code mod was enabled, disabled, imported or deleted since the last setup: Play sets the game code up again
@@ -73,7 +73,7 @@ int mods_is_enabled(const char *name);
 // Recursive delete of our own import, then the MODS fix-up and switch re-apply of a toggle-off.
 void mods_delete(const char *name);
 // Runs merge.py on the enabled mods (skips when already merged); the merged tree lands in
-// <exe>/mods/.merged/romfs, which the game reads as one more overlay, last.
+// <game>/mods/.merged/romfs, which the game reads as one more overlay, last.
 void mods_merge_start(const char *exe_dir);
 int mods_merge_running(void);
 // Blocking merge for the Play button: waits out a running merge, then merges when stale (no-op when

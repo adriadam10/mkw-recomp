@@ -79,6 +79,9 @@ static struct {
     Page shot_page;
     int shot_tab;
     char exe_dir[1024];
+    Uint32 picked_event;            // dialogs can finish on another thread: consume their result on the UI thread
+    int picking;
+    int directory_restart;
     char source[1024];              // the player's copy: a folder, or a .nup file, from the dialogs
     int link_romfs;                 // 0 copy it into the game folder, 1 use it where it is
     int tools;                      // the setup tools are there
@@ -313,12 +316,12 @@ static void page_main(float w, float h) {
     if (play || (play_test && ready)) {
         play_test = false;
         char state[PLAT_PATH_MAX + 32];
-        snprintf(state, sizeof state, "%s/setup-state.json", L.exe_dir);
+        snprintf(state, sizeof state, "%s/setup-state.json", cfg_game_dir());
         if (mods_code_changed() && L.tools && plat_file_exists(state)) {   // a set-up folder (not build/mkw)
             // a code mod changed: the game code is built again first (generate and compile), on the files page
             L.play_after_setup = 1;
             L.page = PAGE_FILES;
-            setup_start(L.exe_dir, nullptr, 0);
+            setup_start(L.exe_dir, cfg_game_dir(), nullptr, 0);
         } else {
             mods_merge_sync(L.exe_dir);   // a stale .merged must not boot: usually a no-op fresh-check
             char player[PLAT_PATH_MAX * 2];
@@ -447,8 +450,12 @@ static const UiTextId kStepText[SETUP_STEPS] = {UI_LAUNCH_STEP_CHECK, UI_LAUNCH_
                                                 UI_LAUNCH_STEP_GENERATE, UI_LAUNCH_STEP_COMPILE, UI_LAUNCH_STEP_SHADERS,
                                                 UI_LAUNCH_STEP_WARM, UI_LAUNCH_STEP_CLEANUP};
 
-static void SDLCALL picked(void *, const char *const *files, int) {
-    if (files && files[0]) snprintf(L.source, sizeof L.source, "%s", files[0]);
+static void SDLCALL picked(void *kind, const char *const *files, int) {
+    SDL_Event e = {};
+    e.type = L.picked_event;
+    e.user.code = kind ? 1 : 0;   // installation directory, else the source dump
+    e.user.data1 = files && files[0] ? SDL_strdup(files[0]) : nullptr;
+    if (!SDL_PushEvent(&e)) SDL_free(e.user.data1);
 }
 
 // Why the setup failed, in the menu language: prepare.py's error code picks the text, its detail (a folder, a build
@@ -529,6 +536,7 @@ static void page_files(float w, float h) {
     ImGui::BeginChild("##files_body", ImVec2(0, -bottom), ImGuiChildFlags_NavFlattened);
     bool ready = rt_game_present();
     SetupState st = setup_state();
+    ImGui::BeginDisabled(L.picking);
     state_line(ready, menu_text(ready ? UI_LAUNCH_FILES_READY : UI_LAUNCH_FILES_MISSING));
     update_row(ImGui::GetContentRegionAvail().x * 0.5f);   // a folder not set up starts on this page
     if (L.updated[0]) {
@@ -543,7 +551,17 @@ static void page_files(float w, float h) {
     ImGui::Spacing();
     ImGui::TextDisabled("%s", menu_text(UI_LAUNCH_FILES_FOLDER));
     ImGui::SameLine();
-    ImGui::TextUnformatted(L.exe_dir);
+    ImGui::TextWrapped("%s", cfg_game_dir());
+    ImGui::BeginDisabled(st.running || update_state().phase == UPDATE_FETCHING || cfg_from_env("MKW_GAME_DIR"));
+    if (ImGui::Button(menu_text(UI_LAUNCH_PICK_GAME_DIR), ImVec2(0, act_h))) {
+        L.picking = 1;
+        SDL_ShowOpenFolderDialog(picked, &L.directory_restart, L.win, cfg_game_dir(), false);
+    }
+    ImGui::EndDisabled();
+    ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_GAME_DIR_HELP));
+    if (cfg_from_env("MKW_GAME_DIR"))
+        ImGui::TextDisabled("%s MKW_GAME_DIR", menu_text(UI_MENU_SET_BY_ENV));
+    if (!cfg_last_save_ok()) ImGui::TextColored(col4(LOOK_BAD), "%s", menu_text(UI_MENU_SAVE_FAILED));
     // the groups apart: more space between them than inside one
     ImGui::Dummy(ImVec2(0, 8 * L.scale));
     ImGui::Separator();
@@ -555,12 +573,16 @@ static void page_files(float w, float h) {
         ImGui::TextDisabled("%s", menu_text(UI_LAUNCH_SOURCE));
         ImGui::SameLine();
         ImGui::TextUnformatted(L.source[0] ? L.source : "-");
-        if (ImGui::Button(menu_text(UI_LAUNCH_PICK), ImVec2(0, act_h)))
+        if (ImGui::Button(menu_text(UI_LAUNCH_PICK), ImVec2(0, act_h))) {
+            L.picking = 1;
             SDL_ShowOpenFolderDialog(picked, nullptr, L.win, nullptr, false);
+        }
         ImGui::SameLine();
         static const SDL_DialogFileFilter kPack[] = {{"Switch 2 package (.nup, .nx)", "nup;nx"}};
-        if (ImGui::Button(menu_text(UI_LAUNCH_PICK_NUP), ImVec2(0, act_h)))   // the dump as one file (runtime/sdk/fs/pack.h)
+        if (ImGui::Button(menu_text(UI_LAUNCH_PICK_NUP), ImVec2(0, act_h))) {   // the dump as one file (runtime/sdk/fs/pack.h)
+            L.picking = 1;
             SDL_ShowOpenFileDialog(picked, nullptr, L.win, kPack, 1, nullptr, false);
+        }
         ImGui::Dummy(ImVec2(0, 8 * L.scale));
         ImGui::TextDisabled("%s", menu_text(UI_LAUNCH_ROMFS_MODE));
         // a ring with a red dot in the chosen one: ImGui's own is a filled disc, which reads as a blank button
@@ -580,7 +602,7 @@ static void page_files(float w, float h) {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, col4(LOOK_ACCENT_DOWN));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
         if (ImGui::Button(menu_text(ready ? UI_LAUNCH_SETUP_AGAIN : UI_LAUNCH_SETUP), ImVec2(0, act_h)))
-            setup_start(L.exe_dir, L.source, L.link_romfs);
+            setup_start(L.exe_dir, cfg_game_dir(), L.source, L.link_romfs);
         ImGui::PopStyleColor(4);
         ImGui::EndDisabled();
         ImGui::EndDisabled();
@@ -603,14 +625,15 @@ static void page_files(float w, float h) {
             setup_progress(st);
         }
     }
+    ImGui::EndDisabled();
     ImGui::EndChild();
     // Not set up: this page is the start screen (decided 06/11/2026), its bottom button quits; set up, it goes back.
     // While the setup runs the button takes no input: one click would throw away minutes of work. Cancel, next to Set
     // up, is the way to stop it on purpose.
-    ImGui::BeginDisabled(st.running);
+    ImGui::BeginDisabled(st.running || L.picking);
     bool leave = panel_back_row(ready ? UI_LAUNCH_BACK : UI_LAUNCH_QUIT);
     ImGui::EndDisabled();
-    leave = leave || (!st.running && back_pressed());
+    leave = leave || (!st.running && !L.picking && back_pressed());
     ImGui::End();
     if (!leave) return;
     if (st.running) setup_cancel();
@@ -1000,6 +1023,7 @@ extern "C" int launcher_run(void) {
     exe_dir(L.exe_dir, sizeof L.exe_dir);
     parse_test();
     if (!open_window()) return LAUNCHER_PLAY;   // no start screen: the game itself says what is wrong
+    L.picked_event = SDL_RegisterEvents(1);
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     io.IniFilename = nullptr;
@@ -1020,8 +1044,8 @@ extern "C" int launcher_run(void) {
     }
     L.tools = setup_available(L.exe_dir);
     if (!rt_game_present() && !L.shot_at) L.page = PAGE_FILES;
-    char state[1100];
-    snprintf(state, sizeof state, "%s/setup-state.json", L.exe_dir);
+    char state[PLAT_PATH_MAX * 3];
+    snprintf(state, sizeof state, "%s/setup-state.json", cfg_game_dir());
     if (L.gb_open && rt_game_present()) L.page = PAGE_MODS;
     if (!L.shot_at && plat_file_exists(state)) {   // a set-up folder: GameBanana's 1-Click opens this program
         char exe[PLAT_PATH_MAX * 2];
@@ -1036,7 +1060,7 @@ extern "C" int launcher_run(void) {
     if ((updated || other) && L.tools && plat_file_exists(state)) {
         if (other) rt_log("launcher: the game files were set up by another version: setting up again what changed");
         L.page = PAGE_FILES;   // set up again what the new version changed, from the last setup's copy
-        setup_start(L.exe_dir, nullptr, 0);
+        setup_start(L.exe_dir, cfg_game_dir(), nullptr, 0);
     } else if (!L.shot_at || getenv("MKW_UPDATE_AS")) {
         update_check_start(L.exe_dir);
     }
@@ -1046,7 +1070,7 @@ extern "C" int launcher_run(void) {
         char *link = strstr(L.source, ":link");
         if (link) *link = 0, L.link_romfs = 1;
         L.page = PAGE_FILES;
-        setup_start(L.exe_dir, L.source, L.link_romfs);
+        setup_start(L.exe_dir, cfg_game_dir(), L.source, L.link_romfs);
     }
     rt_log("launcher: start screen, game files %s, setup tools %s", rt_game_present() ? "ready" : "not set up",
            L.tools ? "present" : "missing");
@@ -1056,13 +1080,27 @@ extern "C" int launcher_run(void) {
             if (setup_state().finished > 0) {
                 mods_code_built();
                 mods_merge_sync(L.exe_dir);
-                mods_before_play(L.exe_dir);
+                char player[PLAT_PATH_MAX * 2];
+                launcher_player_dir(player, sizeof player);
+                if (player[0]) mods_before_play(player);
                 L.result = LAUNCHER_PLAY;
                 break;
             }
         }
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
+            if (e.type == L.picked_event) {
+                L.picking = 0;
+                const char *path = (const char *)e.user.data1;
+                if (path && e.user.code) {
+                    if (cfg_select_game_dir(path)) {
+                        L.directory_restart = 1;
+                        L.result = LAUNCHER_QUIT;
+                    }
+                } else if (path) snprintf(L.source, sizeof L.source, "%s", path);
+                SDL_free(e.user.data1);
+                continue;
+            }
             if (e.type == SDL_EVENT_QUIT) L.result = LAUNCHER_QUIT;
             if (e.type == SDL_EVENT_KEY_DOWN && e.key.scancode == SDL_SCANCODE_F11 && !e.key.repeat)
                 SDL_SetWindowFullscreen(L.win, !(SDL_GetWindowFlags(L.win) & SDL_WINDOW_FULLSCREEN));
@@ -1130,6 +1168,7 @@ extern "C" int launcher_run(void) {
     SDL_DestroyRenderer(L.ren);
     SDL_DestroyWindow(L.win);
     SDL_Quit();
+    if (L.directory_restart) plat_reexec();
     rt_log("launcher: %s", L.result == LAUNCHER_PLAY ? "play" : L.relaunch ? "the update starts" : "quit");
     if (L.relaunch) update_relaunch(L.exe_dir);   // Linux: does not come back
     return L.result;

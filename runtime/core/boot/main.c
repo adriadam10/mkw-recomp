@@ -49,7 +49,7 @@
 unsigned rt_trace;
 
 // Log file. A game run whose stderr is not a file already (started from Explorer, a shortcut or a console) also
-// writes its log to logs\mkw.log next to mkw, so a player has one to attach to a report; run_game.py and
+// writes its log to logs\mkw.log in the selected game folder, so a player has one to attach to a report; run_game.py and
 // `2> file` keep their own file. Each start moves the earlier logs to mkw.1.log .. mkw.4.log. A file stops at 64 MiB
 // (MKW_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
 // nothing else lands in the guest address space, and an earlier open would put the CRT's heap there.
@@ -114,10 +114,9 @@ const char *rt_log_path(void) {
 static void log_open(int game) {
     char dir[PLAT_PATH_MAX * 3], from[PLAT_PATH_MAX * 3 + 16], to[PLAT_PATH_MAX * 3 + 16];
     char *cut = NULL;
-    if (game && !plat_stderr_path(dir, sizeof dir) && plat_exe_path(dir, sizeof dir)) {
-        cut = plat_last_sep(dir);
-        char *f = strrchr(dir, '/');
-        if (f > cut) cut = f;
+    if (game && !plat_stderr_path(dir, sizeof dir) && *cfg_game_dir()) {
+        snprintf(dir, sizeof dir, "%s", cfg_game_dir());
+        cut = dir + strlen(dir);
     }
     if (cut && (size_t)(cut - dir) + sizeof "/logs" <= sizeof dir) {
         strcpy(cut, "/logs");
@@ -480,8 +479,8 @@ static int usage(const char *argv0) {
 }
 
 // Paths for a copied folder (tools/package_build.py). Per path: MKW_EXEFS, MKW_ROMFS, MKW_PROFILE_DIR, else the
-// folder next to mkw (exefs, romfs, profile) if it exists, else the path baked in at build time. A relative
-// value is relative to mkw's folder.
+// selected game folder (exefs, romfs, profile) if it exists, else the path baked in at build time. A relative
+// value is relative to the selected game folder.
 static char pp_exefs[PLAT_PATH_MAX * 2], pp_romfs[PLAT_PATH_MAX * 2], pp_profile[PLAT_PATH_MAX * 2];
 
 static const char *portable_path(const char *dir, const char *var, const char *sub, const char *must, char *out, size_t cap,
@@ -501,17 +500,13 @@ static const char *portable_path(const char *dir, const char *var, const char *s
 }
 
 static void portable_paths(RtConfig *c) {
-    char exe[PLAT_PATH_MAX * 2];
-    int n = plat_exe_path(exe, sizeof exe);
-    char *cut = n && n < sizeof exe ? plat_last_sep(exe) : NULL;
-    if (!cut) return;
-    *cut = 0;
+    const char *exe = cfg_game_dir();
     c->exefs = portable_path(exe, "MKW_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, c->exefs);
-    // The RomFS: a romfs/ folder of loose files next to the executable, as exefs/ (MKW_ROMFS, mkw.ini's romfs and
+    // The RomFS: a romfs/ folder of loose files in the selected game folder, as exefs/ (MKW_ROMFS, mkw.ini's romfs and
     // --romfs may also name a .nup package, romfs.c).
     c->romfs = portable_path(exe, "MKW_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs, c->romfs);
     c->profile = portable_path(exe, "MKW_PROFILE_DIR", "profile", ".", pp_profile, sizeof pp_profile, c->profile);
-    if (!*c->profile) {   // the player's build bakes no path in: saves go to profile/ beside the executable
+    if (!*c->profile) {   // the player's build bakes no path in: saves go to profile/ in the selected game folder
         snprintf(pp_profile, sizeof pp_profile, "%s/profile", exe);
         plat_file_mkdir_p(pp_profile);
         c->profile = pp_profile;
@@ -540,22 +535,16 @@ static int want_launcher(int argc, char **argv) {
 static int run_launcher(int argc, char **argv) {
     cfg_init();   // mkw.ini: the settings pages read and write it
     // the Mods page merges against the same romfs the game will boot: argv wins, else MKW_ROMFS / mkw.ini,
-    // else the folder beside the executable, else the baked-in default (nup packages cannot merge: no loose files)
+    // else the selected installation, else the baked-in default (nup packages cannot merge: no loose files)
     const char *romfs = NULL;
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--romfs") || !strcmp(argv[i], "--nup")) romfs = argv[i + 1];
-    if (!romfs) {
-        char exe[PLAT_PATH_MAX * 2];
-        int n = plat_exe_path(exe, sizeof exe);
-        char *cut = n && n < (int)sizeof exe ? plat_last_sep(exe) : NULL;
-        if (cut) {
-            *cut = 0;
-            romfs = portable_path(exe, "MKW_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs, rt_default_romfs);
-        }
-    }
+    if (!romfs)
+        romfs = portable_path(cfg_game_dir(), "MKW_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs,
+                              rt_default_romfs);
     if (romfs) launcher_set_romfs(romfs);
     // the players (Profiles page) live in the profile folder the game will use: --profile, else MKW_PROFILE_DIR /
-    // mkw.ini, else profile/ beside the executable
+    // mkw.ini, else profile/ in the selected installation
     const char *profile = NULL;
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--profile")) profile = argv[i + 1];
@@ -569,15 +558,9 @@ static int run_launcher(int argc, char **argv) {
     const char *exefs = NULL;
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--exefs")) exefs = argv[i + 1];
-    if (!exefs) {
-        char exe[PLAT_PATH_MAX * 2];
-        int n = plat_exe_path(exe, sizeof exe);
-        char *cut = n && n < (int)sizeof exe ? plat_last_sep(exe) : NULL;
-        if (cut) {
-            *cut = 0;
-            exefs = portable_path(exe, "MKW_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, rt_default_exefs);
-        }
-    }
+    if (!exefs)
+        exefs = portable_path(cfg_game_dir(), "MKW_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs,
+                              rt_default_exefs);
     if (exefs) launcher_set_exefs(exefs);
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--gb-install")) launcher_gb_install(argv[i + 1]);

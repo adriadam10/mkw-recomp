@@ -74,7 +74,7 @@ uint64_t pipe_fnv(uint64_t h, const void *p, size_t n) {
 // than the lookup. Only the in-memory table uses it; the key file keeps fnv.
 uint64_t key_hash(const void *k, size_t n) { return nvn_hm_hash(k, (uint32_t)n); }
 
-// The cache file lives next to mkw, so every build dir (the main build and each private fork) has its own:
+// The cache file lives in the selected game folder, so every installation (the main build and each private fork) has its own:
 // forks that shared build\v121's cache broke each other's runs (2026-10-22).
 static void cache_path_init(void) {
     const char *cfg_path = cfg_get("MKW_PIPELINE_CACHE");
@@ -83,13 +83,7 @@ static void cache_path_init(void) {
         return;
     }
     P.cache_path[0] = 0;
-    char exe[PLAT_PATH_MAX * 2];
-    int n = plat_exe_path(exe, sizeof exe);
-    if (!n || n >= sizeof exe) return;
-    char *cut = plat_last_sep(exe);
-    if (!cut) return;
-    *cut = 0;
-    snprintf(P.cache_path, sizeof P.cache_path, "%s/pipeline-cache.bin", exe);
+    snprintf(P.cache_path, sizeof P.cache_path, "%s/pipeline-cache.bin", cfg_game_dir());
 }
 
 // The cache's own leftovers: a run killed while saving it leaves a full-size temporary file (plat_file_write_atomic).

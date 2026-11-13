@@ -1,10 +1,11 @@
 // The game code's tables (gamelib.h) and what the runtime reads from them. build/mkw links them in; the player's build
-// loads them from mkwgame.so / mkwgame.dll next to the executable, which the start screen's setup builds from their own
+// loads them from mkwgame.so / mkwgame.dll in the selected game folder, which the start screen's setup builds from their own
 // game files (SavageWindRecomp runtime/gamelib.c, MIT: same idea, one entry point found by name, an id check).
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "cfg.h"
 #include "dispatch.h"
 #include "gamelib.h"
 #include "host.h"
@@ -18,14 +19,11 @@ static const char *check(const RtGame *g) {
     return NULL;
 }
 
-// The library next to the executable, its tables if they suit this runtime; why not in *why.
+// The library in the selected game folder, its tables if they suit this runtime; why not in *why.
 static const RtGame *load_library(const char **why) {
     char path[PLAT_PATH_MAX * 2];
-    int n = plat_exe_path(path, sizeof path);
-    char *cut = n && (size_t)n < sizeof path ? plat_last_sep(path) : NULL;
     *why = "the game files are not set up";
-    if (!cut) return NULL;
-    snprintf(cut + 1, sizeof path - (size_t)(cut + 1 - path), "%s", RT_GAME_LIB);
+    snprintf(path, sizeof path, "%s/%s", cfg_game_dir(), RT_GAME_LIB);
     if (!plat_file_exists(path)) return NULL;
     void *lib = plat_lib_open(path);
     const RtGame *(*entry)(void) = lib ? (const RtGame *(*)(void))plat_lib_sym(lib, RT_GAME_ENTRY) : NULL;
@@ -65,12 +63,9 @@ const RtGame *rt_game(void) {
 int rt_game_present(void) {
     if (game || rt_game_builtin()) return 1;
     char path[PLAT_PATH_MAX * 2];
-    int n = plat_exe_path(path, sizeof path);
-    char *cut = n && (size_t)n < sizeof path ? plat_last_sep(path) : NULL;
-    if (!cut) return 0;
-    snprintf(cut + 1, sizeof path - (size_t)(cut + 1 - path), "%s", RT_GAME_LIB);
+    snprintf(path, sizeof path, "%s/%s", cfg_game_dir(), RT_GAME_LIB);
     if (!plat_file_exists(path)) return 0;
-    snprintf(cut + 1, sizeof path - (size_t)(cut + 1 - path), "mkwgame.id");
+    snprintf(path, sizeof path, "%s/mkwgame.id", cfg_game_dir());
     uint64_t size = 0;
     char *id = (char *)plat_file_read(path, &size);
     int ok = id && size >= strlen(RT_GAME_ID) && !strncmp(id, RT_GAME_ID, strlen(RT_GAME_ID));

@@ -11,7 +11,7 @@
 // Overlays: files listed in a directory's manifest.tsv are served in place of the originals. Each line names a RomFS
 // path, the overlay's size and SHA-256 and the original's SHA-256 ("-" adds a file the RomFS lacks; it is numbered
 // after the RomFS's own files, file_count + k in path order). The directories, in this order: MKW_ROMFS_PATCHES and
-// MKW_ROMFS_MODS; unset or "0" = none; then <exe dir>/lang/<code>/ for a language the game does not ship
+// MKW_ROMFS_MODS; unset or "0" = none; then <game dir>/lang/<code>/ for a language the game does not ship
 // (ov_text_language: its texts rebuilt by the setup, tools/i18n/game_texts.py). A missing path, a size or hash mismatch
 // or a changed original stops the start.
 // An overlay file is opened when the game opens it; its identity (volume, file id, size, last write) is kept from the
@@ -303,14 +303,12 @@ static void added_init(void) {
     rt_log("RomFS overlay: %zu files added to the RomFS", nadded);
 }
 
-// <exe dir>/lang/<code> for a rebuilt game language, NULL for one the game ships.
+// <game dir>/lang/<code> for a rebuilt game language, NULL for one the game ships.
 static const char *lang_overlay(void) {
     static char dir[PLAT_PATH_MAX * 2];
     const char *code = ov_text_language();
-    int k = code ? plat_exe_path(dir, sizeof dir - 16) : 0;
-    char *cut = k ? plat_last_sep(dir) : NULL;
-    if (!cut) return NULL;
-    snprintf(cut, sizeof dir - (size_t)(cut - dir), "/lang/%s", code);
+    if (!code) return NULL;
+    snprintf(dir, sizeof dir, "%s/lang/%s", cfg_game_dir(), code);
     return dir;
 }
 
@@ -347,14 +345,13 @@ static void overlay_init(void) {
         overlay_load(legacy);
     }
     // the Mods page's enabled mods, in MODS order: later mods win shared files
-    char exe[PLAT_PATH_MAX * 2], mods[4096], seen[64][64];
+    const char *game = cfg_game_dir();
+    char mods[4096], seen[64][64];
     size_t nseen = 0;
     const char *list = cfg_get("MKW_MODS");
     // a bug report's log says which mods were on (tools/github/classify.py mods_enabled asks for a run without them)
     if (list && *list) rt_log("mods: enabled %s", list);
-    if (plat_exe_path(exe, sizeof exe - 64) && list && *list) {
-        char *cut = plat_last_sep(exe);
-        if (cut) *cut = 0;
+    if (list && *list) {
         snprintf(mods, sizeof mods, "%s", list);
         for (char *t = strtok(mods, ","); t; t = strtok(NULL, ",")) {
             while (*t == ' ') t++;
@@ -366,7 +363,7 @@ static void overlay_init(void) {
             if (k < nseen) continue;
             snprintf(seen[nseen++], sizeof seen[0], "%s", t);
             char dir[PLAT_PATH_MAX * 2 + 16];
-            snprintf(dir, sizeof dir, "%s/mods/%s/romfs", exe, t);
+            snprintf(dir, sizeof dir, "%s/mods/%s/romfs", game, t);
             load_seq++;
             overlay_load(dir);
         }
@@ -375,11 +372,9 @@ static void overlay_init(void) {
     // nothing is shared, and then this is a no-op log line like a missing legacy dir. Gated on MODS so a
     // stale .merged from an earlier enablement never applies after the last mod is toggled off.
     const char *mods_on = cfg_get("MKW_MODS");
-    if (mods_on && *mods_on && plat_exe_path(exe, sizeof exe - 64)) {
-        char *cut = plat_last_sep(exe);
-        if (cut) *cut = 0;
+    if (mods_on && *mods_on) {
         char merged[PLAT_PATH_MAX * 2 + 16];
-        snprintf(merged, sizeof merged, "%s/mods/.merged/romfs", exe);
+        snprintf(merged, sizeof merged, "%s/mods/.merged/romfs", game);
         load_seq++;
         overlay_load(merged);
     }

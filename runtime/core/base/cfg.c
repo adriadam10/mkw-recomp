@@ -37,7 +37,7 @@ static const char *const known[] = {
     "BIND_SKIP", "BIND_STATS", "BIND_UP", "BIND_X", "BIND_Y",
     "BIND_ZL", "BIND_ZR", "BUTTON_ICONS", "CORE_DIAG", "CRIT", "CRIT_OUT", "CTL", "DESC_TEMPLATE", "DETAIL_DISTANCE", "DEVICE_PROFILE", "DUMP", "DUMP_BUF", "DUMP_DIR", "DUMP_DRAWS", "DUMP_DRAWS_RECT", "DUMP_LOG",
     "EXEFS", "FEEDBACK", "FG_BIAS", "FG_DUMP", "FG_DUMP_DIR", "FG_LAMBDA", "FG_PROBE", "FIX_C0", "FIX_ZERO", "FLIGHT", "FLIGHT_AT", "FLIGHT_DIR", "FLIGHT_FRAMES", "FLIGHT_SPIKE_MS",
-    "FLIGHT_THUMBS", "FPS", "FRAMEGEN", "FREEZE_IDLE", "GLYPH_DUMP", "FREE_CORES", "FULLSCREEN", "GPL", "GPL_DRAW_BUILD", "GPU",
+    "FLIGHT_THUMBS", "FPS", "FRAMEGEN", "FREEZE_IDLE", "GLYPH_DUMP", "FREE_CORES", "FULLSCREEN", "GAME_DIR", "GPL", "GPL_DRAW_BUILD", "GPU",
     "GPU_CRUMBS", "GPU_CRUMBS_DRAW", "HDR", "HDR_FAKE", "GPU_INDEX", "GPU_MEM_LIMIT", "GPU_NAME", "INPUT", "INPUT_RECORD", "INPUT_SCRIPT", "LAN", "LAN_IP", "LANG",
     "LOCALE", "MEMORY", "MESH_COMPUTE", "MENU_LANG", "MENU_TEST",
     "MENU_TEST_DIR", "MENU_TEST_SET", "MINIMAL_LAYOUT", "MIRROR_GAP", "MODS", "MODS_ACK", "MODS_PLAYED", "MOTION",
@@ -80,7 +80,7 @@ static const struct { const char *key, *section; } sections[] = {
     {"TRACE", "diagnostics"}, {"FLIGHT", "diagnostics"}, {"FLIGHT_SPIKE_MS", "diagnostics"},
     {"TURBO", "hacks"}, {"TURBO_SPEED", "hacks"}, {"SKIP_MOVIES", "hacks"}, {"SEED", "hacks"}, {"UNLOCK_ALL", "hacks"}, {"FREEZE_KEYS", "hacks"},
     {"QUICK_RACE", "hacks"}, {"MODS", "launcher"}, {"MODS_ACK", "launcher"}, {"MODS_PLAYED", "launcher"},
-    {"UPDATE_CHECK", "launcher"}, {"PLAYER", "launcher"},
+    {"UPDATE_CHECK", "launcher"}, {"GAME_DIR", "launcher"}, {"PLAYER", "launcher"},
 };
 
 // The settings the menu shows: the value in effect when the key is unset, and what the key accepts. The only place a
@@ -117,6 +117,7 @@ static const CfgMeta metas[] = {
     {"MODS", "", NULL, RESTART},   // the Mods page's enabled mods, comma-separated in load order; not a menu row
     {"MODS_ACK", "0", "0|1", LIVE},   // the player ticked the Mods page's "I understand" once
     {"MODS_PLAYED", "", NULL, LIVE},   // the mods of the last start: a new set backs the save up first (launcher)
+    {"GAME_DIR", "", NULL, RESTART},   // unset: beside the executable; the launcher remembers the selection there
     // Advanced: scheduling
     {"ASYNC_PREEMPT", "1", "0|1|2", RESTART}, {"REPLAY_ASYNC", "1", "0|1", RESTART},
     {"FREE_CORES", "0", "0|1", RESTART}, {"TIMER_1MS", "1", "0|1", RESTART},
@@ -601,23 +602,47 @@ int cfg_save_to(const char *path) {
     return ok;
 }
 
-static char ini_path[1024];
+static char ini_path[PLAT_PATH_MAX * 3], launcher_ini[PLAT_PATH_MAX * 3], game_dir[PLAT_PATH_MAX * 2];
 
 static int find_ini(void) {
     if (ini_path[0]) return 1;
-    char path[1024];
+    char path[PLAT_PATH_MAX * 2];
     if (!plat_exe_path(path, sizeof path)) return 0;
     char *cut = plat_last_sep(path);
     if (!cut) cut = strrchr(path, '/');
     if (!cut || cut + 10 >= path + sizeof path) return 0;
     strcpy(cut + 1, "mkw.ini");
     snprintf(ini_path, sizeof ini_path, "%s", path);
+    snprintf(launcher_ini, sizeof launcher_ini, "%s", path);
+    *cut = 0;
+    snprintf(game_dir, sizeof game_dir, "%s", path);
     return 1;
 }
 
 int cfg_save(void) {
     if (find_ini()) return cfg_save_to(ini_path);
     __atomic_store_n(&save_ok, 0, __ATOMIC_RELEASE);
+    return 0;
+}
+
+const char *cfg_game_dir(void) {
+    // mem_init needs the game library's tables before it can reserve the guest address space.
+    if (!game_dir[0]) cfg_init();
+    return game_dir;
+}
+
+// Save pending settings to the current installation first. Only the selector belongs beside the launcher; the
+// caller restarts it after success so no DLL, shader cache or settings from the old installation survive the switch.
+int cfg_select_game_dir(const char *path) {
+    if (cfg_from_env("MKW_GAME_DIR") || !path || !*path || !cfg_save()) return 0;
+    int i = 0, old_n = n_entries;
+    while (i < n_entries && strcmp(entries[i].key, "GAME_DIR")) i++;
+    CfgEntry old = i < n_entries ? entries[i] : (CfgEntry){0};
+    cfg_set("MKW_GAME_DIR", path);
+    if (cfg_save_to(launcher_ini)) return 1;
+    // A failed selector write must not leak into the current installation on the next settings save.
+    if (i < old_n) entries[i] = old;
+    else n_entries = old_n;
     return 0;
 }
 
@@ -636,7 +661,28 @@ static void load_ini(void) {
 }
 
 void cfg_init(void) {
+    static int initialized;
+    if (initialized) return;
+    initialized = 1;
     load_ini();
+    const char *selected = cfg_get("MKW_GAME_DIR");
+    if (selected && *selected) {
+        char dir[sizeof game_dir];
+        int absolute = selected[0] == '/' || selected[0] == '\\' || selected[1] == ':';
+        int n = absolute ? snprintf(dir, sizeof dir, "%s", selected)
+                         : snprintf(dir, sizeof dir, "%s/%s", game_dir, selected);
+        if (n < 0 || (size_t)n >= sizeof dir) rt_fatal("game directory path is too long");
+        if (strcmp(game_dir, dir)) {
+            snprintf(game_dir, sizeof game_dir, "%s", dir);
+            snprintf(ini_path, sizeof ini_path, "%s/mkw.ini", game_dir);
+            // Each installation keeps its own RomFS path and settings. The launcher ini holds the selection only.
+            cfg_load(ini_path);
+            char key[] = "GAME_DIR", value[sizeof game_dir];
+            snprintf(value, sizeof value, "%s", game_dir);
+            add(key, value, 0);
+            rt_log("cfg: game directory %s (settings %s)", game_dir, ini_path);
+        }
+    }
     if (profile_of())
         rt_log("cfg: device profile Steam Deck: defaults for the keys mkw.ini does not set (MKW_DEVICE_PROFILE=desktop "
                "turns it off)");

@@ -101,10 +101,12 @@ reach, and a frame over 33.3 ms runs the race slower than real time.
 1. Dump Mario Kart World 1.0.0 or 1.8.0 from your Switch 2 (`exefs/` and `romfs/`, decrypted; 1.8.0 with the update
    merged into the base game's RomFS), or the same dump packed as one `.nup` or `.nx` file.
 2. Download the launcher for your system from [Releases](https://github.com/adriadam10/mkw-recomp/releases): on Linux
-   the `.AppImage` (`-aarch64` on ARM; it keeps the game it builds in `~/.local/share/mkw-recomp`; glibc 2.31 or newer: Debian 11,
+   the `.AppImage` (`-aarch64` on ARM; the default game folder is `~/.local/share/mkw-recomp`; glibc 2.31 or newer: Debian 11,
    Ubuntu 20.04, SteamOS and later), on Windows the `.zip`, unpacked into a folder. Either needs about 30 GB free.
-3. Run the AppImage (`chmod +x` first) or `mkw.exe`, open **Game files**, point it at your dump (**Choose folder** or
-   **Choose .nup or .nx file**) and press **Set up**.
+3. Run the AppImage (`chmod +x` first) or `mkw.exe`, open **Game files**, optionally use **Choose game folder** to select
+   where the game will be installed (or an existing installation), then point it at your dump (**Choose folder** or
+   **Choose .nup or .nx file**) and press **Set up**. The launcher remembers the installation folder; the compiled
+   game, prepared files, saves, settings and caches live there. Selecting another folder keeps existing files in place.
    The first setup takes a while (it compiles the whole game and downloads NVIDIA's `nvdisasm` and `ptxas`, 84 MB on
    Linux and 126 MB on Windows, to describe the shader encoding on your machine); after that, **Play**.
 4. When a newer release is out, the start screen offers it (**Update to vX**): it downloads it, checks it, replaces
@@ -132,7 +134,8 @@ Beyond the console, all optional and off (or at the console's value) by default:
 - **Hacks**: turbo (hold or toggle F2), skip movies, unlock everything, the same randomness every time, straight to
   time trial or free roam.
 - **Languages**: the menus in 20 languages; the game itself also in Catalan, Galician and Basque.
-- **Game files**: a dump as folders or as one `.nup` or `.nx` file, used where it is; updates from the start screen.
+- **Game files**: choose the installation folder; a dump as folders or as one `.nup` or `.nx` file, used where it is;
+  updates from the start screen.
 - **Performance overlay** (FPS, or CPU, GPU and memory in full) and a one-click system info for bug reports.
 
 ### Switch 2 controllers over USB on Windows

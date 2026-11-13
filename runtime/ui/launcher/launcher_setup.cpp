@@ -117,7 +117,7 @@ static int SDLCALL reader(void *) {
     return 0;
 }
 
-void setup_start(const char *exe_dir, const char *source, int link_romfs) {
+void setup_start(const char *exe_dir, const char *game_dir, const char *source, int link_romfs) {
     if (!g_lock) g_lock = SDL_CreateMutex();
     if (setup_state().running) return;
     char python[1200], script[1200];
@@ -130,10 +130,10 @@ void setup_start(const char *exe_dir, const char *source, int link_romfs) {
     }
     // -I: no user site packages or PYTHON* variables, nothing from the working directory
     // without a source, prepare.py takes the last setup's (and its RomFS mode) and the arguments end at the version
-    const char *args[] = {python, "-I", script, "--game", exe_dir, "--port", rt_port_version, "--source", source,
+    const char *args[] = {python, "-I", script, "--game", game_dir, "--runtime", exe_dir, "--port", rt_port_version, "--source", source,
                           "--romfs", link_romfs ? "link" : "copy", nullptr};
-    if (!source) args[7] = nullptr;
-    rt_log("setup: %s %s --game %s --source %s --romfs %s", python, script, exe_dir, source ? source : "(last)",
+    if (!source) args[9] = nullptr;
+    rt_log("setup: %s %s --game %s --runtime %s --source %s --romfs %s", python, script, game_dir, exe_dir, source ? source : "(last)",
            link_romfs ? "link" : "copy");
     g_proc = SDL_CreateProcess(args, true);
     if (!g_proc) {

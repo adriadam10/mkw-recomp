@@ -65,12 +65,7 @@ static void t_init(void *arg) {
     if (strcmp(e, "1") && strlen(e) < sizeof T.dir) {
         strcpy(T.dir, e);
     } else {
-        char exe[PLAT_PATH_MAX * 2];
-        int n = plat_exe_path(exe, sizeof exe);
-        char *cut = n && n < (int)sizeof exe ? plat_last_sep(exe) : NULL;
-        if (!cut) return;
-        *cut = 0;
-        snprintf(T.dir, sizeof T.dir, "%s/texpre", exe);
+        snprintf(T.dir, sizeof T.dir, "%s/texpre", cfg_game_dir());
     }
     const char *r = cfg_get("MKW_TEXPRE_RECORD");
     T.record = !(r && !strcmp(r, "0"));

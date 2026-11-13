@@ -1723,6 +1723,16 @@ msgctxt "UI_LAUNCH_FILES_FOLDER"
 msgid "Game folder"
 msgstr "Cartella del gioco"
 
+msgctxt "UI_LAUNCH_PICK_GAME_DIR"
+msgid "Choose game folder"
+msgstr ""
+
+msgctxt "UI_LAUNCH_GAME_DIR_HELP"
+msgid ""
+"Choose where to install the game, or select an existing installation. The launcher reopens with "
+"that folder. Existing files are kept where they are."
+msgstr ""
+
 msgctxt "UI_LAUNCH_FILES_HELP"
 msgid ""
 "The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "

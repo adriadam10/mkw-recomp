@@ -12,7 +12,7 @@
 // measured in races 31/10/2026) and to LINES in handheld mode (MKW_OPERATION_MODE=handheld: the scene renders at all of
 // For3D's lines, 540 -> 831 drew 1476x828; measured with MKW_PASS_TIMING on 1.8.0 13/11/2026), and every *Screen*
 // field to LINES. The archive is compressed again and written with its manifest.tsv to
-// <exe dir>/cache/resolution-<LINES>/, which romfs.c loads as an overlay (MKW_ROMFS_PATCHES, when that is unset). A
+// <game dir>/cache/resolution-<LINES>/, which romfs.c loads as an overlay (MKW_ROMFS_PATCHES, when that is unset). A
 // directory already written for the same original is reused.
 #include <math.h>
 #include <stdio.h>
@@ -110,11 +110,8 @@ static const char *find_archive(void) {
 // when missing; NULL when it cannot be made.
 static const char *write_overlay(int lines, float lod) {
     static char dir[PLAT_PATH_MAX * 2];
-    char exe[PLAT_PATH_MAX * 2], path[PLAT_PATH_MAX * 3], man[PLAT_PATH_MAX * 3];
-    int k = plat_exe_path(exe, sizeof exe);
-    char *cut = k ? plat_last_sep(exe) : NULL;
-    if (!cut) return NULL;
-    *cut = 0;
+    char path[PLAT_PATH_MAX * 3], man[PLAT_PATH_MAX * 3];
+    const char *exe = cfg_game_dir();
     const char *archive = find_archive();
     uint64_t zn = 0;
     // over a mod's copy of the archive when one replaces it (romfs.c loads this overlay last), else the game's own

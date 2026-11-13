@@ -7,8 +7,8 @@
 //                                player's progress, and a wrong click must not lose it)
 //   <folder>/nickname.txt        the player's name, UTF-8; missing: PLAYER_DEFAULT_NAME
 //
-// base is the profile folder of main.c (MKW_PROFILE_DIR, profile/ beside mkw, or --profile). mkw.ini's MKW_PLAYER names
-// the player the next start plays: n, or empty for the first one.
+// base is the profile folder of main.c (MKW_PROFILE_DIR, profile/ in the selected installation, or --profile).
+// mkw.ini's MKW_PLAYER names the player the next start plays: n, or empty for the first one.
 #pragma once
 #include <stddef.h>
 

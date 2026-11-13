@@ -1,6 +1,8 @@
 # runtime/ui/launcher
 
-The start screen, before the game, and the setup of the game files.
+The start screen, before the game, and the setup of the game files. **Game files → Choose game folder** selects a new
+or existing installation and reopens the launcher with it. Prepared files, mods, saves, settings and caches use that folder;
+the executable, setup tools and updates stay beside the launcher. Choosing a folder does not move existing files.
 
 | File | What it is |
 |---|---|
@@ -9,7 +11,7 @@ The start screen, before the game, and the setup of the game files.
 | `launcher_logo.cpp`, `launcher_logo.h` | The port's logo drawn with ImGui, the main page's intro (its elements fade and rise in one after the other) and the fade of a page coming in |
 | `launcher_look.cpp`, `launcher_look.h` | The start screen's own look: its palette (dark blue-grey, the logo's blue for the main action), its ImGui style and the colours it gives the settings rows; the in-game menu keeps `menu_look` |
 | `launcher_players.cpp`, `launcher_players.h` | The Profiles page: each player's name, which one the next start plays (`MKW_PLAYER`), a new one, and removing one (its folder moved to `profile/players/deleted`); the folders and names are `core/base/players.c`. Test: `MKW_LAUNCHER_SHOT=<frame>:players`, `MKW_LAUNCHER_PLAYER_NEW=<name>`, `MKW_LAUNCHER_PLAYER_PICK=<id>` |
-| `launcher_setup.cpp`, `launcher_setup.h` | The setup of the files page: `tools/prepare/prepare.py` in a child process (SDL_Process) with the package's Python, and its progress line by line |
+| `launcher_setup.cpp`, `launcher_setup.h` | The setup of the files page: `tools/prepare/prepare.py` in a child process (SDL_Process) with the package's Python, `--game` for the chosen installation and `--runtime` for the executable, and its progress line by line |
 | `launcher_update.cpp`, `launcher_update.h` | The update: at start (`MKW_UPDATE_CHECK`, Menu tab), GitHub's latest published release offered on the start screen; `tools/prepare/update.py` downloads it, then the new files replace the old ones (Windows: renamed to `*.old`; Linux: the AppImage) and the program starts again, which sets up again only what changed. Test: `MKW_UPDATE_AS=<version> MKW_LAUNCHER_UPDATE=1` |
-| `mods_browse.cpp`, `mods_browse.h` | The Mods page's GameBanana tab: list and search (`tools/mod/gamebanana.py`, one child process at a time), a mod's page with its author, license and a link to it, and Install with a confirmation, which downloads the file into `<exe>/mods/.downloads` and hands it to the import. Test: `MKW_LAUNCHER_MODS_FIND=1` |
-| `mods.cpp`, `mods.h` | The Mods page: the player's Switch-style mods in `<exe>/mods`, imported from a zip or a folder by `tools/mod/import.py` (same child-process pattern as the setup) and enabled for the next start. Test: `MKW_LAUNCHER_SHOT=<frame>:mods` |
+| `mods_browse.cpp`, `mods_browse.h` | The Mods page's GameBanana tab: list and search (`tools/mod/gamebanana.py`, one child process at a time), a mod's page with its author, license and a link to it, and Install with a confirmation, which downloads the file into `<game>/mods/.downloads` and hands it to the import. Test: `MKW_LAUNCHER_MODS_FIND=1` |
+| `mods.cpp`, `mods.h` | The Mods page: the player's Switch-style mods in `<game>/mods`, imported from a zip or a folder by `tools/mod/import.py` (same child-process pattern as the setup) and enabled for the next start. Test: `MKW_LAUNCHER_SHOT=<frame>:mods` |

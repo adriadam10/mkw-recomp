@@ -1,7 +1,7 @@
 // The Mods page's GameBanana tab: Mario Kart World mods listed and searched on GameBanana, a mod's page (author,
 // license, description, files) and its install. The network is tools/mod/gamebanana.py in the package's Python, one
 // child process at a time whose tab-separated lines a thread of ours reads, as mods.cpp runs import.py. An install
-// downloads the file into <exe>/mods/.downloads and hands it to the normal import (mods_pick, mods_import_start).
+// downloads the file into <game>/mods/.downloads and hands it to the normal import (mods_pick, mods_import_start).
 // Nothing is hosted by this project: the mods are their authors', fetched from GameBanana when the player asks. The
 // preview pictures too: a second child process (gamebanana.py images) fetches them into the player's cache as the
 // page shows them, and they are decoded here (stb_image) into textures of the start screen's renderer.
@@ -22,6 +22,7 @@
 #include "../../third_party/stb/stb_image.h"
 
 extern "C" {
+#include "cfg.h"
 #include "platform/platform.h"
 #include "ui_text.h"
 void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -180,7 +181,7 @@ static void start(const char *exe_dir, int job, const char *const *rest) {
         G.finished = -1;
         return;
     }
-    snprintf(cache, sizeof cache, "%s/mods/.gamebanana", exe_dir);
+    snprintf(cache, sizeof cache, "%s/mods/.gamebanana", cfg_game_dir());
     const char *args[16] = {python, "-I", script, "--cache", cache};
     int na = 5;
     for (; rest[na - 5] && na < 15; na++) args[na] = rest[na - 5];
@@ -281,7 +282,7 @@ static void pic_tick(const char *exe_dir, SDL_Renderer *ren) {
     if (!idle) return;
     char python[1200], script[1200], cache[PLAT_PATH_MAX];
     if (!setup_tool(exe_dir, "mod/gamebanana.py", python, script, sizeof python)) return;
-    snprintf(cache, sizeof cache, "%s/mods/.gamebanana", exe_dir);
+    snprintf(cache, sizeof cache, "%s/mods/.gamebanana", cfg_game_dir());
     const char *args[32] = {python, "-I", script, "--cache", cache, "images"};
     int na = 6;
     SDL_LockMutex(G.lock);
@@ -554,7 +555,7 @@ int mods_browse_draw(const char *exe_dir, SDL_Renderer *ren) {
                     char mid[16], fid[16], dest[PLAT_PATH_MAX];
                     snprintf(mid, sizeof mid, "%d", info.id);
                     snprintf(fid, sizeof fid, "%d", c.id);
-                    snprintf(dest, sizeof dest, "%s/mods/.downloads", exe_dir);
+                    snprintf(dest, sizeof dest, "%s/mods/.downloads", cfg_game_dir());
                     const char *rest[] = {"download", mid, fid, dest, nullptr};
                     start(exe_dir, JOB_DOWNLOAD, rest);
                     ImGui::CloseCurrentPopup();

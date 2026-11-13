@@ -30,6 +30,11 @@ class Failed(Exception):
 
 # ---- the package's tools (setup/ next to the executable), else the system's
 def package_dir(game: Path) -> Path:
+    # In a release the sources live in setup/src. Tools stay there when the player chooses another installation
+    # folder; resolving this file also follows the AppImage's setup symlink into its current mount.
+    bundled = Path(__file__).resolve().parents[3]
+    if (bundled / "src/tools/prepare/machine.py").is_file():
+        return bundled
     return game / "setup"
 
 
