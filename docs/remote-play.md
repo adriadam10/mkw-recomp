@@ -46,6 +46,20 @@ It is off by default and changes nothing until you set it up.
    options you used: otherwise the log says `steam: Steam started mkw as App ID ..., but steam_appid = ...`.
    Steam shows your friends the name of that game, and only games with Remote Play Together let them join.
 
+   **The game's controller settings in Steam matter too.** Steam hands controllers to mkw as it would to that game,
+   so a game that uses Steam Input in its own way can leave a player without one. Tried on Windows (November 2026):
+
+   | App ID | Your controller | Your friend's controller |
+   |---|---|---|
+   | 1118310 (RetroArch) | works | works |
+   | 985890 (Streets of Rage 4) | works | works |
+   | 1361510 (TMNT: Shredder's Revenge), Steam Input on | none: Steam lists no controller at all | none |
+   | 1361510, Steam Input off (Properties > Controller) | works | listed, but no button reaches mkw |
+
+   To check another one, look in `logs/mkw.log` after a friend has joined for `input: ... Steam virtual ...` and
+   `input: gamepad ... for player 2 (... a Remote Play guest's)`, then make sure player 2 moves in a race. The log
+   lists every controller SDL sees (`input: SDL lists N joysticks`) each time the list changes.
+
 3. **Start the game from Steam, as the App ID's game** (needed for your friends' controllers). Started from its
    folder, mkw runs as the App ID and invitations work, but Steam does not hand the guests' controllers to it: Steam
    gives them to a game through its overlay, and only loads that into games it starts. A Non-Steam Game shortcut does
