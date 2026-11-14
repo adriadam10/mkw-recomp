@@ -16,20 +16,22 @@
 static int local_mode;   // SetLocalNetworkMode's last value
 
 static int lan_up(void) { return local_mode && ov_lan(); }
+// MKW_NPLN (ov_npln.c): an internet request is connected too, as the self-hosted server is the internet the game sees
+static int net_up(void) { return lan_up() || (!local_mode && ov_npln_on()); }
 
 static void ov_ok(Cpu *c) { ret_x(c, 0); }
 static void ov_nothing(Cpu *c) { (void)c; }
 // void SetLocalNetworkMode(bool)
 static void ov_local_mode(Cpu *c) { local_mode = (int)(arg_x(c, 0) & 1); }
 // bool IsNetworkAvailable()
-static void ov_network_available(Cpu *c) { ret_x(c, (uint64_t)lan_up()); }
+static void ov_network_available(Cpu *c) { ret_x(c, (uint64_t)net_up()); }
 // Result HandleNetworkRequestErrorResult()
-static void ov_request_result(Cpu *c) { ret_x(c, lan_up() ? 0 : NIFM_R_NO_NETWORK); }
+static void ov_request_result(Cpu *c) { ret_x(c, net_up() ? 0 : NIFM_R_NO_NETWORK); }
 static void ov_no_network(Cpu *c) { ret_x(c, NIFM_R_NO_NETWORK); }
 // Result GetCurrentIpConfigInfo(in_addr *ip, in_addr *mask, in_addr *gateway, in_addr *dns1, in_addr *dns2)
 static void ov_ip_config(Cpu *c) {
     uint8_t ip[4], mask[4], gw[4];
-    if (!lan_up() || ov_lan_address(ip, mask)) {
+    if (!net_up() || ov_lan_address(ip, mask)) {
         ret_x(c, NIFM_R_NO_NETWORK);
         return;
     }
@@ -114,10 +116,34 @@ HOST_OVERRIDE("_ZN2nn3ldn22SetStationAcceptPolicyENS0_12AcceptPolicyE", ov_ldn_d
 HOST_OVERRIDE("_ZN2nn3ldn6RejectENS0_11Ipv4AddressE", ov_ldn_disabled);
 HOST_OVERRIDE("_ZN2nn3ldn22AttachStateChangeEventEPNS_2os15SystemEventTypeE", ov_nothing);
 
-// ---- nn::nsd: no server name resolution offline.
+// ---- nn::nsd: no server name resolution offline. With MKW_NPLN, the production environment ("lp1", as the NPLN host
+// names carry it) and every name resolved to itself (ov_socket.c's GetAddrInfo sends Nintendo's names to the server).
 static void ov_nsd_none(Cpu *c) { ret_x(c, NIFM_R_NO_NETWORK); }
-HOST_OVERRIDE("_ZN2nn3nsd24GetEnvironmentIdentifierEPNS0_21EnvironmentIdentifierE", ov_nsd_none);
-HOST_OVERRIDE("_ZN2nn3nsd9ResolveExEPNS0_4FqdnERKS1_", ov_nsd_none);
+// Result GetEnvironmentIdentifier(EnvironmentIdentifier *out): char[8]
+static void ov_nsd_env(Cpu *c) {
+    char *out = arg_p(c, 0);
+    if (!ov_npln_on() || !out) {
+        ov_nsd_none(c);
+        return;
+    }
+    memset(out, 0, 8);
+    memcpy(out, "lp1", 3);
+    ret_x(c, 0);
+}
+// Result ResolveEx(Fqdn *out, const Fqdn &in): char[256] each
+static void ov_nsd_resolve(Cpu *c) {
+    char *out = arg_p(c, 0);
+    const char *in = arg_p(c, 1);
+    if (!ov_npln_on() || !out || !in) {
+        ov_nsd_none(c);
+        return;
+    }
+    if (out != in) memmove(out, in, 256);
+    out[255] = 0;
+    ret_x(c, 0);
+}
+HOST_OVERRIDE("_ZN2nn3nsd24GetEnvironmentIdentifierEPNS0_21EnvironmentIdentifierE", ov_nsd_env);
+HOST_OVERRIDE("_ZN2nn3nsd9ResolveExEPNS0_4FqdnERKS1_", ov_nsd_resolve);
 
 // ---- nn::prepo: play reports are built by the SDK's own code and never sent.
 HOST_OVERRIDE("_ZN2nn5prepo28RequestImmediateTransmissionEv", ov_ok);

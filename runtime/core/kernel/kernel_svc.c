@@ -187,7 +187,9 @@ int kern_svc(Cpu *c, uint32_t imm) {
         RtThread *t = h_get((uint32_t)x[2], O_THREAD);
         x[0] = t ? R_OK : R_BAD_HANDLE;
         if (t) {
-            x[1] = (uint64_t)(uint32_t)t->core;
+            // the pair is always one SetThreadCoreMask accepts back (the ideal core inside the mask; see 0x0F)
+            int core = t->core >= 0 && t->mask && !(t->mask >> t->core & 1) ? __builtin_ctzll(t->mask) : t->core;
+            x[1] = (uint64_t)(uint32_t)core;
             x[2] = t->mask;
         }
         unlock();
@@ -210,6 +212,10 @@ int kern_svc(Cpu *c, uint32_t imm) {
         }
         if (t) {
             if (core >= 0) t->core = core;   // -1: no ideal core; ours stays a hint, core_take checks the mask
+            // -1 with an ideal core outside the new mask: the mask's lowest core becomes the ideal one, as Atmosphère's
+            // KThread::SetCoreMask does. Otherwise GetThreadCoreMask hands back a pair this call refuses: libcurl's
+            // thread setup (main+0x14fe9e4) copies its creator's pair to the new thread and the SDK aborts on 0xe801.
+            if (core == -1 && t->core >= 0 && !(mask >> t->core & 1)) t->core = __builtin_ctzll(mask);
             t->mask = mask;
             if (t == tcur && t->cur_core >= 0 && !core_allowed(t, t->cur_core)) {   // move off a forbidden core
                 core_put(t);

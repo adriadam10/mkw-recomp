@@ -484,17 +484,13 @@ static void ov_open_user_by_uid(Cpu *c) {
     ret_x(c, ok ? 0 : ACCOUNT_R_INVALID);
 }
 
-// Result IsNetworkServiceAccountAvailable(bool *out, const UserHandle &): never, offline.
+// Result IsNetworkServiceAccountAvailable(bool *out, const UserHandle &): never offline; with an NPLN server
+// (MKW_NPLN) the local user has one, whose other calls are in ov_npln.c.
 static void ov_nsa_available(Cpu *c) {
     uint8_t *out = arg_p(c, 0);
-    if (out) *out = 0;
+    if (out) *out = (uint8_t)ov_npln_on();
     ret_x(c, out ? 0 : ACCOUNT_R_INVALID);
 }
-
-// The network service account calls fail: the game only makes them after IsNetworkServiceAccountAvailable said yes.
-// (nn::account::ResultNetworkServiceAccountUnavailable is module 124; this description number is a hypothesis.)
-#define ACCOUNT_R_NSA_UNAVAILABLE (124u | (280u << 9))
-static void ov_nsa_unavailable(Cpu *c) { ret_x(c, ACCOUNT_R_NSA_UNAVAILABLE); }
 
 // Result GetUserExistence(bool *out, const Uid &)
 static void ov_user_existence(Cpu *c) {
@@ -839,10 +835,6 @@ HOST_OVERRIDE("_ZN2nn7account9GetUserIdEPNS0_3UidERKNS0_10UserHandleE", ov_user_
 HOST_OVERRIDE("_ZN2nn7account12ListAllUsersEPiPNS0_3UidEi", ov_list_all_users);
 HOST_OVERRIDE("_ZN2nn7account8OpenUserEPNS0_10UserHandleERKNS0_3UidE", ov_open_user_by_uid);
 HOST_OVERRIDE("_ZN2nn7account32IsNetworkServiceAccountAvailableEPbRKNS0_10UserHandleE", ov_nsa_available);
-HOST_OVERRIDE("_ZN2nn7account36EnsureNetworkServiceAccountAvailableERKNS0_10UserHandleE", ov_nsa_unavailable);
-HOST_OVERRIDE("_ZN2nn7account26GetNetworkServiceAccountIdEPNS0_23NetworkServiceAccountIdERKNS0_10UserHandleE", ov_nsa_unavailable);
-HOST_OVERRIDE("_ZN2nn7account37LoadNetworkServiceAccountIdTokenCacheEPmPcmRKNS0_10UserHandleE", ov_nsa_unavailable);
-HOST_OVERRIDE("_ZN2nn7account44EnsureNetworkServiceAccountIdTokenCacheAsyncEPNS0_12AsyncContextERKNS0_10UserHandleE", ov_nsa_unavailable);
 HOST_OVERRIDE("_ZN2nn7account16GetUserExistenceEPbRKNS0_3UidE", ov_user_existence);
 HOST_OVERRIDE("_ZN2nn7account11GetNicknameEPNS0_8NicknameERKNS0_3UidE", ov_nickname);
 

@@ -45,7 +45,10 @@ static uint8_t *index_bytes;
 static size_t index_size;
 static uint64_t file_count, strings_offset;
 static char loose_root[2048];   // the loose folder or the package (load_loose_index, load_package_index)
-static char mount_name[32];
+// The RomFS's mount names: the game's ("content") and the few others it mounts the same RomFS as (MountRom again
+// under another name: "_npln" for the online services, MKW_NPLN). Each is the whole RomFS.
+#define NMOUNT 4
+static char mount_names[NMOUNT][32];
 static PlatMutex lock = PLAT_MUTEX_INIT;
 static uint64_t handles[NH];         // file index + 1; 0 is free
 static uint32_t handle_ovl[NH];      // overlay slot + 1 of an open handle, 0 = original
@@ -647,21 +650,29 @@ const char *romfs_overlay(size_t k, const char **file, uint64_t *size, int *is_a
     return overlays[k].name;
 }
 
-int romfs_owns(const char *path) {
-    size_t n = strlen(mount_name);
-    return n && path && !strncmp(path, mount_name, n) && path[n] == ':';
+// The mount name path starts with ("name:"), or NULL
+static const char *mount_of(const char *path) {
+    for (int i = 0; path && i < NMOUNT; i++) {
+        size_t n = strlen(mount_names[i]);
+        if (n && !strncmp(path, mount_names[i], n) && path[n] == ':') return mount_names[i];
+    }
+    return NULL;
 }
+
+int romfs_owns(const char *path) { return mount_of(path) != NULL; }
 
 int romfs_handle(uint64_t h) { return h > ROMFS_HANDLE_BASE && h < ROMFS_HANDLE_BASE + NH; }
 
 uint32_t romfs_mount(const char *name) {
     fs_init();
-    if (!name || !romfs_path_valid_relative(name) || strlen(name) >= sizeof mount_name || strchr(name, '/') ||
+    if (!name || !romfs_path_valid_relative(name) || strlen(name) >= sizeof mount_names[0] || strchr(name, '/') ||
         strchr(name, ':'))
         return FS_R_INVALID;
     plat_mutex_lock(&lock);
-    if (*mount_name && strcmp(name, mount_name)) rt_fatal("second RomFS mount %s (%s is mounted)", name, mount_name);
-    strcpy(mount_name, name);
+    int i = 0;
+    while (i < NMOUNT && *mount_names[i] && strcmp(name, mount_names[i])) i++;
+    if (i == NMOUNT) rt_fatal("RomFS mount %s: already %d names for it", name, NMOUNT);
+    strcpy(mount_names[i], name);
     plat_mutex_unlock(&lock);
     rt_log("fs mount %s: -> RomFS", name);
     return 0;
@@ -670,7 +681,7 @@ uint32_t romfs_mount(const char *name) {
 uint32_t romfs_open(uint64_t *out, const char *path, int mode) {
     fs_trace("rom", path);
     if (!out || mode != FS_OPEN_READ) return FS_R_UNSUPPORTED_OPEN;
-    const char *p = romfs_path_relative(mount_name, path);
+    const char *p = romfs_path_relative(mount_of(path), path);
     if (!p) return FS_R_PATH_NOT_FOUND;
     uint64_t i = file_index(p);
     if (i == UINT64_MAX) return FS_R_PATH_NOT_FOUND;
@@ -784,7 +795,7 @@ void romfs_close(uint64_t h) {
 
 uint32_t romfs_entry_type(int *out, const char *path) {
     if (!out) return FS_R_INVALID;
-    const char *p = romfs_path_relative(mount_name, path);
+    const char *p = romfs_path_relative(mount_of(path), path);
     if (!p) return FS_R_PATH_NOT_FOUND;
     if (file_index(p) != UINT64_MAX) {
         *out = FS_ENTRY_FILE;
@@ -814,7 +825,7 @@ static int list_from(const char *prefix, size_t n, const char *name, uint64_t si
 }
 
 uint32_t romfs_list(const char *path, int (*add)(const char *name, int is_dir, uint64_t size, void *ctx), void *ctx) {
-    const char *p = romfs_path_relative(mount_name, path);
+    const char *p = romfs_path_relative(mount_of(path), path);
     if (!p) return FS_R_PATH_NOT_FOUND;
     char prefix[4096], last[1024] = "";
     if (snprintf(prefix, sizeof prefix, *p ? "%s/" : "%s", p) >= (int)sizeof prefix) return FS_R_INVALID;
@@ -846,5 +857,8 @@ static void ov_initialize(Cpu *c) {
 }
 
 HOST_OVERRIDE("_ZN2nn2fs8MountRomEPKcPvm", ov_mount_rom);
+// nn::Result nn::fs::MountRom(const char *name): the cacheless form, which only the online setup calls (main+0xf14bbc,
+// with MKW_NPLN; the SDK's version opened the fs service)
+HOST_OVERRIDE("_ZN2nn2fs8MountRomEPKc", ov_mount_rom);
 HOST_OVERRIDE("_ZN2nn2fs22QueryMountRomCacheSizeEPm", ov_query_cache);
 HOST_OVERRIDE("_ZN2nn2fs24InitializeForApplicationEv", ov_initialize);
