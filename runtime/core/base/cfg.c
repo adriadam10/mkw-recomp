@@ -145,7 +145,7 @@ static const CfgMeta metas[] = {
     // Hacks: none of them on the console, all off by default
     {"TURBO", "off", "off|hold|toggle|on|until", LIVE}, {"TURBO_SPEED", "4", "2..8", LIVE},
     {"SKIP_MOVIES", "0", "0|1", LIVE}, {"SEED", "", NULL, RESTART},
-    {"UNLOCK_ALL", "0", "0|1", RESTART}, {"FREEZE_KEYS", "0", "0|1", LIVE}, {"QUICK_RACE", "off", "off|tt|free", RESTART},
+    {"UNLOCK_ALL", "0", "0|1", RESTART}, {"FREEZE_KEYS", "0", "0|1", LIVE}, {"QUICK_RACE", "off", "off|tt|gp|free", RESTART},
 };
 
 static int is_known(const char *key) {

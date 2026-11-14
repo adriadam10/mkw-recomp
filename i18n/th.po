@@ -135,6 +135,10 @@ msgctxt "UI_MENU_QUICK_RACE_TT"
 msgid "Time trial"
 msgstr "ไทม์ไทรอัล"
 
+msgctxt "UI_MENU_QUICK_RACE_GP"
+msgid "Grand Prix"
+msgstr ""
+
 msgctxt "UI_MENU_QUICK_RACE_FREE"
 msgid "Free roam"
 msgstr "ท่องโลกอิสระ"
