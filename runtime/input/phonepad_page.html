@@ -1,0 +1,363 @@
+<!doctype html>
+<!-- The phone's side of phonepad.h: a controller in the browser, embedded in the runtime by phonepad_srv.c.
+     One file, nothing fetched from elsewhere: the phone may have no internet, only the PC's Wi-Fi.
+     What it sends and why it POSTs instead of holding a WebSocket: phonepad_proto.h. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#10161f">
+<title>MKW Recomp</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
+:root{--u:min(1vh,.34vw)}
+html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;background:#10161f;color:#e8edf5;
+  font:600 15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+#pad{position:absolute;inset:0;padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
+  display:grid;grid-template-columns:1fr minmax(120px,22vw) 1fr;grid-template-rows:15vh 1fr;gap:1.5vh 1.2vw}
+.b{display:flex;align-items:center;justify-content:center;border-radius:14px;background:#1d2734;border:2px solid #2f3d50;
+  color:#c9d4e3;text-align:center;line-height:1.1}
+.b small{display:block;font-size:.68em;font-weight:500;opacity:.7}
+.b.on{background:#3b82f6;border-color:#93c5fd;color:#fff;transform:scale(.97)}
+.row{display:flex;gap:1.2vw}.row .b{flex:1}
+#top{grid-column:1/4;display:grid;grid-template-columns:1fr 1fr minmax(120px,22vw) 1fr 1fr;gap:1.2vw}
+#status{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#9fb0c6;min-width:0}
+#status b{color:#e8edf5;font-size:15px}
+#bar{width:90%;height:5px;border-radius:3px;background:#1d2734;margin-top:5px;position:relative;visibility:hidden}
+#bar i{position:absolute;top:-3px;width:11px;height:11px;border-radius:50%;background:#facc15;left:50%;margin-left:-5.5px}
+#left,#right,#mid{position:relative;min-height:0}
+#zone{position:absolute;inset:0;border-radius:18px;border:2px dashed #263244}
+#base,#knob{position:absolute;border-radius:50%;pointer-events:none;left:50%;top:50%}
+#base{width:calc(var(--u)*42);height:calc(var(--u)*42);margin:calc(var(--u)*-21) 0 0 calc(var(--u)*-21);border:2px solid #2f3d50;background:#161e29}
+#knob{width:calc(var(--u)*19);height:calc(var(--u)*19);margin:calc(var(--u)*-9.5) 0 0 calc(var(--u)*-9.5);background:#3b4b61;border:2px solid #5a6f8c}
+#wheel{position:absolute;inset:0;display:none;grid-template-rows:1fr 1.5fr;gap:1.5vh}
+#wheel .b{font-size:19px}
+body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #knob{display:none}body.wheel #bar{visibility:visible}
+#face{position:absolute;inset:0}
+#face .b{position:absolute;width:calc(var(--u)*23);height:calc(var(--u)*23);border-radius:50%;font-size:22px}
+#face [data-b="0"]{right:0;top:50%;width:calc(var(--u)*27);height:calc(var(--u)*27);margin-top:calc(var(--u)*-13.5);background:#17324a;border-color:#2c5f8a}
+#face [data-b="1"]{right:calc(var(--u)*22);top:50%;margin-top:calc(var(--u)*13)}
+#face [data-b="2"]{right:calc(var(--u)*22);top:50%;margin-top:calc(var(--u)*-36)}
+#face [data-b="3"]{right:calc(var(--u)*45);top:50%;margin-top:calc(var(--u)*-11.5)}
+#mid{display:grid;grid-template-rows:auto 1fr;gap:1.5vh}
+#dpad{position:relative;align-self:center;justify-self:center;width:min(36vh,20vw);height:min(36vh,20vw)}
+#dpad .b{position:absolute;width:34%;height:34%;border-radius:10px;font-size:13px}
+#dpad [data-b="10"]{left:33%;top:0}#dpad [data-b="11"]{left:33%;bottom:0}
+#dpad [data-b="12"]{left:0;top:33%}#dpad [data-b="13"]{right:0;top:33%}
+#mid .row .b{height:9vh;min-height:30px;font-size:17px}
+.sheet{position:absolute;inset:0;background:rgba(10,14,20,.94);display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;padding:18px;text-align:center;z-index:5}
+.sheet,.sheet *{touch-action:pan-y}
+.sheet.show{display:flex}
+.sheet h1{margin:0;font-size:22px}.sheet p{margin:0;max-width:560px;font-weight:500;color:#b7c4d6;line-height:1.35}
+.btn{padding:14px 26px;border-radius:14px;border:0;background:#3b82f6;color:#fff;font-family:inherit;font-size:18px;font-weight:700}
+.btn.alt{background:#27364a}
+#code{font:700 34px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.35em;width:6.2em;text-align:center;padding:8px 0 8px .35em;
+  border-radius:12px;border:2px solid #3b82f6;background:#0c1118;color:#fff;-webkit-user-select:text;user-select:text}
+#set{align-items:stretch;justify-content:flex-start;overflow:auto;text-align:left;gap:10px}
+#set label{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#18212d;border-radius:12px;padding:10px 14px;font-weight:500}
+#set input[type=range]{flex:1;max-width:55%}#set input[type=checkbox]{width:24px;height:24px}
+#set .row .btn{flex:1;padding:12px 8px;font-size:16px}
+#turn{z-index:6}
+@media (orientation:portrait){body.started #turn{display:flex}}
+</style>
+</head>
+<body>
+<div id="pad">
+  <div id="top">
+    <div class="b" data-b="6">ZL</div><div class="b" data-b="4"><span>L<small data-t="item"></small></span></div>
+    <div id="status"><b id="who">&nbsp;</b><span id="net"></span><div id="bar"><i></i></div></div>
+    <div class="b" data-b="5"><span>R<small data-t="drift"></small></span></div><div class="b" data-b="7">ZR</div>
+  </div>
+  <div id="left">
+    <div id="zone"></div><div id="base"></div><div id="knob"></div>
+    <div id="wheel">
+      <div class="b" data-b="4"><span><span data-t="item"></span><small>L</small></span></div>
+      <div class="b" data-b="5"><span><span data-t="drift"></span><small>R</small></span></div>
+    </div>
+  </div>
+  <div id="mid">
+    <div class="row"><div class="b" data-b="9">&minus;</div><div class="b" id="gear">&#9881;</div><div class="b" data-b="8">+</div></div>
+    <div id="dpad">
+      <div class="b" data-b="10">&#9650;</div><div class="b" data-b="11">&#9660;</div>
+      <div class="b" data-b="12">&#9664;</div><div class="b" data-b="13">&#9654;</div>
+    </div>
+  </div>
+  <div id="right"><div id="face">
+    <div class="b" data-b="2">X</div><div class="b" data-b="3">Y</div>
+    <div class="b" data-b="0">A</div><div class="b" data-b="1">B</div>
+  </div></div>
+</div>
+
+<div class="sheet show" id="start">
+  <h1>MKW Recomp</h1>
+  <p data-t="intro"></p>
+  <input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="0000">
+  <p id="err" style="color:#fca5a5;min-height:1.3em"></p>
+  <button class="btn" id="go" data-t="start"></button>
+</div>
+
+<div class="sheet" id="set">
+  <label><span data-t="mode"></span><span class="row" style="flex:1;max-width:60%">
+    <button class="btn alt" id="mWheel" data-t="wheel"></button><button class="btn alt" id="mStick" data-t="stick"></button></span></label>
+  <label><span><span data-t="angle"></span> <b id="angV"></b></span><input type="range" id="ang" min="15" max="60" step="5"></label>
+  <label><span data-t="invert"></span><input type="checkbox" id="inv"></label>
+  <label><span data-t="buzz"></span><input type="checkbox" id="vib"></label>
+  <label><span data-t="tilt"></span><b id="tiltV">&ndash;</b></label>
+  <div class="row"><button class="btn alt" id="centre" data-t="centre"></button><button class="btn alt" id="full" data-t="full"></button>
+    <button class="btn" id="done" data-t="done"></button></div>
+</div>
+
+<div class="sheet" id="turn"><h1>&#10227;</h1><p data-t="turn"></p></div>
+
+<script>
+(() => {
+'use strict';
+const es = (navigator.language || '').toLowerCase().startsWith('es');
+const T = es ? {
+  intro: 'Tu teléfono es un mando. Escribe el código que muestra el juego (Ajustes › Controles) y sujétalo en horizontal, como un volante.',
+  start: 'Empezar', item: 'Objeto', drift: 'Derrape', mode: 'Dirección', wheel: 'Volante', stick: 'Palanca',
+  angle: 'Giro máximo', invert: 'Invertir el giro', buzz: 'Vibración', tilt: 'Inclinación ahora', centre: 'Centrar',
+  full: 'Pantalla completa', done: 'Listo', turn: 'Gira el teléfono a horizontal. Si la pantalla no gira, desbloquea la rotación.',
+  joining: 'Conectando…', lost: 'Sin conexión', full503: 'Ya hay ocho mandos conectados.', wait: 'Demasiados intentos: espera diez segundos.',
+  bad: 'Ese código no es el del juego.', player: 'Jugador ', ready: 'Conectado',
+  nosense: 'Este navegador no entrega los sensores de movimiento: se usa la palanca.',
+} : {
+  intro: 'Your phone is a controller. Type the code the game shows (Settings › Controls) and hold it sideways, like a steering wheel.',
+  start: 'Start', item: 'Item', drift: 'Drift', mode: 'Steering', wheel: 'Wheel', stick: 'Stick',
+  angle: 'Full lock at', invert: 'Invert steering', buzz: 'Vibration', tilt: 'Tilt now', centre: 'Centre',
+  full: 'Full screen', done: 'Done', turn: 'Turn the phone sideways. If the screen does not turn, unlock its rotation.',
+  joining: 'Connecting…', lost: 'No connection', full503: 'Eight controllers are connected already.', wait: 'Too many tries: wait ten seconds.',
+  bad: 'That is not the game\'s code.', player: 'Player ', ready: 'Connected',
+  nosense: 'This browser does not hand over the motion sensors: the stick is used.',
+};
+document.documentElement.lang = es ? 'es' : 'en';
+document.querySelectorAll('[data-t]').forEach(e => { e.textContent = T[e.dataset.t]; });
+const $ = id => document.getElementById(id);
+const store = (k, v) => { try { if (v === undefined) return localStorage.getItem('mkw.' + k); localStorage.setItem('mkw.' + k, v); } catch (e) {} return null; };
+
+// ---- settings: kept on the phone
+const cfg = { wheel: store('wheel') !== '0', angle: +(store('angle') || 35), invert: store('invert') === '1', vib: store('vib') !== '0', centre: +(store('centre') || 0) };
+let client = store('id');   // this page's own id: a reload gets the same controller, so the same player
+if (!/^[0-9a-f]{16}$/.test(client || '')) {
+  client = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, '0')).join('');
+  store('id', client);
+}
+
+// ---- touch: every finger presses the button under it and may slide onto the next; one finger owns the stick
+const held = new Map();   // pointer id -> {el} or {stick, ox, oy}
+let stick = [0, 0], wake = null;
+const poke = () => { if (wake) { const w = wake; wake = null; w(); } };
+const buttonAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('#pad [data-b]') : null; };
+function paint() {
+  const on = new Set();
+  held.forEach(h => { if (h.el) on.add(h.el); });
+  document.querySelectorAll('#pad [data-b]').forEach(el => el.classList.toggle('on', on.has(el)));
+}
+function moveStick(h, x, y) {
+  const r = $('base').offsetWidth * 0.5 || 1;
+  let dx = (x - h.ox) / r, dy = (y - h.oy) / r;
+  const m = Math.hypot(dx, dy);
+  if (m > 1) dx /= m, dy /= m;
+  stick = [dx, -dy];
+  $('knob').style.transform = `translate(${dx * r}px,${dy * r}px)`;
+}
+const pad = $('pad');
+pad.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (e.target.id === 'gear') { openSettings(); return; }
+  if (e.target.id === 'zone' && ![...held.values()].some(h => h.stick)) {
+    const z = $('zone').getBoundingClientRect();
+    const h = { stick: true, ox: z.left + z.width / 2, oy: z.top + z.height / 2 };
+    held.set(e.pointerId, h);
+    moveStick(h, e.clientX, e.clientY);
+  } else {
+    const el = buttonAt(e.clientX, e.clientY);
+    if (el) held.set(e.pointerId, { el });
+    if (el && cfg.vib && navigator.vibrate) navigator.vibrate(8);
+  }
+  paint(); poke();
+});
+document.addEventListener('pointermove', e => {
+  const h = held.get(e.pointerId);
+  if (!h) return;
+  if (h.stick) moveStick(h, e.clientX, e.clientY);
+  else { const el = buttonAt(e.clientX, e.clientY); if (el && el !== h.el) { h.el = el; paint(); } }
+  poke();
+});
+const lift = e => {
+  const h = held.get(e.pointerId);
+  if (!h) return;
+  held.delete(e.pointerId);
+  if (h.stick) { stick = [0, 0]; $('knob').style.transform = ''; }
+  paint(); poke();
+};
+document.addEventListener('pointerup', lift);
+document.addEventListener('pointercancel', lift);
+document.addEventListener('contextmenu', e => e.preventDefault());
+// No zoom. Safari on iOS zooms on a double tap and on a pinch whatever the viewport asks, and two thumbs on two
+// buttons are both to it: the page grew and stopped answering (an iPhone, 14/11/2026). touch-action: none on every
+// element says so in CSS; refusing the touch events' default takes the double tap away, and Safari's own gesture
+// events the pinch. The sheets keep their taps and their scroll (pan-y, which allows no zoom either).
+const onPad = e => { const el = e.target.nodeType === 1 ? e.target : e.target.parentElement; return !el || !el.closest('.sheet'); };
+for (const type of ['touchstart', 'touchmove', 'touchend'])
+  document.addEventListener(type, e => { if (onPad(e)) e.preventDefault(); }, { passive: false });
+for (const type of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick'])
+  document.addEventListener(type, e => e.preventDefault(), { passive: false });
+const letGo = () => { held.clear(); stick = [0, 0]; $('knob').style.transform = ''; paint(); };
+
+// ---- motion: the phone in landscape as the controller (phonepad_proto.h's axes), and the wheel's angle from gravity
+// Browsers do not agree on the acceleration's sign (Chrome on Android reports the push against gravity, +9.81 on z
+// lying screen up, as the specification says; Safari on iOS the opposite), and telling them apart by name breaks when
+// one changes. The picture tells instead: the system turns the page until its top is up, so the push points to the
+// screen's top (the phone upright) or out of the screen (lying down); a browser that reports it the other way round
+// is flipped. vote: the last half second's verdict, so a shake does not flip it.
+let acc = [0, 0, 9.80665], gyro = [0, 0, 0], sensed = false, tilt = 0, tiltAt = 0, vote = 0;
+const turned = () => (screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle
+  : ((+window.orientation || 0) + 360) % 360);
+function onMotion(e) {
+  const g = e.accelerationIncludingGravity, r = e.rotationRate || {};
+  if (!g || g.x == null) return;
+  // rotationRate's alpha, beta and gamma are the rates about the phone's x, y and z, in deg/s: not the axes the
+  // orientation angles of the same names turn about (alpha about z). Measured on a phone, 14/11/2026: with alpha
+  // taken as z, turning it like a wheel showed about the screen's right edge; gravity's own turning over 2 278
+  // samples fits x, y, z and no other order or sign.
+  const x = g.x, y = g.y, wx = r.alpha || 0, wy = r.beta || 0, wz = r.gamma || 0, k = Math.PI / 180;
+  const a = turned();
+  // the screen's right and up in the phone's own axes: rotated a quarter turn either way, or upside down
+  let [lx, ly, vx, vy] = a === 90 ? [-y, x, -wy, wx] : a === 270 ? [y, -x, wy, -wx] : a === 180 ? [-x, -y, -wx, -wy] : [x, y, wx, wy];
+  let z = g.z;
+  const up = ly + z / 2;
+  if (Math.abs(up) > 4) vote = vote ? vote + (Math.sign(up) - vote) * 0.03 : Math.sign(up);
+  if (vote < 0) lx = -lx, ly = -ly, z = -z;
+  acc = [lx, ly, z];
+  gyro = [vx * k, vy * k, wz * k];
+  // The wheel's angle from where gravity's push points. Held upright and turned like a wheel (about the line out of
+  // the screen), the push swings between the screen's top and its left: atan2 gives the turn, however far back the
+  // phone leans. Held flat and tipped sideways like a tray, it swings between out of the screen and the left: asin
+  // gives the tip. Each is wrong for the other hold (the first has no reading lying flat, the second reads a wheel
+  // leaning back 45 degrees a third short), so they are mixed by how upright the screen's top edge stands.
+  const n = Math.hypot(lx, ly, z) || 1, upright = Math.abs(ly) / (Math.hypot(ly, z) || 1), deg = 180 / Math.PI;
+  const spin = Math.atan2(-lx, Math.abs(ly)) * deg, tip = Math.asin(Math.max(-1, Math.min(1, -lx / n))) * deg;
+  const t = upright * spin + (1 - upright) * tip;
+  const now = performance.now(), dt = Math.min(100, now - tiltAt);
+  tiltAt = now;
+  tilt = sensed ? tilt + (t - tilt) * (1 - Math.exp(-dt / 40)) : t;   // 40 ms: the hand's tremor, not its turn
+  sensed = true;
+  poke();
+}
+function steer() {   // -1..1 from the wheel
+  if (!cfg.wheel || !sensed) return 0;
+  let d = (tilt - cfg.centre) * (cfg.invert ? -1 : 1);
+  const dead = 2;
+  d = Math.abs(d) < dead ? 0 : (d - Math.sign(d) * dead) / (cfg.angle - dead);
+  return Math.max(-1, Math.min(1, d));
+}
+function askMotion() {   // Safari asks the player here; a browser that refuses simply sends no events
+  if (typeof DeviceMotionEvent === 'undefined') return;
+  try { if (DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) {}
+  addEventListener('devicemotion', onMotion);
+}
+
+// ---- the link: one POST at a time; a pressed button goes at once, the sensors 60 times a second
+let started = false, sid = null, code = (location.hash.match(/\d{4}/) || [store('code') || ''])[0], lag = 0, rumbleAt = 0;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const idle = ms => new Promise(r => { const t = setTimeout(() => { wake = null; r(); }, ms); wake = () => { clearTimeout(t); r(); }; });
+const say = (who, net) => { if (who !== null) $('who').textContent = who; $('net').textContent = net; };
+function packet() {
+  const d = new DataView(new ArrayBuffer(24)), i16 = v => Math.max(-32767, Math.min(32767, Math.round(v)));
+  let b = 0;
+  held.forEach(h => { if (h.el) b |= 1 << +h.el.dataset.b; });
+  const s = steer(), lx = Math.abs(stick[0]) > Math.abs(s) ? stick[0] : s;
+  d.setUint8(0, 1); d.setUint8(1, sensed ? 1 : 0); d.setUint16(2, b, true);
+  d.setInt16(4, i16(lx * 32767), true); d.setInt16(6, i16(stick[1] * 32767), true);
+  for (let i = 0; i < 3; i++) { d.setInt16(12 + i * 2, i16(acc[i] * 500), true); d.setInt16(18 + i * 2, i16(gyro[i] * 1000), true); }
+  $('bar').firstChild.style.left = (50 + s * 50) + '%';
+  return d;
+}
+async function join() {
+  say(null, T.joining);
+  const r = await fetch(`/join?code=${code}&id=${client}`, { method: 'POST', cache: 'no-store' });
+  if (r.status === 200) { sid = await r.text(); store('code', code); say(T.ready, ''); return; }
+  if (r.status === 403) {
+    sid = null; code = ''; started = false;
+    document.body.classList.remove('started');
+    $('err').textContent = T.bad; $('start').classList.add('show');
+    throw 0;
+  }
+  say(null, r.status === 503 ? T.full503 : T.wait);
+  await sleep(2000);
+}
+async function link() {
+  let last = '', sent = 0;
+  for (;;) {
+    try {
+      if (document.hidden || !started || !code) { await sleep(300); continue; }
+      if (!sid) { await join(); continue; }
+      const d = packet(), key = d.getUint16(2) + ',' + d.getInt16(4) + ',' + d.getInt16(6), now = performance.now();
+      // a button or the stick changed: now. Sensors alone: every 16 ms. Nothing: every 200 ms, so the PC knows we are here
+      if (key === last && now - sent < (sensed ? 16 : 200)) { await idle(sensed ? 16 - (now - sent) : 200 - (now - sent)); continue; }
+      const r = await fetch('/i?s=' + sid, { method: 'POST', body: d.buffer, cache: 'no-store' });
+      if (r.status === 410) { sid = null; continue; }
+      if (!r.ok) throw 0;
+      const f = new Uint8Array(await r.arrayBuffer()), done = performance.now();
+      last = key; sent = now;
+      lag += (done - now - lag) * 0.1;
+      say(f[2] ? T.player + f[2] : T.ready, Math.round(lag) + ' ms');
+      if ((f[0] > 12 || f[1] > 12) && cfg.vib && navigator.vibrate && done - rumbleAt > 80) { rumbleAt = done; navigator.vibrate(110); }
+    } catch (e) {
+      if (!started) continue;
+      say(null, T.lost);
+      await sleep(600);
+    }
+  }
+}
+addEventListener('pagehide', () => { if (sid && navigator.sendBeacon) navigator.sendBeacon('/bye?s=' + sid); });
+document.addEventListener('visibilitychange', () => { letGo(); if (!document.hidden) awake(); });
+let lock = null;
+async function awake() { try { if (navigator.wakeLock && (!lock || lock.released)) lock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+
+// ---- the sheets
+const mode = () => {
+  document.body.classList.toggle('wheel', cfg.wheel && sensed);
+  $('mWheel').style.background = cfg.wheel ? '#3b82f6' : ''; $('mStick').style.background = cfg.wheel ? '' : '#3b82f6';
+};
+function openSettings() {
+  letGo();
+  $('ang').value = cfg.angle; $('angV').textContent = cfg.angle + '°'; $('inv').checked = cfg.invert; $('vib').checked = cfg.vib;
+  $('full').style.display = document.fullscreenEnabled ? '' : 'none';
+  mode();
+  $('set').classList.add('show');
+}
+setInterval(() => { if ($('set').classList.contains('show')) $('tiltV').textContent = sensed ? Math.round(tilt - cfg.centre) + '°' : T.nosense; mode(); }, 150);
+$('mWheel').onclick = () => { cfg.wheel = true; store('wheel', '1'); mode(); };
+$('mStick').onclick = () => { cfg.wheel = false; store('wheel', '0'); mode(); };
+$('ang').oninput = e => { cfg.angle = +e.target.value; store('angle', cfg.angle); $('angV').textContent = cfg.angle + '°'; };
+$('inv').onchange = e => { cfg.invert = e.target.checked; store('invert', cfg.invert ? '1' : '0'); };
+$('vib').onchange = e => { cfg.vib = e.target.checked; store('vib', cfg.vib ? '1' : '0'); };
+$('centre').onclick = () => { cfg.centre = Math.round(tilt * 10) / 10; store('centre', cfg.centre); };
+// Android: the address bar goes and the page turns sideways even with the phone's rotation locked. An iPhone has
+// neither call: its player turns the phone (the #turn sheet says so while the page stands upright).
+async function goFull() {
+  try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation.lock('landscape'); } catch (e) {}
+}
+$('full').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else goFull(); };
+$('done').onclick = () => $('set').classList.remove('show');
+
+$('code').value = code;
+$('go').onclick = () => {
+  askMotion();   // first, inside the tap: Safari only asks for the sensors from one
+  const v = $('code').value.trim();
+  if (!/^\d{4}$/.test(v)) { $('err').textContent = T.bad; return; }
+  code = v; $('err').textContent = '';
+  $('start').classList.remove('show');
+  document.body.classList.add('started');
+  started = true;
+  awake();
+  goFull();
+};
+link();
+})();
+</script>
+</body>
+</html>
