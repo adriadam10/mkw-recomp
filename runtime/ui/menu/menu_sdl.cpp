@@ -54,6 +54,24 @@ extern "C" void menu_sdl_event(const SDL_Event *e) {
             if (!e->key.repeat) menu_perf_cycle();
             return;
         }
+        // Ctrl+V / Shift+Insert in a text field: the clipboard, read here (SDL's clipboard belongs to the window
+        // thread), goes to the field as typed characters, so the field's filter applies to it too
+        if (menu_wants_text() &&
+            ((e->key.scancode == SDL_SCANCODE_V && (e->key.mod & SDL_KMOD_CTRL)) ||
+             (e->key.scancode == SDL_SCANCODE_INSERT && (e->key.mod & SDL_KMOD_SHIFT)))) {
+            if (char *clip = SDL_GetClipboardText()) {
+                int n = 0;
+                for (const char *s = clip; *s && n < 256; n++) {
+                    unsigned c;
+                    int k = ImTextCharFromUtf8(&c, s, NULL);
+                    if (k <= 0) break;
+                    if (c >= 0x20) menu_event_char(c);   // a copied line's newline or tab is left out
+                    s += k;
+                }
+                SDL_free(clip);
+            }
+            return;
+        }
         [[fallthrough]];
     case SDL_EVENT_KEY_UP:
         if (!menu_is_open()) return;
