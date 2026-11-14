@@ -61,14 +61,53 @@ static int is_app_id(const char *s);
 
 // steam_appid = auto: the App ID Steam put in the environment when it started mkw from a game's launch options
 // (%command%), so the overlay and the guests' controllers are that game's. Read once, before steam_rpt_start sets it.
+// Each one Steam passes is kept in cache/steam-appid next to mkw.ini, and a start from mkw's own folder (no SteamAppId)
+// uses the last one, so Automatic works there as a fixed number does (auto_saved).
 static char auto_id[16];
+static int auto_saved;
+
+static void saved_path(char *out, size_t cap) { snprintf(out, cap, "%s/cache/steam-appid", cfg_game_dir()); }
+
+static void auto_load(void) {
+    char p[PLAT_PATH_MAX], line[32] = "";
+    saved_path(p, sizeof p);
+    FILE *f = fopen(p, "r");
+    if (!f) return;
+    if (fgets(line, sizeof line, f)) line[strcspn(line, "\r\n")] = 0;
+    fclose(f);
+    if (is_app_id(line)) { snprintf(auto_id, sizeof auto_id, "%s", line); auto_saved = 1; }
+}
+
+static void auto_store(const char *id) {
+    char p[PLAT_PATH_MAX], old[32] = "";
+    saved_path(p, sizeof p);
+    FILE *f = fopen(p, "r");
+    if (f) {
+        if (fgets(old, sizeof old, f)) old[strcspn(old, "\r\n")] = 0;
+        fclose(f);
+    }
+    if (!strcmp(old, id)) return;
+    char dir[PLAT_PATH_MAX];
+    snprintf(dir, sizeof dir, "%s/cache", cfg_game_dir());
+    plat_fs_mkdir(dir);
+    if ((f = fopen(p, "w"))) { fprintf(f, "%s\n", id); fclose(f); }
+    else rt_log("steam: cannot write %s: Automatic will not remember App ID %s", p, id);
+}
+
 const char *steam_rpt_app_id(void) {
     const char *v = cfg_get("MKW_STEAM_APPID");
     if (!v) return "";
     if (strcmp(v, "auto")) return v;
-    if (!auto_id[0]) {
+    static int resolved;
+    if (!resolved) {
+        resolved = 1;
         char e[32];
-        if (plat_getenv("SteamAppId", e, sizeof e) && is_app_id(e)) snprintf(auto_id, sizeof auto_id, "%s", e);
+        if (plat_getenv("SteamAppId", e, sizeof e) && is_app_id(e)) {
+            snprintf(auto_id, sizeof auto_id, "%s", e);
+            auto_store(e);
+        } else {
+            auto_load();
+        }
     }
     return auto_id[0] ? auto_id : "auto";
 }
@@ -351,11 +390,14 @@ void steam_rpt_start(void) {
     const char *app = steam_rpt_app_id();
     if (!*app) { plat_xchg32(&g_state, STEAM_RPT_OFF); return; }
     if (!strcmp(app, "auto")) {
-        fail("steam_appid = %s, but Steam passed no App ID: start mkw from a Steam game's launch options (%%command%%)",
-             app);
+        fail("steam_appid = %s, but Steam passed no App ID and none is remembered: start mkw once from a Steam game's "
+             "launch options (%%command%%)", app);
         return;
     }
     if (!is_app_id(app)) { fail("steam_appid = %s is not a Steam App ID (a number)", app); return; }
+    if (auto_saved)
+        rt_log("steam: steam_appid = auto, started without Steam: App ID %s, the one Steam passed last time "
+               "(guests' controllers need mkw started from that game in Steam, docs/remote-play.md)", app);
     char started[32];   // a number set while Steam started mkw as another game: the overlay is that game's
     if (plat_getenv("SteamAppId", started, sizeof started) && is_app_id(started) && strcmp(started, app))
         rt_log("steam: Steam started mkw as App ID %s, but steam_appid = %s: set steam_appid = auto to follow the game",
