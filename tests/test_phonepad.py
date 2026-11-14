@@ -36,7 +36,12 @@ def compiler() -> list[str] | None:
     if os.environ.get("CC"):
         return shlex.split(os.environ["CC"], posix=os.name != "nt")
     cc = shutil.which("clang") or shutil.which("cc") or shutil.which("gcc")
-    return [cc] if cc else None
+    if not cc:
+        return None
+    # A clang that targets MSVC (the Windows CI runner's) is not a compiler the runtime is ever built with (Windows
+    # is llvm-mingw), and BearSSL does not build under its <intrin.h> (the fork's CI, 14/11/2026).
+    machine = subprocess.run([cc, "-dumpmachine"], capture_output=True, text=True, check=False).stdout
+    return None if "msvc" in machine else [cc]
 
 
 def bearssl_objects(cc: list[str]) -> list[Path]:
@@ -65,7 +70,7 @@ def bearssl_objects(cc: list[str]) -> list[Path]:
 def exe(tmp_path_factory: pytest.TempPathFactory) -> Path:
     cc = compiler()
     if not cc:
-        pytest.skip("no C compiler")
+        pytest.skip("no C compiler the runtime is built with")
     tmp = tmp_path_factory.mktemp("phonepad")
     rsp = tmp / "bearssl.rsp"   # 294 objects: past what a Windows command line takes
     rsp.write_text("\n".join(f'"{o.as_posix()}"' for o in bearssl_objects(cc)))
