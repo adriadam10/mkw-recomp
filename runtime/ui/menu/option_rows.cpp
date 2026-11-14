@@ -261,8 +261,9 @@ bool opt_button(const char *id, UiTextId label, UiTextId desc, const char *value
 bool opt_digits(const char *id, UiTextId label, UiTextId desc, char *buf, size_t cap, const char *hint) {
     RowView v = {buf[0] ? buf : hint, false, false, NULL};
     int step = row(id, label, desc, v);
-    // the row's button is the last item: its focus decides who takes the keys (the typed digits show next frame)
-    if (ImGui::IsItemFocused() && ImGui::GetCurrentContext()->NavCursorVisible) {
+    // the row's button is the last item: selected (by the cursor or a click, which hides the cursor while the mouse
+    // is used) or under the mouse, it takes the digit keys; they show next frame
+    if (ImGui::IsItemFocused() || ImGui::IsItemHovered()) {
         size_t n = strlen(buf);
         for (int d = 0; d < 10; d++)
             if ((ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_0 + d)) ||
