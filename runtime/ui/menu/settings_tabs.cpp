@@ -258,6 +258,7 @@ static void tab_game(float scale) {
     opt_begin("##game", scale);
     row_game_lang();
     opt_toggle("MKW_LAN", UI_MENU_LAN, UI_MENU_LAN_DESC);   // sdk/ov/ov_socket.c, the lan set of recomp/patches-mkw.txt
+    opt_edit("MKW_NPLN", UI_MENU_NPLN, UI_MENU_NPLN_DESC, UI_MENU_NPLN_HINT, "192.168.1.20");   // sdk/ov/ov_npln.c
     opt_end();
 }
 
@@ -512,7 +513,8 @@ void settings_opened(void) {
 bool settings_modal(void) { return g_modal || binds_modal(); }
 
 void settings_tabs(float scale, float bottom) {
-    int step = settings_modal()                                                                          ? 0
+    // Q and E are letters while a text field (the ghost server's address) takes the keyboard
+    int step = settings_modal() || ImGui::GetIO().WantTextInput                                          ? 0
              : ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false) || ImGui::IsKeyPressed(ImGuiKey_E, false) ? 1
              : ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false) || ImGui::IsKeyPressed(ImGuiKey_Q, false) ? -1
                                                                                                          : 0;

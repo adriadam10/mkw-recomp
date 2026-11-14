@@ -506,6 +506,22 @@ msgid ""
 "the next start."
 msgstr "标题菜单的本地无线游戏变为局域网游戏，可与同一局域网中的其他电脑比赛（UDP 端口 49152 和 35000）。只连接局域网地址，绝不连接互联网。下次启动时生效。"
 
+msgctxt "UI_MENU_NPLN"
+msgid "Ghost server"
+msgstr ""
+
+msgctxt "UI_MENU_NPLN_DESC"
+msgid ""
+"The address of a ghost server (tools/npln/server.py), such as 192.168.1.20 or 192.168.1.20:8443: "
+"Time Trial uploads your ghosts there, shows its leaderboards and downloads the other players' "
+"ghosts. Never Nintendo's servers. Press A or click to type it with the keyboard, Enter to keep "
+"it; empty turns it off. Applies at the next start."
+msgstr ""
+
+msgctxt "UI_MENU_NPLN_HINT"
+msgid "Off"
+msgstr ""
+
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
 msgstr "音量"

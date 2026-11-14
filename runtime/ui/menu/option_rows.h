@@ -63,6 +63,10 @@ bool opt_choice_list(const char *key, UiTextId label, const char *const *values,
 // A row that runs an action: true on A or a click. id: unique on the page and not a setting ("##copy_info"); value:
 // shown on the right ("" none).
 bool opt_button(const char *id, UiTextId label, UiTextId desc, const char *value = "");
+// A free text value (an address): A or a click opens a field over the row to type it with the keyboard; Enter or a
+// click elsewhere keeps it, Escape leaves it as it was. Shows empty (the key unset) as the text of off. hint: greyed in
+// the empty field. Takes the characters of a host name, an address and a port only.
+bool opt_edit(const char *key, UiTextId label, UiTextId desc, UiTextId off, const char *hint);
 // lo..hi in steps of step (left and right held for a second go ten times as fast); fmt formats the value ("%.0f %%").
 bool opt_slider(const char *key, UiTextId label, float lo, float hi, UiTextId desc, float step = 1,
                 const char *fmt = "%g");

@@ -34,6 +34,9 @@ void menu_event_mouse_pos(float x, float y);
 void menu_event_mouse_button(int button, int down);   // 0 left, 1 right, 2 middle
 void menu_event_wheel(float dx, float dy);
 void menu_event_focus(int focused);
+void menu_event_char(unsigned codepoint);   // a typed character (SDL_EVENT_TEXT_INPUT), for a text field
+// A text field of the menu is taking the keyboard (the window adapter starts the system's text input for it).
+int menu_wants_text(void);
 
 // ---- the overlay, drawn into the swapchain image after the game image (gfx_present.c, present lock held)
 typedef struct {

@@ -8,6 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include "imgui.h"
+#include "imgui_internal.h"   // ImTextCharFromUtf8
 
 extern "C" {
 #include "input.h"
@@ -71,6 +72,16 @@ extern "C" void menu_sdl_event(const SDL_Event *e) {
         menu_event_mouse_button(b, e->type == SDL_EVENT_MOUSE_BUTTON_DOWN);
         return;
     }
+    case SDL_EVENT_TEXT_INPUT:   // UTF-8 from the system's text input (menu_sdl_text), one character at a time
+        if (menu_is_open())
+            for (const char *s = e->text.text; s && *s;) {
+                unsigned c;
+                int n = ImTextCharFromUtf8(&c, s, NULL);
+                if (n <= 0) break;
+                menu_event_char(c);
+                s += n;
+            }
+        return;
     case SDL_EVENT_MOUSE_WHEEL:
         if (menu_is_open()) menu_event_wheel(e->wheel.x, e->wheel.y);
         return;
@@ -79,4 +90,15 @@ extern "C" void menu_sdl_event(const SDL_Event *e) {
         menu_event_focus(e->type == SDL_EVENT_WINDOW_FOCUS_GAINED);
         return;
     }
+}
+
+// SDL3 sends text only between SDL_StartTextInput and SDL_StopTextInput (which may also show an on-screen keyboard), so
+// it is on only while a menu field (opt_edit) has the keyboard.
+extern "C" void menu_sdl_text(SDL_Window *w) {
+    static int on;
+    int want = menu_wants_text();
+    if (!w || want == on) return;
+    on = want;
+    if (want) SDL_StartTextInput(w);
+    else SDL_StopTextInput(w);
 }

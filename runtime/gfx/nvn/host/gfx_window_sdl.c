@@ -236,6 +236,7 @@ static void window_main(void *arg) {
         SDL_Event e;
         if (SDL_WaitEventTimeout(&e, 100)) handle(&e);
         else input_sdl_idle();   // a cursor change requested from another thread meanwhile
+        menu_sdl_text(g_win);    // the menu's text field opened or closed
     }
 }
 

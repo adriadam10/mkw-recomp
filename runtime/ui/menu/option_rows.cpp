@@ -4,7 +4,8 @@
 // 575ad88e02f9a89a9a885d90039d48af33c982f4, MIT, Copyright (c) 2026 Revivedx and the Savage Wind Recomp contributors,
 // Copyright (c) 2026 Peiikai): the row look, the two panes, the left / right stepping and the hold speed-up. The rows
 // read and write cfg keys instead of a settings struct, take their text from the menu catalog (menu_text), and show
-// the default, "after restart" and environment notes; the text field, radio and on-screen keyboard rows are not ported.
+// the default, "after restart" and environment notes; its radio and on-screen keyboard rows are not
+// ported, and its text field is replaced by opt_edit's.
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -309,6 +310,62 @@ bool opt_choice(const char *key, UiTextId label, const UiTextId *names, int n, U
     if (n > k) n = k;
     for (int i = 0; i < n; i++) shown[i] = menu_text(names[i]);
     return opt_choice_list(key, label, values, shown, n, desc, -1, note);
+}
+
+// ---- opt_edit: one field open at a time, drawn in place of its row
+static char g_edit_key[64], g_edit_buf[128];
+static int g_edit_frames;   // frames since the field opened: it takes the keyboard on the first
+
+static int edit_filter(ImGuiInputTextCallbackData *d) {   // a host name, an IPv4 / [IPv6] address and a port
+    ImWchar c = d->EventChar;
+    bool ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '.' || c == ':' ||
+              c == '-' || c == '_' || c == '[' || c == ']';
+    return ok ? 0 : 1;
+}
+
+bool opt_edit(const char *key, UiTextId label, UiTextId desc, UiTextId off, const char *hint) {
+    const char *now = cfg_value(key);
+    if (strcmp(g_edit_key, key) != 0) {
+        RowView v = {now[0] ? now : menu_text(off), !now[0], false, NULL};
+        if (row(key, label, desc, v) != 2) return false;   // A or a click opens the field; left and right do nothing
+        snprintf(g_edit_key, sizeof g_edit_key, "%s", key);
+        snprintf(g_edit_buf, sizeof g_edit_buf, "%s", now);
+        g_edit_frames = 0;
+        return false;
+    }
+    // the open field: the row's frame and label, the field where the value was
+    const CfgMeta *m = cfg_meta(key);
+    desc_set(g_focus, desc, key, m, NULL);
+    if (!g_first.text[0]) desc_set(g_first, desc, key, m, NULL);
+    ImGui::PushID(key);
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    float fs = ImGui::GetFontSize(), w = ImGui::GetContentRegionAvail().x, h = floorf(fs * 2.2f);
+    float r = g_look->radius * g_scale, pad = 16 * g_scale;
+    ImDrawList *dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(p, ImVec2(p.x + w, p.y + h), g_look->fill_hot, r);
+    dl->AddRect(p, ImVec2(p.x + w, p.y + h), g_look->select, r, 0, 2.0f);
+    float fw = w * 0.5f, fh = ImGui::GetFrameHeight();
+    ImVec4 clip(p.x, p.y, p.x + w - pad - fw - fs * 0.6f, p.y + h);
+    dl->AddText(ImGui::GetFont(), fs, ImVec2(p.x + pad, p.y + fs * 0.25f), g_look->label, menu_text(label), NULL, 0,
+                &clip);
+    ImGui::SetCursorScreenPos(ImVec2(p.x + w - pad - fw, p.y + (h - fh) * 0.5f));
+    ImGui::SetNextItemWidth(fw);
+    if (g_edit_frames == 0) ImGui::SetKeyboardFocusHere();
+    bool enter = ImGui::InputTextWithHint("##edit", hint, g_edit_buf, sizeof g_edit_buf,
+                                          ImGuiInputTextFlags_EnterReturnsTrue |
+                                              ImGuiInputTextFlags_CallbackCharFilter,
+                                          edit_filter);
+    bool active = ImGui::IsItemActive(), cancel = ImGui::IsKeyPressed(ImGuiKey_Escape, false);
+    ImGui::SetCursorScreenPos(p);
+    ImGui::Dummy(ImVec2(w, h));
+    ImGui::PopID();
+    if (++g_edit_frames <= 2 || (active && !enter)) return false;
+    // closed: Enter or a click elsewhere keeps the text, Escape the old value; the cursor goes back to the row
+    g_edit_key[0] = 0;
+    opt_focus_key(key);
+    if (cancel || !strcmp(g_edit_buf, now)) return false;
+    apply(key, g_edit_buf);
+    return true;
 }
 
 bool opt_slider(const char *key, UiTextId label, float lo, float hi, UiTextId desc, float step, const char *fmt) {

@@ -554,6 +554,22 @@ msgstr ""
 "rede local (portos UDP 49152 e 35000). Só chega a enderezos da rede local, nunca a internet. "
 "Aplícase no seguinte arranque."
 
+msgctxt "UI_MENU_NPLN"
+msgid "Ghost server"
+msgstr ""
+
+msgctxt "UI_MENU_NPLN_DESC"
+msgid ""
+"The address of a ghost server (tools/npln/server.py), such as 192.168.1.20 or 192.168.1.20:8443: "
+"Time Trial uploads your ghosts there, shows its leaderboards and downloads the other players' "
+"ghosts. Never Nintendo's servers. Press A or click to type it with the keyboard, Enter to keep "
+"it; empty turns it off. Applies at the next start."
+msgstr ""
+
+msgctxt "UI_MENU_NPLN_HINT"
+msgid "Off"
+msgstr ""
+
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
 msgstr "Volume"

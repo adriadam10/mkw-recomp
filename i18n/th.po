@@ -541,6 +541,22 @@ msgstr ""
 "เพื่อแข่งกับพีซีเครื่องอื่นในเครือข่ายภายในเดียวกัน (พอร์ต UDP 49152 และ 35000) "
 "เชื่อมต่อได้เฉพาะที่อยู่ในเครือข่ายภายใน ไม่ออกอินเทอร์เน็ต มีผลเมื่อเริ่มครั้งหน้า"
 
+msgctxt "UI_MENU_NPLN"
+msgid "Ghost server"
+msgstr ""
+
+msgctxt "UI_MENU_NPLN_DESC"
+msgid ""
+"The address of a ghost server (tools/npln/server.py), such as 192.168.1.20 or 192.168.1.20:8443: "
+"Time Trial uploads your ghosts there, shows its leaderboards and downloads the other players' "
+"ghosts. Never Nintendo's servers. Press A or click to type it with the keyboard, Enter to keep "
+"it; empty turns it off. Applies at the next start."
+msgstr ""
+
+msgctxt "UI_MENU_NPLN_HINT"
+msgid "Off"
+msgstr ""
+
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
 msgstr "ระดับเสียง"

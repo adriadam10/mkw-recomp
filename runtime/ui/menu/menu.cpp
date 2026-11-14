@@ -74,7 +74,7 @@ extern "C" void menu_toggle(void) {
 }
 
 // ---- events from the window adapter, queued while the menu is open; the present path hands them to ImGui
-enum { EV_KEY, EV_POS, EV_BUTTON, EV_WHEEL, EV_FOCUS, EV_MAX = 256 };
+enum { EV_KEY, EV_POS, EV_BUTTON, EV_WHEEL, EV_FOCUS, EV_CHAR, EV_MAX = 256 };
 struct Ev { int type, a, b; float x, y; };
 static PlatMutex ev_lock = PLAT_MUTEX_INIT;
 static Ev ev_q[EV_MAX];
@@ -93,6 +93,10 @@ extern "C" void menu_event_mouse_pos(float x, float y) { push({EV_POS, 0, 0, x, 
 extern "C" void menu_event_mouse_button(int button, int down) { push({EV_BUTTON, button, down, 0, 0}); }
 extern "C" void menu_event_wheel(float dx, float dy) { push({EV_WHEEL, 0, 0, dx, dy}); }
 extern "C" void menu_event_focus(int focused) { push({EV_FOCUS, focused, 0, 0, 0}); }
+extern "C" void menu_event_char(unsigned c) { push({EV_CHAR, (int)c, 0, 0, 0}); }
+
+static std::atomic<int> g_wants_text;   // io.WantTextInput of the last frame drawn with the menu open
+extern "C" int menu_wants_text(void) { return menu_is_open() && g_wants_text.load(std::memory_order_relaxed); }
 
 static void drain_events(ImGuiIO &io) {
     Ev q[EV_MAX];
@@ -109,6 +113,7 @@ static void drain_events(ImGuiIO &io) {
         case EV_BUTTON: io.AddMouseButtonEvent(e.a, e.b != 0); break;
         case EV_WHEEL: io.AddMouseWheelEvent(e.x, e.y); break;
         case EV_FOCUS: io.AddFocusEvent(e.a != 0); break;
+        case EV_CHAR: io.AddInputCharacter((unsigned)e.a); break;
         }
     }
 }
@@ -331,7 +336,9 @@ static void layout_menu(uint32_t w, uint32_t h, float scale) {
     if (ImGui::Button(quit, ImVec2(bw, 0))) gfx_window_request_close();
     bool was_modal = settings_modal();
     settings_tabs_done();
-    if (!was_modal && (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false)))
+    // Escape and B close the menu, but not while a text field (Ghost server) takes them
+    if (!was_modal && !ImGui::GetIO().WantTextInput &&
+        (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false)))
         set_open(0);
     ImGui::End();
 }
@@ -659,6 +666,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     perf_draw(t, scale);
     menu_notice_draw((float)t->width, scale);
     ImGui::Render();
+    g_wants_text.store(open && io.WantTextInput, std::memory_order_relaxed);
     if (open) g_save_pending = opt_save_tick(0);
     g_cost_ns += plat_now_ns() - t0;
     if (g_test.page >= 0 && frame >= g_test.opened + g_test.per_page * (uint64_t)(g_test.page + 1)) {
