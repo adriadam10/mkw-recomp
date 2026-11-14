@@ -19,6 +19,8 @@ import grpc
 
 import pb
 
+MAX_UPLOAD = 4 << 20  # bytes of one ghost file; the game's are about 400 KB
+
 log = logging.getLogger("npln")
 
 # Methods whose responses are streams (server-streaming RPCs)
@@ -85,7 +87,7 @@ class Store:
 
     def blob_put(self, path: str, body: bytes) -> bool:
         m = re.fullmatch(r"/upload/([A-Za-z0-9_-]{8,64})", path.split("?")[0])
-        if not m or m.group(1) not in self.db["uploads"] or len(body) > 8 << 20:
+        if not m or m.group(1) not in self.db["uploads"] or len(body) > MAX_UPLOAD:
             return False
         (self.blobs / m.group(1)).write_bytes(body)
         return True

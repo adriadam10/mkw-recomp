@@ -313,13 +313,13 @@ bool opt_choice(const char *key, UiTextId label, const UiTextId *names, int n, U
 }
 
 // ---- opt_edit: one field open at a time, drawn in place of its row
-static char g_edit_key[64], g_edit_buf[128];
+static char g_edit_key[64], g_edit_buf[128], g_edit_old[128];   // the open field, its text, the value before
 static int g_edit_frames;   // frames since the field opened: it takes the keyboard on the first
 
-static int edit_filter(ImGuiInputTextCallbackData *d) {   // a host name, an IPv4 / [IPv6] address and a port
+static int edit_filter(ImGuiInputTextCallbackData *d) {   // a host name, an IPv4 / [IPv6] address, a port, a URL
     ImWchar c = d->EventChar;
     bool ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '.' || c == ':' ||
-              c == '-' || c == '_' || c == '[' || c == ']';
+              c == '-' || c == '_' || c == '[' || c == ']' || c == '/';   // '/': a pasted URL (ov_npln.c)
     return ok ? 0 : 1;
 }
 
@@ -330,6 +330,7 @@ bool opt_edit(const char *key, UiTextId label, UiTextId desc, UiTextId off, cons
         if (row(key, label, desc, v) != 2) return false;   // A or a click opens the field; left and right do nothing
         snprintf(g_edit_key, sizeof g_edit_key, "%s", key);
         snprintf(g_edit_buf, sizeof g_edit_buf, "%s", now);
+        snprintf(g_edit_old, sizeof g_edit_old, "%s", now);
         g_edit_frames = 0;
         return false;
     }
@@ -351,21 +352,23 @@ bool opt_edit(const char *key, UiTextId label, UiTextId desc, UiTextId off, cons
     ImGui::SetCursorScreenPos(ImVec2(p.x + w - pad - fw, p.y + (h - fh) * 0.5f));
     ImGui::SetNextItemWidth(fw);
     if (g_edit_frames == 0) ImGui::SetKeyboardFocusHere();
-    bool enter = ImGui::InputTextWithHint("##edit", hint, g_edit_buf, sizeof g_edit_buf,
-                                          ImGuiInputTextFlags_EnterReturnsTrue |
-                                              ImGuiInputTextFlags_CallbackCharFilter,
-                                          edit_filter);
+    // the setting follows the text as it is typed, so a game quit or a menu closed with the field open keeps it
+    bool changed = ImGui::InputTextWithHint("##edit", hint, g_edit_buf, sizeof g_edit_buf,
+                                            ImGuiInputTextFlags_CallbackCharFilter, edit_filter);
     bool active = ImGui::IsItemActive(), cancel = ImGui::IsKeyPressed(ImGuiKey_Escape, false);
     ImGui::SetCursorScreenPos(p);
     ImGui::Dummy(ImVec2(w, h));
     ImGui::PopID();
-    if (++g_edit_frames <= 2 || (active && !enter)) return false;
-    // closed: Enter or a click elsewhere keeps the text, Escape the old value; the cursor goes back to the row
+    if (changed && strcmp(g_edit_buf, now)) apply(key, g_edit_buf);
+    if (++g_edit_frames <= 2 || active) return changed;
+    // closed: Enter or a click elsewhere keeps the text, Escape the value from before; the cursor goes back to the row
     g_edit_key[0] = 0;
     opt_focus_key(key);
-    if (cancel || !strcmp(g_edit_buf, now)) return false;
-    apply(key, g_edit_buf);
-    return true;
+    if (cancel && strcmp(cfg_value(key), g_edit_old)) {
+        apply(key, g_edit_old);
+        return true;
+    }
+    return changed;
 }
 
 bool opt_slider(const char *key, UiTextId label, float lo, float hi, UiTextId desc, float step, const char *fmt) {

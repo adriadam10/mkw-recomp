@@ -14,6 +14,8 @@ It serves:
 Data (CA, certificate, scores, ghosts) lives in --data (default tools/npln/data, never committed).
 
 Usage: uv run --with grpcio --with cryptography tools/npln/server.py [--host 0.0.0.0] [--port 8443] [--data DIR]
+The ghost files' URLs name UGC_HOST, not this machine: the runtime resolves Nintendo's names to whatever server the
+player typed, so the same URL works on a local network, behind a cloud provider's NAT and under a domain name.
 Every call is logged with its decoded request, so a call the server does not know yet shows what the game asked.
 """
 
@@ -119,8 +121,13 @@ class Http(http.server.BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
-    def _body(self) -> bytes:
-        n = int(self.headers.get("Content-Length") or 0)
+    def _body(self) -> bytes | None:  # None: too big (a ghost is ~400 KB), refused before it is read
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return None
+        if n < 0 or n > services.MAX_UPLOAD:
+            return None
         return self.rfile.read(n) if n else b""
 
     def do_GET(self):  # noqa: N802
@@ -134,6 +141,10 @@ class Http(http.server.BaseHTTPRequestHandler):
 
     def do_PUT(self):  # noqa: N802
         body = self._body()
+        if body is None:
+            self.close_connection = True
+            log.info("HTTP PUT %s refused: Content-Length %s", self.path, self.headers.get("Content-Length"))
+            return self._send(413)
         ok = self.store.blob_put(self.path, body)
         log.info("HTTP PUT %s, %d bytes -> %s", self.path, len(body), "stored" if ok else "refused")
         self._send(200 if ok else 403)
@@ -142,6 +153,9 @@ class Http(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         log.debug("http: " + fmt, *args)
+
+
+UGC_HOST = "ugc.lp1.t.npln.srv.nintendo.net"  # never looked up on the internet: the runtime resolves it
 
 
 def local_address() -> str:
@@ -167,7 +181,7 @@ def main() -> None:
     args.data.mkdir(parents=True, exist_ok=True)
     ca, chain, key = make_certs(args.data)
     public = args.host if args.host not in ("0.0.0.0", "") else local_address()
-    store = services.Store(args.data, f"http://{public}:{args.port + 1}")
+    store = services.Store(args.data, f"http://{UGC_HOST}")  # port 443: the runtime sends it to the HTTP port
 
     Http.store, Http.ca = store, ca
     httpd = http.server.ThreadingHTTPServer((args.host, args.port + 1), Http)

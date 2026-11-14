@@ -333,7 +333,10 @@ static void layout_menu(uint32_t w, uint32_t h, float scale) {
     ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - st.WindowPadding.x - bw * 2 - st.ItemSpacing.x, y));
     if (ImGui::Button(cont, ImVec2(bw, 0))) set_open(0);
     ImGui::SameLine();
-    if (ImGui::Button(quit, ImVec2(bw, 0))) gfx_window_request_close();
+    if (ImGui::Button(quit, ImVec2(bw, 0))) {
+        opt_save_tick(1);   // a change of the last moment (a typed address) is not lost with the game
+        gfx_window_request_close();
+    }
     bool was_modal = settings_modal();
     settings_tabs_done();
     // Escape and B close the menu, but not while a text field (Ghost server) takes them

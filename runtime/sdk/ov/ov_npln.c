@@ -53,7 +53,8 @@ static void net_start(void) {
 #endif
 }
 
-// MKW_NPLN: an IPv4 address or a host name (resolved once, by the host), and an optional port
+// MKW_NPLN: an IPv4 address or a host name (resolved once, by the host), and an optional port. A URL as a player would
+// paste it (https://ghosts.example.org:8443/) keeps its name and port.
 static void parse(void) {
     static PlatMutex lock = PLAT_MUTEX_INIT;
     plat_mutex_lock(&lock);
@@ -63,8 +64,12 @@ static void parse(void) {
     }
     const char *v = cfg_get("MKW_NPLN");
     if (v && *v) {
-        char host[256];
-        snprintf(host, sizeof host, "%s", v);
+        char buf[256], *host = buf;
+        snprintf(buf, sizeof buf, "%s", v);
+        char *scheme = strstr(host, "://");
+        if (scheme) host = scheme + 3;
+        char *slash = strchr(host, '/');
+        if (slash) *slash = 0;
         char *colon = strrchr(host, ':');
         unsigned port = NPLN_PORT;
         if (colon) *colon = 0, port = (unsigned)strtoul(colon + 1, NULL, 10);
