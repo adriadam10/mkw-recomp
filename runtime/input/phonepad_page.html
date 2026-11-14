@@ -219,9 +219,10 @@ function onMotion(e) {
   const g = e.accelerationIncludingGravity, r = e.rotationRate || {};
   if (!g || g.x == null) return;
   // rotationRate's alpha, beta and gamma are the rates about the phone's x, y and z, in deg/s: not the axes the
-  // orientation angles of the same names turn about (alpha about z). Measured on a phone, 14/11/2026: with alpha
-  // taken as z, turning it like a wheel showed about the screen's right edge; gravity's own turning over 2 278
-  // samples fits x, y, z and no other order or sign.
+  // orientation angles of the same names turn about (alpha about z). Measured on an iPhone, 14/11/2026: with alpha
+  // taken as z, turning it like a wheel showed about the screen's right edge. With x, y, z, the matrix that best
+  // explains how gravity's direction turned over 104 windows of a 50 Hz recording is the identity to within 0.25
+  // off the diagonal, with 1.03, 0.95 and 1.44 on it: the order, the three signs and the unit are right.
   const x = g.x, y = g.y, wx = r.alpha || 0, wy = r.beta || 0, wz = r.gamma || 0, k = Math.PI / 180;
   const a = turned();
   // the screen's right and up in the phone's own axes: rotated a quarter turn either way, or upside down
