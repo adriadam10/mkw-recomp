@@ -59,6 +59,10 @@ void opt_indent(bool on);
 // Page text that is not a row: a group heading in the accent colour, a wrapped paragraph (warn: the warning colour).
 void opt_group(UiTextId title);
 void opt_text(UiTextId text, bool warn = false);
+void opt_note(const char *text, bool warn = false);   // the same for a text the caller built
+// A QR code (core/base/qr.h: size modules a side, row by row, 1 dark) on a white square, with lines of text beside
+// it: the first as a label, the second as a value, the rest dimmer. Takes no cursor.
+void opt_qr(const unsigned char *modules, int size, const char *const *lines, int n);
 
 // The return value of every row: true when it changed the setting this frame.
 // inverted: the row shows "on" while the key is 0 (a setting whose key names the opposite).

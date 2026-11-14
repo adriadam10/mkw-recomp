@@ -20,6 +20,7 @@
 #include "input_map.h"
 #include "input_script.h"
 #include "input_wsys.h"
+#include "phonepad.h"
 #include "switch2.h"
 #include "nvn_api.h"
 #include "plugin.h"
@@ -169,6 +170,7 @@ static void pad_adopt(void);
 
 // Close the gamepads that went away and open the new ones (player 1 first, then the first free player); logs each change.
 static void scan_pads(void) {
+    phonepad_start();   // phones as virtual gamepads (MKW_PHONE_PADS, live: the setting may have just been turned on)
     if (pad && !SDL_GamepadConnected(pad)) {
         SDL_CloseGamepad(pad); pad = NULL; sensor_pad[0] = 0; sensor_ok[0] = 0;
         plat_xchg32(&pad_layout_shown, -1);
@@ -476,6 +478,18 @@ void input_poll_ui(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int
         pick(lx, ly, sl2[0], sl2[1]);
         pick(rx, ry, sr2[0], sr2[1]);
     }
+}
+
+int input_pad_player(uint32_t joystick) {
+    int player = -1;
+    plat_mutex_lock(&lock);
+    if (state == 1) {
+        if (pad && SDL_GetGamepadID(pad) == joystick) player = 0;
+        for (int p = 1; player < 0 && p < INPUT_MAX_PLAYERS; p++)
+            if (extra[p] && SDL_GetGamepadID(extra[p]) == joystick) player = p;
+    }
+    plat_mutex_unlock(&lock);
+    return player;
 }
 
 uint32_t input_player_mask(void) {

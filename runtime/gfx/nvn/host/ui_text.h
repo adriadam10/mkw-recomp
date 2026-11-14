@@ -100,6 +100,11 @@ typedef enum {
     UI_MENU_STICK_DEADZONE, UI_MENU_STICK_DEADZONE_DESC,
     UI_MENU_SWITCH2, UI_MENU_SWITCH2_DESC,
     UI_MENU_DSU, UI_MENU_DSU_DESC,   // Cemuhook / DSU motion (input/dsu.c)
+    // phones as controllers (input/phonepad.c): the row, then what shows under it (settings_tabs.cpp phone_rows):
+    // CODE "... %s" (the four digits), COUNT "... %d" (phones connected), FAILED "... %d ..." (the port)
+    UI_MENU_PHONE_PADS, UI_MENU_PHONE_PADS_DESC, UI_MENU_PHONE_SCAN, UI_MENU_PHONE_CODE, UI_MENU_PHONE_COUNT,
+    UI_MENU_PHONE_WAITING, UI_MENU_PHONE_FAILED,
+    UI_NOTICE_PHONE_JOINED,   // the notice when a phone connects
     UI_MENU_BUTTON_ICONS, UI_MENU_BUTTON_ICONS_DESC, UI_MENU_ICONS_NINTENDO, UI_MENU_ICONS_XBOX,
     UI_MENU_ICONS_PLAYSTATION, UI_MENU_ICONS_KEYBOARD, UI_MENU_ICONS_IN_USE,   // "in use: %s"
     UI_MENU_MENU_SHORTCUT, UI_MENU_MENU_SHORTCUT_DESC, UI_MENU_SHORTCUT_MINUS_PLUS, UI_MENU_SHORTCUT_GUIDE,

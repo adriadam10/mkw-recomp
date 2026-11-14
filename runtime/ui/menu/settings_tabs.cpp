@@ -21,7 +21,9 @@ extern "C" {
 #include "gfx.h"
 #include "input.h"
 #include "input_map.h"
+#include "phonepad.h"
 #include "platform/platform.h"
+#include "qr.h"
 #include "sysinfo.h"
 #include "ui/menu/menu.h"
 #include "sdk/ov/ov_lanif.h"
@@ -485,6 +487,34 @@ static const char *shortcut_guide_note(void) {
     return menu_text(UI_MENU_SHORTCUT_STEAM_NOTE);
 }
 
+// Under the phones row while it is on: the address a phone opens as a QR code and as text, the code its page asks
+// for and how many are connected (input/phonepad.c); or why there is no address to give. On the start screen the
+// server is not running yet: the address shows in the game's menu.
+static void phone_rows(void) {
+    if (!cfg_bool("MKW_PHONE_PADS")) return;
+    PhonePadInfo info;
+    phonepad_info(&info);
+    if (!info.on) {
+        char why[256];
+        snprintf(why, sizeof why, menu_text(UI_MENU_PHONE_FAILED), info.port);
+        if (info.failed) opt_note(why, true);
+        else opt_text(UI_MENU_PHONE_WAITING);
+        return;
+    }
+    static char url[sizeof info.url];
+    static uint8_t modules[QR_MAX_SIZE * QR_MAX_SIZE];
+    static int size;
+    if (strcmp(url, info.url)) {   // encoded once per address
+        snprintf(url, sizeof url, "%s", info.url);
+        size = qr_encode(url, -1, modules);
+    }
+    char code[64], count[64];
+    snprintf(code, sizeof code, menu_text(UI_MENU_PHONE_CODE), info.code);
+    snprintf(count, sizeof count, menu_text(UI_MENU_PHONE_COUNT), info.pads);
+    const char *lines[] = {menu_text(UI_MENU_PHONE_SCAN), info.address, code, count};
+    if (size) opt_qr(modules, size, lines, 4);
+}
+
 static void tab_controls(float scale) {
     opt_begin("##controls", scale);
     pad_rows();
@@ -502,6 +532,8 @@ static void tab_controls(float scale) {
     opt_toggle("MKW_RUMBLE_TRIGGERS", UI_MENU_RUMBLE_TRIGGERS, UI_MENU_RUMBLE_TRIGGERS_DESC);
     opt_toggle("MKW_SWITCH2", UI_MENU_SWITCH2, UI_MENU_SWITCH2_DESC);   // input/switch2.c, at the next start
     opt_toggle("MKW_DSU", UI_MENU_DSU, UI_MENU_DSU_DESC);   // input/dsu.c, live
+    opt_toggle("MKW_PHONE_PADS", UI_MENU_PHONE_PADS, UI_MENU_PHONE_PADS_DESC);   // input/phonepad.c, live
+    phone_rows();
     opt_slider("MKW_STICK_DEADZONE", UI_MENU_STICK_DEADZONE, 0, 40, UI_MENU_STICK_DEADZONE_DESC, 1, "%.0f %%");   // input.c
     opt_toggle("MKW_KEYBOARD_MOUSE", UI_MENU_KEYBOARD_MOUSE, UI_MENU_KEYBOARD_MOUSE_DESC);   // input.c, live
     opt_slider("MKW_MOUSE_SENS", UI_MENU_MOUSE_SENS, 0, 10, UI_MENU_MOUSE_SENS_DESC, 0.1f, "%.1f");

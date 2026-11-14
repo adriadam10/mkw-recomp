@@ -321,11 +321,40 @@ void opt_group(UiTextId title) {
     ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(g_look->group), "%s", menu_text(title));
 }
 
-void opt_text(UiTextId text, bool warn) {
+void opt_note(const char *text, bool warn) {
     ImGui::PushTextWrapPos(0);
-    if (warn) ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(g_look->warn), "%s", menu_text(text));
-    else ImGui::TextUnformatted(menu_text(text));
+    if (warn) ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(g_look->warn), "%s", text);
+    else ImGui::TextUnformatted(text);
     ImGui::PopTextWrapPos();
+}
+
+void opt_text(UiTextId text, bool warn) { opt_note(menu_text(text), warn); }
+
+void opt_qr(const unsigned char *modules, int size, const char *const *lines, int n) {
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    float fs = ImGui::GetFontSize(), w = ImGui::GetContentRegionAvail().x, pad = 16 * g_scale;
+    // whole pixels a module, so its edges stay sharp for a camera; the light margin of four modules a QR code needs
+    float cell = fmaxf(2, floorf(fs * 9 / (size + 8))), side = cell * (size + 8);
+    ImVec2 q(floorf(p.x + pad), floorf(p.y));
+    ImDrawList *dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(q, ImVec2(q.x + side, q.y + side), IM_COL32(255, 255, 255, 255), 4 * g_scale);
+    for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++) {
+            if (!modules[y * size + x]) continue;
+            int end = x;   // a run of dark modules as one rectangle
+            while (end + 1 < size && modules[y * size + end + 1]) end++;
+            dl->AddRectFilled(ImVec2(q.x + (x + 4) * cell, q.y + (y + 4) * cell),
+                              ImVec2(q.x + (end + 5) * cell, q.y + (y + 5) * cell), IM_COL32(0, 0, 0, 255));
+            x = end;
+        }
+    ImFont *font = ImGui::GetFont();
+    float tx = q.x + side + pad, ty = p.y + fs * 0.3f, room = fmaxf(fs * 4, p.x + w - tx);
+    for (int i = 0; i < n; i++) {
+        dl->AddText(font, fs, ImVec2(tx, ty), i == 0 ? g_look->label : i == 1 ? g_look->value : g_look->dim, lines[i],
+                    NULL, room);
+        ty += font->CalcTextSizeA(fs, FLT_MAX, room, lines[i]).y + fs * 0.4f;
+    }
+    ImGui::Dummy(ImVec2(w, fmaxf(side, ty - p.y) + 4 * g_scale));
 }
 
 bool opt_choice_list(const char *key, UiTextId label, const char *const *values, const char *const *names, int n,

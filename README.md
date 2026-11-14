@@ -110,6 +110,8 @@ Beyond the console, all optional and off (or at the console's value) by default:
   vibration, local multiplayer with one controller each. Switch 2 controllers work over Bluetooth and, on Linux, USB
   (Windows USB: see below). Gyro from a Cemuhook / DSU server (DS4Windows, BetterJoy) is supported. Racing wheels
   work as a controller (steering and first buttons); for pedals, put a `gamecontrollerdb.txt` in the game folder.
+  A phone is a controller too, Android or iPhone, steering by tilting it like a wheel, with nothing to install:
+  [Phones as controllers](#phones-as-controllers), below.
 - **Hacks**: turbo (F2), skip movies, unlock everything, fixed randomness, straight to time trial or free roam.
 - **Languages**: menus in 20 languages; the game also in Catalan, Galician, Basque and Turkish.
 - **Tools**: performance overlay and a one-click system info for bug reports.
@@ -126,6 +128,26 @@ Once per controller, with [Zadig](https://zadig.akeo.ie/):
 
 The same applies to a virtual controller with those IDs (Switch2Connect's USB/IP mode). To undo it, uninstall that
 interface's device in Device Manager with "delete the driver" ticked.
+
+### Phones as controllers
+
+A phone on the same Wi-Fi as the PC plays as one more controller from its browser: buttons on its screen, and
+steering by tilting the phone like a wheel (or a stick on the screen). Each phone is a player, up to eight.
+
+1. **Settings → Controls → Phones as controllers**: On.
+2. With the game running, open the menu (F1) on **Controls**: under that row there is a QR code, the address and a
+   four-digit code.
+3. Scan the QR code with the phone's camera. The phone warns once that the connection is not private: the game
+   makes its own certificate, which no browser knows. Continue anyway (Chrome: **Advanced**, then **Proceed**;
+   Safari: **Show Details**, then **visit this website**). Browsers only give a page the motion sensors over HTTPS,
+   which is why the page is not plain HTTP.
+4. Press **Start** on the phone and hold it sideways. An iPhone asks once more, for the motion sensors.
+
+If the page does not open: the phone must be on the same network as the PC (not on mobile data or a guest Wi-Fi),
+and on Windows the game must be allowed through the firewall (Windows asks the first time it runs).
+The gear on the phone's page switches between wheel and stick, sets how far the wheel turns for full lock, and
+re-centres it. On Android the page goes full screen; on an iPhone Safari keeps its address bar (it has no full screen
+for pages), and the screen's rotation must be unlocked. `phone_port` in `mkw.ini` picks another port than 6590.
 
 ## Mods
 
