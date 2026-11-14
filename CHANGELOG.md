@@ -47,6 +47,13 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   midway (8 of 8, against 30 % of the game's fragment shaders). A discarded pixel now stays as a helper to the end of
   the shader (Vulkan's demote, as Switch emulators and DXVK do) instead of ending in the middle of it. Verified on the
   captures (same images) and not on an NVIDIA card.
+- **Steam Remote Play Together, off by default**: friends who are not in the room join local multiplayer through Steam,
+  which streams the window and the sound; each guest's controller, or keyboard when they have none, becomes the next
+  player. mkw runs under the App ID of a Steam game you own that supports Remote Play Together (RetroArch, 1118310, is
+  free): `steam_appid` in `mkw.ini`, or the menu's Game tab, where an App ID can be typed and is kept in a list.
+  Picking local multiplayer with too few controllers asks whether the other players connect controllers or join over
+  Steam. Steam's library is not in the release: `tools/build/steamlib.py` puts it next to mkw. Set-up and the App
+  IDs tried: [docs/remote-play.md](docs/remote-play.md).
 
 ## 0.1.11
 
