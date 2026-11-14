@@ -127,8 +127,7 @@ static void stick(int16_t x, int16_t y, int32_t out[2]) {
 static SDL_Gamepad *extra[INPUT_MAX_PLAYERS];   // [0] unused
 static int extra_rumble[INPUT_MAX_PLAYERS], extra_east_a[INPUT_MAX_PLAYERS];
 // A guest's gamepad (input_guest_pads): a Steam virtual gamepad, or any gamepad opened while a Remote Play guest is
-// connected. On Windows a guest's controller can also show as an XInput pad ("#controller_xboxone" in a user's log),
-// which only the timing tells apart. Under lock.
+// connected. Under lock.
 static uint8_t extra_guest[INPUT_MAX_PLAYERS];
 // Players 2-8 fed by a remote keyboard (input_remote_*: a Remote Play Together guest's keys) instead of a gamepad, and
 // the keys each one holds. Under lock.
@@ -152,8 +151,53 @@ enum { VIRTUAL_MAX = 16, VIRTUAL_SETTLE_MS = 2000 };
 static struct { SDL_JoystickID id; uint64_t seen_ms; int host; } virt_pads[VIRTUAL_MAX];   // host: -1 not yet known
 static int n_virt_pads;
 
+// The device's own vendor and product, from its GUID: for a Steam virtual gamepad, SDL_GetGamepadVendorForID and
+// SDL_GetGamepadProductForID give those of the controller behind it, read from Steam's SteamVirtualGamepadInfo file
+// (SDL 3.4 SDL_joystick.c, SDL_GetJoystickVendorForID), and its name is Steam's ("#controller_xboxone" in a user's
+// Windows log, a guest's controller that the vendor test took for an ordinary pad).
+static void raw_ids(SDL_JoystickID id, Uint16 *vendor, Uint16 *product) {
+    SDL_GetJoystickGUIDInfo(SDL_GetJoystickGUIDForID(id), vendor, product, NULL, NULL);
+}
+
 static int steam_virtual(SDL_JoystickID id) {
-    return SDL_GetGamepadVendorForID(id) == STEAM_VENDOR_ID && SDL_GetGamepadProductForID(id) == STEAM_VIRTUAL_PAD_ID;
+    Uint16 v = 0, p = 0;
+    raw_ids(id, &v, &p);
+    return v == STEAM_VENDOR_ID && p == STEAM_VIRTUAL_PAD_ID;
+}
+
+// Logs SDL's joysticks each time the list changes, and once the environment Steam sets for them: a run where a
+// controller is missing then says whether SDL saw it, as what, and which variable hid it.
+static void log_joysticks(void) {
+    static int env_logged;
+    static uint64_t seen = ~0ull;
+    if (!env_logged) {
+        env_logged = 1;
+        static const char *const vars[] = {"SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD", "SDL_GAMECONTROLLER_IGNORE_DEVICES",
+                                           "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT", "SteamVirtualGamepadInfo",
+                                           "EnableConfiguratorSupport"};
+        for (size_t i = 0; i < sizeof vars / sizeof vars[0]; i++) {
+            char v[512];
+            rt_log("input: %s=%s", vars[i], plat_getenv(vars[i], v, sizeof v) ? v : "(unset)");
+        }
+    }
+    int n = 0;
+    SDL_JoystickID *ids = SDL_GetJoysticks(&n);
+    uint64_t h = 1469598103934665603ull ^ (uint64_t)n;
+    for (int i = 0; ids && i < n; i++) h = (h ^ ids[i]) * 1099511628211ull;
+    if (h != seen) {
+        seen = h;
+        rt_log("input: SDL lists %d joysticks", n);
+        for (int i = 0; ids && i < n; i++) {
+            Uint16 v = 0, p = 0;
+            raw_ids(ids[i], &v, &p);
+            const char *name = SDL_GetJoystickNameForID(ids[i]), *path = SDL_GetJoystickPathForID(ids[i]);
+            rt_log("input:   %u \"%s\" device %04x:%04x, reported %04x:%04x, %s%s, path %s", (unsigned)ids[i],
+                   name ? name : "?", v, p, SDL_GetJoystickVendorForID(ids[i]), SDL_GetJoystickProductForID(ids[i]),
+                   SDL_IsGamepad(ids[i]) ? "gamepad" : "not a gamepad", steam_virtual(ids[i]) ? ", Steam virtual" : "",
+                   path ? path : "?");
+        }
+    }
+    SDL_free(ids);
 }
 
 // 1 for a host's virtual gamepad, 0 for a guest's, -1 while it is too early to tell (the pad waits for a later scan).
@@ -190,6 +234,7 @@ static void scan_pads(void) {
             SDL_CloseGamepad(extra[p]); extra[p] = NULL; sensor_pad[p] = 0; sensor_ok[p] = 0;
             rt_log("input: gamepad of player %d disconnected", p + 1);
         }
+    log_joysticks();
     int n = 0;
     SDL_JoystickID *ids = SDL_GetGamepads(&n);
     int steam = steam_rpt_state() == STEAM_RPT_READY, guests = steam ? steam_rpt_guests() : 0, direct = 0;
@@ -206,7 +251,12 @@ static void scan_pads(void) {
         if (p == INPUT_MAX_PLAYERS) break;
         if (host_only && p) continue;
         SDL_Gamepad *g = SDL_OpenGamepad(ids[i]);
-        if (!g) continue;
+        if (!g) {
+            static SDL_JoystickID failed;   // logged once per gamepad: the scan tries again every second
+            if (failed != ids[i]) rt_log("input: cannot open gamepad %u (%s)", (unsigned)ids[i], SDL_GetError());
+            failed = ids[i];
+            continue;
+        }
         if (!p) { pad = g; pad_adopt(); continue; }
         extra[p] = g;
         extra_guest[p] = virt || guests > 0;
