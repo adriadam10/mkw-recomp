@@ -2378,3 +2378,18 @@ msgid ""
 msgstr ""
 "La superposició de Steam no s'ha obert: inicia el joc des de Steam o envia un enllaç de convidat "
 "(menú > Joc)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CHOICE"
+msgid "Local multiplayer for %d players: %d controllers connected. How do the other players join?"
+msgstr ""
+"Multijugador local per a %d jugadors: %d comandaments connectats. Com s'uneixen els altres "
+"jugadors?"
+
+msgctxt "UI_MENU_RPT_CHOICE_LOCAL"
+msgid "Local players (connect more controllers)"
+msgstr "Jugadors locals (connectar més comandaments)"
+
+msgctxt "UI_MENU_RPT_CHOICE_STEAM"
+msgid "Steam Remote Play Together (invite friends)"
+msgstr "Steam Remote Play Together (convidar amics)"

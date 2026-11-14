@@ -2257,3 +2257,16 @@ msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
 msgid ""
 "The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
 msgstr "Steam 介面未能開啟：請從 Steam 啟動遊戲，或傳送訪客連結（選單 > 遊戲）。"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CHOICE"
+msgid "Local multiplayer for %d players: %d controllers connected. How do the other players join?"
+msgstr "%d 人本機多人遊戲：已連接 %d 個控制器。其他玩家要如何加入？"
+
+msgctxt "UI_MENU_RPT_CHOICE_LOCAL"
+msgid "Local players (connect more controllers)"
+msgstr "本機玩家（連接更多控制器）"
+
+msgctxt "UI_MENU_RPT_CHOICE_STEAM"
+msgid "Steam Remote Play Together (invite friends)"
+msgstr "Steam 遠端同樂（邀請好友）"

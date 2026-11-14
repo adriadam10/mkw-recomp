@@ -36,10 +36,11 @@ int steam_rpt_take_link(char *out, size_t cap);
 int steam_rpt_invite_failed(void);
 
 // Local multiplayer (sdk/ov/ov_input.c, the controller applet): the game asks for need players and have of them have a
-// controller. With Steam ready and need >= 2 it opens the overlay's Remote Play Together invite list (at most every
-// 3 s) while no guest has joined or controllers are missing, and with too few controllers shows a notice saying so.
-// MKW_STEAM_INVITE (steam_invite in mkw.ini): auto (default), always (every such request), off (never). Returns 1 when
-// it showed its notice (the caller shows none of its own). Any thread.
+// controller. With Steam ready, need >= 2 and too few controllers, MKW_STEAM_INVITE (steam_invite in mkw.ini) = ask
+// (default) asks the player (menu_choice) whether the others join as local players or through Remote Play Together;
+// Remote Play opens the overlay's invite list, and each answer shows a notice saying what to do next. auto opens the
+// invite list without asking (at most every 3 s) while no guest has joined or controllers are missing, always on every
+// such request, off never. Returns 1 when it asked or showed its notice (the caller shows none of its own). Any thread.
 int steam_rpt_multiplayer(int need, int have);
 
 // Steam Input's virtual gamepad (Valve's USB vendor id and the virtual pad's product id, as SDL's

@@ -2383,3 +2383,17 @@ msgid ""
 msgstr ""
 "Das Steam-Overlay ging nicht auf: Starte das Spiel über Steam oder schicke einen Gastlink (Menü > "
 "Spiel)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CHOICE"
+msgid "Local multiplayer for %d players: %d controllers connected. How do the other players join?"
+msgstr ""
+"Lokaler Mehrspieler für %d Spieler: %d Controller verbunden. Wie kommen die anderen Spieler dazu?"
+
+msgctxt "UI_MENU_RPT_CHOICE_LOCAL"
+msgid "Local players (connect more controllers)"
+msgstr "Lokale Spieler (weitere Controller verbinden)"
+
+msgctxt "UI_MENU_RPT_CHOICE_STEAM"
+msgid "Steam Remote Play Together (invite friends)"
+msgstr "Steam Remote Play Together (Freunde einladen)"

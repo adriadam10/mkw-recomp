@@ -60,12 +60,20 @@ Menu (F1) > Game > **Steam Remote Play Together**:
 - **Copy guest link**: a link to send to anyone. They open it in a browser or the Steam Link app, no Steam friendship
   or account needed. The link is also written to the log.
 
-**Picking local multiplayer** (2, 3 or 4 players) opens Steam's Remote Play Together invite list by itself, as long
-as no friend has joined yet or there are fewer controllers than players. With too few controllers the game goes back
-to its menu, as it does without Steam, and a notice says how many are missing: once your friends' controllers are in,
-pick the mode again. The game does not wait inside its controller screen, because the picture (and with it the overlay
-and your friends' stream) would freeze meanwhile. `steam_invite = always` in `mkw.ini` opens the list every time,
-`steam_invite = off` never.
+**Picking local multiplayer** (2, 3 or 4 players) with fewer controllers than players asks how the other players
+join:
+
+- **Local players (connect more controllers)**: a notice says how many controllers are missing. Connect them, then
+  pick the mode again.
+- **Steam Remote Play Together (invite friends)**: Steam's invite list opens. Once your friends have joined and pressed
+  a button on their controller, pick the mode again.
+
+B or Esc closes the question without choosing. Either way the game goes back to its menu first, as it does without
+Steam: the game does not wait inside its controller screen, because the picture (and with it the overlay and your
+friends' stream) would freeze meanwhile. With a controller for every player, the game starts at once, with no
+question. `steam_invite` in `mkw.ini` changes this: `ask` (the default) as above; `auto` opens the invite list without
+asking while no friend has joined yet or controllers are missing; `always` opens it every time; `off` never asks nor
+opens it.
 
 When a guest joins, a notice says so. Their controller becomes the next free player (a notice says which). A guest
 without a controller gets a player at the first key they press, and plays with the same keys as you (WASD, Space,

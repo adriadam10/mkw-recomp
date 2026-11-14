@@ -6,7 +6,7 @@ set-up in [docs/remote-play.md](../../docs/remote-play.md).
 
 | File | What it is |
 |---|---|
-| `steam_rpt.c`, `steam_rpt.h` | Starts Steam's API as the App ID before the game boots (main.c), then the `steam` thread: Steam's callbacks by manual dispatch (guests joining and leaving, the guest link), the guests' keys through Remote Play direct input every 8 ms, and the menu's buttons (Game tab: Invite friends, Copy guest link). Picking local multiplayer (the controller applet, `sdk/ov/ov_input.c`) opens the invite list while no guest has joined or controllers are missing (`steam_invite`: auto, always, off) |
+| `steam_rpt.c`, `steam_rpt.h` | Starts Steam's API as the App ID before the game boots (main.c), then the `steam` thread: Steam's callbacks by manual dispatch (guests joining and leaving, the guest link), the guests' keys through Remote Play direct input every 8 ms, and the menu's buttons (Game tab: Invite friends, Copy guest link). Picking local multiplayer with too few controllers (the controller applet, `sdk/ov/ov_input.c`) asks whether the others join as local players or through Remote Play Together (`menu_choice`), which opens the invite list (`steam_invite`: ask, auto, always, off) |
 | `steam_flat.h` | The part of Steam's flat C API used, declared from the Steamworks SDK 1.65 headers so the build needs no SDK; `libsteam_api.so` / `steam_api64.dll` is loaded at run time from mkw's folder (`tools/build/steamlib.py` puts it there) |
 
 How the guests become players, in `runtime/input/input.c`:

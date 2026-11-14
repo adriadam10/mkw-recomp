@@ -76,13 +76,46 @@ void steam_rpt_request_link(void) {
     plat_xchg32(&req_link, 1);
 }
 
+// The answer to steam_rpt_multiplayer's choice (present path, menu_choice): 0 local players, 1 Remote Play Together,
+// -1 none. Either way the game went back to its menu; the notice says what to do before picking the mode again.
+static volatile int32_t choice_need, choice_have;
+static void choice_done(int choice, void *ctx) {
+    (void)ctx;
+    int need = plat_cas32(&choice_need, 0, 0), have = plat_cas32(&choice_have, 0, 0);
+    char text[256];
+    if (choice == 1) {
+        rt_log("steam: local multiplayer: Remote Play Together chosen: opening the invite list");
+        steam_rpt_invite();
+        snprintf(text, sizeof text, menu_text(UI_NOTICE_RPT_INVITE), need, have);
+        menu_notice(text, 10);
+    } else if (choice == 0) {
+        rt_log("steam: local multiplayer: local players chosen");
+        snprintf(text, sizeof text, menu_text(UI_NOTICE_PADS_MISSING), need, have);
+        menu_notice(text, 8);
+    }
+}
+
 int steam_rpt_multiplayer(int need, int have) {
     if (need < 2 || steam_rpt_state() != STEAM_RPT_READY) return 0;
-    // auto (default): the invite list opens while no guest has joined yet or controllers are missing; once friends are
-    // in and every player has a controller, picking the mode again starts it without the overlay in the way
     const char *mode = cfg_get("MKW_STEAM_INVITE");
     if (mode && !strcmp(mode, "off")) return 0;
-    int missing = have < need, always = mode && !strcmp(mode, "always");
+    int missing = have < need;
+    // ask (default): with too few controllers the player chooses how the others join, local controllers or Steam's
+    // invite list; with one each the game starts at once, local or with friends already in
+    if (!mode || !*mode || !strcmp(mode, "ask")) {
+        if (!missing) return 0;
+        plat_xchg32(&choice_need, need);
+        plat_xchg32(&choice_have, have);
+        char title[320];
+        snprintf(title, sizeof title, menu_text(UI_MENU_RPT_CHOICE), need, have);
+        const char *labels[2] = {menu_text(UI_MENU_RPT_CHOICE_LOCAL), menu_text(UI_MENU_RPT_CHOICE_STEAM)};
+        int shown = menu_choice(title, labels, 2, choice_done, NULL);
+        if (shown) return 1;   // shown, or one is up already: the answer's notice comes then
+        rt_log("steam: local multiplayer: the menu cannot ask: as steam_invite = auto");
+    }
+    // auto: the invite list opens while no guest has joined yet or controllers are missing; once friends are in and
+    // every player has a controller, picking the mode again starts it without the overlay in the way
+    int always = mode && !strcmp(mode, "always");
     if (!missing && !always && steam_rpt_guests() > 0) return 0;
     // The game asks again at once when the player picks the mode again: one overlay for a burst of requests
     static volatile int32_t last_s;

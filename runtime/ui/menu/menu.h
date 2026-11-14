@@ -26,6 +26,12 @@ int menu_is_open(void);
 void menu_toggle(void);                   // F1 / Esc on the keyboard, Minus+Plus on the pad
 void menu_perf_cycle(void);               // F10: the performance overlay off, fps, full
 void menu_notice(const char *text, int seconds);   // a line at the top of the picture for that long, menu closed or not
+// A question in a small window over the game, in place of the menu's (the menu opens for it, so the game gets no input
+// meanwhile): title and n (1..4) button labels, copied. The player answers with the pad (A / B), the keys or the mouse;
+// done(choice, ctx) then runs on the present path with the button's index, or -1 for B, Esc or closing the menu, and
+// a menu the choice opened closes. done must be quick (set a flag, show a notice). Does not wait for the answer.
+// Returns 1 when shown, -1 while another choice is up (none shown), 0 when the menu cannot draw. Any thread.
+int menu_choice(const char *title, const char *const *labels, int n, void (*done)(int choice, void *ctx), void *ctx);
 
 // ---- events from the window adapter, used only while the menu is open. key: an ImGuiKey; coordinates in pixels of the
 // window's client area, which is the swapchain image.

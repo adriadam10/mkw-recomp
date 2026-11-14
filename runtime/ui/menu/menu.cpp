@@ -294,6 +294,85 @@ static void test_apply_sets(uint64_t frame) {
 }
 
 
+// ---- a choice (menu_choice, menu.h): asked from any thread, laid out and answered on the present path. The question
+// does not wait for its answer: the game thread that asks (the controller applet, steam_rpt.c) must go on presenting
+// frames, or the picture, the overlay and a Remote Play stream would freeze.
+enum { CHOICE_MAX = 4 };
+static PlatMutex choice_lock = PLAT_MUTEX_INIT;
+static struct {
+    int up, n, opened, fresh;   // opened: the choice opened the menu, and closes it; fresh: no frame laid out yet
+    char title[320], labels[CHOICE_MAX][128];
+    void (*done)(int, void *);
+    void *ctx;
+} g_choice;
+static std::atomic<int> g_choice_up;
+
+extern "C" int menu_choice(const char *title, const char *const *labels, int n, void (*done)(int, void *), void *ctx) {
+    if (n < 1 || n > CHOICE_MAX || g_failed_flag()) return 0;
+    plat_mutex_lock(&choice_lock);
+    if (g_choice.up) {
+        plat_mutex_unlock(&choice_lock);
+        return -1;
+    }
+    snprintf(g_choice.title, sizeof g_choice.title, "%s", title);
+    for (int i = 0; i < n; i++) snprintf(g_choice.labels[i], sizeof g_choice.labels[i], "%s", labels[i]);
+    g_choice.n = n, g_choice.done = done, g_choice.ctx = ctx, g_choice.fresh = 1, g_choice.up = 1;
+    int opens = g_choice.opened = !menu_is_open();
+    plat_mutex_unlock(&choice_lock);
+    g_choice_up.store(1);
+    rt_log("menu: choice: %s", title);
+    if (opens) set_open(1);
+    return 1;
+}
+
+// i: the button, -1 cancelled. The callback runs outside the lock (it may show a notice or ask again).
+static void choice_answer(int i) {
+    plat_mutex_lock(&choice_lock);
+    if (!g_choice.up) {
+        plat_mutex_unlock(&choice_lock);
+        return;
+    }
+    void (*done)(int, void *) = g_choice.done;
+    void *ctx = g_choice.ctx;
+    int opened = g_choice.opened;
+    g_choice.up = 0;
+    plat_mutex_unlock(&choice_lock);
+    g_choice_up.store(0);
+    rt_log("menu: choice answered: %s", i < 0 ? "cancelled" : g_choice.labels[i]);
+    if (done) done(i, ctx);
+    if (opened) set_open(0);
+}
+
+static void layout_choice(uint32_t w, uint32_t h, float scale) {
+    char title[sizeof g_choice.title], labels[CHOICE_MAX][sizeof g_choice.labels[0]];
+    plat_mutex_lock(&choice_lock);
+    int n = g_choice.n, fresh = g_choice.fresh;
+    g_choice.fresh = 0;
+    memcpy(title, g_choice.title, sizeof title);
+    memcpy(labels, g_choice.labels, sizeof labels);
+    plat_mutex_unlock(&choice_lock);
+
+    ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), ImVec2((float)w, (float)h), IM_COL32(0, 0, 0, 120));
+    ImGui::SetNextWindowPos(ImVec2(w * 0.5f, h * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(fminf(w * 0.7f, 900 * scale), 0), ImGuiCond_Always);   // height: fits the content
+    ImGui::Begin("##choice", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                                          ImGuiWindowFlags_NoSavedSettings);
+    ImGui::TextWrapped("%s", title);
+    ImGui::Spacing();
+    int picked = -2;
+    for (int i = 0; i < n; i++) {
+        if (ImGui::Button(labels[i], ImVec2(-FLT_MIN, 0))) picked = i;
+        if (i == 0 && fresh) {   // the first button has the cursor: A answers it at once
+            ImGui::SetFocusID(ImGui::GetItemID(), ImGui::GetCurrentWindow());
+            ImGui::SetNavCursorVisible(true);
+        }
+    }
+    if (picked == -2 && (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false)))
+        picked = -1;
+    ImGui::End();
+    if (picked != -2) choice_answer(picked);
+}
+
 // ---- the window: title, tabs (L / R or Q / E switch), the page, and the bottom row with "Continue" and "Quit game".
 // B on the gamepad and Esc close it.
 static void layout_menu(uint32_t w, uint32_t h, float scale) {
@@ -600,6 +679,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     if (g_perf_save.exchange(0)) cfg_save();
     perf_tick(plat_now_ns(), frame, t);
     bool open = g_open.load(std::memory_order_relaxed);
+    if (!open && g_choice_up.load()) choice_answer(-1);   // F1 or Esc closed the menu over a choice: no answer
     if (!open) {
         if (g_save_pending) g_save_pending = opt_save_tick(1);   // closed: the last change goes to mkw.ini now
         if (g_test.at && !g_test.opened && frame >= g_test.at) {
@@ -655,7 +735,8 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     }
     ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();
-    if (open) layout_menu(t->width, t->height, scale);
+    if (open && g_choice_up.load()) layout_choice(t->width, t->height, scale);
+    else if (open) layout_menu(t->width, t->height, scale);
     perf_draw(t, scale);
     menu_notice_draw((float)t->width, scale);
     ImGui::Render();

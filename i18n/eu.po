@@ -2391,3 +2391,18 @@ msgid ""
 msgstr ""
 "Steam-en geruza ez da ireki: abiarazi jokoa Steam-etik edo bidali gonbidatu-esteka bat (menua > "
 "Jokoa)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CHOICE"
+msgid "Local multiplayer for %d players: %d controllers connected. How do the other players join?"
+msgstr ""
+"Tokiko jokalari anitzeko modua %d jokalarirentzat: %d kontrolagailu konektatuta. Nola batuko dira "
+"gainerako jokalariak?"
+
+msgctxt "UI_MENU_RPT_CHOICE_LOCAL"
+msgid "Local players (connect more controllers)"
+msgstr "Tokiko jokalariak (konektatu kontrolagailu gehiago)"
+
+msgctxt "UI_MENU_RPT_CHOICE_STEAM"
+msgid "Steam Remote Play Together (invite friends)"
+msgstr "Steam Remote Play Together (gonbidatu lagunak)"

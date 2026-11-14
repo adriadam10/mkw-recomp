@@ -227,7 +227,10 @@ typedef enum {
     // local multiplayer with too few controllers and Steam ready: INVITE "%d ... %d" (players, controllers) as
     // UI_NOTICE_PADS_MISSING, saying the invite list opened; NO_OVERLAY when the overlay could not open
     UI_NOTICE_RPT_INVITE, UI_NOTICE_RPT_NO_OVERLAY,
-    UI_MENU_LAST_ID = UI_NOTICE_RPT_NO_OVERLAY,
+    // local multiplayer with too few controllers and Steam ready (steam_invite = ask, menu_choice): the question
+    // CHOICE "%d ... %d" (players, controllers) and its two buttons
+    UI_MENU_RPT_CHOICE, UI_MENU_RPT_CHOICE_LOCAL, UI_MENU_RPT_CHOICE_STEAM,
+    UI_MENU_LAST_ID = UI_MENU_RPT_CHOICE_STEAM,
     UI_TEXT_COUNT
 } UiTextId;
 
