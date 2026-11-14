@@ -680,7 +680,7 @@ VkPipeline vk_mesh_cs_compact_pipeline(VkPipelineLayout *layout);   // runtime/s
 // sets the rest: vkCmdSetViewportWithCount, vkCmdSetScissorWithCount, depth bias, blend constants, stencil compare and
 // write masks and references; vertex buffers with vkCmdBindVertexBuffers2 (strides NULL when
 // vk_pipeline_vertex_input_dynamic(), else from VkPipeState.vstream).
-void vk_pipeline_set_dynamic(VkCommandBuffer cb, const VkPipeState *s);
+void vk_pipeline_set_dynamic(VkCommandBuffer cb, const VkPipeState *s, const VkPipeState *last);   // last: NULL sets all
 int vk_pipeline_vertex_input_dynamic(void);    // 1: vertex input is VK_EXT_vertex_input_dynamic_state
 // What the bound state says of the shader of stage (GFX_STAGE_VS: attr_type from the vertex attribute formats;
 // GFX_STAGE_FS: out_type from the colour target formats).
