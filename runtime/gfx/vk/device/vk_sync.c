@@ -214,7 +214,10 @@ static void cb_log(uint64_t values) {
     memset(cb_cost, 0, sizeof cb_cost), cb_values = 0;
 }
 
-#define HANG_NS 5000000000ull   // no frame's submission takes seconds; a load's uploads are many short ones
+// No frame's submission takes seconds; a load's uploads are many short ones. Under amdgpu's lockup_timeout (5 s for
+// gfx on the Steam Deck, SteamOS's amdgpu.lockup_timeout=5000,...): at 5 s the kernel reset the GPU first and mkw
+// ended without a line (three hangs on 13-14/11/2026, "ring gfx_0.0.0 timeout ... Process mkw").
+#define HANG_NS 2000000000ull
 static void completion_main(void *arg) {
     VkCtx *c = arg;
     plat_mutex_lock(&st_lock);
