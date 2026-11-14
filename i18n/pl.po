@@ -2270,6 +2270,7 @@ msgstr "Usunąć profil %s? Zniknie z listy; jego zapis zostanie w folderze prof
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "Nie udało się zapisać profilu (przyczyna jest w dzienniku)."
+
 #. A product name: keep it as Steam shows it in your language.
 msgctxt "UI_MENU_GROUP_RPT"
 msgid "Steam Remote Play Together"

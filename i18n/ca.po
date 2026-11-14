@@ -2277,6 +2277,7 @@ msgstr ""
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "No s'ha pogut desar el perfil (el registre diu per què)."
+
 #. A product name: keep it as Steam shows it in your language.
 msgctxt "UI_MENU_GROUP_RPT"
 msgid "Steam Remote Play Together"

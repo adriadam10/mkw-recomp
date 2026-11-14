@@ -2164,6 +2164,7 @@ msgstr "移除档案 %s？它会从列表中消失，存档保留在 profile/pla
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "无法保存档案（原因见日志）。"
+
 #. A product name: keep it as Steam shows it in your language.
 msgctxt "UI_MENU_GROUP_RPT"
 msgid "Steam Remote Play Together"
