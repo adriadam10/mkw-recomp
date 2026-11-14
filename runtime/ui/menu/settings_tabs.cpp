@@ -256,12 +256,26 @@ static void tab_graphics(float scale) {
 }
 
 // Steam Remote Play Together (steam/steam_rpt.h): invite through the Steam overlay or copy a guest link. Greyed out with
-// the reason when Steam is not running for the game; the App ID itself is steam_appid in mkw.ini (docs/remote-play.md).
+// the reason when Steam is not running for the game. The App ID row above them sets steam_appid (docs/remote-play.md).
 static void rows_remote_play(void) {
     static char value[64];
     static uint64_t link_until;   // "Copied" or "did not work" beside Copy guest link until then
     static int link_ok;
     opt_group(UI_MENU_GROUP_RPT);
+    // the App ID: off, the game Steam started, RetroArch (docs/remote-play.md's example) or a number from mkw.ini
+    {
+        static char custom[16], custom_name[64];
+        const char *v = cfg_get("MKW_STEAM_APPID");
+        const char *vals[4] = {"", "auto", "1118310", custom}, *names[4] = {menu_text(UI_MENU_RPT_APPID_OFF),
+                               menu_text(UI_MENU_RPT_APPID_AUTO), "RetroArch (1118310)", custom_name};
+        int n = 3;
+        if (v && *v && strcmp(v, "auto") && strcmp(v, "1118310")) {
+            snprintf(custom, sizeof custom, "%s", v);
+            snprintf(custom_name, sizeof custom_name, menu_text(UI_MENU_RPT_APPID_CUSTOM), custom);
+            n = 4;
+        }
+        opt_choice_list("MKW_STEAM_APPID", UI_MENU_RPT_APPID, vals, names, n, UI_MENU_RPT_APPID_DESC);
+    }
     int st = steam_rpt_state();
     UiTextId why = st == STEAM_RPT_OFF ? UI_MENU_RPT_NEED_APPID : st == STEAM_RPT_IDLE ? UI_MENU_RPT_AT_START
                                                                                         : UI_MENU_RPT_FAILED;

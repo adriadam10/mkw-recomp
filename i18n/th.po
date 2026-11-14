@@ -2349,3 +2349,30 @@ msgstr "ผู้เล่นในเครื่อง (เชื่อมต�
 msgctxt "UI_MENU_RPT_CHOICE_STEAM"
 msgid "Steam Remote Play Together (invite friends)"
 msgstr "Steam Remote Play Together (เชิญเพื่อน)"
+
+msgctxt "UI_MENU_RPT_APPID"
+msgid "Steam App ID"
+msgstr "Steam App ID"
+
+msgctxt "UI_MENU_RPT_APPID_DESC"
+msgid ""
+"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
+"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in mkw.ini. Takes effect at the next start."
+msgstr ""
+"เกม Steam ที่ mkw ทำงานในนามสำหรับ Remote Play Together อัตโนมัติ: เกมที่ตัวเลือกการเปิดใช้เปิด "
+"mkw (\"C:\\...\\mkw.exe\" %command%) จึงใช้ได้กับเกม Steam ใดก็ได้ที่คุณมีซึ่งรองรับ Remote Play "
+"Together หมายเลขอื่น: steam_appid ใน mkw.ini มีผลเมื่อเปิดครั้งถัดไป"
+
+msgctxt "UI_MENU_RPT_APPID_OFF"
+msgid "Off"
+msgstr "ปิด"
+
+msgctxt "UI_MENU_RPT_APPID_AUTO"
+msgid "Automatic (the game Steam started)"
+msgstr "อัตโนมัติ (เกมที่ Steam เปิด)"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_APPID_CUSTOM"
+msgid "%s (mkw.ini)"
+msgstr "%s (mkw.ini)"

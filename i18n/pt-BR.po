@@ -2387,3 +2387,31 @@ msgstr "Jogadores locais (conectar mais controles)"
 msgctxt "UI_MENU_RPT_CHOICE_STEAM"
 msgid "Steam Remote Play Together (invite friends)"
 msgstr "Steam Remote Play Together (convidar amigos)"
+
+msgctxt "UI_MENU_RPT_APPID"
+msgid "Steam App ID"
+msgstr "ID do app na Steam"
+
+msgctxt "UI_MENU_RPT_APPID_DESC"
+msgid ""
+"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
+"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in mkw.ini. Takes effect at the next start."
+msgstr ""
+"O jogo da Steam como o qual o mkw roda no Remote Play Together. Automático: o jogo cujas opções "
+"de inicialização abrem o mkw (\"C:\\...\\mkw.exe\" %command%), então qualquer jogo seu da Steam "
+"com Remote Play Together funciona. Outro número: steam_appid no mkw.ini. Vale a partir da próxima "
+"inicialização."
+
+msgctxt "UI_MENU_RPT_APPID_OFF"
+msgid "Off"
+msgstr "Desligado"
+
+msgctxt "UI_MENU_RPT_APPID_AUTO"
+msgid "Automatic (the game Steam started)"
+msgstr "Automático (o jogo iniciado pela Steam)"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_APPID_CUSTOM"
+msgid "%s (mkw.ini)"
+msgstr "%s (mkw.ini)"

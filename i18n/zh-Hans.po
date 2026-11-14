@@ -2270,3 +2270,29 @@ msgstr "本地玩家（连接更多控制器）"
 msgctxt "UI_MENU_RPT_CHOICE_STEAM"
 msgid "Steam Remote Play Together (invite friends)"
 msgstr "Steam 远程同乐（邀请好友）"
+
+msgctxt "UI_MENU_RPT_APPID"
+msgid "Steam App ID"
+msgstr "Steam 应用 ID"
+
+msgctxt "UI_MENU_RPT_APPID_DESC"
+msgid ""
+"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
+"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in mkw.ini. Takes effect at the next start."
+msgstr ""
+"mkw 在远程同乐中所使用的 Steam 游戏。自动：通过启动选项启动 mkw 的游戏 (\"C:\\...\\mkw.exe\" %command%)，因此你拥有的任何支持远程同乐的 "
+"Steam 游戏都可以。其他编号：mkw.ini 中的 steam_appid。下次启动时生效。"
+
+msgctxt "UI_MENU_RPT_APPID_OFF"
+msgid "Off"
+msgstr "关闭"
+
+msgctxt "UI_MENU_RPT_APPID_AUTO"
+msgid "Automatic (the game Steam started)"
+msgstr "自动（Steam 启动的游戏）"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_APPID_CUSTOM"
+msgid "%s (mkw.ini)"
+msgstr "%s（mkw.ini）"

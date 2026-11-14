@@ -1,6 +1,6 @@
 // Steam Remote Play Together (steam_rpt.c): Steam streams the game's window and sound to friends, and each guest's
 // controller or keyboard becomes a player of local multiplayer. Off unless MKW_STEAM_APPID (steam_appid in mkw.ini)
-// names the Steam App ID to run as; Steam's library is loaded at run time from mkw's folder (steam_flat.h), so nothing
+// names the Steam App ID to run as (auto: the one Steam passes to a game it starts); Steam's library is loaded at run time from mkw's folder (steam_flat.h), so nothing
 // changes for a player without it. docs/remote-play.md has the set-up.
 #pragma once
 #include <stddef.h>
@@ -23,7 +23,7 @@ void steam_rpt_start(void);
 // Any thread.
 int steam_rpt_state(void);
 const char *steam_rpt_reason(void);   // STEAM_RPT_FAILED: why, in English, for the log and the menu; "" otherwise
-const char *steam_rpt_app_id(void);   // the App ID set, "" when none
+const char *steam_rpt_app_id(void);   // the App ID set (auto: Steam's, "auto" while Steam gave none), "" when none
 int steam_rpt_guests(void);           // guests connected now
 
 // The menu's buttons (any thread; the steam thread carries them out). invite: the Steam overlay's Remote Play Together

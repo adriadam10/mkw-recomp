@@ -2241,3 +2241,27 @@ msgstr ""
 msgctxt "UI_MENU_RPT_CHOICE_STEAM"
 msgid "Steam Remote Play Together (invite friends)"
 msgstr ""
+
+msgctxt "UI_MENU_RPT_APPID"
+msgid "Steam App ID"
+msgstr ""
+
+msgctxt "UI_MENU_RPT_APPID_DESC"
+msgid ""
+"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options start mkw "
+"(\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together works. Another number: "
+"steam_appid in mkw.ini. Takes effect at the next start."
+msgstr ""
+
+msgctxt "UI_MENU_RPT_APPID_OFF"
+msgid "Off"
+msgstr ""
+
+msgctxt "UI_MENU_RPT_APPID_AUTO"
+msgid "Automatic (the game Steam started)"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_APPID_CUSTOM"
+msgid "%s (mkw.ini)"
+msgstr ""

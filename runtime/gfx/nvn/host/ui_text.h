@@ -230,7 +230,10 @@ typedef enum {
     // local multiplayer with too few controllers and Steam ready (steam_invite = ask, menu_choice): the question
     // CHOICE "%d ... %d" (players, controllers) and its two buttons
     UI_MENU_RPT_CHOICE, UI_MENU_RPT_CHOICE_LOCAL, UI_MENU_RPT_CHOICE_STEAM,
-    UI_MENU_LAST_ID = UI_MENU_RPT_CHOICE_STEAM,
+    // the Game tab's App ID row (steam_appid): its values off and auto (the game Steam started); CUSTOM "%s" (a number
+    // from mkw.ini that the list lacks)
+    UI_MENU_RPT_APPID, UI_MENU_RPT_APPID_DESC, UI_MENU_RPT_APPID_OFF, UI_MENU_RPT_APPID_AUTO, UI_MENU_RPT_APPID_CUSTOM,
+    UI_MENU_LAST_ID = UI_MENU_RPT_APPID_CUSTOM,
     UI_TEXT_COUNT
 } UiTextId;
 

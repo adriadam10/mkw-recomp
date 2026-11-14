@@ -36,7 +36,15 @@ It is off by default and changes nothing until you set it up.
    steam_appid = 1118310
    ```
 
-   or set the environment variable `MKW_STEAM_APPID=1118310`.
+   or set the environment variable `MKW_STEAM_APPID=1118310`. The menu has the same choice (Game > Steam
+   Remote Play Together > Steam App ID; it takes effect at the next start).
+
+   **Another Steam game.** Any game you own whose store page lists Remote Play Together can stand in for
+   RetroArch. Put mkw in that game's launch options (step 3) and set `steam_appid = auto` (in the menu:
+   Automatic): mkw then runs as whichever game Steam started it from. A number works too (the App ID is the number
+   in the game's store address, `store.steampowered.com/app/<number>/`), but it must be the game whose launch
+   options you used: otherwise the log says `steam: Steam started mkw as App ID ..., but steam_appid = ...`.
+   Steam shows your friends the name of that game, and only games with Remote Play Together let them join.
 
 3. **Start the game from Steam, as the App ID's game** (needed for your friends' controllers). Started from its
    folder, mkw runs as the App ID and invitations work, but Steam does not hand the guests' controllers to it: Steam

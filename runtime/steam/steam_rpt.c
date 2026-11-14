@@ -1,4 +1,4 @@
-// Steam Remote Play Together (steam_rpt.h). With MKW_STEAM_APPID set, the game process starts Steam's API as that App
+// Steam Remote Play Together (steam_rpt.h). With MKW_STEAM_APPID set (a number, or auto: the game Steam started), the game process starts Steam's API as that App
 // ID before the game boots; Steam then streams the window and the sound to the guests itself, and this file turns the
 // guests into players:
 //   - a guest's controller is a Steam virtual gamepad on the host, which input.c gives to the next free player once SDL
@@ -57,9 +57,20 @@ typedef struct {
 static Guest guests[MAX_GUESTS];
 static int n_guests;
 
+static int is_app_id(const char *s);
+
+// steam_appid = auto: the App ID Steam put in the environment when it started mkw from a game's launch options
+// (%command%), so the overlay and the guests' controllers are that game's. Read once, before steam_rpt_start sets it.
+static char auto_id[16];
 const char *steam_rpt_app_id(void) {
     const char *v = cfg_get("MKW_STEAM_APPID");
-    return v ? v : "";
+    if (!v) return "";
+    if (strcmp(v, "auto")) return v;
+    if (!auto_id[0]) {
+        char e[32];
+        if (plat_getenv("SteamAppId", e, sizeof e) && is_app_id(e)) snprintf(auto_id, sizeof auto_id, "%s", e);
+    }
+    return auto_id[0] ? auto_id : "auto";
 }
 
 int steam_rpt_state(void) {
@@ -339,7 +350,16 @@ void steam_rpt_start(void) {
     if (plat_cas32(&g_state, -1, -1) >= 0) return;
     const char *app = steam_rpt_app_id();
     if (!*app) { plat_xchg32(&g_state, STEAM_RPT_OFF); return; }
+    if (!strcmp(app, "auto")) {
+        fail("steam_appid = %s, but Steam passed no App ID: start mkw from a Steam game's launch options (%%command%%)",
+             app);
+        return;
+    }
     if (!is_app_id(app)) { fail("steam_appid = %s is not a Steam App ID (a number)", app); return; }
+    char started[32];   // a number set while Steam started mkw as another game: the overlay is that game's
+    if (plat_getenv("SteamAppId", started, sizeof started) && is_app_id(started) && strcmp(started, app))
+        rt_log("steam: Steam started mkw as App ID %s, but steam_appid = %s: set steam_appid = auto to follow the game",
+               started, app);
 
     char tried[PLAT_PATH_MAX];
     void *lib = open_library(tried, sizeof tried);
