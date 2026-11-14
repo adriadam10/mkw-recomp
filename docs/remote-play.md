@@ -39,6 +39,12 @@ It is off by default and changes nothing until you set it up.
    or set the environment variable `MKW_STEAM_APPID=1118310`. The menu has the same choice (Game > Steam
    Remote Play Together > Steam App ID; it takes effect at the next start).
 
+   **Your own App ID in the menu.** Under that row, select **Enter a Steam App ID**, type the number with the
+   keyboard's number keys (Backspace deletes a digit) and press Enter or A. mkw runs as that game from the next start,
+   and the Steam App ID row keeps the number in its list, so you can switch back to it later. The list is
+   `steam_appids` in `mkw.ini` (comma-separated, 16 at most: the oldest goes first); delete a number there to take it
+   off the list.
+
    **Another Steam game.** Any game you own whose store page lists Remote Play Together can stand in for
    RetroArch. Put mkw in that game's launch options (step 3) and set `steam_appid = auto` (in the menu:
    Automatic): mkw then runs as whichever game Steam started it from. mkw remembers the last one in

@@ -233,7 +233,10 @@ typedef enum {
     // the Game tab's App ID row (steam_appid): its values off and auto (the game Steam started); CUSTOM "%s" (a number
     // from mkw.ini that the list lacks)
     UI_MENU_RPT_APPID, UI_MENU_RPT_APPID_DESC, UI_MENU_RPT_APPID_OFF, UI_MENU_RPT_APPID_AUTO, UI_MENU_RPT_APPID_CUSTOM,
-    UI_MENU_LAST_ID = UI_MENU_RPT_APPID_CUSTOM,
+    // the row under it that takes a typed App ID (opt_digits; steam_appids keeps them for the list): label, description,
+    // and the hint shown while nothing is typed
+    UI_MENU_RPT_APPID_ADD, UI_MENU_RPT_APPID_ADD_DESC, UI_MENU_RPT_APPID_ADD_HINT,
+    UI_MENU_LAST_ID = UI_MENU_RPT_APPID_ADD_HINT,
     UI_TEXT_COUNT
 } UiTextId;
 

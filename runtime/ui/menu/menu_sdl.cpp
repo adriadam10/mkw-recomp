@@ -16,7 +16,12 @@ extern "C" {
 }
 
 static ImGuiKey key_of(SDL_Scancode sc) {
+    // digits, for the rows that take a number (opt_digits: the Steam App ID); SDL orders 1..9 then 0
+    if (sc >= SDL_SCANCODE_1 && sc <= SDL_SCANCODE_9) return (ImGuiKey)(ImGuiKey_1 + (sc - SDL_SCANCODE_1));
+    if (sc >= SDL_SCANCODE_KP_1 && sc <= SDL_SCANCODE_KP_9) return (ImGuiKey)(ImGuiKey_Keypad1 + (sc - SDL_SCANCODE_KP_1));
     switch (sc) {
+    case SDL_SCANCODE_0: return ImGuiKey_0;
+    case SDL_SCANCODE_KP_0: return ImGuiKey_Keypad0;
     case SDL_SCANCODE_UP: return ImGuiKey_UpArrow;
     case SDL_SCANCODE_DOWN: return ImGuiKey_DownArrow;
     case SDL_SCANCODE_LEFT: return ImGuiKey_LeftArrow;

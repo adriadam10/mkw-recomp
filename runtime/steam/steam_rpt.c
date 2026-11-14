@@ -112,6 +112,35 @@ const char *steam_rpt_app_id(void) {
     return auto_id[0] ? auto_id : "auto";
 }
 
+int steam_rpt_saved_ids(const char *list, char ids[][16], int max) {
+    int n = 0;
+    for (const char *s = list ? list : ""; *s && n < max;) {
+        size_t len = strcspn(s, ", ");
+        if (len && len < 12 && strspn(s, "0123456789") >= len) {   // digits only; anything else skipped
+            int dup = 0;
+            for (int i = 0; i < n; i++) dup |= strlen(ids[i]) == len && !strncmp(ids[i], s, len);
+            if (!dup) snprintf(ids[n++], 16, "%.*s", (int)len, s);
+        }
+        s += len;
+        s += strspn(s, ", ");
+    }
+    return n;
+}
+
+void steam_rpt_saved_add(const char *list, const char *id, char *out, size_t cap) {
+    char ids[STEAM_RPT_SAVED + 1][16];
+    int n = steam_rpt_saved_ids(list, ids, STEAM_RPT_SAVED), m = 0;
+    for (int i = 0; i < n; i++)
+        if (strcmp(ids[i], id)) memcpy(ids[m++], ids[i], 16);
+    if (is_app_id(id) && strcmp(id, "1118310") && strlen(id) < 12) {
+        if (m == STEAM_RPT_SAVED) memmove(ids[0], ids[1], 16 * (size_t)--m);
+        snprintf(ids[m++], 16, "%s", id);
+    }
+    size_t len = 0;
+    if (cap) out[0] = 0;
+    for (int i = 0; i < m && len < cap; i++) len += (size_t)snprintf(out + len, cap - len, "%s%s", i ? "," : "", ids[i]);
+}
+
 int steam_rpt_state(void) {
     int32_t s = plat_cas32(&g_state, -1, -1);
     if (s >= 0) return s;

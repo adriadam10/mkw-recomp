@@ -258,6 +258,23 @@ bool opt_button(const char *id, UiTextId label, UiTextId desc, const char *value
     return row(id, label, desc, v) == 2;   // A or a click; left and right do nothing
 }
 
+bool opt_digits(const char *id, UiTextId label, UiTextId desc, char *buf, size_t cap, const char *hint) {
+    RowView v = {buf[0] ? buf : hint, false, false, NULL};
+    int step = row(id, label, desc, v);
+    // the row's button is the last item: its focus decides who takes the keys (the typed digits show next frame)
+    if (ImGui::IsItemFocused() && ImGui::GetCurrentContext()->NavCursorVisible) {
+        size_t n = strlen(buf);
+        for (int d = 0; d < 10; d++)
+            if ((ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_0 + d)) ||
+                 ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_Keypad0 + d))) && n + 1 < cap) {
+                buf[n++] = (char)('0' + d);
+                buf[n] = 0;
+            }
+        if (ImGui::IsKeyPressed(ImGuiKey_Backspace) && n) buf[--n] = 0;
+    }
+    return step == 2 && buf[0];
+}
+
 void opt_group(UiTextId title) {
     ImGui::Dummy(ImVec2(0, 6 * g_scale));
     ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(g_look->group), "%s", menu_text(title));

@@ -24,6 +24,12 @@ void steam_rpt_start(void);
 int steam_rpt_state(void);
 const char *steam_rpt_reason(void);   // STEAM_RPT_FAILED: why, in English, for the log and the menu; "" otherwise
 const char *steam_rpt_app_id(void);   // the App ID set (auto: Steam's, "auto" while Steam gave none), "" when none
+// The App IDs typed in the menu (steam_appids, comma-separated, oldest first): steam_rpt_saved_ids puts at most max
+// of them in ids and returns how many; steam_rpt_saved_add makes id the newest (moved there if listed, the oldest
+// dropped past STEAM_RPT_SAVED; RetroArch's 1118310 not listed, the menu has it already) and writes the new list in out.
+enum { STEAM_RPT_SAVED = 16 };
+int steam_rpt_saved_ids(const char *list, char ids[][16], int max);
+void steam_rpt_saved_add(const char *list, const char *id, char *out, size_t cap);
 int steam_rpt_guests(void);           // guests connected now
 
 // The menu's buttons (any thread; the steam thread carries them out). invite: the Steam overlay's Remote Play Together

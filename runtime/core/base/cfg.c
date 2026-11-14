@@ -51,7 +51,7 @@ static const char *const known[] = {
     "BIND_XF", "REG_LATE", "REG_QUEUED", "REPLAY_ASYNC", "USNAP_CMP",
     "REPLAY_CHECK", "RESOLUTION", "RESOLVE_CHECK", "ROMFS", "RTSTATS", "ROMFS_MODS", "ROMFS_PATCHES",
     "RUMBLE", "RUMBLE_CURVE", "RUMBLE_STRENGTH", "RUMBLE_TRIGGERS",
-    "SHADER_MEMO", "SHADOW_SIZE", "SHARED_FONTS", "SHARPNESS", "SHOTS", "SHOTS_DIR", "SHOTS_FULL", "SPARSE_IMAGES", "SPARSE_MIB", "SPARSE_NO_BUFFER", "SPIN", "SPIN_HANDOFF_US", "SPLIT_DRAWS", "SPLIT_US", "STEAM_APPID", "STEAM_INVITE", "STICK_DEADZONE", "SWITCH2", "SWKBD_ANSWER",
+    "SHADER_MEMO", "SHADOW_SIZE", "SHARED_FONTS", "SHARPNESS", "SHOTS", "SHOTS_DIR", "SHOTS_FULL", "SPARSE_IMAGES", "SPARSE_MIB", "SPARSE_NO_BUFFER", "SPIN", "SPIN_HANDOFF_US", "SPLIT_DRAWS", "SPLIT_US", "STEAM_APPID", "STEAM_APPIDS", "STEAM_INVITE", "STICK_DEADZONE", "SWITCH2", "SWKBD_ANSWER",
     "SKIP_PROGRAMS", "SWKBD_TEST", "TEX_ALIAS", "TEX_MEMO", "TEX_QUALITY", "TEX_RELEASED_MIB", "TIMER_1MS", "TRACE", "TURBO", "TURBO_SPEED", "SKIP_MOVIES", "SEED", "UNLOCK_ALL", "QUICK_RACE", "FREEZE_KEYS", "QUALITY", "TRACE_UBO", "TRACE_UBO_OUT", "UBO_SNAPSHOT", "UPSCALER", "VK_DYN_VERTEX", "VK_NO_FLOAT64",
     "VK_PRESENT", "VK_RECORDER", "VK_SSBO_ALIGN", "VK_SUBGROUP", "VK_SUBGROUP_PIN", "VK_TEX_POOL_MIN", "VK_VALIDATION", "VOLUME", "VRAM_HEADROOM", "VRAM_LOG", "VRAM_MARGIN", "VS_OUTS",
     "UPDATE_AS", "UPDATE_CHECK", "UPDATE_REPO", "WINDOW_SIZE", "ZSTD_CHECK", "ZSTD_NATIVE",
@@ -84,7 +84,7 @@ static const struct { const char *key, *section; } sections[] = {
     {"TURBO", "hacks"}, {"TURBO_SPEED", "hacks"}, {"SKIP_MOVIES", "hacks"}, {"SEED", "hacks"}, {"UNLOCK_ALL", "hacks"}, {"FREEZE_KEYS", "hacks"},
     {"QUICK_RACE", "hacks"}, {"MODS", "launcher"}, {"MODS_ACK", "launcher"}, {"MODS_PLAYED", "launcher"},
     {"UPDATE_CHECK", "launcher"}, {"GAME_DIR", "launcher"}, {"PLAYER", "launcher"},
-    {"STEAM_APPID", "steam"}, {"STEAM_INVITE", "steam"},
+    {"STEAM_APPID", "steam"}, {"STEAM_APPIDS", "steam"}, {"STEAM_INVITE", "steam"},
 };
 
 // The settings the menu shows: the value in effect when the key is unset, and what the key accepts. The only place a
@@ -108,6 +108,7 @@ static const CfgMeta metas[] = {
     {"OPERATION_MODE", "docked", "docked|handheld", RESTART},
     // Remote Play Together (steam/steam_rpt.c reads both with cfg_get): unset is off; auto, or any App ID number
     {"STEAM_APPID", "", NULL, RESTART}, {"STEAM_INVITE", "ask", "ask|auto|always|off", LIVE},
+    {"STEAM_APPIDS", "", NULL, LIVE},   // the App IDs typed in the menu, comma-separated; the App ID row lists them
     {"LAN", "0", "0|1", RESTART},   // LAN play (sdk/ov/ov_socket.c), off until played between two PCs (#144)
     // Graphics: the console's look by default
     {"QUALITY", "console", "low|medium|console|high|ultra|custom", RESTART},   // the menu's presets; nothing reads it

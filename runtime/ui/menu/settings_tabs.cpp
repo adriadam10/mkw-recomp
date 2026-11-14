@@ -262,19 +262,44 @@ static void rows_remote_play(void) {
     static uint64_t link_until;   // "Copied" or "did not work" beside Copy guest link until then
     static int link_ok;
     opt_group(UI_MENU_GROUP_RPT);
-    // the App ID: off, the game Steam started, RetroArch (docs/remote-play.md's example) or a number from mkw.ini
+    // the App ID: off, the game Steam started, RetroArch (docs/remote-play.md's example), the numbers typed in the row
+    // under it (steam_appids, oldest first) and a number from mkw.ini the list lacks
     {
-        static char custom[16], custom_name[64];
+        enum { SAVED = STEAM_RPT_SAVED };
+        static char ids[SAVED + 1][16], names_buf[SAVED + 1][64];
+        const char *vals[SAVED + 4] = {"", "auto", "1118310"}, *names[SAVED + 4] = {
+            menu_text(UI_MENU_RPT_APPID_OFF), menu_text(UI_MENU_RPT_APPID_AUTO), "RetroArch (1118310)"};
+        int n = 3, k = 0;
+        auto add = [&](const char *id) {
+            for (int i = 0; i < n; i++)
+                if (!strcmp(vals[i], id)) return;
+            snprintf(ids[k], sizeof ids[k], "%s", id);
+            snprintf(names_buf[k], sizeof names_buf[k], menu_text(UI_MENU_RPT_APPID_CUSTOM), ids[k]);
+            vals[n] = ids[k];
+            names[n++] = names_buf[k++];
+        };
+        char saved[SAVED][16];
+        int n_saved = steam_rpt_saved_ids(cfg_get("MKW_STEAM_APPIDS"), saved, SAVED);
+        for (int i = 0; i < n_saved; i++) add(saved[i]);
         const char *v = cfg_get("MKW_STEAM_APPID");
-        const char *vals[4] = {"", "auto", "1118310", custom}, *names[4] = {menu_text(UI_MENU_RPT_APPID_OFF),
-                               menu_text(UI_MENU_RPT_APPID_AUTO), "RetroArch (1118310)", custom_name};
-        int n = 3;
-        if (v && *v && strcmp(v, "auto") && strcmp(v, "1118310")) {
-            snprintf(custom, sizeof custom, "%s", v);
-            snprintf(custom_name, sizeof custom_name, menu_text(UI_MENU_RPT_APPID_CUSTOM), custom);
-            n = 4;
-        }
+        if (v && *v && strlen(v) < 16) add(v);   // a number only mkw.ini has
         opt_choice_list("MKW_STEAM_APPID", UI_MENU_RPT_APPID, vals, names, n, UI_MENU_RPT_APPID_DESC);
+
+        // a typed number: the App ID from the next start, and the newest in steam_appids
+        static char typed[11];   // App IDs are 32-bit: 10 digits at most
+        if (opt_digits("##rpt_appid_add", UI_MENU_RPT_APPID_ADD, UI_MENU_RPT_APPID_ADD_DESC, typed, sizeof typed,
+                       menu_text(UI_MENU_RPT_APPID_ADD_HINT))) {
+            const char *id = typed + strspn(typed, "0");   // "0985890" is 985890; "0" is no App ID
+            if (*id) {
+                char out[SAVED * 12 + 16];
+                steam_rpt_saved_add(cfg_get("MKW_STEAM_APPIDS"), id, out, sizeof out);
+                if (*out) cfg_set("MKW_STEAM_APPIDS", out);
+                cfg_set("MKW_STEAM_APPID", id);
+                opt_save_soon();
+                rt_log("menu: Steam App ID %s typed: in use from the next start (steam_appids = %s)", id, out);
+            }
+            typed[0] = 0;
+        }
     }
     int st = steam_rpt_state();
     UiTextId why = st == STEAM_RPT_OFF ? UI_MENU_RPT_NEED_APPID : st == STEAM_RPT_IDLE ? UI_MENU_RPT_AT_START

@@ -63,6 +63,9 @@ bool opt_choice_list(const char *key, UiTextId label, const char *const *values,
 // A row that runs an action: true on A or a click. id: unique on the page and not a setting ("##copy_info"); value:
 // shown on the right ("" none).
 bool opt_button(const char *id, UiTextId label, UiTextId desc, const char *value = "");
+// A row that takes a number typed on the keyboard while it is selected (0-9 and the keypad's, Backspace deletes): buf
+// (cap bytes, digits only) is shown as the value, hint while it is empty. True on A, Enter or a click with digits in buf.
+bool opt_digits(const char *id, UiTextId label, UiTextId desc, char *buf, size_t cap, const char *hint);
 // lo..hi in steps of step (left and right held for a second go ten times as fast); fmt formats the value ("%.0f %%").
 bool opt_slider(const char *key, UiTextId label, float lo, float hi, UiTextId desc, float step = 1,
                 const char *fmt = "%g");
