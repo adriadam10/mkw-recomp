@@ -4,7 +4,8 @@
 //   - a guest's controller is a Steam virtual gamepad on the host, which input.c gives to the next free player once SDL
 //     lists it (SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD, set here);
 //   - a guest's keyboard comes through Remote Play's direct input (SDK 1.62+): at the guest's first key with a binding
-//     it becomes a player of its own (input_remote_*, input.h), on the host's key table.
+//     it becomes a player of its own (input_remote_*, input.h), on the host's key table, when some guest has no
+//     controller (more guests than guest gamepads and keyboard players) and not in the guest's first 5 s.
 // The steam thread runs Steam's callbacks (manual dispatch: nothing of Steam's runs on a game thread), reads the
 // guests' keys every 8 ms and carries out the menu's buttons (invite through the overlay, a guest link).
 //
@@ -27,6 +28,9 @@
 #include "ui_text.h"
 
 enum { TICK_NS = 8000000, SYNC_NS = 1000000000, MAX_GUESTS = 8, EVENTS = 32 };
+// A guest's keys in their first 5 s give no player: their controller, if they have one, reaches SDL several seconds
+// after the session starts (users' logs), and a keyboard player taken first would give them two players.
+#define KEY_WAIT_NS 5000000000ull
 enum { LINK_NONE, LINK_WAITING, LINK_READY, LINK_REFUSED };
 
 static SteamApi api;
@@ -46,6 +50,8 @@ typedef struct {
     SteamSession id;
     int player;       // the player of the guest's keyboard, -1 before the first key
     int full;         // a key found no free player (said once)
+    int held;         // a key came while every guest had a controller (logged once)
+    uint64_t joined_ns;
     char name[64];
 } Guest;
 static Guest guests[MAX_GUESTS];
@@ -161,7 +167,7 @@ static void add_guest(SteamSession id) {
     if (!id || guest_index(id) >= 0) return;
     if (n_guests == MAX_GUESTS) { rt_log("steam: guest session %u ignored: %d guests already", id, MAX_GUESTS); return; }
     Guest *g = &guests[n_guests++];
-    *g = (Guest){.id = id, .player = -1};
+    *g = (Guest){.id = id, .player = -1, .joined_ns = plat_now_ns()};
     const char *persona = friends ? api.persona_name(friends, api.session_steam_id(rp, id)) : NULL;
     const char *client = api.session_client_name(rp, id);
     snprintf(g->name, sizeof g->name, "%s", persona && *persona ? persona : client && *client ? client : "Guest");
@@ -218,6 +224,12 @@ static void callbacks(void) {
     }
 }
 
+static int keyboard_players(void) {
+    int n = 0;
+    for (int i = 0; i < n_guests; i++) n += guests[i].player >= 0;
+    return n;
+}
+
 // The guests' keys (direct input). A key without a key id (Esc, F1, F10, F11: the host's menu and window) is dropped.
 static void read_keys(void) {
     SteamRemoteInput ev[EVENTS];
@@ -230,7 +242,16 @@ static void read_keys(void) {
             int gi = guest_index(ev[i].session), key = input_key_of_usb(ev[i].key.scancode);
             if (gi < 0 || !key) continue;
             Guest *g = &guests[gi];
-            if (down && g->player < 0 && !g->full) {
+            // A keyboard is a player only for a guest without a controller. Steam does not say whose a controller is,
+            // so: while guest controllers and keyboard players together are as many as the guests, every guest plays
+            // already and keys play no one
+            int attach = down && g->player < 0 && !g->full;
+            if (attach && plat_now_ns() - g->joined_ns < KEY_WAIT_NS) attach = 0;   // too early: a later key decides
+            else if (attach && input_guest_pads() + keyboard_players() >= n_guests) {
+                if (!g->held) rt_log("steam: %s's keys give no player: every guest plays already", g->name);
+                g->held = 1, attach = 0;
+            }
+            if (attach) {
                 g->player = input_remote_attach();
                 if (g->player >= 0) notice(UI_NOTICE_RPT_KEYBOARD, g->name, g->player);
                 else {

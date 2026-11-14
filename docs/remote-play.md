@@ -77,13 +77,17 @@ opens it.
 
 When a guest joins, a notice says so. Their controller becomes the next free player (a notice says which). A guest
 without a controller gets a player at the first key they press, and plays with the same keys as you (WASD, Space,
-Shift...; Settings > Controls). Then choose the number of players in the game as usual: the game needs one controller
+Shift...; Settings > Controls). While every guest has a controller, guests' keys give no player, so a guest with both
+gets only one. Then choose the number of players in the game as usual: the game needs one controller
 per player.
 
 ## Good to know
 
-- Steam does not say whose a virtual controller is. Controllers appear in the order guests connect them; a guest who
-  joins with both a controller and a keyboard can get two players.
+- Steam does not say whose a virtual controller is. Controllers appear in the order guests connect them. A keyboard
+  becomes a player only while there are more guests than guest controllers and keyboard players, and not in a guest's first 5 seconds
+  (their controller can take that long to appear). With one guest on a controller and another on a keyboard only,
+  the first key pressed by either guest after 5 seconds takes the keyboard player. A controller you plug in yourself while a guest is
+  connected counts as a guest's.
 - Your own controller through Steam Input (Steam shows it as a "Steam Virtual Gamepad") stays player 1 and never
   becomes a second player.
 - Guests cannot open the menu: Esc, F1, F10 and F11 stay yours. Their mouse does nothing.

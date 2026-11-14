@@ -18,7 +18,9 @@ How the guests become players, in `runtime/input/input.c`:
   another player.
 - **Keyboards**: with direct input (Steamworks SDK 1.62+) a guest's keys come to `steam_rpt.c` instead of the host's
   keyboard. At the guest's first key that has a binding, that keyboard takes the next free player
-  (`input_remote_attach`) and plays with the host's key table (WASD, Space...). Esc, F1, F10 and F11 stay the host's.
+  (`input_remote_attach`) and plays with the host's key table (WASD, Space...), but only while there are more guests
+  than guest gamepads (`input_guest_pads`) and keyboard players and not in the guest's first 5 s, so a guest with a controller does not also
+  get a keyboard player. Esc, F1, F10 and F11 stay the host's.
   The guest's mouse drives nothing.
 
 Steam's client may install crash handlers when it starts: `steam_rpt_start` saves the signal handlers before

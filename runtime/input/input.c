@@ -126,6 +126,10 @@ static void stick(int16_t x, int16_t y, int32_t out[2]) {
 // 1's is `pad`. A player keeps the slot while the gamepad stays connected. Under lock.
 static SDL_Gamepad *extra[INPUT_MAX_PLAYERS];   // [0] unused
 static int extra_rumble[INPUT_MAX_PLAYERS], extra_east_a[INPUT_MAX_PLAYERS];
+// A guest's gamepad (input_guest_pads): a Steam virtual gamepad, or any gamepad opened while a Remote Play guest is
+// connected. On Windows a guest's controller can also show as an XInput pad ("#controller_xboxone" in a user's log),
+// which only the timing tells apart. Under lock.
+static uint8_t extra_guest[INPUT_MAX_PLAYERS];
 // Players 2-8 fed by a remote keyboard (input_remote_*: a Remote Play Together guest's keys) instead of a gamepad, and
 // the keys each one holds. Under lock.
 static uint8_t remote_on[INPUT_MAX_PLAYERS];
@@ -205,6 +209,7 @@ static void scan_pads(void) {
         if (!g) continue;
         if (!p) { pad = g; pad_adopt(); continue; }
         extra[p] = g;
+        extra_guest[p] = virt || guests > 0;
         extra_rumble[p] = SDL_GetBooleanProperty(SDL_GetGamepadProperties(g), SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false);
         extra_east_a[p] = SDL_GetGamepadButtonLabel(g, SDL_GAMEPAD_BUTTON_EAST) == SDL_GAMEPAD_BUTTON_LABEL_A;
         rt_log("input: gamepad \"%s\" for player %d (%s%s)", SDL_GetGamepadName(g), p + 1,
@@ -507,6 +512,14 @@ void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, 
     stick_bits(&b, sr[0], sr[1], B_SR_LEFT);
     if (g_block || g_menu) b = 0, sl[0] = sl[1] = sr[0] = sr[1] = 0;
     *buttons = b; *lx = sl[0]; *ly = sl[1]; *rx = sr[0]; *ry = sr[1];
+}
+
+int input_guest_pads(void) {
+    int n = 0;
+    plat_mutex_lock(&lock);
+    for (int p = 1; p < INPUT_MAX_PLAYERS; p++) n += extra[p] && extra_guest[p] && SDL_GamepadConnected(extra[p]);
+    plat_mutex_unlock(&lock);
+    return n;
 }
 
 int input_remote_attach(void) {

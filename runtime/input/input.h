@@ -21,6 +21,9 @@ void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, 
 // gamepad nor a remote keyboard, -1 when none is free; input_remote_key holds or releases a key (input_map.h KEY_*);
 // input_remote_detach frees the player. Any thread.
 int input_remote_attach(void);
+// Players 2-8 on a Remote Play guest's gamepad: a Steam virtual gamepad, or one opened while a guest was connected
+// (steam_rpt.c gives a guest's keyboard a player only while there are more guests than these). Any thread.
+int input_guest_pads(void);
 void input_remote_detach(int player);
 void input_remote_key(int player, int key, int down);
 // The key id (input_map.h KEY_*) of a USB HID keyboard usage (page 7: SDL scancodes, Steam Remote Play's scancodes);
