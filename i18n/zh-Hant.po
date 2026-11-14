@@ -719,7 +719,7 @@ msgstr "%s 與 %s 已互換"
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_NOTICE_PADS_MISSING"
 msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
-msgstr "%d 名玩家各需要一個控制器：目前已連接 %d 個。鍵盤只算作玩家 1。"
+msgstr ""
 
 msgctxt "UI_BINDS_RESET"
 msgid "Reset all buttons"
@@ -2164,3 +2164,292 @@ msgstr "移除檔案 %s？它會從清單中消失，存檔保留在 profile/pla
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "無法儲存檔案（原因見記錄）。"
+
+msgctxt "UI_LAUNCH_ONLINE"
+msgid "Online play"
+msgstr ""
+
+msgctxt "UI_ONLINE_TITLE"
+msgid "Online play with friends"
+msgstr ""
+
+msgctxt "UI_ONLINE_ENABLE"
+msgid "How you play online"
+msgstr ""
+
+msgctxt "UI_ONLINE_ENABLE_DESC"
+msgid "The game stays offline, like a console with no network. LAN play below still works."
+msgstr ""
+
+msgctxt "UI_ONLINE_SERVER"
+msgid "Server"
+msgstr ""
+
+msgctxt "UI_ONLINE_SERVER_HINT"
+msgid "address:port, like 100.x.y.z:8443"
+msgstr ""
+
+msgctxt "UI_ONLINE_SAVE"
+msgid "Save"
+msgstr ""
+
+msgctxt "UI_ONLINE_TEST"
+msgid "Connect"
+msgstr ""
+
+msgctxt "UI_ONLINE_TESTING"
+msgid "Asking the server..."
+msgstr ""
+
+msgctxt "UI_ONLINE_REACHED"
+msgid "Server reached: online play is ready."
+msgstr ""
+
+msgctxt "UI_ONLINE_FAILED"
+msgid "Not reached: %s"
+msgstr ""
+
+msgctxt "UI_ONLINE_MY_CODE"
+msgid "Your friend code"
+msgstr ""
+
+msgctxt "UI_ONLINE_COPY"
+msgid "Copy"
+msgstr ""
+
+msgctxt "UI_ONLINE_COPIED"
+msgid "Copied"
+msgstr ""
+
+msgctxt "UI_ONLINE_CODE_NOTE"
+msgid ""
+"Give it to your friends: they send you a request from their Online page, you accept it below."
+msgstr ""
+
+msgctxt "UI_ONLINE_ADD"
+msgid "Add a friend"
+msgstr ""
+
+msgctxt "UI_ONLINE_SEND"
+msgid "Send request"
+msgstr ""
+
+msgctxt "UI_ONLINE_RECEIVED"
+msgid "Requests received (%d)"
+msgstr ""
+
+msgctxt "UI_ONLINE_ACCEPT"
+msgid "Accept"
+msgstr ""
+
+msgctxt "UI_ONLINE_DECLINE"
+msgid "Decline"
+msgstr ""
+
+msgctxt "UI_ONLINE_SENT"
+msgid "Requests sent (%d)"
+msgstr ""
+
+msgctxt "UI_ONLINE_CANCEL"
+msgid "Cancel"
+msgstr ""
+
+msgctxt "UI_ONLINE_FRIENDS"
+msgid "Friends (%d)"
+msgstr ""
+
+msgctxt "UI_ONLINE_IS_ONLINE"
+msgid "online"
+msgstr ""
+
+msgctxt "UI_ONLINE_IS_OFFLINE"
+msgid "offline"
+msgstr ""
+
+msgctxt "UI_ONLINE_REMOVE"
+msgid "Remove"
+msgstr ""
+
+msgctxt "UI_ONLINE_REFRESH"
+msgid "Refresh"
+msgstr ""
+
+msgctxt "UI_ONLINE_NONE"
+msgid "No one yet."
+msgstr ""
+
+msgctxt "UI_ONLINE_DONE"
+msgid "Done."
+msgstr ""
+
+msgctxt "UI_ONLINE_NEED_SERVER"
+msgid "Set the server above first."
+msgstr ""
+
+msgctxt "UI_ONLINE_HOWTO"
+msgid "How to play together"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOWTO_TEXT"
+msgid ""
+"1. One player chooses \"I host\" and gives the address shown in gold.\n2. The others choose \"I "
+"join a friend\" and write that address.\n3. Everyone adds the others with their friend codes, "
+"then plays from the game's online menu."
+msgstr ""
+
+msgctxt "UI_ONLINE_FIREWALL"
+msgid ""
+"The first time online, Windows may ask to let mkw.exe through its firewall: allow private "
+"networks, or the other players cannot reach your game."
+msgstr ""
+
+msgctxt "UI_ONLINE_SERVER_SAYS"
+msgid "The server answered: %s"
+msgstr ""
+
+msgctxt "UI_ONLINE_FIRST_SIGNIN"
+msgid ""
+"Server reached. This friend code is new: the server records it at your first online sign-in in "
+"the game (online play, 1 player). Friend requests work after that."
+msgstr ""
+
+msgctxt "UI_ONLINE_LAN"
+msgid "LAN play through Tailscale"
+msgstr ""
+
+msgctxt "UI_ONLINE_LAN_ENABLE"
+msgid "LAN play (Wireless Play becomes LAN Play)"
+msgstr ""
+
+msgctxt "UI_ONLINE_LAN_PEERS"
+msgid "Other PCs"
+msgstr ""
+
+msgctxt "UI_ONLINE_LAN_PEERS_HINT"
+msgid "Tailscale addresses, like 100.x.y.z, 100.a.b.c"
+msgstr ""
+
+msgctxt "UI_ONLINE_LAN_DESC"
+msgid ""
+"LAN Play finds the other games by broadcast, which Tailscale does not carry: write here the "
+"Tailscale address of each other player's PC (they write yours), then everyone opens Wireless Play "
+"in the game. At home on the same box, leave it empty. Applies at the next start of the game."
+msgstr ""
+
+msgctxt "UI_ONLINE_NETWORK"
+msgid "Network"
+msgstr ""
+
+msgctxt "UI_ONLINE_NET_AUTO"
+msgid "Automatic (Tailscale, else the home network)"
+msgstr ""
+
+msgctxt "UI_ONLINE_NET_HOME"
+msgid "Home network (the box), without Tailscale"
+msgstr ""
+
+msgctxt "UI_ONLINE_NET_TS"
+msgid "Tailscale"
+msgstr ""
+
+msgctxt "UI_ONLINE_NET_ADDRS"
+msgid "This PC: home network %s, Tailscale %s"
+msgstr ""
+
+msgctxt "UI_ONLINE_NET_NONE"
+msgid "none"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_DESC"
+msgid ""
+"The server is part of the game: it starts with it and stops when it closes. It answers your home "
+"network and Tailscale only, never the internet."
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_OFF"
+msgid "Stopped."
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_STARTING"
+msgid "Starting..."
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_RUNNING"
+msgid "Running, on %s"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_FAILED"
+msgid "Stopped: %s"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_OTHER"
+msgid "Another server already answers on this PC (port 8443): stop it to host from here."
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_GIVE_HOME"
+msgid "Friends at home write: %s:%d"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_GIVE_TS"
+msgid "Friends through Tailscale write: %s:%d"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_START"
+msgid "Start"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_STOP"
+msgid "Stop"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_FIREWALL"
+msgid "Allow in the firewall"
+msgstr ""
+
+msgctxt "UI_ONLINE_HOST_FIREWALL_DESC"
+msgid "Once per PC (Windows asks first): lets your friends' PCs reach the server and your game."
+msgstr ""
+
+msgctxt "UI_NOTICE_ERROR"
+msgid "Error %s: %s"
+msgstr ""
+
+msgctxt "UI_NOTICE_NO_NETWORK"
+msgid "No connection: %s"
+msgstr ""
+
+msgctxt "UI_NOTICE_OFFLINE"
+msgid "online play is off on this PC (start screen > Online play)."
+msgstr ""
+
+msgctxt "UI_NOTICE_NO_SERVER"
+msgid "no server is set (start screen > Online play)."
+msgstr ""
+
+msgctxt "UI_NOTICE_SERVER"
+msgid "is the server %s running and reachable? (start screen > Online play > Test the server)"
+msgstr ""
+
+msgctxt "UI_ONLINE_PROFILE"
+msgid "The others see you as: %s (the start screen's Profile row changes it)"
+msgstr ""
+
+msgctxt "UI_ONLINE_PROFILE_DEFAULT"
+msgid "Still the default name: give your profile a name of its own so your friends tell you apart."
+msgstr ""
+
+msgctxt "UI_ONLINE_MODE_OFF"
+msgid "Off"
+msgstr ""
+
+msgctxt "UI_ONLINE_MODE_HOST"
+msgid "I host (my friends join me)"
+msgstr ""
+
+msgctxt "UI_ONLINE_MODE_JOIN"
+msgid "I join a friend"
+msgstr ""
+
+msgctxt "UI_ONLINE_JOIN_DESC"
+msgid "Write the address your friend gives you (it ends with :8443), then Connect."
+msgstr ""

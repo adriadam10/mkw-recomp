@@ -23,6 +23,7 @@
 #include "fs.h"
 #include "hacks.h"
 #include "host.h"
+#include "net_online.h"
 #include "ov.h"
 #include "players.h"
 #include "platform/platform.h"
@@ -292,6 +293,7 @@ static void ov_show_error(Cpu *c) {
     char lr[96];
     rt_log("err: game error dialog %04u-%04u (result %#x) from %s", 2000 + (r & 0x1ff), (r >> 9) & 0x1fff, r,
            caller(c, lr, sizeof lr));
+    net_error_notice(2000 + (r & 0x1ff), (r >> 9) & 0x1fff);   // the dialog the console would show (net_host.c)
 }
 
 // void err::ShowError(const ErrorResultVariant &): the same dialog, which MKW's menus use ("Mode sans fil local"
@@ -306,6 +308,8 @@ static void ov_show_error_variant(Cpu *c) {
     else if (v[0] == 1) rt_log("err: game error dialog %04u-%04u (result %#x) from %s", 2000 + (v[1] & 0x1ff),
                                (v[1] >> 9) & 0x1fff, v[1], caller(c, lr, sizeof lr));
     else rt_log("err: game error dialog without an error (state %u) from %s", v[0], caller(c, lr, sizeof lr));
+    if (v[0] == 2) net_error_notice(v[1], v[2]);
+    else if (v[0] == 1) net_error_notice(2000 + (v[1] & 0x1ff), (v[1] >> 9) & 0x1fff);
 }
 
 // void crypto::GenerateCryptographicallyRandomBytes(void *out, size_t size): the SDK asks the csrng service; the host's
@@ -484,17 +488,8 @@ static void ov_open_user_by_uid(Cpu *c) {
     ret_x(c, ok ? 0 : ACCOUNT_R_INVALID);
 }
 
-// Result IsNetworkServiceAccountAvailable(bool *out, const UserHandle &): never, offline.
-static void ov_nsa_available(Cpu *c) {
-    uint8_t *out = arg_p(c, 0);
-    if (out) *out = 0;
-    ret_x(c, out ? 0 : ACCOUNT_R_INVALID);
-}
-
-// The network service account calls fail: the game only makes them after IsNetworkServiceAccountAvailable said yes.
-// (nn::account::ResultNetworkServiceAccountUnavailable is module 124; this description number is a hypothesis.)
-#define ACCOUNT_R_NSA_UNAVAILABLE (124u | (280u << 9))
-static void ov_nsa_unavailable(Cpu *c) { ret_x(c, ACCOUNT_R_NSA_UNAVAILABLE); }
+// The network service account (IsNetworkServiceAccountAvailable, its id and ID token) is in ov_net.c, with the
+// online play it belongs to.
 
 // Result GetUserExistence(bool *out, const Uid &)
 static void ov_user_existence(Cpu *c) {
@@ -838,11 +833,6 @@ HOST_OVERRIDE("_ZN2nn7account9CloseUserERKNS0_10UserHandleE", ov_close_user);
 HOST_OVERRIDE("_ZN2nn7account9GetUserIdEPNS0_3UidERKNS0_10UserHandleE", ov_user_id);
 HOST_OVERRIDE("_ZN2nn7account12ListAllUsersEPiPNS0_3UidEi", ov_list_all_users);
 HOST_OVERRIDE("_ZN2nn7account8OpenUserEPNS0_10UserHandleERKNS0_3UidE", ov_open_user_by_uid);
-HOST_OVERRIDE("_ZN2nn7account32IsNetworkServiceAccountAvailableEPbRKNS0_10UserHandleE", ov_nsa_available);
-HOST_OVERRIDE("_ZN2nn7account36EnsureNetworkServiceAccountAvailableERKNS0_10UserHandleE", ov_nsa_unavailable);
-HOST_OVERRIDE("_ZN2nn7account26GetNetworkServiceAccountIdEPNS0_23NetworkServiceAccountIdERKNS0_10UserHandleE", ov_nsa_unavailable);
-HOST_OVERRIDE("_ZN2nn7account37LoadNetworkServiceAccountIdTokenCacheEPmPcmRKNS0_10UserHandleE", ov_nsa_unavailable);
-HOST_OVERRIDE("_ZN2nn7account44EnsureNetworkServiceAccountIdTokenCacheAsyncEPNS0_12AsyncContextERKNS0_10UserHandleE", ov_nsa_unavailable);
 HOST_OVERRIDE("_ZN2nn7account16GetUserExistenceEPbRKNS0_3UidE", ov_user_existence);
 HOST_OVERRIDE("_ZN2nn7account11GetNicknameEPNS0_8NicknameERKNS0_3UidE", ov_nickname);
 

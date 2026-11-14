@@ -46,6 +46,10 @@ static size_t index_size;
 static uint64_t file_count, strings_offset;
 static char loose_root[2048];   // the loose folder or the package (load_loose_index, load_package_index)
 static char mount_name[32];
+// More names of the same RomFS: MountRom under another name mounts the application's RomFS again (MKW's online
+// code mounts it once more, with MountRom(const char *), when its network starts).
+static char mount_alias[4][32];
+static int nalias;
 static PlatMutex lock = PLAT_MUTEX_INIT;
 static uint64_t handles[NH];         // file index + 1; 0 is free
 static uint32_t handle_ovl[NH];      // overlay slot + 1 of an open handle, 0 = original
@@ -647,9 +651,23 @@ const char *romfs_overlay(size_t k, const char **file, uint64_t *size, int *is_a
     return overlays[k].name;
 }
 
+static int owns_name(const char *name, const char *path) {
+    size_t n = strlen(name);
+    return n && path && !strncmp(path, name, n) && path[n] == ':';
+}
+
 int romfs_owns(const char *path) {
-    size_t n = strlen(mount_name);
-    return n && path && !strncmp(path, mount_name, n) && path[n] == ':';
+    if (owns_name(mount_name, path)) return 1;
+    for (int i = 0; i < nalias; i++)
+        if (owns_name(mount_alias[i], path)) return 1;
+    return 0;
+}
+
+// The path inside the RomFS of "<mount>:/...", under the first name or an alias; NULL when another mount's.
+static const char *rom_relative(const char *path) {
+    const char *r = romfs_path_relative(mount_name, path);
+    for (int i = 0; !r && i < nalias; i++) r = romfs_path_relative(mount_alias[i], path);
+    return r;
 }
 
 int romfs_handle(uint64_t h) { return h > ROMFS_HANDLE_BASE && h < ROMFS_HANDLE_BASE + NH; }
@@ -660,8 +678,15 @@ uint32_t romfs_mount(const char *name) {
         strchr(name, ':'))
         return FS_R_INVALID;
     plat_mutex_lock(&lock);
-    if (*mount_name && strcmp(name, mount_name)) rt_fatal("second RomFS mount %s (%s is mounted)", name, mount_name);
-    strcpy(mount_name, name);
+    int known = !strcmp(name, mount_name);
+    for (int i = 0; i < nalias && !known; i++) known = !strcmp(name, mount_alias[i]);
+    if (!*mount_name) {
+        strcpy(mount_name, name);
+    } else if (!known) {
+        if (nalias == (int)(sizeof mount_alias / sizeof *mount_alias))
+            rt_fatal("RomFS mount %s: already %d names (%s first)", name, nalias + 1, mount_name);
+        strcpy(mount_alias[nalias++], name);
+    }
     plat_mutex_unlock(&lock);
     rt_log("fs mount %s: -> RomFS", name);
     return 0;
@@ -670,7 +695,7 @@ uint32_t romfs_mount(const char *name) {
 uint32_t romfs_open(uint64_t *out, const char *path, int mode) {
     fs_trace("rom", path);
     if (!out || mode != FS_OPEN_READ) return FS_R_UNSUPPORTED_OPEN;
-    const char *p = romfs_path_relative(mount_name, path);
+    const char *p = rom_relative(path);
     if (!p) return FS_R_PATH_NOT_FOUND;
     uint64_t i = file_index(p);
     if (i == UINT64_MAX) return FS_R_PATH_NOT_FOUND;
@@ -784,7 +809,7 @@ void romfs_close(uint64_t h) {
 
 uint32_t romfs_entry_type(int *out, const char *path) {
     if (!out) return FS_R_INVALID;
-    const char *p = romfs_path_relative(mount_name, path);
+    const char *p = rom_relative(path);
     if (!p) return FS_R_PATH_NOT_FOUND;
     if (file_index(p) != UINT64_MAX) {
         *out = FS_ENTRY_FILE;
@@ -814,7 +839,7 @@ static int list_from(const char *prefix, size_t n, const char *name, uint64_t si
 }
 
 uint32_t romfs_list(const char *path, int (*add)(const char *name, int is_dir, uint64_t size, void *ctx), void *ctx) {
-    const char *p = romfs_path_relative(mount_name, path);
+    const char *p = rom_relative(path);
     if (!p) return FS_R_PATH_NOT_FOUND;
     char prefix[4096], last[1024] = "";
     if (snprintf(prefix, sizeof prefix, *p ? "%s/" : "%s", p) >= (int)sizeof prefix) return FS_R_INVALID;
@@ -831,7 +856,7 @@ uint32_t romfs_list(const char *path, int (*add)(const char *name, int is_dir, u
 }
 
 // ---- overrides
-// nn::Result nn::fs::MountRom(const char *name, void *cache, size_t cache_size)
+// nn::Result nn::fs::MountRom(const char *name, void *cache, size_t cache_size), and MountRom(const char *name)
 static void ov_mount_rom(Cpu *c) { ret_x(c, romfs_mount(arg_p(c, 0))); }
 // nn::Result nn::fs::QueryMountRomCacheSize(size_t *out): no cache needed, the host reads the files directly
 static void ov_query_cache(Cpu *c) {
@@ -846,5 +871,6 @@ static void ov_initialize(Cpu *c) {
 }
 
 HOST_OVERRIDE("_ZN2nn2fs8MountRomEPKcPvm", ov_mount_rom);
+HOST_OVERRIDE("_ZN2nn2fs8MountRomEPKc", ov_mount_rom);   // the overload without a cache (MKW's online code)
 HOST_OVERRIDE("_ZN2nn2fs22QueryMountRomCacheSizeEPm", ov_query_cache);
 HOST_OVERRIDE("_ZN2nn2fs24InitializeForApplicationEv", ov_initialize);

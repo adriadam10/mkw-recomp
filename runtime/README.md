@@ -17,6 +17,7 @@ behind that code was seen there, not in MKW.
 | [input/](input/README.md) | Controllers, keyboard, mouse, gyro |
 | [gfx/](gfx/README.md) | NVN over Vulkan: API front end (`nvn/`) and back end (`vk/`) |
 | [platform/](platform/README.md) | Operating system layer: `linux.c`, `win32.c` |
+| [srv/](srv/README.md) | The online server built into the executable (`mkw.exe --server`): sign-in, friends, rooms, matchmaking, Gamesync, STUN and NAT check |
 | [ui/](ui/README.md) | Menu and overlay (Dear ImGui) |
 | [shaders/](shaders/README.md) | The runtime's own shaders (ASTC, FSR 1) |
 | [probes/](probes/README.md) | Self-tests per subsystem |

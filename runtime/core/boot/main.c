@@ -2,6 +2,7 @@
 //
 //   mkw [--exefs DIR] [--romfs DIR|FILE.nup|FILE.nx] [--nup FILE] [--profile DIR] <mode>
 //   mkw --unpack PACKAGE DEST [PREFIX...]   a .nup or .nx dump's files written out (sdk/fs/pack_unpack.c)
+//   mkw --server [--host ADDR]... [--seconds S]   the online server built in (runtime/srv), its own process
 //     --selftest        layout, dispatch table and host-function registry; needs no game files
 //     --replay DIR      a frame capture (MKW_CAPTURE, runtime/gfx/cap) replayed through the back end, no game
 //     --probe-loader    load and relocate the modules, check them against the measured 1.2.1 values
@@ -41,6 +42,7 @@
 #include "players.h"
 #include "platform/platform.h"
 #include "sha256.h"
+#include "srv.h"
 #include "ui/launcher/launcher.h"
 
 #define MAX_MODULES 16
@@ -517,6 +519,8 @@ static void portable_paths(RtConfig *c) {
 // build/mkw with --launcher. --play, MKW_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
 // MKW_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
 // gone).
+void net_host_boot(void);   // sdk/ov/net_host.c
+
 static int want_launcher(int argc, char **argv) {
     const char *done = getenv("MKW_LAUNCHED"), *off = getenv("MKW_NO_LAUNCHER");
     if ((done && *done) || (off && !strcmp(off, "1"))) return 0;
@@ -573,6 +577,8 @@ int main(int argc, char **argv) {
     // --unpack PACKAGE DEST [PREFIX...]: a packed dump's files written out (sdk/fs/pack_unpack.c), for the setup; first,
     // as the setup runs it before the game code exists (no address space, launcher or log file needed)
     if (argc >= 2 && !strcmp(argv[1], "--unpack")) return pack_unpack_main(argc - 2, argv + 2);
+    // --server: the online server (runtime/srv/srv.h), with no game, window or address space of its own
+    if (argc >= 2 && !strcmp(argv[1], "--server")) return srv_main(argc - 2, argv + 2);
     if (want_launcher(argc, argv)) return run_launcher(argc, argv);
 #ifdef __linux__
     // MKW_ALLOW_PTRACE=1: let a debugger attach (tools/run/stacks.py) under yama ptrace_scope 1, without root.
@@ -588,6 +594,7 @@ int main(int argc, char **argv) {
     // Timed guest waits (kernel.c block_inner) sleep in whole milliseconds; at the default 15.6 ms tick a 1 ms wait
     // costs a full tick. MKW_TIMER_1MS=0 keeps the default for comparison.
     if (cfg_bool("MKW_TIMER_1MS")) plat_timer_1ms();
+    net_host_boot();   // MKW_SERVER_HOST without the start screen: this PC's server, until the game closes
     cfg = (RtConfig){.exefs = rt_default_exefs, .romfs = rt_default_romfs, .profile = rt_default_profile,
                      .gpu = cfg_get("MKW_GPU")};
     portable_paths(&cfg);   // command-line paths below still win

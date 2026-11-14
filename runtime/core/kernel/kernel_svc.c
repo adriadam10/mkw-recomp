@@ -203,7 +203,18 @@ int kern_svc(Cpu *c, uint32_t imm) {
         int keep = core == -3 && t ? t->core : core;   // no update: the ideal core stays and must be in the mask
         uint32_t bad = (mask & ~APP_MASK) || core < -3 || core >= NCORE ? R_INVALID_CORE
                        : !mask || (keep >= 0 && !(mask >> keep & 1)) ? R_INVALID_COMBINATION : R_OK;
+        // An ideal core outside a valid mask: the online mode's network thread (main+0x14fe9f8) asks core 0 with mask
+        // 0x4 and aborts on the refusal, which it does not on a console. The mask wins, its first core is the ideal one.
+        if (t && bad == R_INVALID_COMBINATION && mask) {
+            static int n;
+            if (n++ < 4)
+                rt_log("kernel: SetThreadCoreMask(core %d, mask %#llx): ideal core outside the mask, core %d taken", core,
+                       (unsigned long long)mask, __builtin_ctzll(mask));
+            core = __builtin_ctzll(mask), bad = R_OK;
+        }
         if (t && bad) {
+            rt_log("kernel: SetThreadCoreMask(core %d, mask %#llx) refused (%#x): thread ideal core %d, mask %#llx", core,
+                   (unsigned long long)mask, bad, t->core, (unsigned long long)t->mask);
             x[0] = bad;
             unlock();
             return 1;

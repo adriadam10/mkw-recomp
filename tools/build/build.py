@@ -29,9 +29,13 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "i18n"))
 import catalog  # noqa: E402  (tools/i18n: the text catalogs from i18n/*.po)
+
+if TYPE_CHECKING:
+    from srvdeps import Deps
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "runtime"
@@ -93,7 +97,7 @@ WINDOWS = Target(
     [f"-I{WIN / 'deps/include'}"],
     # 16 MiB main-thread stack, as mkw; the map as on Linux.
     [f"-L{WIN / 'deps/lib'}", "-fuse-ld=lld", "-Wl,--stack,16777216", "-Wl,--Map=$builddir/mkw.map"],
-    ["-lpsapi", "-lbcrypt", "-ladvapi32", "-lws2_32", "-liphlpapi", "-luser32", "-lole32", "-luuid", "-lshell32", "-lgdi32", "-ldwmapi", "-lruntimeobject", "-lwinmm", "-lvulkan-1", "-lSDL3", "-lopus",
+    ["-lpsapi", "-lbcrypt", "-ladvapi32", "-lws2_32", "-liphlpapi", "-lwinhttp", "-lcrypt32", "-luser32", "-lole32", "-luuid", "-lshell32", "-lgdi32", "-ldwmapi", "-lruntimeobject", "-lwinmm", "-lvulkan-1", "-lSDL3", "-lopus",
      "-l:libvpx.a", "-l:libzstd.a", "-l:libc++.a", "-l:libc++abi.a", "-l:libunwind.a", "-l:libwinpthread.a"],
     WIN / "deps/include/vma",
     str(WIN / "llvm-mingw/bin/x86_64-w64-mingw32-windres"),
@@ -195,10 +199,11 @@ RT_EXPORTS = ("rt_dispatch", "rt_sj_owner", "rt_svc", "rt_udf", "rt_ticks", "rt_
 
 def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: Path | None,
                runtime_only: bool = False, ld_extra: list[str] | None = None,
-               sys_flags: list[str] | None = None) -> str:  # fmt: skip
+               sys_flags: list[str] | None = None, srv: "Deps | None" = None) -> str:  # fmt: skip
     """dist: the player's build into that folder, the runtime (mkw, mkw.exe) and the game code apart (mkwgame.so,
     mkwgame.dll); else build/mkw with the game code linked in. runtime_only (with dist): the runtime alone, what a
-    release ships and the CI builds, without the game's generated C."""
+    release ships and the CI builds, without the game's generated C. srv: the online server's libraries
+    (tools/build/srvdeps.py), compiled with their own flags into libsrvdeps.a, linked into the executable."""
     inc = " ".join(f"-I{d}" for d in sorted({RUNTIME} | {p.parent for p in RUNTIME.rglob("*.h")}))
     gid = f'-DRT_GAME_ID=\\"{game_id()}\\"'
     pic = ["-fPIC"] if dist and target is LINUX else []
@@ -217,7 +222,11 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
     lines = [
         f"builddir = {out}",
         f"genflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} -I{RUNTIME / 'cpu'}",
-        f"rtflags = {' '.join(RT_FLAGS + target.rt_flags + rt_extra)} {gid} {inc} -I{gen} -I{out / 'rt'} -I{target.vma}",
+        f"rtflags = {' '.join(RT_FLAGS + target.rt_flags + rt_extra)} {gid} {inc} -I{gen} -I{out / 'rt'} -I{target.vma}"
+        + "".join(f" -I{d}" for d in (srv.includes if srv else []))
+        + "".join(f" {d}" for d in (srv.defines if srv else [])),
+        # third-party C as its authors ship it: no warnings of ours, no debug info (it is not ours to step through)
+        f"depflags = -std=gnu11 -O2 -w -fno-strict-aliasing {' '.join(ARCH_FLAGS[ARCH] + target.rt_flags + rt_extra + pic)}",
         f"tabflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} {gid} {inc} -I{gen}",
         f"ldflags = {' '.join(link_flags)}",
         (
@@ -237,6 +246,17 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
             "  depfile = $out.d\n  deps = gcc\n  description = cc $in"
         ),
         f"rule ar\n  command = rm -f $out && {target.ar} rcs $out $in\n  description = ar $out",
+        (
+            f"rule depcc\n  command = {cc} $depflags $libflags -MD -MF $out.d -c $in -o $out\n  depfile = $out.d"
+            "\n  deps = gcc\n  description = dep $in"
+        ),
+        # the archive made anew (no stale member), its inputs in a response file: Windows' command line is 32 KiB.
+        # How to delete depends on the machine that builds (Linux cross-compiles the Windows exe), not the target; cmd's
+        # parentheses end the "if" (without them the archiver would be part of it and run only when the file exists).
+        (
+            f"rule deplib\n  command = {'cmd /c (if exist $out del $out) &' if os.name == 'nt' else 'rm -f $out &&'}"
+            f" {target.ar} rcs $out @$out.rsp\n  rspfile = $out.rsp\n  rspfile_content = $in\n  description = ar $out"
+        ),
         (
             f"rule solink\n  command = {' '.join([target.cc, *(sys_flags or [])])} -shared -fuse-ld=lld -o $out $in $solibs"
             "\n  description = link $out"
@@ -268,6 +288,16 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
         obj = out / "rt" / rel.with_suffix(".o")
         rt_objs.append(str(obj))
         lines.append(f"build {obj}: {'rtcxx' if src.suffix == '.cpp' else 'rtcc'} {src}")
+    if srv:
+        dep_objs = []
+        for name, (srcs, flags) in srv.groups.items():
+            top = Path(os.path.commonpath([s.parent for s in srcs]))
+            for src in srcs:
+                obj = out / "srvdeps" / name / src.relative_to(top).with_suffix(".o")
+                dep_objs.append(str(obj))
+                lines.append(f"build {obj}: depcc {src}\n  libflags = {' '.join(flags)}")
+        rt_objs.append(str(out / "libsrvdeps.a"))  # an archive: the link takes only the objects the runtime calls
+        lines.append(f"build {rt_objs[-1]}: deplib {' '.join(dep_objs)}")
     if target.windres:  # windres writes no depfile: the manifest and the icon it embeds are listed by hand
         rc = RUNTIME / "platform/mkw.rc"
         ico = out / "rt/platform/mkw.ico"  # drawn by tools/build/icon.py, never committed
@@ -355,6 +385,11 @@ def main() -> None:
         if not path.exists() or path.read_text() != text:  # an unchanged file keeps its mtime: no rebuild
             path.write_text(text)
     catalog.generate(args.out / "rt/i18n")  # the menu texts of every language (i18n/*.po)
+    # the online server's libraries (runtime/srv), fetched and checked on first use; imported here only: prepare.py
+    # imports this module in the player's package, which has no tools/build/srvdeps.py
+    import srvdeps  # noqa: PLC0415
+
+    srv = srvdeps.ensure(target is WINDOWS)
     # which headers the library is built with, for the start screen (runtime/core/boot/gamelib.c rt_game_present)
     if dist:
         dist.mkdir(parents=True, exist_ok=True)
@@ -363,7 +398,7 @@ def main() -> None:
     (args.out / "build.ninja").write_text(
         # the lifted code and its library take the sysroot only for another CPU: an x86-64 release's stay as they were
         ninja_file(
-            target, args.gen, args.out, fp + sys_flags, dist, args.runtime_only, sys_ld, sys_flags if cross else None
+            target, args.gen, args.out, fp + sys_flags, dist, args.runtime_only, sys_ld, sys_flags if cross else None, srv
         )
     )
     if target is LINUX and not dist:

@@ -19,3 +19,5 @@ __pycache__/
 
 # Local agent tooling settings (private, never published)
 .agents-*
+# A hosted server's data (runtime/srv, server/ next to mkw): private keys and account secrets
+/server/

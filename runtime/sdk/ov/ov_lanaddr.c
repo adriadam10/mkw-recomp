@@ -13,17 +13,53 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #endif
 
 #include "cfg.h"
 #include "host.h"
+#include "net_online.h"
 #include "ov.h"
 
 static int lan_only(struct in_addr a) { return ov_lan_only(ntohl(a.s_addr)); }
 
-// ---- the LAN address nifm reports (ov_net.c): MKW_LAN_IP, else the best interface that is up with a local network
-// address (lan_only, not loopback), read from the system's interface list (nothing is sent), with its mask. Pia
-// builds its broadcast from both. Best first (a tie keeps the first in the system's order):
+static int is_tailscale(struct in_addr a) { return (ntohl(a.s_addr) >> 22) == (100u << 2 | 1); }   // 100.64.0.0/10
+
+// This PC's address on the route to peer (nothing is sent: a datagram socket's connect only picks the route)
+static uint32_t route_to(uint32_t peer) {
+#ifdef _WIN32
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa)) return 0;
+    SOCKET s = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s == INVALID_SOCKET) return 0;
+    int len;
+#else
+    int s = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0) return 0;
+    socklen_t len;
+#endif
+    struct sockaddr_in d = {.sin_family = AF_INET, .sin_port = htons(49152)}, me = {0};
+    d.sin_addr.s_addr = peer;
+    len = sizeof me;
+    uint32_t r = 0;
+    if (!connect(s, (struct sockaddr *)&d, sizeof d) && !getsockname(s, (struct sockaddr *)&me, &len))
+        r = me.sin_addr.s_addr;
+#ifdef _WIN32
+    closesocket(s);
+#else
+    close(s);
+#endif
+    return r;
+}
+
+// ---- the LAN address nifm reports (ov_net.c): MKW_LAN_IP; else, with MKW_LAN_PEERS (a virtual LAN without
+// broadcast), the address on the route to the first of them; else the address of the network MKW_NETWORK names (home,
+// tailscale: the Online page's choice); else the best interface that is up with a local network address (lan_only,
+// not loopback), read from the system's interface list (nothing is sent), with its mask. Pia builds its broadcast from
+// both. An address of Tailscale's 100.64.0.0/10 gets that whole range as its mask: Tailscale gives each PC a /32 that
+// holds no other PC, and with the range the others are on the same network for Pia (a local network below, not a /32).
+// Best first (a tie keeps the first in the system's order):
 //   3  a network with the default route: the one the PC reaches its router and the other PCs through
 //   2  another local network: a virtual machine's host-only adapter (VirtualBox 192.168.56.1, Hyper-V), a cable
 //      between two PCs
@@ -48,6 +84,7 @@ typedef struct {
 } LanBest;
 
 static void lan_offer(LanBest *b, struct in_addr x, struct in_addr xm, int default_route, const char *ifname) {
+    if (is_tailscale(x)) xm.s_addr = htonl(0xffc00000u);   // its /32 widened to the range (above)
     int s = lan_score(x, xm, default_route);
     static int logged;   // the candidates of the first look, for a report
     if (logged < 8) {
@@ -82,6 +119,16 @@ int ov_lan_address(uint8_t ip[4], uint8_t mask[4]) {
     LanBest best = {0};
     const char *e = cfg_get("MKW_LAN_IP");
     if (e && *e && inet_pton(AF_INET, e, &want) != 1) rt_log("nifm: MKW_LAN_IP %s is not an IPv4 address", e);
+    uint32_t first;
+    if (!want.s_addr && ov_lan_peer_first(&first) && !(want.s_addr = route_to(first)))
+        rt_log("nifm: no route to the first of MKW_LAN_PEERS");
+    if (!want.s_addr && strcmp(net_network(), "auto")) {   // MKW_NETWORK home or tailscale: that network's address
+        NetAddrs na;
+        net_addrs(&na);
+        const char *ip = net_network_address(&na);
+        if (*ip) inet_pton(AF_INET, ip, &want);
+        else rt_log("nifm: the %s network is not up", net_network());
+    }
 #ifdef _WIN32
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa)) return -1;
@@ -121,6 +168,7 @@ int ov_lan_address(uint8_t ip[4], uint8_t mask[4]) {
 #endif
     if (best.seen) a = best.a, m = best.m;
     if (!a.s_addr && want.s_addr) a = want, m.s_addr = htonl(0xffffff00u);   // MKW_LAN_IP not on an interface: /24
+    if (a.s_addr && is_tailscale(a)) m.s_addr = htonl(0xffc00000u);   // the range, even when picked by want
     if (!a.s_addr) {
         rt_log("nifm: no network interface with a local network address: no LAN");
         return -1;
@@ -130,8 +178,9 @@ int ov_lan_address(uint8_t ip[4], uint8_t mask[4]) {
         char t[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &a, t, sizeof t);
         rt_log("nifm: %s has a /32 mask and no other interface has a local network address: the game refuses it "
-               "(error 2318-0007); LAN play needs a network with a broadcast address", t);
+               "(error 2318-0007); LAN play needs a network with a broadcast address, or MKW_LAN_PEERS", t);
     }
+    ov_lan_set_broadcast(a.s_addr | ~m.s_addr);
     memcpy(ip, &a, 4);
     memcpy(mask, &m, 4);
     return 0;

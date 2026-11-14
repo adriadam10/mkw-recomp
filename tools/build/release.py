@@ -113,11 +113,20 @@ def check_no_game(root: Path) -> None:
             sys.exit(f"{p}: game code in the release")
 
 
+def srv_licences() -> dict[str, Path]:
+    """The online server's libraries, linked into the executable (tools/build/srvdeps.py): their licence files."""
+    import srvdeps  # noqa: PLC0415  (fetched by the build; nothing to download when it ran)
+
+    return srvdeps.ensure(False).licences
+
+
 def licenses(dst: Path) -> None:
     dst.mkdir()
     shutil.copy2(ROOT / "LICENSE", dst / "mkw-recomp-LICENSE")
     for name, rel in LICENSES.items():
         shutil.copy2(sysroot.SYSROOT / rel, dst / f"{name}-copyright")
+    for name, path in srv_licences().items():
+        shutil.copy2(path, dst / f"{name}-LICENSE")
 
 
 def linux(dist: Path, version: str, arch: str = "x86_64") -> Path:
@@ -172,6 +181,8 @@ def windows(dist: Path, version: str) -> Path:
         for p in sorted((ROOT / "build/win/deps/share/licenses").rglob("*")):
             if p.is_file():
                 z.write(p, top / "licenses" / p.relative_to(ROOT / "build/win/deps/share/licenses"))
+        for name, path in srv_licences().items():
+            z.write(path, top / f"licenses/{name}-LICENSE")
     return out
 
 
