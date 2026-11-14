@@ -2289,3 +2289,313 @@ msgstr ""
 msgctxt "UI_PLAYER_FAILED"
 msgid "The profile could not be saved (the log says why)."
 msgstr "Le profil n'a pas pu être enregistré (le journal indique pourquoi)."
+
+msgctxt "UI_LAUNCH_ONLINE"
+msgid "Online play"
+msgstr "Jeu en ligne"
+
+msgctxt "UI_ONLINE_TITLE"
+msgid "Online play with friends"
+msgstr "Jouer en ligne avec des amis"
+
+msgctxt "UI_ONLINE_ENABLE"
+msgid "How you play online"
+msgstr "Comment vous jouez en ligne"
+
+msgctxt "UI_ONLINE_ENABLE_DESC"
+msgid "The game stays offline, like a console with no network. LAN play below still works."
+msgstr ""
+"Le jeu reste hors ligne, comme une console sans réseau. Le jeu en LAN, plus bas, marche quand "
+"même."
+
+msgctxt "UI_ONLINE_SERVER"
+msgid "Server"
+msgstr "Serveur"
+
+msgctxt "UI_ONLINE_SERVER_HINT"
+msgid "address:port, like 100.x.y.z:8443"
+msgstr "adresse:port, par exemple 100.x.y.z:8443"
+
+msgctxt "UI_ONLINE_SAVE"
+msgid "Save"
+msgstr "Enregistrer"
+
+msgctxt "UI_ONLINE_TEST"
+msgid "Connect"
+msgstr "Se connecter"
+
+msgctxt "UI_ONLINE_TESTING"
+msgid "Asking the server..."
+msgstr "Interrogation du serveur..."
+
+msgctxt "UI_ONLINE_REACHED"
+msgid "Server reached: online play is ready."
+msgstr "Serveur joint : le jeu en ligne est prêt."
+
+msgctxt "UI_ONLINE_FAILED"
+msgid "Not reached: %s"
+msgstr "Injoignable : %s"
+
+msgctxt "UI_ONLINE_MY_CODE"
+msgid "Your friend code"
+msgstr "Votre code ami"
+
+msgctxt "UI_ONLINE_COPY"
+msgid "Copy"
+msgstr "Copier"
+
+msgctxt "UI_ONLINE_COPIED"
+msgid "Copied"
+msgstr "Copié"
+
+msgctxt "UI_ONLINE_CODE_NOTE"
+msgid ""
+"Give it to your friends: they send you a request from their Online page, you accept it below."
+msgstr ""
+"Donnez-le à vos amis : ils vous envoient une demande depuis leur page Jeu en ligne, vous "
+"l'acceptez ci-dessous."
+
+msgctxt "UI_ONLINE_ADD"
+msgid "Add a friend"
+msgstr "Ajouter un ami"
+
+msgctxt "UI_ONLINE_SEND"
+msgid "Send request"
+msgstr "Envoyer la demande"
+
+msgctxt "UI_ONLINE_RECEIVED"
+msgid "Requests received (%d)"
+msgstr "Demandes reçues (%d)"
+
+msgctxt "UI_ONLINE_ACCEPT"
+msgid "Accept"
+msgstr "Accepter"
+
+msgctxt "UI_ONLINE_DECLINE"
+msgid "Decline"
+msgstr "Refuser"
+
+msgctxt "UI_ONLINE_SENT"
+msgid "Requests sent (%d)"
+msgstr "Demandes envoyées (%d)"
+
+msgctxt "UI_ONLINE_CANCEL"
+msgid "Cancel"
+msgstr "Annuler"
+
+msgctxt "UI_ONLINE_FRIENDS"
+msgid "Friends (%d)"
+msgstr "Amis (%d)"
+
+msgctxt "UI_ONLINE_IS_ONLINE"
+msgid "online"
+msgstr "en ligne"
+
+msgctxt "UI_ONLINE_IS_OFFLINE"
+msgid "offline"
+msgstr "hors ligne"
+
+msgctxt "UI_ONLINE_REMOVE"
+msgid "Remove"
+msgstr "Retirer"
+
+msgctxt "UI_ONLINE_REFRESH"
+msgid "Refresh"
+msgstr "Actualiser"
+
+msgctxt "UI_ONLINE_NONE"
+msgid "No one yet."
+msgstr "Personne pour l'instant."
+
+msgctxt "UI_ONLINE_DONE"
+msgid "Done."
+msgstr "C'est fait."
+
+msgctxt "UI_ONLINE_NEED_SERVER"
+msgid "Set the server above first."
+msgstr "Indiquez d'abord le serveur ci-dessus."
+
+msgctxt "UI_ONLINE_HOWTO"
+msgid "How to play together"
+msgstr "Comment jouer ensemble"
+
+msgctxt "UI_ONLINE_HOWTO_TEXT"
+msgid ""
+"1. One player chooses \"I host\" and gives the address shown in gold.\n2. The others choose \"I "
+"join a friend\" and write that address.\n3. Everyone adds the others with their friend codes, "
+"then plays from the game's online menu."
+msgstr ""
+"1. Un joueur choisit « J'héberge » et donne l'adresse affichée en doré.\n2. Les autres "
+"choisissent « Je rejoins un ami » et écrivent cette adresse.\n3. Chacun ajoute les autres avec "
+"leur code ami, puis joue depuis le menu en ligne du jeu."
+
+msgctxt "UI_ONLINE_FIREWALL"
+msgid ""
+"The first time online, Windows may ask to let mkw.exe through its firewall: allow private "
+"networks, or the other players cannot reach your game."
+msgstr ""
+"La première fois en ligne, Windows peut demander d'autoriser mkw.exe dans son pare-feu : "
+"autorisez les réseaux privés, sinon les autres joueurs ne joignent pas votre partie."
+
+msgctxt "UI_ONLINE_SERVER_SAYS"
+msgid "The server answered: %s"
+msgstr "Le serveur répond : %s"
+
+msgctxt "UI_ONLINE_FIRST_SIGNIN"
+msgid ""
+"Server reached. This friend code is new: the server records it at your first online sign-in in "
+"the game (online play, 1 player). Friend requests work after that."
+msgstr ""
+"Serveur joint. Ce code ami est nouveau : le serveur l'enregistre à votre première connexion en "
+"ligne dans le jeu (jeu en ligne, 1 joueur). Les demandes d'ami marchent ensuite."
+
+msgctxt "UI_ONLINE_LAN"
+msgid "LAN play through Tailscale"
+msgstr "Jeu en LAN par Tailscale"
+
+msgctxt "UI_ONLINE_LAN_ENABLE"
+msgid "LAN play (Wireless Play becomes LAN Play)"
+msgstr "Jeu en LAN (le Jeu sans fil devient le Jeu en LAN)"
+
+msgctxt "UI_ONLINE_LAN_PEERS"
+msgid "Other PCs"
+msgstr "Autres PC"
+
+msgctxt "UI_ONLINE_LAN_PEERS_HINT"
+msgid "Tailscale addresses, like 100.x.y.z, 100.a.b.c"
+msgstr "adresses Tailscale, par exemple 100.x.y.z, 100.a.b.c"
+
+msgctxt "UI_ONLINE_LAN_DESC"
+msgid ""
+"LAN Play finds the other games by broadcast, which Tailscale does not carry: write here the "
+"Tailscale address of each other player's PC (they write yours), then everyone opens Wireless Play "
+"in the game. At home on the same box, leave it empty. Applies at the next start of the game."
+msgstr ""
+"Le Jeu en LAN trouve les autres parties par diffusion, que Tailscale ne transmet pas : écrivez "
+"ici l'adresse Tailscale du PC de chaque autre joueur (ils écrivent la vôtre), puis tout le monde "
+"ouvre le Jeu sans fil dans le jeu. À la maison sur la même box, laissez vide. S'applique au "
+"prochain lancement du jeu."
+
+msgctxt "UI_ONLINE_NETWORK"
+msgid "Network"
+msgstr "Réseau"
+
+msgctxt "UI_ONLINE_NET_AUTO"
+msgid "Automatic (Tailscale, else the home network)"
+msgstr "Automatique (Tailscale, sinon la maison)"
+
+msgctxt "UI_ONLINE_NET_HOME"
+msgid "Home network (the box), without Tailscale"
+msgstr "Réseau de la maison (la box), sans Tailscale"
+
+msgctxt "UI_ONLINE_NET_TS"
+msgid "Tailscale"
+msgstr "Tailscale"
+
+msgctxt "UI_ONLINE_NET_ADDRS"
+msgid "This PC: home network %s, Tailscale %s"
+msgstr "Ce PC : maison %s, Tailscale %s"
+
+msgctxt "UI_ONLINE_NET_NONE"
+msgid "none"
+msgstr "aucune"
+
+msgctxt "UI_ONLINE_HOST_DESC"
+msgid ""
+"The server is part of the game: it starts with it and stops when it closes. It answers your home "
+"network and Tailscale only, never the internet."
+msgstr ""
+"Le serveur fait partie du jeu : il démarre avec lui et s'arrête quand il se ferme. Il ne répond "
+"qu'au réseau de la maison et à Tailscale, jamais à Internet."
+
+msgctxt "UI_ONLINE_HOST_OFF"
+msgid "Stopped."
+msgstr "Arrêté."
+
+msgctxt "UI_ONLINE_HOST_STARTING"
+msgid "Starting..."
+msgstr "Démarrage..."
+
+msgctxt "UI_ONLINE_HOST_RUNNING"
+msgid "Running, on %s"
+msgstr "En marche, sur %s"
+
+msgctxt "UI_ONLINE_HOST_FAILED"
+msgid "Stopped: %s"
+msgstr "Arrêté : %s"
+
+msgctxt "UI_ONLINE_HOST_OTHER"
+msgid "Another server already answers on this PC (port 8443): stop it to host from here."
+msgstr "Un autre serveur répond déjà sur ce PC (port 8443) : arrêtez-le pour héberger d'ici."
+
+msgctxt "UI_ONLINE_HOST_GIVE_HOME"
+msgid "Friends at home write: %s:%d"
+msgstr "Les amis à la maison écrivent : %s:%d"
+
+msgctxt "UI_ONLINE_HOST_GIVE_TS"
+msgid "Friends through Tailscale write: %s:%d"
+msgstr "Les amis par Tailscale écrivent : %s:%d"
+
+msgctxt "UI_ONLINE_HOST_START"
+msgid "Start"
+msgstr "Démarrer"
+
+msgctxt "UI_ONLINE_HOST_STOP"
+msgid "Stop"
+msgstr "Arrêter"
+
+msgctxt "UI_ONLINE_HOST_FIREWALL"
+msgid "Allow in the firewall"
+msgstr "Autoriser dans le pare-feu"
+
+msgctxt "UI_ONLINE_HOST_FIREWALL_DESC"
+msgid "Once per PC (Windows asks first): lets your friends' PCs reach the server and your game."
+msgstr ""
+"Une fois par PC (Windows le demande) : laisse les PC de vos amis joindre le serveur et votre jeu."
+
+msgctxt "UI_NOTICE_ERROR"
+msgid "Error %s: %s"
+msgstr "Erreur %s : %s"
+
+msgctxt "UI_NOTICE_NO_NETWORK"
+msgid "No connection: %s"
+msgstr "Pas de connexion : %s"
+
+msgctxt "UI_NOTICE_OFFLINE"
+msgid "online play is off on this PC (start screen > Online play)."
+msgstr "le jeu en ligne est désactivé sur ce PC (écran de démarrage > Jeu en ligne)."
+
+msgctxt "UI_NOTICE_NO_SERVER"
+msgid "no server is set (start screen > Online play)."
+msgstr "aucun serveur n'est indiqué (écran de démarrage > Jeu en ligne)."
+
+msgctxt "UI_NOTICE_SERVER"
+msgid "is the server %s running and reachable? (start screen > Online play > Test the server)"
+msgstr ""
+"le serveur %s est-il lancé et joignable ? (écran de démarrage > Jeu en ligne > Tester le serveur)"
+
+msgctxt "UI_ONLINE_PROFILE"
+msgid "The others see you as: %s (the start screen's Profile row changes it)"
+msgstr "Les autres vous voient sous le nom : %s (la ligne Profil de l'écran de démarrage le change)"
+
+msgctxt "UI_ONLINE_PROFILE_DEFAULT"
+msgid "Still the default name: give your profile a name of its own so your friends tell you apart."
+msgstr ""
+"C'est encore le nom par défaut : donnez un nom à votre profil pour que vos amis vous "
+"reconnaissent."
+
+msgctxt "UI_ONLINE_MODE_OFF"
+msgid "Off"
+msgstr "Désactivé"
+
+msgctxt "UI_ONLINE_MODE_HOST"
+msgid "I host (my friends join me)"
+msgstr "J'héberge (mes amis me rejoignent)"
+
+msgctxt "UI_ONLINE_MODE_JOIN"
+msgid "I join a friend"
+msgstr "Je rejoins un ami"
+
+msgctxt "UI_ONLINE_JOIN_DESC"
+msgid "Write the address your friend gives you (it ends with :8443), then Connect."
+msgstr "Écrivez l'adresse que votre ami vous donne (elle finit par :8443), puis Se connecter."
