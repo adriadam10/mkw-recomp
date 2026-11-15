@@ -51,16 +51,27 @@ The game picks a frame time of 1/60 or 1/30 s itself (Settings > Screen > Frame 
 race runs at full speed (`game: speed 1.00x` in the log). Below 30 fps it runs in slow motion: in a Grand Prix that
 was ~0.9x.
 
-## The Deck slows itself down every few seconds
+## If the Deck slows itself down every few seconds
 
-During a race the Deck repeatedly drops to 400 MHz CPU and 200 MHz GPU at ~3 W, for 4–20 s at a time, and then the
-game runs at 0.1–0.3x. It happened in 36–46 % of every long run:
+On the Deck these notes come from, the CPU dropped to 400 MHz and the GPU to 200 MHz again and again, at ~3 W, for
+4–20 s at a time. In those stretches the game ran at 0.1–0.3x. It took 36–46 % of every long run. It happened:
 - on the charger and on battery,
-- at the 15 W default and with the TDP limit at 12 W,
-- at 56–74 °C, so it is not heat,
+- at 12 W and 15 W,
+- at 56–74 °C,
 - and with a CPU stress test without the game too.
 
-It is the Deck, not the game. The game cannot change it.
+The cause was the fan's speed sensor. The fan turned, but the Deck read 0 rpm and reported a fan fault, and its
+firmware then held the clocks down under load. With *Updated fan control* off in Steam's settings, the clocks stayed
+at 400 MHz all the time. Reseating the fan's cable did not help, so it needs a new fan.
+
+To check a Deck, read the fan fault and the speed (in Desktop Mode's terminal):
+
+```
+cat /sys/class/hwmon/hwmon*/fan1_fault /sys/class/hwmon/hwmon*/fan1_input 2>/dev/null
+```
+
+`1` and `0` mean the same fault. A healthy Deck reports `0` and a speed of some thousand rpm. The game cannot change
+this. The frame times above come from that Deck, so a healthy one may be a little faster.
 
 ## Fixed along the way
 
