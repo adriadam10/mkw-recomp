@@ -8,6 +8,31 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
 
 ### Changes
 
+- **The start screen's main page, with the update at the top right** (#357 by @ViniciusStanula): the profile that
+  plays is a chip beside Play (it opens Profiles) instead of a menu row, the first controller SDL sees sits under
+  Play — with how many more, and a click through to Controls, refreshed when a pad is connected or removed — and the
+  update is offered as a card in the upper right with the release, the size in use, Update and What's new. The
+  desktop shortcut is offered once after setup instead of taking a menu entry, and the game files' state at the
+  lower left names the version the last setup installed.
+- **Settings in five tabs plus Advanced and Hacks** (#358 by @ViniciusStanula): the eight tabs become Screen,
+  Graphics, Sound, Controls and General, with Game and Menu folded into General (both languages, LAN play, the update
+  check) — every row kept its setting, only where it lives changed. Graphics opens with the Quality preset and the
+  four rows it sets hanging under it, then a Resolution group and a Performance group, and the FSR sharpness row is
+  greyed out unless the scaling is AMD FSR 1. The row described on the right is the one the player used last, the
+  mouse's or the cursor's, never both; the start screen's rows show a changed value with a dot instead of the
+  default and "after restart" notes (nothing there needs a restart), and Graphics gains **Auto-set**, the best preset,
+  resolution and FSR for the card and screen in use, only when the player asks for it — the defaults stay the
+  console's — with an Undo.
+- **The Game files page follows what is installed** (#359 by @ViniciusStanula): with nothing set up it is three
+  numbered steps — the player's copy, how its RomFS is kept as two cards saying what each costs, then Set up with the
+  folder it installs to — and once installed a card of what is there (game version, the port version that set it up,
+  how the RomFS is kept, the copy and the folder) with the steps folded under Set up again. A failed setup gets a red
+  card above the steps with the reason, Try again (the steps already done are kept) and the log folder.
+- **A Tools page on the start screen** (#360 by @ViniciusStanula): Back up saves zips the profile into the game
+  folder's `backups/`, Add to Steam puts the game in every Steam user's `shortcuts.vdf` (the same executable
+  replaced, never doubled), Undo update brings back the version the last update replaced (the files it replaced are
+  kept for it), and Report a problem copies the system's details to the clipboard and opens the bug form. The
+  scripts run off the UI thread, one job at a time.
 - **The Steam Deck renders the race at 720 lines** (#317 by @andreknieriem): the Deck's picture is 1280x720 on its
   screen, but the 3D scene still rendered at the console's docked 2560x1440. @andreknieriem measured it on a Deck: those
   passes took 16 of the GPU's 42 ms a frame. The Deck's profile now sets Resolution to 720, and races went from about
