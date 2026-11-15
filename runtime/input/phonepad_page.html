@@ -6,39 +6,41 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#10161f">
+<meta name="theme-color" content="#14161b">
 <title>MKW Recomp</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
 :root{--pw:1vw;--ph:1vh;--rot:0deg;--u:min(var(--ph),calc(var(--pw)*.34))}
-html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;background:#10161f;color:#e8edf5;
+html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;background:#14161b;color:#f4f5f7;
   font:600 15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none;-webkit-text-size-adjust:100%}
 #pad{position:absolute;left:50%;top:50%;width:calc(var(--pw)*100);height:calc(var(--ph)*100);margin:calc(var(--ph)*-50) 0 0 calc(var(--pw)*-50);
   transform:rotate(var(--rot));padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
   display:grid;grid-template-columns:1fr minmax(120px,calc(var(--pw)*22)) 1fr;grid-template-rows:calc(var(--ph)*15) 1fr;gap:calc(var(--ph)*1.5) calc(var(--pw)*1.2)}
 body.r90 #pad{padding:max(8px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)) max(10px,env(safe-area-inset-top))}
 body.r270 #pad{padding:max(8px,env(safe-area-inset-left)) max(10px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom))}
-.b{display:flex;align-items:center;justify-content:center;border-radius:14px;background:#1d2734;border:2px solid #2f3d50;
-  color:#c9d4e3;text-align:center;line-height:1.1}
+.b{display:flex;align-items:center;justify-content:center;border-radius:14px;background:#22262e;border:2px solid #3a404b;
+  color:#f4f5f7;text-align:center;line-height:1.1}
 .b small{display:block;font-size:.68em;font-weight:500;opacity:.7}
-.b.on{background:#3b82f6;border-color:#93c5fd;color:#fff;transform:scale(.97)}
+.b.on{background:#fff;border-color:#e0202b;color:#c1121f;transform:scale(.97)}
 .row{display:flex;gap:calc(var(--pw)*1.2)}.row .b{flex:1}
 #top{grid-column:1/4;display:grid;grid-template-columns:1fr 1fr minmax(120px,calc(var(--pw)*22)) 1fr 1fr;gap:calc(var(--pw)*1.2)}
-#status{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#9fb0c6;min-width:0}
-#status b{color:#e8edf5;font-size:15px}
-#bar{width:90%;height:5px;border-radius:3px;background:#1d2734;margin-top:5px;position:relative;visibility:hidden}
-#bar i{position:absolute;top:-3px;width:11px;height:11px;border-radius:50%;background:#facc15;left:50%;margin-left:-5.5px}
+#status{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#b9bec7;min-width:0}
+#status b{color:#f4f5f7;font-size:15px}
+#bar{width:90%;height:5px;border-radius:3px;background:#3a404b;margin-top:5px;position:relative;visibility:hidden}
+#bar i{position:absolute;top:-3px;width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #e0202b;left:50%;margin-left:-5.5px}
+#flag{width:90%;height:6px;margin-top:7px;border-radius:2px;background:repeating-conic-gradient(#f7f7f5 0 25%,#14161b 0 50%) 0 0/6px 6px}
+#auto{display:none;margin-left:10px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ff6b72}
 #left,#right,#mid{position:relative;min-height:0}
-#zone{position:absolute;inset:0;border-radius:18px;border:2px dashed #263244}
+#zone{position:absolute;inset:0;border-radius:18px;border:2px dashed #3a404b}
 #base,#knob{position:absolute;border-radius:50%;pointer-events:none;left:50%;top:50%}
-#base{width:calc(var(--u)*42);height:calc(var(--u)*42);margin:calc(var(--u)*-21) 0 0 calc(var(--u)*-21);border:2px solid #2f3d50;background:#161e29}
-#knob{width:calc(var(--u)*19);height:calc(var(--u)*19);margin:calc(var(--u)*-9.5) 0 0 calc(var(--u)*-9.5);background:#3b4b61;border:2px solid #5a6f8c}
+#base{width:calc(var(--u)*42);height:calc(var(--u)*42);margin:calc(var(--u)*-21) 0 0 calc(var(--u)*-21);border:2px solid #3a404b;background:#1b1e24}
+#knob{width:calc(var(--u)*19);height:calc(var(--u)*19);margin:calc(var(--u)*-9.5) 0 0 calc(var(--u)*-9.5);background:#e0202b;border:2px solid #ff8a90}
 #wheel{position:absolute;inset:0;display:none;grid-template-rows:1fr 1.5fr;gap:calc(var(--ph)*1.5)}
 #wheel .b{font-size:19px}
 body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #knob{display:none}body.wheel #bar{visibility:visible}
 #face{position:absolute;inset:0}
 #face .b{position:absolute;width:calc(var(--u)*23);height:calc(var(--u)*23);border-radius:50%;font-size:22px}
-#face [data-b="0"]{right:0;top:50%;width:calc(var(--u)*27);height:calc(var(--u)*27);margin-top:calc(var(--u)*-13.5);background:#17324a;border-color:#2c5f8a}
+#face [data-b="0"]{right:0;top:50%;width:calc(var(--u)*27);height:calc(var(--u)*27);margin-top:calc(var(--u)*-13.5);background:#e0202b;border-color:#ff8a90;color:#fff}
 #face [data-b="1"]{right:calc(var(--u)*22);top:50%;margin-top:calc(var(--u)*13)}
 #face [data-b="2"]{right:calc(var(--u)*22);top:50%;margin-top:calc(var(--u)*-36)}
 #face [data-b="3"]{right:calc(var(--u)*45);top:50%;margin-top:calc(var(--u)*-11.5)}
@@ -48,26 +50,43 @@ body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #kno
 #dpad [data-b="10"]{left:33%;top:0}#dpad [data-b="11"]{left:33%;bottom:0}
 #dpad [data-b="12"]{left:0;top:33%}#dpad [data-b="13"]{right:0;top:33%}
 #mid .row .b{height:calc(var(--ph)*9);min-height:30px;font-size:17px}
-.sheet{position:absolute;inset:0;background:rgba(10,14,20,.94);display:none;align-items:center;justify-content:center;
+.sheet{position:absolute;inset:0;background:rgba(14,15,18,.95);display:none;align-items:center;justify-content:center;
   flex-direction:column;gap:14px;padding:18px;text-align:center;z-index:5}
 .sheet,.sheet *{touch-action:pan-y}
 .sheet.show{display:flex}
-.sheet h1{margin:0;font-size:22px}.sheet p{margin:0;max-width:560px;font-weight:500;color:#b7c4d6;line-height:1.35}
-.btn{padding:14px 26px;border-radius:14px;border:0;background:#3b82f6;color:#fff;font-family:inherit;font-size:18px;font-weight:700}
-.btn.alt{background:#27364a}
+.sheet h1{margin:0;font-size:22px}.sheet p{margin:0;max-width:560px;font-weight:500;color:#c9cdd4;line-height:1.35}
+.btn{padding:14px 26px;border-radius:14px;border:0;background:#e0202b;color:#fff;font-family:inherit;font-size:18px;font-weight:700}
+.btn.alt{background:#2a2f38}
 #code{font:700 34px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.35em;width:6.2em;text-align:center;padding:8px 0 8px .35em;
-  border-radius:12px;border:2px solid #3b82f6;background:#0c1118;color:#fff;-webkit-user-select:text;user-select:text}
+  border-radius:12px;border:2px solid #e0202b;background:#0e0f12;color:#fff;-webkit-user-select:text;user-select:text}
 #set{align-items:stretch;justify-content:flex-start;overflow:auto;text-align:left;gap:10px}
-#set label{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#18212d;border-radius:12px;padding:10px 14px;font-weight:500}
-#set input[type=range]{flex:1;max-width:55%}#set input[type=checkbox]{width:24px;height:24px}
+#set label{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#1e2128;border-radius:12px;padding:10px 14px;font-weight:500}
+#set input{accent-color:#e0202b}#set input[type=range]{flex:1;max-width:55%}#set input[type=checkbox]{width:24px;height:24px}
 #set .row .btn{flex:1;padding:12px 8px;font-size:16px}
+#big,#ok,#bk{display:none}
+body.c1 #pad{grid-template-columns:1fr calc(var(--pw)*34) 1fr;grid-template-rows:calc(var(--ph)*17) 1fr}
+body.c1 #top .b,body.c1 #zone,body.c1 #base,body.c1 #knob,body.c1 #face,body.c1 #wheel [data-b="4"],body.c1 #mid [data-b="9"]{display:none}
+body.c1 #status{grid-column:1/6}body.c1 #bar{visibility:visible;width:min(90%,calc(var(--pw)*40))}body.c1 #flag{width:min(90%,calc(var(--pw)*40))}
+body.c1 #auto{display:inline}
+body.c1 #wheel{display:grid;grid-template-rows:1fr}
+body.c1 #wheel .b,#big{font-size:calc(var(--u)*9);font-weight:800;border-radius:24px;border-width:3px}
+body.c1 #wheel .b{background:linear-gradient(#ea2a35,#b3141d);border-color:#ff8a90;color:#fff}
+body.c1 #wheel .b.on{background:#ff5660;border-color:#fff}
+body.c1 #big{display:flex;position:absolute;inset:0;background:linear-gradient(#fff,#e4e4e0);border-color:#fff;color:#c1121f}
+body.c1 #big.on{background:#ffc4c8;border-color:#e0202b}
+body.c1 #ok,body.c1 #bk{display:flex}
+body.c1 #ok.on{background:#fff;border-color:#e0202b;color:#c1121f}
+body.c1 #mid .row .b{height:calc(var(--ph)*13);font-size:16px}
+body.c1 #dpad{width:min(calc(var(--ph)*56),calc(var(--pw)*31));height:min(calc(var(--ph)*56),calc(var(--pw)*31))}
+body.c1 #dpad .b{font-size:22px;background:#f7f7f5;border-color:#fff;color:#14161b;border-radius:14px}
+body.c1 #dpad .b.on{background:#e0202b;border-color:#ff8a90;color:#fff}
 </style>
 </head>
 <body>
 <div id="pad">
   <div id="top">
     <div class="b" data-b="6">ZL</div><div class="b" data-b="4"><span>L<small data-t="item"></small></span></div>
-    <div id="status"><b id="who">&nbsp;</b><span id="net"></span><div id="bar"><i></i></div></div>
+    <div id="status"><b id="who">&nbsp;</b><span><span id="net"></span><small id="auto" data-t="auto"></small></span><div id="bar"><i></i></div><div id="flag"></div></div>
     <div class="b" data-b="5"><span>R<small data-t="drift"></small></span></div><div class="b" data-b="7">ZR</div>
   </div>
   <div id="left">
@@ -78,13 +97,14 @@ body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #kno
     </div>
   </div>
   <div id="mid">
-    <div class="row"><div class="b" data-b="9">&minus;</div><div class="b" id="gear">&#9881;</div><div class="b" data-b="8">+</div></div>
+    <div class="row"><div class="b" id="bk" data-b="1"><span>B<small data-t="back"></small></span></div><div class="b" data-b="9">&minus;</div>
+      <div class="b" id="gear">&#9881;</div><div class="b" data-b="8">+</div><div class="b" id="ok"><span>A<small data-t="ok"></small></span></div></div>
     <div id="dpad">
       <div class="b" data-b="10">&#9650;</div><div class="b" data-b="11">&#9660;</div>
       <div class="b" data-b="12">&#9664;</div><div class="b" data-b="13">&#9654;</div>
     </div>
   </div>
-  <div id="right"><div id="face">
+  <div id="right"><div class="b" id="big" data-b="4"><span><span data-t="item"></span><small>L</small></span></div><div id="face">
     <div class="b" data-b="2">X</div><div class="b" data-b="3">Y</div>
     <div class="b" data-b="0">A</div><div class="b" data-b="1">B</div>
   </div></div>
@@ -99,7 +119,9 @@ body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #kno
 </div>
 
 <div class="sheet" id="set">
-  <label><span data-t="mode"></span><span class="row" style="flex:1;max-width:60%">
+  <label><span data-t="pad"></span><span class="row" style="flex:1;max-width:60%">
+    <button class="btn alt" id="p1" data-t="simple"></button><button class="btn alt" id="p2" data-t="complete"></button></span></label>
+  <label id="modeRow"><span data-t="mode"></span><span class="row" style="flex:1;max-width:60%">
     <button class="btn alt" id="mWheel" data-t="wheel"></button><button class="btn alt" id="mStick" data-t="stick"></button></span></label>
   <label><span><span data-t="angle"></span> <b id="angV"></b></span><input type="range" id="ang" min="15" max="60" step="5"></label>
   <label><span data-t="invert"></span><input type="checkbox" id="inv"></label>
@@ -117,18 +139,20 @@ const T = es ? {
   intro: 'Tu teléfono es un mando. Escribe el código que muestra el juego (Ajustes › Controles) y sujétalo en horizontal, como un volante.',
   start: 'Empezar', item: 'Objeto', drift: 'Derrape', mode: 'Dirección', wheel: 'Volante', stick: 'Palanca',
   angle: 'Giro máximo', invert: 'Invertir el giro', buzz: 'Vibración', tilt: 'Inclinación ahora', centre: 'Centrar',
-  full: 'Pantalla completa', done: 'Listo',
+  full: 'Pantalla completa', done: 'Listo', pad: 'Mando', simple: '1 · Simple', complete: '2 · Completo',
+  auto: 'Acelera solo', ok: 'Aceptar', back: 'Atrás · freno',
   joining: 'Conectando…', lost: 'Sin conexión', full503: 'Ya hay ocho mandos conectados.', wait: 'Demasiados intentos: espera diez segundos.',
   bad: 'Ese código no es el del juego.', player: 'Jugador ', ready: 'Conectado',
-  nosense: 'Este navegador no entrega los sensores de movimiento: se usa la palanca.',
+  nosense: 'Este navegador no entrega los sensores de movimiento: no hay volante.',
 } : {
   intro: 'Your phone is a controller. Type the code the game shows (Settings › Controls) and hold it sideways, like a steering wheel.',
   start: 'Start', item: 'Item', drift: 'Drift', mode: 'Steering', wheel: 'Wheel', stick: 'Stick',
   angle: 'Full lock at', invert: 'Invert steering', buzz: 'Vibration', tilt: 'Tilt now', centre: 'Centre',
-  full: 'Full screen', done: 'Done',
+  full: 'Full screen', done: 'Done', pad: 'Controller', simple: '1 · Simple', complete: '2 · Full',
+  auto: 'Auto-accelerate', ok: 'Accept', back: 'Back · brake',
   joining: 'Connecting…', lost: 'No connection', full503: 'Eight controllers are connected already.', wait: 'Too many tries: wait ten seconds.',
   bad: 'That is not the game\'s code.', player: 'Player ', ready: 'Connected',
-  nosense: 'This browser does not hand over the motion sensors: the stick is used.',
+  nosense: 'This browser does not hand over the motion sensors: there is no wheel.',
 };
 document.documentElement.lang = es ? 'es' : 'en';
 document.querySelectorAll('[data-t]').forEach(e => { e.textContent = T[e.dataset.t]; });
@@ -136,7 +160,7 @@ const $ = id => document.getElementById(id);
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem('mkw.' + k); localStorage.setItem('mkw.' + k, v); } catch (e) {} return null; };
 
 // ---- settings: kept on the phone
-const cfg = { wheel: store('wheel') !== '0', angle: +(store('angle') || 35), invert: store('invert') === '1', vib: store('vib') !== '0', centre: +(store('centre') || 0) };
+const cfg = { pad: store('pad') === '2' ? 2 : 1, wheel: store('wheel') !== '0', angle: +(store('angle') || 35), invert: store('invert') === '1', vib: store('vib') !== '0', centre: +(store('centre') || 0) };
 let client = store('id');   // this page's own id: a reload gets the same controller, so the same player
 if (!/^[0-9a-f]{16}$/.test(client || '')) {
   client = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, '0')).join('');
@@ -166,6 +190,13 @@ const pad = $('pad');
 pad.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (e.target.id === 'gear') { openSettings(); return; }
+  if (e.target.closest('#ok')) {   // pad 1's Accept: see packet
+    okAt = performance.now();
+    $('ok').classList.add('on');
+    setTimeout(() => { $('ok').classList.remove('on'); poke(); }, OK_MS);
+    poke();
+    return;
+  }
   if (e.target.id === 'zone' && ![...held.values()].some(h => h.stick)) {
     const z = $('zone').getBoundingClientRect();
     const h = { stick: true, ox: z.left + z.width / 2, oy: z.top + z.height / 2 };
@@ -283,7 +314,7 @@ function onMotion(e) {
   poke();
 }
 function steer() {   // -1..1 from the wheel
-  if (!cfg.wheel || !sensed) return 0;
+  if (!(cfg.pad === 1 || cfg.wheel) || !sensed) return 0;
   let d = (tilt - cfg.centre) * (cfg.invert ? -1 : 1);
   const dead = 2;
   d = Math.abs(d) < dead ? 0 : (d - Math.sign(d) * dead) / (cfg.angle - dead);
@@ -300,11 +331,21 @@ let started = false, sid = null, code = (location.hash.match(/\d{4}/) || [store(
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const idle = ms => new Promise(r => { const t = setTimeout(() => { wake = null; r(); }, ms); wake = () => { clearTimeout(t); r(); }; });
 const say = (who, net) => { if (who !== null) $('who').textContent = who; $('net').textContent = net; };
+// Pad 1 holds the accelerator for the player: a kart needs it all the time, and on glass a thumb is better spent on
+// the drift. A is let go while B is held (the brake, and Back in a menu) and for an instant when Accept is touched:
+// a menu takes a button going down, and one that is always down never does.
+const OK_MS = 120;
+let okAt = -1e9;
 function packet() {
   const d = new DataView(new ArrayBuffer(24)), i16 = v => Math.max(-32767, Math.min(32767, Math.round(v)));
   let b = 0;
   held.forEach(h => { if (h.el) b |= 1 << +h.el.dataset.b; });
-  const s = steer(), lx = Math.abs(stick[0]) > Math.abs(s) ? stick[0] : s;
+  const s = steer();
+  let lx = Math.abs(stick[0]) > Math.abs(s) ? stick[0] : s;
+  if (cfg.pad === 1 && !$('set').classList.contains('show')) {
+    if (!(b & 2) && performance.now() - okAt >= OK_MS) b |= 1;
+    if (!sensed) lx = (b >> 13 & 1) - (b >> 12 & 1);   // no sensors: the cross steers
+  }
   d.setUint8(0, 1); d.setUint8(1, sensed ? 1 : 0); d.setUint16(2, b, true);
   d.setInt16(4, i16(lx * 32767), true); d.setInt16(6, i16(stick[1] * 32767), true);
   for (let i = 0; i < 3; i++) { d.setInt16(12 + i * 2, i16(acc[i] * 500), true); d.setInt16(18 + i * 2, i16(gyro[i] * 1000), true); }
@@ -354,9 +395,13 @@ async function awake() { try { if (navigator.wakeLock && (!lock || lock.released
 
 // ---- the sheets
 const mode = () => {
-  document.body.classList.toggle('wheel', cfg.wheel && sensed);
-  $('mWheel').style.background = cfg.wheel ? '#3b82f6' : ''; $('mStick').style.background = cfg.wheel ? '' : '#3b82f6';
+  document.body.classList.toggle('c1', cfg.pad === 1);
+  document.body.classList.toggle('wheel', cfg.pad === 2 && cfg.wheel && sensed);
+  $('p1').style.background = cfg.pad === 1 ? '#e0202b' : ''; $('p2').style.background = cfg.pad === 2 ? '#e0202b' : '';
+  $('modeRow').style.display = cfg.pad === 1 ? 'none' : '';
+  $('mWheel').style.background = cfg.wheel ? '#e0202b' : ''; $('mStick').style.background = cfg.wheel ? '' : '#e0202b';
 };
+mode();
 function openSettings() {
   letGo();
   $('ang').value = cfg.angle; $('angV').textContent = cfg.angle + '°'; $('inv').checked = cfg.invert; $('vib').checked = cfg.vib;
@@ -365,6 +410,8 @@ function openSettings() {
   $('set').classList.add('show');
 }
 setInterval(() => { if ($('set').classList.contains('show')) $('tiltV').textContent = sensed ? Math.round(tilt - cfg.centre) + '°' : T.nosense; mode(); place(); }, 150);
+$('p1').onclick = () => { cfg.pad = 1; store('pad', '1'); mode(); };
+$('p2').onclick = () => { cfg.pad = 2; store('pad', '2'); mode(); };
 $('mWheel').onclick = () => { cfg.wheel = true; store('wheel', '1'); mode(); };
 $('mStick').onclick = () => { cfg.wheel = false; store('wheel', '0'); mode(); };
 $('ang').oninput = e => { cfg.angle = +e.target.value; store('angle', cfg.angle); $('angV').textContent = cfg.angle + '°'; };
