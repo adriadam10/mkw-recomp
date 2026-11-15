@@ -147,9 +147,11 @@ If the page does not open: the phone must be on the same network as the PC (not 
 and on Windows the game must be allowed through the firewall (Windows asks the first time it runs).
 The phone's page has two controllers, picked under its gear. The first, the default, is for driving: it holds the
 accelerator for you and has a large Drift on the left, a large Item on the right and the cross between them, with
-Accept and Back (the brake) small above it. The second has every button, and a stick if you would rather not tilt.
-The gear also sets how far the wheel turns for full lock, and re-centres it. On Android the page goes full screen; on an iPhone Safari keeps its address bar (it has no full screen
-for pages), and the screen's rotation must be unlocked. `phone_port` in `mkw.ini` picks another port than 6590.
+Back (B, the brake) and Accept (A) in their inner corners. The second has every button, and a stick if you would
+rather not tilt. The gear also sets how far the wheel turns for full lock, and re-centres it. On Android the page
+goes full screen; on an iPhone Safari keeps its address bar (it has no full screen for pages). The controller is
+drawn as the phone is held, with the screen's rotation locked or not. `phone_port` in `mkw.ini` picks another port
+than 6590.
 
 ## Mods
 

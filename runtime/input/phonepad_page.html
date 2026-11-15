@@ -74,8 +74,12 @@ body.c1 #wheel .b{background:linear-gradient(#ea2a35,#b3141d);border-color:#ff8a
 body.c1 #wheel .b.on{background:#ff5660;border-color:#fff}
 body.c1 #big{display:flex;position:absolute;inset:0;background:linear-gradient(#fff,#e4e4e0);border-color:#fff;color:#c1121f}
 body.c1 #big.on{background:#ffc4c8;border-color:#e0202b}
-body.c1 #ok,body.c1 #bk{display:flex}
-body.c1 #ok.on{background:#fff;border-color:#e0202b;color:#c1121f}
+/* A and B sit in the large buttons' inner top corners, where a thumb resting on Drift or Item reaches them */
+body.c1 #ok,body.c1 #bk{display:flex;position:absolute;top:0;z-index:1;width:calc(var(--u)*30);height:calc(var(--u)*30);border-radius:50%;
+  font-size:calc(var(--u)*9);font-weight:800;background:#14161b;border:3px solid #f7f7f5;color:#fff;box-shadow:0 0 0 calc(var(--u)*1.6) #14161b}
+body.c1 #ok small,body.c1 #bk small{font-size:calc(var(--u)*3.4);font-weight:600;opacity:.85}
+body.c1 #ok{left:0}body.c1 #bk{right:0}
+body.c1 #ok.on,body.c1 #bk.on{background:#fff;border-color:#e0202b;color:#c1121f}
 body.c1 #mid .row .b{height:calc(var(--ph)*13);font-size:16px}
 body.c1 #dpad{width:min(calc(var(--ph)*56),calc(var(--pw)*31));height:min(calc(var(--ph)*56),calc(var(--pw)*31))}
 body.c1 #dpad .b{font-size:22px;background:#f7f7f5;border-color:#fff;color:#14161b;border-radius:14px}
@@ -95,16 +99,17 @@ body.c1 #dpad .b.on{background:#e0202b;border-color:#ff8a90;color:#fff}
       <div class="b" data-b="4"><span><span data-t="item"></span><small>L</small></span></div>
       <div class="b" data-b="5"><span><span data-t="drift"></span><small>R</small></span></div>
     </div>
+    <div class="b" id="bk" data-b="1"><span>B<small data-t="back"></small></span></div>
   </div>
   <div id="mid">
-    <div class="row"><div class="b" id="bk" data-b="1"><span>B<small data-t="back"></small></span></div><div class="b" data-b="9">&minus;</div>
-      <div class="b" id="gear">&#9881;</div><div class="b" data-b="8">+</div><div class="b" id="ok"><span>A<small data-t="ok"></small></span></div></div>
+    <div class="row"><div class="b" data-b="9">&minus;</div><div class="b" id="gear">&#9881;</div><div class="b" data-b="8">+</div></div>
     <div id="dpad">
       <div class="b" data-b="10">&#9650;</div><div class="b" data-b="11">&#9660;</div>
       <div class="b" data-b="12">&#9664;</div><div class="b" data-b="13">&#9654;</div>
     </div>
   </div>
-  <div id="right"><div class="b" id="big" data-b="4"><span><span data-t="item"></span><small>L</small></span></div><div id="face">
+  <div id="right"><div class="b" id="big" data-b="4"><span><span data-t="item"></span><small>L</small></span></div>
+    <div class="b" id="ok"><span>A<small data-t="ok"></small></span></div><div id="face">
     <div class="b" data-b="2">X</div><div class="b" data-b="3">Y</div>
     <div class="b" data-b="0">A</div><div class="b" data-b="1">B</div>
   </div></div>
@@ -140,7 +145,7 @@ const T = es ? {
   start: 'Empezar', item: 'Objeto', drift: 'Derrape', mode: 'Dirección', wheel: 'Volante', stick: 'Palanca',
   angle: 'Giro máximo', invert: 'Invertir el giro', buzz: 'Vibración', tilt: 'Inclinación ahora', centre: 'Centrar',
   full: 'Pantalla completa', done: 'Listo', pad: 'Mando', simple: '1 · Simple', complete: '2 · Completo',
-  auto: 'Acelera solo', ok: 'Aceptar', back: 'Atrás · freno',
+  auto: 'Acelera solo', ok: 'Aceptar', back: 'Atrás',
   joining: 'Conectando…', lost: 'Sin conexión', full503: 'Ya hay ocho mandos conectados.', wait: 'Demasiados intentos: espera diez segundos.',
   bad: 'Ese código no es el del juego.', player: 'Jugador ', ready: 'Conectado',
   nosense: 'Este navegador no entrega los sensores de movimiento: no hay volante.',
@@ -149,7 +154,7 @@ const T = es ? {
   start: 'Start', item: 'Item', drift: 'Drift', mode: 'Steering', wheel: 'Wheel', stick: 'Stick',
   angle: 'Full lock at', invert: 'Invert steering', buzz: 'Vibration', tilt: 'Tilt now', centre: 'Centre',
   full: 'Full screen', done: 'Done', pad: 'Controller', simple: '1 · Simple', complete: '2 · Full',
-  auto: 'Auto-accelerate', ok: 'Accept', back: 'Back · brake',
+  auto: 'Auto-accelerate', ok: 'Accept', back: 'Back',
   joining: 'Connecting…', lost: 'No connection', full503: 'Eight controllers are connected already.', wait: 'Too many tries: wait ten seconds.',
   bad: 'That is not the game\'s code.', player: 'Player ', ready: 'Connected',
   nosense: 'This browser does not hand over the motion sensors: there is no wheel.',
