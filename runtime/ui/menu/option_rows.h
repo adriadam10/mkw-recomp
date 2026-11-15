@@ -61,8 +61,11 @@ void opt_group(UiTextId title);
 void opt_text(UiTextId text, bool warn = false);
 void opt_note(const char *text, bool warn = false);   // the same for a text the caller built
 // A QR code (core/base/qr.h: size modules a side, row by row, 1 dark) on a white square, with lines of text beside
-// it: the first as a label, the second as a value, the rest dimmer. Takes no cursor.
-void opt_qr(const unsigned char *modules, int size, const char *const *lines, int n);
+// it: the first as a label, the second as a value, the rest dimmer. Takes no cursor, so the cursor never scrolls it
+// into view: reveal scrolls the pane until the whole block shows (a code cut by the pane's edge cannot be scanned).
+void opt_qr(const unsigned char *modules, int size, const char *const *lines, int n, bool reveal = false);
+// The row drawn last has the controller's or the keyboard's cursor.
+bool opt_row_focused(void);
 
 // The return value of every row: true when it changed the setting this frame.
 // inverted: the row shows "on" while the key is 0 (a setting whose key names the opposite).

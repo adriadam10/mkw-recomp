@@ -45,6 +45,7 @@ static float g_scale = 1;
 static bool g_focus_req, g_take_first;   // opt_focus_first: requested / this page's first row takes it
 static char g_focus_key[64];             // opt_focus_key: the row that takes the cursor when it is next drawn
 static bool g_held;                      // the last row's left / right has been held a while (steppers go faster)
+static bool g_row_focused;               // the last row has the controller's or keyboard's cursor (opt_row_focused)
 static float g_bottom;                   // opt_reserve_bottom: kept free under the panes
 static bool g_disable_next;              // opt_disable_next: the next row is greyed out with g_disable_note
 static UiTextId g_disable_note;
@@ -204,6 +205,7 @@ static int row_text(const char *key, const char *label, UiTextId desc, const Row
             ImGui::SetKeyOwner(k, ImGui::GetItemID());
         }
     }
+    g_row_focused = foc;
     if (foc && !g_mouse) desc_set(g_focus, desc, key, m, disabled, v.desc_note);
     if (hov) desc_set(g_hover, desc, key, m, disabled, v.desc_note);
     if (!g_first.text[0]) desc_set(g_first, desc, key, m, disabled, v.desc_note);
@@ -330,7 +332,9 @@ void opt_note(const char *text, bool warn) {
 
 void opt_text(UiTextId text, bool warn) { opt_note(menu_text(text), warn); }
 
-void opt_qr(const unsigned char *modules, int size, const char *const *lines, int n) {
+bool opt_row_focused(void) { return g_row_focused; }
+
+void opt_qr(const unsigned char *modules, int size, const char *const *lines, int n, bool reveal) {
     ImVec2 p = ImGui::GetCursorScreenPos();
     float fs = ImGui::GetFontSize(), w = ImGui::GetContentRegionAvail().x, pad = 16 * g_scale;
     // whole pixels a module, so its edges stay sharp for a camera; the light margin of four modules a QR code needs
@@ -355,6 +359,7 @@ void opt_qr(const unsigned char *modules, int size, const char *const *lines, in
         ty += font->CalcTextSizeA(fs, FLT_MAX, room, lines[i]).y + fs * 0.4f;
     }
     ImGui::Dummy(ImVec2(w, fmaxf(side, ty - p.y) + 4 * g_scale));
+    if (reveal) ImGui::ScrollToItem(ImGuiScrollFlags_KeepVisibleEdgeY);
 }
 
 bool opt_choice_list(const char *key, UiTextId label, const char *const *values, const char *const *names, int n,
