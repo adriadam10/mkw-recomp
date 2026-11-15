@@ -266,7 +266,12 @@ struct Hot {
 static Hot hot_button(const char *id, ImVec2 size, bool enabled = true) {
     ImGui::BeginDisabled(!enabled);
     Hot h;
-    h.hit = ImGui::InvisibleButton(id, size);
+    // ImGui 1.91 leaves an InvisibleButton out of navigation unless asked (imgui_widgets.cpp, ItemAdd's NoNav): without
+    // EnableNav the controller reaches only Play, which SetKeyboardFocusHere puts the cursor on. ImGui's own cursor is
+    // hidden: each button draws its own (focus_ring, or the menu row's band), as the in-game menu's rows do.
+    ImGui::PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
+    h.hit = ImGui::InvisibleButton(id, size, ImGuiButtonFlags_EnableNav);
+    ImGui::PopStyleColor();
     bool over = ImGui::IsItemHovered();
     if (enabled && over) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);   // it can be clicked
     h.held = ImGui::IsItemActive();
