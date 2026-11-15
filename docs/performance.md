@@ -23,6 +23,7 @@ does it and the pre-commit checks it.
 | 0.1.8 | RTX 3050 Laptop (NVIDIA 621.14) | Core i5-12450H | Windows 11 | 720p | Race | 26.7 ms median, p95 42.7 ms | [#126](https://github.com/adriadam10/mkw-recomp/issues/126) |
 | 0.1.8 | RX 5500 XT (AMD 26.10.1) | Ryzen 5 5600G, 16 GB | Windows 11 | 1080p | Race | ~57 ms | [#151](https://github.com/adriadam10/mkw-recomp/issues/151) |
 | 0.1.8 | RX 7900 XTX (AMD 26.10.2) | Ryzen 5 7500F | Windows 11 | 2160p | Race | 16.7 ms median, p95 20-22 ms; freezes of 1-2 s | [#138](https://github.com/adriadam10/mkw-recomp/issues/138) |
+| 0.1.11 | RTX 3050 Ti Laptop 4 GB (NVIDIA 621.01) | Core i7-11800H, 16 GB | Windows 11 | 1080p | Race | 17.0 ms median (58.6 fps), p95 19.5 ms | [4gb-vram-optimization](4gb-vram-optimization.md) |
 | 0.1.12 | RTX 5080 (NVIDIA 621.24) | Ryzen 9 9950X3D, 32 GB | Windows 11 | 900p | Race (Lightning Cup) | 16.7 ms, max 18.8 ms (the overlay; no log attached) | [#428](https://github.com/adriadam10/mkw-recomp/issues/428) |
 | 0.1.12 | RX 9070 XT (AMD 26.10.1) | Ryzen 5 5600X, 32 GB | Windows 11 | 1440p | Race | 16.8 ms, max 24.2 ms; 11 frames over 33 ms in the last minute (the overlay; no log attached) | [#431](https://github.com/adriadam10/mkw-recomp/issues/431) |
 | source | RX 9070 XT (Mesa 26.2.5 RADV) | Ryzen 7 7800X3D | Linux (CachyOS) | 720p to 2160p | Race | 16.7 ms (no log attached) | [#97](https://github.com/adriadam10/mkw-recomp/issues/97) |
