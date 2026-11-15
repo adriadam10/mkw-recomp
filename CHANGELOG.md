@@ -114,6 +114,7 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   without it is planned in discussion 82), and on an AMD FX or an Intel Core older than the 4th generation `mkw.exe`
   closed before writing any log. It now says so in a box before anything else runs.
 - **The Windows setup sizes its jobs by the PC's memory** (#PR by @fraustiz): it read the memory size from
+- **The Windows setup sizes its jobs by the PC's memory** (#416 by @fraustiz): it read the memory size from
   `/proc/meminfo`, which only Linux has, so every Windows PC was taken for one with 8 GB (a 24-thread PC with 31 GB
   logged `machine: 24 threads, 8.0 GB, 9 compile and 6 generate jobs, win32`). The size now comes from Windows
   (`GlobalMemoryStatusEx`). With it alone, 24 generate workers held 26.6 GB (1.1 GB each, 0.42 on Linux) and left
