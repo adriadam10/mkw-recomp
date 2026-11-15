@@ -16,7 +16,7 @@ Exit codes: 0 done, 1 failed.
 
 Usage: python -I update.py check --version VER [--os linux|windows]
        python -I update.py fetch --tag TAG --dest DIR [--os linux|windows]
-       python -I update.py clean --game DIR
+       python -I update.py clean --game DIR [--previous VERSION]
 MKW_UPDATE_REPO=owner/name (default adriadam10/mkw-recomp) and MKW_UPDATE_AS=<version> (compare as that version: a
 test) change what is asked.
 """
@@ -46,6 +46,7 @@ ASSET_SUFFIX = {  # tools/build/release.py's names
 }
 CLEAN_WAIT = 20  # s
 OLD_SUFFIX = ".old"  # what the launcher renames the replaced files to (Windows: a running exe cannot be removed)
+PREVIOUS = "update-previous"  # the version an update replaced, kept for the Tools page's Undo (launcher_update.h)
 
 
 def emit(*words: object) -> None:
@@ -148,18 +149,27 @@ def fetch(args: argparse.Namespace) -> None:
 
 
 def clean(args: argparse.Namespace) -> None:
-    """The old program may still be closing when the new one starts this (Windows refuses to remove a running exe):
-    each entry is tried again for CLEAN_WAIT seconds."""
+    """The files the update replaced: with --previous (the version they are), kept in PREVIOUS under their own names so
+    Undo can put them back, the version before replaced; without, removed. The old program may still be closing when
+    the new one starts this (Windows refuses to move or remove a running exe): each entry is tried again for CLEAN_WAIT
+    seconds."""
     game, n = args.game.resolve(), 0
-    for p in game.iterdir():
-        if not p.name.endswith(OLD_SUFFIX):
-            continue
+    olds = [p for p in game.iterdir() if p.name.endswith(OLD_SUFFIX)]
+    keep = game / PREVIOUS
+    if args.previous and olds:
+        shutil.rmtree(keep, ignore_errors=True)
+        keep.mkdir()
+        (keep / "version").write_text(f"{args.previous}\n", encoding="utf-8")
+    for p in olds:
         for _ in range(CLEAN_WAIT):
             try:
-                shutil.rmtree(p) if p.is_dir() and not p.is_symlink() else p.unlink()
+                if args.previous:
+                    p.rename(keep / p.name.removesuffix(OLD_SUFFIX))
+                else:
+                    shutil.rmtree(p) if p.is_dir() and not p.is_symlink() else p.unlink()
                 n += 1
                 break
-            except PermissionError:
+            except OSError:   # a running exe on Windows; in keep/, a leftover entry the previous clean-up left
                 time.sleep(1)
     shutil.rmtree(game / "update", ignore_errors=True)
     emit("cleaned", n)
@@ -179,6 +189,7 @@ def main() -> None:
     f.add_argument("--os", choices=ASSET_SUFFIX, default=host)
     k = sub.add_parser("clean")
     k.add_argument("--game", type=Path, required=True)
+    k.add_argument("--previous", help="the version the replaced files are: kept for Undo instead of removed")
     args = ap.parse_args()
     try:
         {"check": check, "fetch": fetch, "clean": clean}[args.cmd](args)

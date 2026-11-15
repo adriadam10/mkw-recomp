@@ -2,14 +2,14 @@
 
 A self-hosted server for Mario Kart World's online services (NPLN, Nintendo's gRPC platform), so the time trial's
 "Ver clasificación" and "Subir fantasma" work between players who point their game at it. The runtime side is
-`runtime/sdk/ov/ov_npln.c`: Settings > Game > Ghost server (`MKW_NPLN=<address>[:port]`).
+`runtime/sdk/ov/ov_npln.c`: Settings > General > Ghost server (`MKW_NPLN=<address>[:port]`).
 
 The time trial's menu works against it: uploading a ghost, the leaderboards, and downloading another player's ghost
 (tested on Windows, two profiles on one PC).
 
 Between PCs: one runs the server (`uv run --with grpcio --with cryptography tools/npln/server.py`; its first line
 gives the address to type), lets TCP ports 8443 and 8444 in (on Windows, allow Python on private networks when the
-firewall asks), and every player types that address in Settings > Game > Ghost server, then restarts the game.
+firewall asks), and every player types that address in Settings > General > Ghost server, then restarts the game.
 
 On a cloud server (any Linux VM with a public IP, or a domain name pointing at it): copy `tools/npln/` there, open
 TCP ports 8443 and 8444 in the provider's firewall (security group), and run it with uv:

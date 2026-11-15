@@ -1,5 +1,5 @@
 """A self-hosted NPLN server for mkw-recomp's online time trials: the ranking ("Ver clasificación"), ghost uploads
-("Subir fantasma") and downloads, between players who point their game at it (Settings > Game > Ghost server, or
+("Subir fantasma") and downloads, between players who point their game at it (Settings > General > Ghost server, or
 MKW_NPLN=<address>[:<port>]).
 
 Why: Mario Kart World's online services are NPLN, Nintendo's gRPC platform. The runtime (runtime/sdk/ov/ov_npln.c)

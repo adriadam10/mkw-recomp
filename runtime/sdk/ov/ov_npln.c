@@ -1,4 +1,4 @@
-// MKW_NPLN=<address>[:<port>] (Settings > Game > Ghost server): the game's online services (NPLN, Nintendo's gRPC
+// MKW_NPLN=<address>[:<port>] (Settings > General > Ghost server): the game's online services (NPLN, Nintendo's gRPC
 // platform) go to a self-hosted server, tools/npln/server.py, which answers the time trial's ranking, ghost uploads and
 // downloads. Off by default: then nothing here runs and the game stays offline as before.
 //
