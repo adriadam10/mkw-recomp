@@ -10,17 +10,20 @@
 <title>MKW Recomp</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
-:root{--u:min(1vh,.34vw)}
+:root{--pw:1vw;--ph:1vh;--rot:0deg;--u:min(var(--ph),calc(var(--pw)*.34))}
 html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;background:#10161f;color:#e8edf5;
   font:600 15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none;-webkit-text-size-adjust:100%}
-#pad{position:absolute;inset:0;padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
-  display:grid;grid-template-columns:1fr minmax(120px,22vw) 1fr;grid-template-rows:15vh 1fr;gap:1.5vh 1.2vw}
+#pad{position:absolute;left:50%;top:50%;width:calc(var(--pw)*100);height:calc(var(--ph)*100);margin:calc(var(--ph)*-50) 0 0 calc(var(--pw)*-50);
+  transform:rotate(var(--rot));padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
+  display:grid;grid-template-columns:1fr minmax(120px,calc(var(--pw)*22)) 1fr;grid-template-rows:calc(var(--ph)*15) 1fr;gap:calc(var(--ph)*1.5) calc(var(--pw)*1.2)}
+body.r90 #pad{padding:max(8px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)) max(10px,env(safe-area-inset-top))}
+body.r270 #pad{padding:max(8px,env(safe-area-inset-left)) max(10px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom))}
 .b{display:flex;align-items:center;justify-content:center;border-radius:14px;background:#1d2734;border:2px solid #2f3d50;
   color:#c9d4e3;text-align:center;line-height:1.1}
 .b small{display:block;font-size:.68em;font-weight:500;opacity:.7}
 .b.on{background:#3b82f6;border-color:#93c5fd;color:#fff;transform:scale(.97)}
-.row{display:flex;gap:1.2vw}.row .b{flex:1}
-#top{grid-column:1/4;display:grid;grid-template-columns:1fr 1fr minmax(120px,22vw) 1fr 1fr;gap:1.2vw}
+.row{display:flex;gap:calc(var(--pw)*1.2)}.row .b{flex:1}
+#top{grid-column:1/4;display:grid;grid-template-columns:1fr 1fr minmax(120px,calc(var(--pw)*22)) 1fr 1fr;gap:calc(var(--pw)*1.2)}
 #status{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#9fb0c6;min-width:0}
 #status b{color:#e8edf5;font-size:15px}
 #bar{width:90%;height:5px;border-radius:3px;background:#1d2734;margin-top:5px;position:relative;visibility:hidden}
@@ -30,7 +33,7 @@ html,body{margin:0;height:100%;overflow:hidden;position:fixed;inset:0;background
 #base,#knob{position:absolute;border-radius:50%;pointer-events:none;left:50%;top:50%}
 #base{width:calc(var(--u)*42);height:calc(var(--u)*42);margin:calc(var(--u)*-21) 0 0 calc(var(--u)*-21);border:2px solid #2f3d50;background:#161e29}
 #knob{width:calc(var(--u)*19);height:calc(var(--u)*19);margin:calc(var(--u)*-9.5) 0 0 calc(var(--u)*-9.5);background:#3b4b61;border:2px solid #5a6f8c}
-#wheel{position:absolute;inset:0;display:none;grid-template-rows:1fr 1.5fr;gap:1.5vh}
+#wheel{position:absolute;inset:0;display:none;grid-template-rows:1fr 1.5fr;gap:calc(var(--ph)*1.5)}
 #wheel .b{font-size:19px}
 body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #knob{display:none}body.wheel #bar{visibility:visible}
 #face{position:absolute;inset:0}
@@ -39,12 +42,12 @@ body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #kno
 #face [data-b="1"]{right:calc(var(--u)*22);top:50%;margin-top:calc(var(--u)*13)}
 #face [data-b="2"]{right:calc(var(--u)*22);top:50%;margin-top:calc(var(--u)*-36)}
 #face [data-b="3"]{right:calc(var(--u)*45);top:50%;margin-top:calc(var(--u)*-11.5)}
-#mid{display:grid;grid-template-rows:auto 1fr;gap:1.5vh}
-#dpad{position:relative;align-self:center;justify-self:center;width:min(36vh,20vw);height:min(36vh,20vw)}
+#mid{display:grid;grid-template-rows:auto 1fr;gap:calc(var(--ph)*1.5)}
+#dpad{position:relative;align-self:center;justify-self:center;width:min(calc(var(--ph)*36),calc(var(--pw)*20));height:min(calc(var(--ph)*36),calc(var(--pw)*20))}
 #dpad .b{position:absolute;width:34%;height:34%;border-radius:10px;font-size:13px}
 #dpad [data-b="10"]{left:33%;top:0}#dpad [data-b="11"]{left:33%;bottom:0}
 #dpad [data-b="12"]{left:0;top:33%}#dpad [data-b="13"]{right:0;top:33%}
-#mid .row .b{height:9vh;min-height:30px;font-size:17px}
+#mid .row .b{height:calc(var(--ph)*9);min-height:30px;font-size:17px}
 .sheet{position:absolute;inset:0;background:rgba(10,14,20,.94);display:none;align-items:center;justify-content:center;
   flex-direction:column;gap:14px;padding:18px;text-align:center;z-index:5}
 .sheet,.sheet *{touch-action:pan-y}
@@ -58,8 +61,6 @@ body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #kno
 #set label{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#18212d;border-radius:12px;padding:10px 14px;font-weight:500}
 #set input[type=range]{flex:1;max-width:55%}#set input[type=checkbox]{width:24px;height:24px}
 #set .row .btn{flex:1;padding:12px 8px;font-size:16px}
-#turn{z-index:6}
-@media (orientation:portrait){body.started #turn{display:flex}}
 </style>
 </head>
 <body>
@@ -108,8 +109,6 @@ body.wheel #wheel{display:grid}body.wheel #zone,body.wheel #base,body.wheel #kno
     <button class="btn" id="done" data-t="done"></button></div>
 </div>
 
-<div class="sheet" id="turn"><h1>&#10227;</h1><p data-t="turn"></p></div>
-
 <script>
 (() => {
 'use strict';
@@ -118,7 +117,7 @@ const T = es ? {
   intro: 'Tu teléfono es un mando. Escribe el código que muestra el juego (Ajustes › Controles) y sujétalo en horizontal, como un volante.',
   start: 'Empezar', item: 'Objeto', drift: 'Derrape', mode: 'Dirección', wheel: 'Volante', stick: 'Palanca',
   angle: 'Giro máximo', invert: 'Invertir el giro', buzz: 'Vibración', tilt: 'Inclinación ahora', centre: 'Centrar',
-  full: 'Pantalla completa', done: 'Listo', turn: 'Gira el teléfono a horizontal. Si la pantalla no gira, desbloquea la rotación.',
+  full: 'Pantalla completa', done: 'Listo',
   joining: 'Conectando…', lost: 'Sin conexión', full503: 'Ya hay ocho mandos conectados.', wait: 'Demasiados intentos: espera diez segundos.',
   bad: 'Ese código no es el del juego.', player: 'Jugador ', ready: 'Conectado',
   nosense: 'Este navegador no entrega los sensores de movimiento: se usa la palanca.',
@@ -126,7 +125,7 @@ const T = es ? {
   intro: 'Your phone is a controller. Type the code the game shows (Settings › Controls) and hold it sideways, like a steering wheel.',
   start: 'Start', item: 'Item', drift: 'Drift', mode: 'Steering', wheel: 'Wheel', stick: 'Stick',
   angle: 'Full lock at', invert: 'Invert steering', buzz: 'Vibration', tilt: 'Tilt now', centre: 'Centre',
-  full: 'Full screen', done: 'Done', turn: 'Turn the phone sideways. If the screen does not turn, unlock its rotation.',
+  full: 'Full screen', done: 'Done',
   joining: 'Connecting…', lost: 'No connection', full503: 'Eight controllers are connected already.', wait: 'Too many tries: wait ten seconds.',
   bad: 'That is not the game\'s code.', player: 'Player ', ready: 'Connected',
   nosense: 'This browser does not hand over the motion sensors: the stick is used.',
@@ -157,6 +156,7 @@ function paint() {
 function moveStick(h, x, y) {
   const r = $('base').offsetWidth * 0.5 || 1;
   let dx = (x - h.ox) / r, dy = (y - h.oy) / r;
+  if (rot) [dx, dy] = rot > 0 ? [dy, -dx] : [-dy, dx];   // the pad is drawn turned (place): the finger's move in its axes
   const m = Math.hypot(dx, dy);
   if (m > 1) dx /= m, dy /= m;
   stick = [dx, -dy];
@@ -206,15 +206,44 @@ for (const type of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick'])
   document.addEventListener(type, e => e.preventDefault(), { passive: false });
 const letGo = () => { held.clear(); stick = [0, 0]; $('knob').style.transform = ''; paint(); };
 
-// ---- motion: the phone in landscape as the controller (phonepad_proto.h's axes), and the wheel's angle from gravity
-// Browsers do not agree on the acceleration's sign (Chrome on Android reports the push against gravity, +9.81 on z
-// lying screen up, as the specification says; Safari on iOS the opposite), and telling them apart by name breaks when
-// one changes. The picture tells instead: the system turns the page until its top is up, so the push points to the
-// screen's top (the phone upright) or out of the screen (lying down); a browser that reports it the other way round
-// is flipped. vote: the last half second's verdict, so a shake does not flip it.
-let acc = [0, 0, 9.80665], gyro = [0, 0, 0], sensed = false, tilt = 0, tiltAt = 0, vote = 0;
+// ---- where the pad is: drawn as the phone is held, whichever way the page stands
+// A phone turned far as a wheel is upright to its system, which turns the page: on an iPhone the pad then stood on
+// its side under a "turn the phone" sheet and took no input until the wheel came back (in a race, 14/11/2026), and a
+// page cannot stop Safari from turning it (screen.orientation.lock is Android's). So while the page stands upright
+// the pad is drawn turned a quarter, where it was on the phone, and the sensors keep the pad's axes; a phone whose
+// rotation is locked plays the same way. side: which way the phone lies, 90 its top to the left, 270 to the right:
+// the page's own angle while it lies sideways, and gravity while it does not (the push along the phone's x: the
+// wheel's whole travel, a quarter turn each way, never changes its sign).
 const turned = () => (screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle
   : ((+window.orientation || 0) + 360) % 360);
+let side = 90, lean = 1, rot = 0, placed = '';
+function place() {
+  const a = turned(), tall = innerHeight > innerWidth, st = document.documentElement.style;
+  if (a === 90 || a === 270) side = a, lean = a === 90 ? 1 : -1;
+  const now = [a, innerWidth, innerHeight, side].join();
+  if (now === placed) return;
+  placed = now;
+  rot = !tall ? 0 : (side === 90 ? 90 : -90) * (a === 180 ? -1 : 1);
+  st.setProperty('--pw', (tall ? innerHeight : innerWidth) / 100 + 'px');   // in pixels: Safari's bars are not in vh
+  st.setProperty('--ph', (tall ? innerWidth : innerHeight) / 100 + 'px');
+  st.setProperty('--rot', rot + 'deg');
+  document.body.classList.toggle('r90', rot === 90);
+  document.body.classList.toggle('r270', rot === -90);
+}
+addEventListener('resize', place);   // and on the page's timer below: Safari's event can come before the new size
+place();
+
+// ---- motion: the phone in landscape as the controller (phonepad_proto.h's axes), and the wheel's angle from gravity
+// Browsers do not agree on the acceleration's sign (Chrome on Android reports the push against gravity, +9.81 on z
+// lying screen up, as the specification says; Safari on iOS the opposite). The picture tells: while the page lies
+// sideways the system has turned it until its top is up, so the push points to the screen's top (the phone upright)
+// or out of the screen (lying down), and a browser that reports it the other way round is flipped. vote: the last
+// half second's verdict, so a shake does not flip it; before any (a page that never lies sideways: the rotation
+// locked), the browser's name stands in.
+let acc = [0, 0, 9.80665], gyro = [0, 0, 0], sensed = false, tilt = 0, tiltAt = 0, voted = false;
+let vote = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? -1 : 1;
+// the right and up of a screen at that angle, in the phone's own axes: a quarter turn either way, or upside down
+const axes = (angle, x, y) => angle === 90 ? [-y, x] : angle === 270 ? [y, -x] : angle === 180 ? [-x, -y] : [x, y];
 function onMotion(e) {
   const g = e.accelerationIncludingGravity, r = e.rotationRate || {};
   if (!g || g.x == null) return;
@@ -225,12 +254,18 @@ function onMotion(e) {
   // off the diagonal, with 1.03, 0.95 and 1.44 on it: the order, the three signs and the unit are right.
   const x = g.x, y = g.y, wx = r.alpha || 0, wy = r.beta || 0, wz = r.gamma || 0, k = Math.PI / 180;
   const a = turned();
-  // the screen's right and up in the phone's own axes: rotated a quarter turn either way, or upside down
-  let [lx, ly, vx, vy] = a === 90 ? [-y, x, -wy, wx] : a === 270 ? [y, -x, wy, -wx] : a === 180 ? [-x, -y, -wx, -wy] : [x, y, wx, wy];
-  let z = g.z;
-  const up = ly + z / 2;
-  if (Math.abs(up) > 4) vote = vote ? vote + (Math.sign(up) - vote) * 0.03 : Math.sign(up);
-  if (vote < 0) lx = -lx, ly = -ly, z = -z;
+  if (a === 90 || a === 270) {
+    const up = axes(a, x, y)[1] + g.z / 2;
+    if (Math.abs(up) > 4) vote = voted ? vote + (Math.sign(up) - vote) * 0.03 : Math.sign(up), voted = true;
+  }
+  const s = vote < 0 ? -1 : 1;
+  if (rot) {   // the page stands upright: gravity says which way the phone lies
+    if (Math.abs(x) > 5) lean += (Math.sign(x * s) - lean) * 0.03;
+    const now = lean > 0.5 ? 90 : lean < -0.5 ? 270 : side;
+    if (now !== side) side = now, place();
+  }
+  const pa = ((a + rot) % 360 + 360) % 360;   // the pad's own angle on the phone
+  const [lx, ly] = axes(pa, x * s, y * s), [vx, vy] = axes(pa, wx, wy), z = g.z * s;
   acc = [lx, ly, z];
   gyro = [vx * k, vy * k, wz * k];
   // The wheel's angle from where gravity's push points. Held upright and turned like a wheel (about the line out of
@@ -282,7 +317,6 @@ async function join() {
   if (r.status === 200) { sid = await r.text(); store('code', code); say(T.ready, ''); return; }
   if (r.status === 403) {
     sid = null; code = ''; started = false;
-    document.body.classList.remove('started');
     $('err').textContent = T.bad; $('start').classList.add('show');
     throw 0;
   }
@@ -330,15 +364,15 @@ function openSettings() {
   mode();
   $('set').classList.add('show');
 }
-setInterval(() => { if ($('set').classList.contains('show')) $('tiltV').textContent = sensed ? Math.round(tilt - cfg.centre) + '°' : T.nosense; mode(); }, 150);
+setInterval(() => { if ($('set').classList.contains('show')) $('tiltV').textContent = sensed ? Math.round(tilt - cfg.centre) + '°' : T.nosense; mode(); place(); }, 150);
 $('mWheel').onclick = () => { cfg.wheel = true; store('wheel', '1'); mode(); };
 $('mStick').onclick = () => { cfg.wheel = false; store('wheel', '0'); mode(); };
 $('ang').oninput = e => { cfg.angle = +e.target.value; store('angle', cfg.angle); $('angV').textContent = cfg.angle + '°'; };
 $('inv').onchange = e => { cfg.invert = e.target.checked; store('invert', cfg.invert ? '1' : '0'); };
 $('vib').onchange = e => { cfg.vib = e.target.checked; store('vib', cfg.vib ? '1' : '0'); };
 $('centre').onclick = () => { cfg.centre = Math.round(tilt * 10) / 10; store('centre', cfg.centre); };
-// Android: the address bar goes and the page turns sideways even with the phone's rotation locked. An iPhone has
-// neither call: its player turns the phone (the #turn sheet says so while the page stands upright).
+// Android: the address bar goes and the page lies sideways whatever the phone's rotation lock says. An iPhone has
+// neither call: its page turns with the phone, and the pad is drawn where it was (place).
 async function goFull() {
   try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation.lock('landscape'); } catch (e) {}
 }
@@ -352,7 +386,6 @@ $('go').onclick = () => {
   if (!/^\d{4}$/.test(v)) { $('err').textContent = T.bad; return; }
   code = v; $('err').textContent = '';
   $('start').classList.remove('show');
-  document.body.classList.add('started');
   started = true;
   awake();
   goFull();
