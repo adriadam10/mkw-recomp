@@ -19,7 +19,7 @@
 | `phonepad_proto.h` | What the page and the server say to each other, without sockets or SDL: the state packet (buttons, sticks, motion in the controller's axes), the HTTP request head, which addresses may join; checked by `tests/runtime/test_phonepad.py` |
 | `phonepad_srv.h`, `phonepad_srv.c` | The server: HTTPS on one port of the LAN with BearSSL (`third_party/bearssl`), one thread, non-blocking sockets. HTTPS because browsers hand a page the phone's motion sensors only in a secure context; requests instead of a WebSocket because Safari on iOS refuses one to a certificate the player accepted by hand |
 | `phonepad_cert.c` | Its certificate: a P-256 key and a self-signed X.509 certificate naming the PC's LAN address, its DER written by hand; the player accepts it once on the phone |
-| `phonepad_page.html` | The page, embedded with `#embed`: touch buttons and a stick, or the wheel: the steering angle from where gravity points on the phone, sent as the left stick, with the raw sensors beside it for the game's own motion steering |
+| `phonepad_page.html` | The page, embedded with `#embed`. Two pads: the first (the default) holds the accelerator and has only Drift, Item, the cross, Accept and Back; the second has every button and a stick. The wheel in both: the steering angle from where gravity points on the phone, sent as the left stick, with the raw sensors beside it for the game's own motion steering. The pad is drawn as the phone is held, whichever way the page stands |
 
 Default keyboard (`input_map.c`, changeable in the `.ini`):
 
