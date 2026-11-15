@@ -375,11 +375,19 @@ static const char *button_icons_note(void) {
 
 // Under the phones row while it is on: the address a phone opens as a QR code and as text, the code its page asks
 // for and how many are connected (input/phonepad.c); or why there is no address to give. On the start screen the
-// server is not running yet: the address shows in the game's menu.
-static void phone_rows(void) {
-    if (!cfg_bool("MKW_PHONE_PADS")) return;
+// server is not running yet: the address shows in the game's menu. focused: the row above has the cursor. The code
+// is the eighth thing on the page and the pane cut it in half, so it is scrolled into view when it first shows and
+// while its row has the cursor.
+static void phone_rows(bool focused) {
+    static bool shown;
+    if (!cfg_bool("MKW_PHONE_PADS")) {
+        shown = false;
+        return;
+    }
     PhonePadInfo info;
     phonepad_info(&info);
+    bool first = info.on && !shown;
+    shown = info.on;
     if (!info.on) {
         char why[256];
         snprintf(why, sizeof why, menu_text(UI_MENU_PHONE_FAILED), info.port);
@@ -398,7 +406,7 @@ static void phone_rows(void) {
     snprintf(code, sizeof code, menu_text(UI_MENU_PHONE_CODE), info.code);
     snprintf(count, sizeof count, menu_text(UI_MENU_PHONE_COUNT), info.pads);
     const char *lines[] = {menu_text(UI_MENU_PHONE_SCAN), info.address, code, count};
-    if (size) opt_qr(modules, size, lines, 4);
+    if (size) opt_qr(modules, size, lines, 4, focused || first);
 }
 
 static void tab_controls(float scale) {
@@ -414,7 +422,7 @@ static void tab_controls(float scale) {
     opt_toggle("MKW_RUMBLE_TRIGGERS", UI_MENU_RUMBLE_TRIGGERS, UI_MENU_RUMBLE_TRIGGERS_DESC);
     opt_toggle("MKW_SWITCH2", UI_MENU_SWITCH2, UI_MENU_SWITCH2_DESC);   // input/switch2.c, at the next start
     opt_toggle("MKW_PHONE_PADS", UI_MENU_PHONE_PADS, UI_MENU_PHONE_PADS_DESC);   // input/phonepad.c, live
-    phone_rows();
+    phone_rows(opt_row_focused());
     opt_slider("MKW_STICK_DEADZONE", UI_MENU_STICK_DEADZONE, 0, 40, UI_MENU_STICK_DEADZONE_DESC, 1, "%.0f %%");   // input.c
     opt_slider("MKW_MOUSE_SENS", UI_MENU_MOUSE_SENS, 0, 10, UI_MENU_MOUSE_SENS_DESC, 0.1f, "%.1f");
     binds_rows(scale);
