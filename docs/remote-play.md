@@ -36,7 +36,7 @@ It is off by default and changes nothing until you set it up.
    steam_appid = 1118310
    ```
 
-   or set the environment variable `MKW_STEAM_APPID=1118310`. The menu has the same choice (Game > Steam
+   or set the environment variable `MKW_STEAM_APPID=1118310`. The menu has the same choice (General > Steam
    Remote Play Together > Steam App ID; it takes effect at the next start).
 
    **Your own App ID in the menu.** Under that row, select **Enter a Steam App ID**, type the number with the
@@ -84,7 +84,7 @@ top of the picture says why, and the log has the line `steam: Remote Play Togeth
 
 ## Play
 
-Menu (F1) > Game > **Steam Remote Play Together**:
+Menu (F1) > General > **Steam Remote Play Together**:
 
 - **Invite friends**: the Steam overlay's Remote Play Together list. Beside it: how many guests are connected.
 - **Copy guest link**: a link to send to anyone. They open it in a browser or the Steam Link app, no Steam friendship
