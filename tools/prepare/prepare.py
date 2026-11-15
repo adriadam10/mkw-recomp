@@ -79,6 +79,7 @@ from machine import (
     default_cc,
     default_glslc,
     emit,
+    mem_available_gb,
     mem_gb,
     own_children,
     run,
@@ -270,17 +271,26 @@ def main() -> None:
 
     # Within 60 % of the RAM, by what one job was measured to take (13/11/2026, 12 at once): a compile 0.5 GB (peaks
     # 266-409 MB, build.py --job-mem-gb), a generate worker 0.7 GB (gen.py: 5 065 MB for 12, one up to 608 MB). 1 GB for
-    # both kept a 12-thread PC with 13 GB at 8 compiles and an 8 GB one at 4
-    def fit(gb: float) -> int:
-        return args.jobs or max(1, min(os.cpu_count() or 1, int(mem_gb() * 0.6 / gb)))
+    # both kept a 12-thread PC with 13 GB at 8 compiles and an 8 GB one at 4.
+    # Windows, 15/11/2026 (24 threads, 31 GB): 24 generate workers held 26.6 GB of private memory, 1.1 GB each (cause
+    # not measured), and took the free memory from 8.9 GB to 0.13 GB; 24 compiles held 7.6 GB, 0.32 GB each. So a
+    # Windows worker counts 1.2 GB (the 1.1 measured plus a margin, as 0.7 is for 0.42 on Linux). The budget is also
+    # what is free when the setup starts (the player's browser and launcher stay open), as shader_jobs does on every
+    # system; on Linux MemAvailable counts the reclaimable cache, and it lowers the jobs only when less than 60 % of the
+    # RAM is available (not measured on Linux).
+    free = mem_available_gb()
+    budget = min(mem_gb() * 0.6, free)
 
-    jobs, gen_jobs = fit(0.5), fit(0.7)
+    def fit(gb: float) -> int:
+        return args.jobs or max(1, min(os.cpu_count() or 1, int(budget / gb)))
+
+    jobs, gen_jobs = fit(0.5), fit(1.2 if os.name == "nt" else 0.7)
     # setup.log only (stderr): what the machine gave the setup, and below each step's time, so two setups (Linux and
     # Windows, or a player's and ours) compare step by step (Adrià 13/11/2026: "los logs de preparación deberían
     # guardar tiempos"; 0.1.10's Windows setup took twice the Linux one and nothing said where)
     print(
-        f"machine: {os.cpu_count()} threads, {mem_gb():.1f} GB, {jobs} compile and {gen_jobs} generate jobs, "
-        f"{sys.platform}",
+        f"machine: {os.cpu_count()} threads, {mem_gb():.1f} GB, {free:.1f} GB free, {jobs} compile and {gen_jobs} "
+        f"generate jobs, {sys.platform}",
         file=sys.stderr,
     )
     t_all, step, t_step = time.monotonic(), "check", time.monotonic()

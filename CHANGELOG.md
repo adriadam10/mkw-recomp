@@ -113,6 +113,12 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
 - **A processor without AVX2 gets a message instead of nothing** (#262): the game is still built for AVX2 (a build
   without it is planned in discussion 82), and on an AMD FX or an Intel Core older than the 4th generation `mkw.exe`
   closed before writing any log. It now says so in a box before anything else runs.
+- **The Windows setup sizes its jobs by the PC's memory** (#PR by @fraustiz): it read the memory size from
+  `/proc/meminfo`, which only Linux has, so every Windows PC was taken for one with 8 GB (a 24-thread PC with 31 GB
+  logged `machine: 24 threads, 8.0 GB, 9 compile and 6 generate jobs, win32`). The size now comes from Windows
+  (`GlobalMemoryStatusEx`). With it alone, 24 generate workers held 26.6 GB (1.1 GB each, 0.42 on Linux) and left
+  0.13 GB free, so a Windows generate worker now counts 1.2 GB, and on every system the jobs also fit in the memory
+  free when the setup starts: 17 compiles and 7 generate workers on that PC, the setup in 222 s instead of 300 s.
 
 ## 0.1.11
 
