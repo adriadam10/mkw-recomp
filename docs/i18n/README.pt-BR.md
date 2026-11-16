@@ -36,7 +36,8 @@
   <a href="README.ar.md">العربية</a> ·
   <a href="README.hi.md">हिन्दी</a> ·
   <b>Português (Brasil)</b> ·
-  <a href="README.pt-PT.md">Português (Portugal)</a>
+  <a href="README.pt-PT.md">Português (Portugal)</a> ·
+  <a href="README.de.md">Deutsch</a>
 </p>
 <!-- i18n-bar:end -->
 

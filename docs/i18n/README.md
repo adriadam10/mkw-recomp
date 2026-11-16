@@ -15,3 +15,4 @@ notes the ones older than the current `README.md`.
 | [README.hi.md](README.hi.md) | Hindi |
 | [README.pt-BR.md](README.pt-BR.md) | Portuguese (Brazil) |
 | [README.pt-PT.md](README.pt-PT.md) | Portuguese (Portugal) |
+| [README.de.md](README.de.md) | German |

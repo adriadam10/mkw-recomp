@@ -23,7 +23,8 @@ I18N = ROOT / "docs/i18n"
 REPO = "https://github.com/adriadam10/mkw-recomp"
 # (code, name in its own language, right to left)
 LANGS = [("zh-CN", "简体中文", False), ("es", "Español", False), ("ar", "العربية", True), ("hi", "हिन्दी", False),
-         ("pt-BR", "Português (Brasil)", False), ("pt-PT", "Português (Portugal)", False)]  # fmt: skip
+         ("pt-BR", "Português (Brasil)", False), ("pt-PT", "Português (Portugal)", False),
+         ("de", "Deutsch", False)]  # fmt: skip
 # per language: tagline, download, latest for Windows / Linux (AppImage) / Linux ARM, and the link row's names
 # fmt: off
 STRINGS = {
@@ -50,6 +51,10 @@ STRINGS = {
               "mais recente para Linux ARM",
               ["Versões", "Wiki de ajuda", "Discord", "Alterações", "Contribuir", "Fontes", "Roteiro", "Desempenho", "Issues", "Discussões",
                "Arquivo"]),
+    "de": ("Mario Kart World (Nintendo Switch 2), rekompiliert, um nativ unter Linux und Windows zu laufen.",
+           "Download", "neueste für Windows", "neueste für Linux (AppImage)", "neueste für Linux ARM",
+           ["Releases", "Hilfe-Wiki", "Änderungen", "Mitwirken", "Quellen", "Roadmap", "Leistung", "Issues", "Discussions",
+            "Archiv"]),
 }
 # fmt: on
 LINKS = [
