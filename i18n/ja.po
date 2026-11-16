@@ -2517,6 +2517,16 @@ msgid ""
 "seconds at most, nothing offline)."
 msgstr "起動時にGitHubへ問い合わせ、ポートの新しいリリースがあればスタート画面で案内します（長くても数秒。オフラインでは何もしません）。"
 
+msgctxt "UI_MENU_DISCORD"
+msgid "Discord status"
+msgstr ""
+
+msgctxt "UI_MENU_DISCORD_DESC"
+msgid ""
+"While the game runs, your Discord profile shows that you are playing, for how long, and whether "
+"you are racing or in the menus. Your Discord friends see it too."
+msgstr ""
+
 msgctxt "UI_LAUNCH_PLAYERS"
 msgid "Profiles"
 msgstr "プロフィール"

@@ -407,6 +407,7 @@ static void tab_general(float scale) {
     opt_toggle("MKW_LAN", UI_MENU_LAN, UI_MENU_LAN_DESC);   // sdk/ov/ov_socket.c, the lan set of recomp/patches-mkw.txt
     opt_edit("MKW_NPLN", UI_MENU_NPLN, UI_MENU_NPLN_DESC, UI_MENU_NPLN_HINT, "192.168.1.20");   // sdk/ov/ov_npln.c
     opt_toggle("MKW_UPDATE_CHECK", UI_MENU_UPDATE_CHECK, UI_MENU_UPDATE_CHECK_DESC);   // ui/launcher/launcher_update.cpp
+    opt_toggle("MKW_DISCORD", UI_MENU_DISCORD, UI_MENU_DISCORD_DESC);   // core/presence/presence.c
     opt_end();
 }
 

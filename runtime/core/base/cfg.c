@@ -38,7 +38,7 @@ static const char *const known[] = {
     "BIND_LSTICK_RIGHT", "BIND_LSTICK_UP", "BIND_MINUS",
     "BIND_PLUS", "BIND_R", "BIND_RCLICK", "BIND_RIGHT", "BIND_RSTICK_DOWN", "BIND_RSTICK_LEFT", "BIND_RSTICK_RIGHT", "BIND_RSTICK_UP",
     "BIND_SKIP", "BIND_STATS", "BIND_UP", "BIND_X", "BIND_Y",
-    "BIND_ZL", "BIND_ZR", "BUTTON_ICONS", "CLASSIC_GP", "CORE_DIAG", "CRIT", "CRIT_OUT", "CTL", "DESC_TEMPLATE", "DETAIL_DISTANCE", "DEVICE_PROFILE", "DUMP", "DUMP_BUF", "DUMP_DIR", "DUMP_DRAWS", "DUMP_DRAWS_RECT", "DYN_DIFF", "DUMP_LOG",
+    "BIND_ZL", "BIND_ZR", "BUTTON_ICONS", "CLASSIC_GP", "CORE_DIAG", "CRIT", "CRIT_OUT", "CTL", "DESC_TEMPLATE", "DETAIL_DISTANCE", "DEVICE_PROFILE", "DISCORD", "DISCORD_APP", "DUMP", "DUMP_BUF", "DUMP_DIR", "DUMP_DRAWS", "DUMP_DRAWS_RECT", "DYN_DIFF", "DUMP_LOG",
     "EXEFS", "FEEDBACK", "FG_BIAS", "FG_DUMP", "FG_DUMP_DIR", "FG_LAMBDA", "FG_PROBE", "FIX_C0", "FIX_ZERO", "FLIGHT", "FLIGHT_AT", "FLIGHT_DIR", "FLIGHT_FRAMES", "FLIGHT_SPIKE_MS",
     "FLIGHT_THUMBS", "FPS", "FRAMEGEN", "FREEZE_IDLE", "GLYPH_DUMP", "FREE_CORES", "FULLSCREEN", "GAME_DIR", "GPL", "GPL_DRAW_BUILD", "GPU",
     "GPU_CRUMBS", "GPU_CRUMBS_DRAW", "HDR", "HDR_FAKE", "GPU_INDEX", "GPU_MEM_LIMIT", "GPU_NAME", "INPUT", "INPUT_RECORD", "INPUT_SCRIPT", "LAN", "LAN_IP", "LANG", "LATENCY", "LOW_LATENCY",
@@ -83,7 +83,7 @@ static const struct { const char *key, *section; } sections[] = {
     {"TRACE", "diagnostics"}, {"FLIGHT", "diagnostics"}, {"FLIGHT_SPIKE_MS", "diagnostics"},
     {"TURBO", "hacks"}, {"TURBO_SPEED", "hacks"}, {"SKIP_MOVIES", "hacks"}, {"SEED", "hacks"}, {"UNLOCK_ALL", "hacks"}, {"FREEZE_KEYS", "hacks"},
     {"QUICK_RACE", "hacks"}, {"CLASSIC_GP", "hacks"}, {"MODS", "launcher"}, {"MODS_ACK", "launcher"}, {"MODS_PLAYED", "launcher"},
-    {"UPDATE_CHECK", "launcher"}, {"GAME_DIR", "launcher"}, {"PLAYER", "launcher"},
+    {"UPDATE_CHECK", "launcher"}, {"DISCORD", "launcher"}, {"GAME_DIR", "launcher"}, {"PLAYER", "launcher"},
     {"SHORTCUT_ASKED", "launcher"},
 };
 
@@ -123,6 +123,7 @@ static const CfgMeta metas[] = {
     {"BUTTON_ICONS", "auto", "auto|nintendo|xbox|playstation|keyboard", LIVE},
     {"MOUSE_SENS", "1", "0..10", LIVE}, {"STICK_DEADZONE", "8", "0..40", LIVE}, {"SWITCH2", "0", "0|1|2", RESTART},
     {"MENU_LANG", "", "en|ja|fr|de|it|es|nl|pt|pt-BR|ru|zh-Hans|zh-Hant|ko|es-419|ca|gl|eu|pl|tr|uk|th", LIVE}, {"UPDATE_CHECK", "1", "0|1", LIVE},
+    {"DISCORD", "0", "0|1", LIVE},   // Discord Rich Presence (core/presence): off by default, the player's friends see it
     {"MODS", "", NULL, RESTART},   // the Mods page's enabled mods, comma-separated in load order; not a menu row
     {"MODS_ACK", "0", "0|1", LIVE},   // the player ticked the Mods page's "I understand" once
     {"MODS_PLAYED", "", NULL, LIVE},   // the mods of the last start: a new set backs the save up first (launcher)

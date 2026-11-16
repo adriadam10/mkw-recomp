@@ -2629,6 +2629,16 @@ msgstr ""
 "Fragt beim Start GitHub nach einer neueren Version des Ports und bietet sie auf dem "
 "Startbildschirm an (höchstens ein paar Sekunden, offline nichts)."
 
+msgctxt "UI_MENU_DISCORD"
+msgid "Discord status"
+msgstr ""
+
+msgctxt "UI_MENU_DISCORD_DESC"
+msgid ""
+"While the game runs, your Discord profile shows that you are playing, for how long, and whether "
+"you are racing or in the menus. Your Discord friends see it too."
+msgstr ""
+
 msgctxt "UI_LAUNCH_PLAYERS"
 msgid "Profiles"
 msgstr "Profile"

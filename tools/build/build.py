@@ -10,9 +10,11 @@ code's tables (runtime/core/boot/gamelib.h: module layout, function tables, the 
 game copy, patch sets); build/obj/rt/defaults.c the default game paths; build/obj/rt/i18n/ the menu texts
 of every language, from i18n/*.po (tools/i18n/catalog.py).
 
---target windows cross-compiles build/mkw.exe from Linux with llvm-mingw and the MSYS2 UCRT64 libraries that
-tools/build/windeps.py puts in build/win (totk-pc-recomp's --toolchain build: its LLVM_LINK_LIBS). Objects go to
-build/obj-win. The window, input, keyboard and menu are SDL3 on both systems; platform/win32.c replaces platform/linux.c.
+--target windows builds build/mkw.exe with llvm-mingw and the MSYS2 UCRT64 libraries that tools/build/windeps.py puts
+in build/win (totk-pc-recomp's --toolchain build: its LLVM_LINK_LIBS), cross-compiled from Linux or on Windows itself,
+where it is the only target and ninja comes from PATH or else MSYS2 UCRT64 (C:/msys64/ucrt64/bin, MSYS2_UCRT64_BIN).
+Objects go to build/obj-win. The window, input, keyboard and menu are SDL3 on both systems; platform/win32.c replaces
+platform/linux.c.
 
 Usage: uv run tools/build/build.py [--target linux|windows] [--gen build/generated] [--exefs DIR] [--romfs DIR]
        [--jobs N] [--frame-pointers] [--dry-run]
@@ -24,6 +26,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -64,6 +67,12 @@ def set_arch(arch: str) -> None:
     ARCH = arch
     GEN_FLAGS[5:] = [*ARCH_FLAGS[arch], *GEN_ARCH_FLAGS[arch]]
     RT_FLAGS[4:] = ARCH_FLAGS[arch]
+
+
+# Built on Windows itself (not cross-compiled from Linux): Ninja runs each command with CreateProcess, no shell, and
+# Windows caps a command line at 32 K characters; see windows_host_rules() and windows_host_ninja().
+HOST_WINDOWS = os.name == "nt"
+MSYS2_UCRT64_BIN = Path(os.environ.get("MSYS2_UCRT64_BIN", "C:/msys64/ucrt64/bin"))  # ninja, glslc, spirv-val
 
 
 @dataclass(frozen=True)
@@ -255,15 +264,21 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
             f"rule tabcc\n  command = {cc} -std=gnu11 $tabflags -MD -MF $out.d -c $in -o $out\n"
             "  depfile = $out.d\n  deps = gcc\n  description = cc $in"
         ),
-        f"rule ar\n  command = rm -f $out && {target.ar} rcs $out $in\n  description = ar $out",
-        (
-            f"rule solink\n  command = {' '.join([target.cc, *(sys_flags or [])])} -shared -fuse-ld=lld -o $out $in $solibs"
-            "\n  description = link $out"
-        ),
-        (
-            f"rule link\n  command = {target.cxx} $ldflags -o $out $in {' '.join(target.link_libs)}"
-            "\n  description = link $out"
-        ),
+        *(
+            windows_host_rules(target)
+            if HOST_WINDOWS
+            else [
+                f"rule ar\n  command = rm -f $out && {target.ar} rcs $out $in\n  description = ar $out",
+                (
+                    f"rule solink\n  command = {' '.join([target.cc, *(sys_flags or [])])} -shared -fuse-ld=lld -o $out $in $solibs"
+                    "\n  description = link $out"
+                ),
+                (
+                    f"rule link\n  command = {target.cxx} $ldflags -o $out $in {' '.join(target.link_libs)}"
+                    "\n  description = link $out"
+                ),
+            ]
+        ),  # fmt: skip
         f"rule rc\n  command = {target.windres} -O coff -I {out / 'rt/platform'} $in -o $out\n  description = rc $in",
         f"rule icon\n  command = {sys.executable} $in $out\n  description = icon $out",
     ]
@@ -314,6 +329,32 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
     return "\n".join(lines) + "\n"
 
 
+def windows_host_rules(target: Target) -> list[str]:
+    """ar, solink and link when Ninja runs on Windows. No shell: "rm -f $out && ..." would hand rm the "&&", the
+    archiver and every object as files to delete. The object lists go through response files (the game's archive and
+    the link pass the 32 K command-line limit); clang reads a response file the GNU way by default, where a backslash
+    escapes, so the links ask for Windows quoting. llvm-ar replaces members by name, so without the rm a chunk that
+    disappears stays in its archive until build/obj-win is cleaned."""
+    rsp = "\n  rspfile = $out.rsp\n  rspfile_content = $in"
+    return [
+        f"rule ar\n  command = {target.ar} rcs $out @$out.rsp{rsp}\n  description = ar $out",
+        (
+            f"rule solink\n  command = {target.cc} -shared -fuse-ld=lld --rsp-quoting=windows -o $out @$out.rsp"
+            f" $solibs{rsp}\n  description = link $out"
+        ),
+        (
+            f"rule link\n  command = {target.cxx} $ldflags --rsp-quoting=windows -o $out @$out.rsp"
+            f" {' '.join(target.link_libs)}{rsp}\n  description = link $out"
+        ),
+    ]
+
+
+def windows_host_ninja(text: str) -> str:
+    """Ninja reads the ":" of a drive letter in a build line as the end of its outputs: escape it ($:)."""
+    drive = re.compile(r"(?<![$\w])([A-Za-z]):(?=[\\/])")
+    return "\n".join(drive.sub(r"\1$:", line) if line.startswith("build ") else line for line in text.split("\n"))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--gen", type=Path, default=ROOT / "build/generated")
@@ -347,6 +388,8 @@ def main() -> None:
     args = ap.parse_args()
     if args.runtime_only and not args.dist:
         ap.error("--runtime-only needs --dist")
+    if HOST_WINDOWS and args.target != "windows":
+        ap.error("on Windows only --target windows builds (mkw.exe)")
     target = WINDOWS if args.target == "windows" else LINUX
     if args.arch != "x86_64" and target is WINDOWS:
         ap.error("--target windows is x86_64 only")
@@ -360,6 +403,9 @@ def main() -> None:
     dist = ROOT / "build/dist" / (args.target + (f"-{ARCH}" if cross else "")) if args.dist else None
     args.out = args.out or ROOT / ("build/obj" + ("-dist" if dist else "") + ("-win" if target is WINDOWS else "")
                                    + (f"-{ARCH}" if cross else ""))  # fmt: skip
+    if HOST_WINDOWS and not shutil.which("ninja") and (MSYS2_UCRT64_BIN / "ninja.exe").is_file():
+        # at the end, as windeps.py does: what PATH already has stays first
+        os.environ["PATH"] = f"{os.environ['PATH']}{os.pathsep}{MSYS2_UCRT64_BIN}"
     for tool in (target.cc, target.cxx, "ninja", target.ar):
         if not shutil.which(tool):
             sys.exit(f"{tool} not found" + (" (uv run tools/build/windeps.py)" if target is WINDOWS else ""))
@@ -379,12 +425,13 @@ def main() -> None:
         dist.mkdir(parents=True, exist_ok=True)
         (dist / "mkwgame.id").write_text(game_id())
     fp = ["-fno-omit-frame-pointer", "-mno-omit-leaf-frame-pointer"] if args.frame_pointers else []
-    (args.out / "build.ninja").write_text(
+    ninja = (
         # the lifted code and its library take the sysroot only for another CPU: an x86-64 release's stay as they were
         ninja_file(
             target, args.gen, args.out, fp + sys_flags, dist, args.runtime_only, sys_ld, sys_flags if cross else None
         )
     )
+    (args.out / "build.ninja").write_text(windows_host_ninja(ninja) if HOST_WINDOWS else ninja)
     if target is LINUX and not dist:
         write_compile_db(args.out / "build.ninja")
     cmd = ["ninja", "-f", str(args.out / "build.ninja"), "-j", str(jobs)] + (["-n"] if args.dry_run else [])

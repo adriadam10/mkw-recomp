@@ -235,6 +235,7 @@ typedef enum {
     UI_LAUNCH_LASTRUN_KNOWN, UI_LAUNCH_LASTRUN_FIXED, UI_LAUNCH_LASTRUN_CRASH, UI_LAUNCH_LASTRUN_OPEN,
     UI_LAUNCH_LASTRUN_REPORT, UI_LAUNCH_LASTRUN_DISMISS,
     UI_MENU_UPDATE_CHECK, UI_MENU_UPDATE_CHECK_DESC,
+    UI_MENU_DISCORD, UI_MENU_DISCORD_DESC,   // Discord Rich Presence (core/presence/presence.c)
     // the Profiles page (ui/launcher/launcher_players.cpp): PLAYER "...: %s" (the main page's row, the name),
     // CONFIRM "... %s ..." (the name)
     UI_LAUNCH_PLAYERS, UI_PLAYER_NOTE, UI_PLAYER_NAME_HINT, UI_PLAYER_CHOOSE, UI_PLAYER_CHOSEN,

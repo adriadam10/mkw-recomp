@@ -2579,6 +2579,16 @@ msgstr ""
 "ตอนเริ่ม ถาม GitHub หารีลีสใหม่ของพอร์ตและเสนอที่หน้าเริ่มต้น (ไม่กี่วินาทีที่มากที่สุด "
 "ออฟไลน์จะไม่ทำอะไร)"
 
+msgctxt "UI_MENU_DISCORD"
+msgid "Discord status"
+msgstr ""
+
+msgctxt "UI_MENU_DISCORD_DESC"
+msgid ""
+"While the game runs, your Discord profile shows that you are playing, for how long, and whether "
+"you are racing or in the menus. Your Discord friends see it too."
+msgstr ""
+
 msgctxt "UI_LAUNCH_PLAYERS"
 msgid "Profiles"
 msgstr "โปรไฟล์"

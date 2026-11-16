@@ -17,6 +17,7 @@
 #include "nvn_api.h"
 #include "vk.h"
 #include "platform/platform.h"
+#include "presence.h"
 #include "version.h"
 
 #define SYM_INIT_START "_ZN2nn4init5StartEmmPFvvES2_S2_"
@@ -366,6 +367,7 @@ static void lock_profile(void) {
 void rt_boot(void) {
     lock_profile();
     check_npdm();
+    presence_start();   // core/presence: Discord Rich Presence, on a thread of its own
     if (!rt_config()->shot) vk_pipeline_async_enable();   // a --shot image must not depend on build timing
     // Shaders and pipelines recorded in earlier runs are made ready while the modules load; the guest waits for them.
     PlatThread *warm = plat_thread_new(prewarm_main, NULL, "prewarm");

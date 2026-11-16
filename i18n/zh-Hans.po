@@ -2502,6 +2502,16 @@ msgid ""
 "seconds at most, nothing offline)."
 msgstr "启动时向 GitHub 查询此移植版的新版本，并在开始画面中提示（最多几秒，离线时不做任何事）。"
 
+msgctxt "UI_MENU_DISCORD"
+msgid "Discord status"
+msgstr ""
+
+msgctxt "UI_MENU_DISCORD_DESC"
+msgid ""
+"While the game runs, your Discord profile shows that you are playing, for how long, and whether "
+"you are racing or in the menus. Your Discord friends see it too."
+msgstr ""
+
 msgctxt "UI_LAUNCH_PLAYERS"
 msgid "Profiles"
 msgstr "档案"
