@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/build"))
-import build  # (mem_total_gb)
+import build  # (mem_total_gb, windows_memory_gb)
 
 
 def emit(*words: object) -> None:
@@ -49,8 +49,35 @@ def default_cc(game: Path, target: str) -> list[str]:
         if not (lib / "std/std.zig").is_file():
             raise Failed(f"{lib} is incomplete: extract the release again")
         os.environ["ZIG_LIB_DIR"] = str(lib)
+        use_own_zig_cache_if_split(game)
         return [str(zig), "cc", "-target", "x86_64-windows-gnu" if target == "windows" else f"{build.ARCH}-linux-gnu"]
     return ["clang"]
+
+
+def zig_cache_dir() -> Path:
+    """Where zig keeps its cache unless told: ZIG_GLOBAL_CACHE_DIR, else the user's cache folder (zig/)."""
+    if os.environ.get("ZIG_GLOBAL_CACHE_DIR"):
+        return Path(os.environ["ZIG_GLOBAL_CACHE_DIR"])
+    base = os.environ.get("LOCALAPPDATA") if os.name == "nt" else os.environ.get("XDG_CACHE_HOME")
+    return Path(base or Path.home() / ".cache") / "zig"
+
+
+def use_own_zig_cache_if_split(game: Path) -> None:
+    """zig writes each object into the cache's tmp/ and renames it into o/; where the two are on different file
+    systems (a home on an overlay or merged mount) every rename fails with CrossDevice and its libc cannot be built
+    (#439). Tried here with one file: when it fails, the cache goes inside the game folder, setup-work/zig-cache."""
+    cache = zig_cache_dir()
+    probe = cache / "tmp" / ".probe"
+    try:
+        (cache / "o").mkdir(parents=True, exist_ok=True)
+        probe.parent.mkdir(parents=True, exist_ok=True)
+        probe.write_text("")
+        os.rename(probe, cache / "o" / ".probe")
+        (cache / "o" / ".probe").unlink()
+    except OSError:
+        own = game / "setup-work" / "zig-cache"
+        own.mkdir(parents=True, exist_ok=True)
+        os.environ["ZIG_GLOBAL_CACHE_DIR"] = str(own)
 
 
 def crt_spec(game: Path, cc: list[str]) -> Path | None:
@@ -129,14 +156,10 @@ def own_children() -> None:
 def mem_available_gb() -> float:
     """Memory free for new work now (MemAvailable on Linux, ullAvailPhys on Windows); 8 when unknown."""
     if os.name == "nt":
-        import ctypes
-
-        class Status(ctypes.Structure):  # MEMORYSTATUSEX
-            _fields_ = [("length", ctypes.c_uint32), ("load", ctypes.c_uint32), ("total", ctypes.c_uint64),
-                        ("avail", ctypes.c_uint64), ("rest", ctypes.c_uint64 * 5)]  # fmt: skip
-
-        st = Status(length=ctypes.sizeof(Status))
-        return st.avail / 2**30 if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)) else 8.0
+        try:
+            return build.windows_memory_gb()[1]
+        except OSError:
+            return 8.0
     try:
         with open("/proc/meminfo") as f:
             for line in f:

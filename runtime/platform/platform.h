@@ -281,6 +281,16 @@ long plat_tz_west(void);                  // the local zone's standard offset, s
 // at most timeout_ms (0: no limit) and kills it after that. Returns the exit code, -1 when it could not start.
 int plat_run_self(const char *env_name, const char *env_value, char *out, size_t cap, uint32_t timeout_ms);
 
+// ---- local IPC: a byte stream to another program on this machine (Discord's Rich Presence). Windows: the named pipe
+// \\.\pipe\<name>; elsewhere the Unix socket <name> in $XDG_RUNTIME_DIR, $TMPDIR or /tmp, or in the app/
+// com.discordapp.Discord/ (Flatpak) or snap.discord/ (Snap) folder under them. One thread uses a connection at a time.
+typedef struct PlatIpc PlatIpc;
+PlatIpc *plat_ipc_open(const char *name);   // NULL when nobody listens; never waits for a busy server
+int plat_ipc_send(PlatIpc *c, const void *data, size_t n);   // blocks until all n bytes are written; 1 on success
+// What has arrived, without waiting: bytes read (at most cap), 0 when nothing is there, -1 when the connection is gone.
+long plat_ipc_recv(PlatIpc *c, void *buf, size_t cap);
+void plat_ipc_close(PlatIpc *c);
+
 // ---- randomness
 int plat_random(void *out, size_t n);     // cryptographically random bytes; 1 on success
 

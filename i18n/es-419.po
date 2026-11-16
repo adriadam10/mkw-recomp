@@ -75,7 +75,7 @@ msgstr "Velocidad del turbo"
 
 msgctxt "UI_MENU_TURBO_SPEED_DESC"
 msgid "How many times faster. A slow PC may not reach it."
-msgstr "Cuántas veces más rápido. Un PC lento puede no llegar."
+msgstr "Cuántas veces más rápido. Una PC lenta puede no llegar."
 
 msgctxt "UI_MENU_SKIP_MOVIES"
 msgid "Skip movies"
@@ -139,9 +139,33 @@ msgctxt "UI_MENU_QUICK_RACE_TT"
 msgid "Time trial"
 msgstr "Contrarreloj"
 
+msgctxt "UI_MENU_QUICK_RACE_GP"
+msgid "Grand Prix"
+msgstr ""
+
 msgctxt "UI_MENU_QUICK_RACE_FREE"
 msgid "Free roam"
 msgstr "Paseo libre"
+
+msgctxt "UI_MENU_CLASSIC_GP"
+msgid "Classic Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_GP_DESC"
+msgid ""
+"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
+"Changes take several seconds and affect races started afterward."
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS"
+msgid "Classic VS races"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS_DESC"
+msgid ""
+"VS races after the first take place on the next course instead of the road to it, whatever the "
+"course rule. Changes take several seconds and affect races started afterward."
+msgstr ""
 
 msgctxt "UI_MENU_ANISO"
 msgid "Texture filtering"
@@ -152,7 +176,7 @@ msgid ""
 "Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
 "each texture asks for. Impact on frame rate: low."
 msgstr ""
-"Nitidez de las texturas a lo lejos o en ángulo bajo, como el asfalto de delante. «Juego» usa lo "
+"Nitidez de las texturas a lo lejos o en ángulo bajo, como el asfalto más adelante. «Juego» usa lo "
 "que pide cada textura. Impacto en los fps: bajo."
 
 msgctxt "UI_MENU_ANISO_GAME"
@@ -275,7 +299,7 @@ msgstr "Pantalla completa"
 
 msgctxt "UI_MENU_FULLSCREEN_DESC"
 msgid "Fills the screen with the game; F11 toggles it."
-msgstr "El juego ocupa toda la pantalla; F11 la activa o la quita."
+msgstr "El juego ocupa toda la pantalla; F11 la activa o la desactiva."
 
 msgctxt "UI_MENU_WINDOW_SIZE"
 msgid "Window size"
@@ -381,7 +405,7 @@ msgid ""
 "Frame rate in the top right corner. Full adds frame times with a graph, CPU, GPU and memory load, "
 "temperatures and the render thread's waits. F10 cycles the modes."
 msgstr ""
-"Fotogramas por segundo arriba a la derecha. «Completo» añade los tiempos de fotograma con una "
+"Fotogramas por segundo arriba a la derecha. «Completo» agrega los tiempos de fotograma con una "
 "gráfica, la carga de CPU, GPU y memoria, las temperaturas y las esperas del hilo de dibujo. F10 "
 "cambia de modo."
 
@@ -413,12 +437,15 @@ msgstr "Fotogramas por segundo"
 
 msgctxt "UI_MENU_FPS_DESC"
 msgid ""
-"Frames per second the game aims for. Automatic is the console's: 60, or 30 when a frame takes too "
-"long. If your computer cannot hold 60, choose 30 so the race runs at its real speed."
+"Frames per second the game aims for. Automatic lowers it from 60 to 30, 20 or 15 when frames take "
+"too long, so the race always runs at its real speed. At 20 or 15, Frame generation can show the "
+"frames in between. 20 and 15 apply only in races: menus, movies and loading screens go at 30 at "
+"most, as on the console."
 msgstr ""
-"Los fotogramas por segundo a los que va el juego. «Automático» es lo de la consola: 60, o 30 "
-"cuando un fotograma tarda demasiado. Si tu computadora no llega a 60, elige 30 y la carrera irá a "
-"su velocidad real."
+"Los fotogramas por segundo a los que va el juego. «Automático» baja de 60 a 30, 20 o 15 cuando un "
+"fotograma tarda demasiado, para que la carrera siempre vaya a su velocidad real. A 20 o 15, la "
+"generación de fotogramas puede mostrar los fotogramas intermedios. 20 y 15 solo se aplican en "
+"carrera: los menús, los videos y las pantallas de carga van como máximo a 30, como en la consola."
 
 msgctxt "UI_MENU_FPS_AUTO"
 msgid "Automatic"
@@ -430,13 +457,47 @@ msgstr "Generación de fotogramas"
 
 msgctxt "UI_MENU_FRAMEGEN_DESC"
 msgid ""
-"Shows frames made between the game's own: 2x turns 30 fps into 60. Automatic makes as many as "
-"your monitor's refresh rate has room for. Adds up to one frame of delay, and fast motion can "
+"Shows frames made between the game's own: 2x turns 30 fps into 60. Automatic makes only as many "
+"as divide your monitor's refresh rate evenly. Adds up to one frame of delay, and fast motion can "
 "smear. Not on the console."
 msgstr ""
-"Muestra fotogramas hechos entre los del juego: 2x convierte 30 fps en 60. «Automático» hace "
-"tantos como quepan en la frecuencia de tu monitor. Añade hasta un fotograma de retraso y el "
-"movimiento rápido puede emborronarse. La consola no lo hace."
+"Muestra fotogramas hechos entre los del juego: 2x convierte 30 fps en 60. «Automático» solo hace "
+"los que dividen la frecuencia de tu monitor en partes iguales. Agrega hasta un fotograma de "
+"retraso y el movimiento rápido puede verse borroso. La consola no lo hace."
+
+msgctxt "UI_MENU_FRAMEGEN_UNEVEN"
+msgid ""
+"At the game's frame rate now, this factor does not divide your screen's refresh rate evenly: "
+"motion judders. Automatic avoids it."
+msgstr ""
+"Con los fps del juego ahora, este factor no divide la frecuencia de tu pantalla en partes "
+"iguales: el movimiento se ve entrecortado. «Automático» lo evita."
+
+msgctxt "UI_MENU_VRR"
+msgid "Variable refresh screen"
+msgstr "Pantalla con frecuencia variable"
+
+msgctxt "UI_MENU_VRR_DESC"
+msgid ""
+"Turn on if your screen has FreeSync or G-Sync and it is enabled. Off, Automatic frame generation "
+"only makes the frames that divide the refresh rate evenly, so motion does not judder."
+msgstr ""
+"Actívalo si tu pantalla tiene FreeSync o G-Sync y está encendido. Desactivado, la generación de "
+"fotogramas en «Automático» solo hace los que dividen la frecuencia en partes iguales, para que el "
+"movimiento no se vea entrecortado."
+
+msgctxt "UI_MENU_LOW_LATENCY"
+msgid "Low latency"
+msgstr "Baja latencia"
+
+msgctxt "UI_MENU_LOW_LATENCY_DESC"
+msgid ""
+"Starts each frame as late as your computer allows, so what you press reaches the screen sooner. "
+"Matters most at 20 or 15 fps and with Frame generation. Turn it off if the picture stutters."
+msgstr ""
+"Inicia cada fotograma tan tarde como lo permita tu computadora, para que lo que presionas llegue "
+"antes a la pantalla. Importa sobre todo a 20 o 15 fps y con Generación de fotogramas. Desactívalo "
+"si la imagen se entrecorta."
 
 msgctxt "UI_MENU_GRAPHICS"
 msgid "Picture"
@@ -523,7 +584,7 @@ msgstr "Rendimiento"
 #. Graphics tab button: Auto-set.
 msgctxt "UI_MENU_AUTOSET"
 msgid "Best settings for this PC"
-msgstr "Los mejores ajustes para este PC"
+msgstr "Los mejores ajustes para esta PC"
 
 #. Description of Best settings for this PC.
 msgctxt "UI_MENU_AUTOSET_DESC"
@@ -542,7 +603,7 @@ msgstr "Deshacer los mejores ajustes"
 #. Description of Undo best settings.
 msgctxt "UI_MENU_AUTOSET_UNDO_DESC"
 msgid "Puts back the rows Best settings for this PC changed."
-msgstr "Restaura las filas que cambió «Los mejores ajustes para este PC»."
+msgstr "Restaura las filas que cambió «Los mejores ajustes para esta PC»."
 
 msgctxt "UI_MENU_GAME_LANG"
 msgid "Game language"
@@ -590,7 +651,7 @@ msgid ""
 msgstr ""
 "El juego inalámbrico del menú de título pasa a ser el juego en LAN, para correr con otras PC de "
 "la misma red local (puertos UDP 49152 y 35000). Solo llega a direcciones de la red local, nunca a "
-"internet. Se aplica en el siguiente inicio."
+"internet. Se aplica en el próximo inicio."
 
 msgctxt "UI_MENU_VOLUME"
 msgid "Volume"
@@ -626,7 +687,7 @@ msgid ""
 "more, and stereo otherwise. Applies at the next start."
 msgstr ""
 "«Automático» da la mezcla envolvente 5.1 del juego cuando la salida de sonido del sistema tiene 6 "
-"canales o más, y estéreo si no. Se aplica al reiniciar."
+"canales o más, y estéreo si no. Se aplica en el próximo inicio."
 
 msgctxt "UI_MENU_MOTION"
 msgid "Motion controls"
@@ -1028,15 +1089,15 @@ msgstr "Flecha derecha"
 
 msgctxt "UI_KEY_MOUSE_L"
 msgid "Left mouse"
-msgstr "Mouse izquierdo"
+msgstr "Clic izquierdo"
 
 msgctxt "UI_KEY_MOUSE_R"
 msgid "Right mouse"
-msgstr "Mouse derecho"
+msgstr "Clic derecho"
 
 msgctxt "UI_KEY_MOUSE_M"
 msgid "Middle mouse"
-msgstr "Mouse central"
+msgstr "Clic central"
 
 msgctxt "UI_KEY_MOUSE_X1"
 msgid "Mouse 4"
@@ -1248,7 +1309,7 @@ msgid ""
 "Prepares frames for the GPU on a separate thread instead of the game thread. Adds up to one frame "
 "of latency."
 msgstr ""
-"Prepara los fotogramas para la GPU en un hilo aparte en vez del hilo del juego. Añade hasta un "
+"Prepara los fotogramas para la GPU en un hilo aparte en vez del hilo del juego. Agrega hasta un "
 "fotograma de retraso."
 
 msgctxt "UI_MENU_FREE_CORES"
@@ -1277,7 +1338,7 @@ msgid ""
 "Default keeps the current scheduling with a reserved worker for waiting draws; Old (draw) uses "
 "the previous scheduling."
 msgstr ""
-"Por defecto mantiene la planificación actual con un trabajador reservado para los dibujos en "
+"Por defecto mantiene la planificación actual con un hilo de trabajo reservado para los dibujos en "
 "espera; Antigua (dibujo) usa la planificación anterior."
 
 msgctxt "UI_MENU_PIPE_WAIT_DEFAULT"
@@ -1323,7 +1384,7 @@ msgstr "Biblioteca de pipelines gráficos"
 msgctxt "UI_MENU_GPL_DESC"
 msgid "Uses the Vulkan pipeline library extension; turn off if your driver misbehaves with it."
 msgstr ""
-"Usa la extensión de bibliotecas de pipelines de Vulkan; quítala si tu driver falla con ella."
+"Usa la extensión de bibliotecas de pipelines de Vulkan; desactívala si tu driver falla con ella."
 
 msgctxt "UI_MENU_ASTC"
 msgid "ASTC texture decoding"
@@ -1409,7 +1470,7 @@ msgstr "Saltar enlaces repetidos"
 
 msgctxt "UI_MENU_BIND_SKIP_DESC"
 msgid "Optimisation: skips bindings that did not change."
-msgstr "Optimización: salta los enlaces que no han cambiado."
+msgstr "Optimización: salta los enlaces que no cambiaron."
 
 msgctxt "UI_MENU_SHADER_MEMO"
 msgid "Shader memo"
@@ -1449,7 +1510,7 @@ msgstr "Saltar push constants repetidas"
 
 msgctxt "UI_MENU_PUSH_SKIP_DESC"
 msgid "Optimisation: skips push constants that did not change."
-msgstr "Optimización: salta las push constants que no han cambiado."
+msgstr "Optimización: salta las push constants que no cambiaron."
 
 msgctxt "UI_MENU_SPLIT_DRAWS"
 msgid "Early GPU submission"
@@ -1520,7 +1581,7 @@ msgstr "Grabar los controles"
 
 msgctxt "UI_MENU_INPUT_RECORD_DESC"
 msgid "Writes your inputs to a file for bug reports."
-msgstr "Escribe tus pulsaciones en un archivo para informar de fallos."
+msgstr "Escribe tus pulsaciones en un archivo para reportar fallos."
 
 msgctxt "UI_MENU_OPEN_LOG"
 msgid "Open log folder"
@@ -1544,7 +1605,7 @@ msgstr "Copiado"
 
 msgctxt "UI_MENU_ACTION_FAILED"
 msgid "did not work"
-msgstr "no ha funcionado"
+msgstr "no funcionó"
 
 msgctxt "UI_MENU_RESET"
 msgid "Reset all settings to defaults"
@@ -1552,7 +1613,7 @@ msgstr "Volver a los valores predeterminados"
 
 msgctxt "UI_MENU_RESET_DESC"
 msgid "Applies to every tab."
-msgstr "Vale para todas las pestañas."
+msgstr "Aplica a todas las pestañas."
 
 msgctxt "UI_MENU_RESET_CONFIRM"
 msgid "Reset every setting to its default?"
@@ -1867,7 +1928,7 @@ msgstr "%s está cifrado: el exefs del juego debe estar descifrado"
 msgctxt "UI_SETUP_ERR_VERSION"
 msgid ""
 "the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
-msgstr "el juego no es Mario Kart World 1.0.0/1.8.0 (build id %s): solo se admite la 1.0.0/1.8.0"
+msgstr "el juego no es Mario Kart World 1.0.0/1.8.0 (build id %s): solo se admiten esas versiones"
 
 #. %s: how many files the player's RomFS has.
 msgctxt "UI_SETUP_ERR_ROMFS"
@@ -2212,7 +2273,7 @@ msgstr "No se pudo actualizar: %s"
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_UPDATED"
 msgid "Updated to %s: setting up again what it changed"
-msgstr "Actualizado a %s: preparando de nuevo lo que ha cambiado"
+msgstr "Actualizado a %s: preparando de nuevo lo que cambió"
 
 #. The update card's title; %s is the release (v0.1.12).
 #. printf format: keep every %... conversion, in the same order.
@@ -2251,12 +2312,12 @@ msgstr "Archivos del juego listos (versión %s)"
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_PAD"
 msgid "Controller: %s"
-msgstr "Mando: %s"
+msgstr "Control: %s"
 
 #. Under Play when no controller is connected.
 msgctxt "UI_LAUNCH_PAD_NONE"
 msgid "No controller connected"
-msgstr "Sin mando conectado"
+msgstr "Sin control conectado"
 
 #. On the controller row: opens the Controls tab.
 msgctxt "UI_LAUNCH_CONFIGURE"
@@ -2281,7 +2342,7 @@ msgstr "Ahora no"
 #. The keys, at the lower right of the start screen.
 msgctxt "UI_LAUNCH_KEYS"
 msgid "Enter or A: select · F11: fullscreen"
-msgstr "Intro o A: seleccionar · F11: pantalla completa"
+msgstr "Enter o A: seleccionar · F11: pantalla completa"
 
 #. Beside the Settings title on the start screen.
 msgctxt "UI_LAUNCH_SETTINGS_NOTE"
@@ -2401,7 +2462,7 @@ msgstr "Accesos directos"
 #. Tools page row.
 msgctxt "UI_TOOLS_STEAM"
 msgid "Add to Steam"
-msgstr "Añadir a Steam"
+msgstr "Agregar a Steam"
 
 #. Under Add to Steam.
 msgctxt "UI_TOOLS_STEAM_NOTE"
@@ -2411,17 +2472,17 @@ msgstr "Como juego no perteneciente a Steam, para Big Picture y Steam Deck"
 #. Button of Add to Steam.
 msgctxt "UI_TOOLS_ADD"
 msgid "Add"
-msgstr "Añadir"
+msgstr "Agregar"
 
 #. After Add to Steam.
 msgctxt "UI_TOOLS_STEAM_DONE"
 msgid "Added to Steam"
-msgstr "Añadido a Steam"
+msgstr "Agregado a Steam"
 
 #. After Add to Steam while Steam runs.
 msgctxt "UI_TOOLS_STEAM_RESTART"
 msgid "Added: restart Steam to see it"
-msgstr "Añadido: reinicia Steam para verlo"
+msgstr "Agregado: reinicia Steam para verlo"
 
 #. Why Add to Steam failed.
 msgctxt "UI_TOOLS_STEAM_NONE"
@@ -2554,7 +2615,17 @@ msgid ""
 "seconds at most, nothing offline)."
 msgstr ""
 "Al arrancar, pregunta a GitHub si hay una versión más nueva del port y la ofrece en la pantalla "
-"de inicio (unos segundos como mucho, nada sin conexión)."
+"de inicio (unos segundos como máximo, nada sin conexión)."
+
+msgctxt "UI_MENU_DISCORD"
+msgid "Discord status"
+msgstr ""
+
+msgctxt "UI_MENU_DISCORD_DESC"
+msgid ""
+"While the game runs, your Discord profile shows that you are playing, for how long, and whether "
+"you are racing or in the menus. Your Discord friends see it too."
+msgstr ""
 
 msgctxt "UI_LAUNCH_PLAYERS"
 msgid "Profiles"

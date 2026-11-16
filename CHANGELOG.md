@@ -4,7 +4,26 @@ Each version's section is that release's notes: `tools/build/notes.py` puts it i
 updating, known issues, reporting) for the GitHub release. A section has a summary paragraph, `### Changes` (each with
 its issue, #N), `### Tested` (what was run from the packages before publishing) and optionally `### Known issues`.
 
+## Unreleased
+
+### Changes
+
+- **Steam Remote Play Together, off by default**: friends who are not in the room join local multiplayer through Steam,
+  which streams the window and the sound; each guest's controller, or keyboard when they have none, becomes the next
+  player. mkw runs under the App ID of a Steam game you own that supports Remote Play Together (RetroArch, 1118310, is
+  free): `steam_appid` in `mkw.ini`, or Settings > General, where an App ID can be typed and is kept in a list.
+  Picking local multiplayer with too few controllers asks whether the other players connect controllers or join over
+  Steam. Steam's library is not in the release: `tools/build/steamlib.py` puts it next to mkw. Set-up and the App
+  IDs tried: [docs/remote-play.md](docs/remote-play.md).
+
 ## 0.1.12
+
+A new start screen and settings by @ViniciusStanula; 20 and 15 fps at the race's real speed, Low latency and frame
+generation that splits the screen's refreshes evenly; a second fix for NVIDIA's "instruction pointer invalid" crashes,
+with one part by @Elenedeath; Classic Grand Prix, faster audio and Steam Deck fixes by @andreknieriem; the Windows
+setup sized by the PC's real memory by @fraustiz; and fixes for the setup's shaders step (cause found by @Talaric0),
+the minimap on AMD (diagnosed by @elenotrindade) and game version 1.8.0 (photo mode, Thai, LAN play, button icons).
+Thanks to @ViniciusStanula, @andreknieriem, @Elenedeath, @fraustiz, @SavageCore, @Talaric0 and @elenotrindade.
 
 ### Changes
 
@@ -32,7 +51,45 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   folder's `backups/`, Add to Steam puts the game in every Steam user's `shortcuts.vdf` (the same executable
   replaced, never doubled), Undo update brings back the version the last update replaced (the files it replaced are
   kept for it), and Report a problem copies the system's details to the clipboard and opens the bug form. The
-  scripts run off the UI thread, one job at a time.
+  scripts run off the UI thread, one job at a time. The start screen's 64 new texts come in all 20 menu languages.
+- **The Windows setup sizes its jobs by the PC's memory** (#416 by @fraustiz): it read the memory size from
+  `/proc/meminfo`, which only Linux has, so every Windows PC was taken for one with 8 GB (a 24-thread PC with 31 GB
+  logged `machine: 24 threads, 8.0 GB, 9 compile and 6 generate jobs, win32`). The size now comes from Windows
+  (`GlobalMemoryStatusEx`). With it alone, 24 generate workers held 26.6 GB (1.1 GB each, 0.42 on Linux) and left
+  0.13 GB free, so a Windows generate worker now counts 1.2 GB, and on every system the jobs also fit in the memory
+  free when the setup starts: 17 compiles and 7 generate workers on that PC, the setup in 222 s instead of 300 s.
+- **NVIDIA "instruction pointer invalid": the particles' integer abs** (#395 by @Elenedeath, #22): NVIDIA's shader
+  compiler mis-compiles an integer `abs` of a small select result followed by an add or xor, and the GPU jumps to an
+  invalid address; in 1.8.0 it hits the title screen's and the Souk's particle programs on their first draw. The
+  translator now writes that `abs` as `x * ((x >> 31) | 1)`, the one form the driver does not turn back into it
+  (bit-exact for every 32-bit input). It goes with the second fix below.
+- **LAN play on game version 1.8.0** (#394 by @Elenedeath, #309): 1.8.0's patch table had no `lan` set, so its title
+  menu kept Wireless Play (the console's radio, which a PC does not have) and picking it ended in 2203-0022, the game
+  never asking for a local network. The set is ported, and with LAN play on the menu opens with LAN Play chosen, as
+  on 1.0.0.
+- **Classic Grand Prix** (#402 by @andreknieriem): a new switch in Settings > Hacks (`MKW_CLASSIC_GP`, off). With it
+  on, every race of a Grand Prix cup is laps on one course: the intermissions, one lap on the road to the next
+  course, become that course for its laps (Mushroom Cup: Mario Bros. Circuit, then Crown City for 3 laps, and so on).
+  Knockout Tour is left as it is. Turned on during play, it applies to races started after its scan (a few seconds).
+- **Audio decodes each sample once** (#331 by @andreknieriem): a DSP-ADPCM voice decoded each sample about three
+  times; now about once, 24 % fewer cycles in the mixer. Two errors in the history carried from one buffer to the next
+  (at a buffer change, and at a pitch above 1) are fixed along the way, checked against an exact decode.
+- **Dynamic state recorded only when it changes** (#349 by @andreknieriem): the 12 to 18 dynamic-state commands of a
+  draw were recorded again after every pipeline bind; now only the ones whose value changed, 10.6 % fewer Vulkan calls
+  on a Steam Deck's Grand Prix (no measurable change in frame time there, which the replay thread bounds).
+- **Out of video memory for a pool chunk, memory is freed first** (#326 by @andreknieriem): on the Steam Deck (1 GB
+  carve-out) a pool chunk that found no video memory failed outright; it now frees idle textures and waits for the
+  GPU, as an image already did, and tries again (a wait of 1.9 ms at the median and 17.5 ms at most on the Deck).
+- **The GPU hang report comes before amdgpu resets the GPU** (#327 by @andreknieriem): on the Steam Deck the kernel
+  resets a GPU job after 5 s (SteamOS's `amdgpu.lockup_timeout`), as soon as the report of #297 was due, so three hangs
+  ended with no line in `mkw.log`. On amdgpu the report now comes after two fifths of that timeout (2 s on the Deck);
+  an unset or unavailable kernel timeout uses 1 s (the documented default has been as short as 2 s), elsewhere it stays
+  at 5 s, and `MKW_GPU_HANG_MS` sets it. Each stuck episode reports once, not only the first, and one the GPU finishes
+  after all says so ("it was slow, not hung").
+- **"Straight to" a Grand Prix** (#348 by @andreknieriem): Settings > Hacks > Straight to gains Grand Prix (24 karts,
+  through the menus by phase, skipping the course's flyover), beside time trial and free roam.
+- **Makefile shortcuts** (#362 by @SavageCore): for building from source, `make build`, `check`, `dist`, `appimage`,
+  `windows` and `clean` run the commands `tools/build/README.md` documents (`make help` lists them).
 - **The Steam Deck renders the race at 720 lines** (#317 by @andreknieriem): the Deck's picture is 1280x720 on its
   screen, but the 3D scene still rendered at the console's docked 2560x1440. @andreknieriem measured it on a Deck: those
   passes took 16 of the GPU's 42 ms a frame. The Deck's profile now sets Resolution to 720, and races went from about
@@ -40,6 +97,30 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
 - **The start screen says how the last game ended**: when it stopped with a known problem, it names the issue that
   follows it (no need to report it again) or the release that fixes it; an unknown error gets a button to the bug
   form, asking for `logs/mkw.log`.
+- **20 and 15 fps, at the race's real speed, and Low latency**: Settings > Graphics > Frame rate gains 20 and 15, and
+  Automatic now drops to them (it stopped at 30) when frames take too long, so a slow graphics card no longer plays
+  the race in slow motion: at 15 the time trial's clock runs at 0.998x real time and the karts drive as at 60. With
+  Frame generation at 2x, 15 fps shows as 30. New **Low latency** (on): the game used to prepare up to two frames
+  ahead of the screen; now it starts each one only as early as its work needs, measured frame by frame. On a Radeon
+  660M at 15 fps a controller read reached its frame's display time in about 115 ms instead of 200. 20 and 15 apply
+  only in races: menus and loading screens go at 30 at most, as on the console, and a cup's opening movie plays at
+  60 from its first frame, so it can always be skipped (opened at 30 or 15 fps it was not skipped in 7 of 9 runs).
+  Frame generation pauses while a movie plays: the movie keeps its own rate instead of repeated frames. At 15 fps
+  with 2x the made frame and the game's now go out evenly, 33 ms apart (they went 25 and 42 ms apart), and the full
+  performance overlay shows the game's frames and the screen's ("20/40 fps") instead of only the game's.
+  Frame generation's **Automatic** now makes only as many frames as split the screen's refreshes evenly: on 60 Hz,
+  2x at 30 fps, 3x at 20 and 4x at 15, all 60, where 2x at 20 (40 fps) held frames 1, 2, 1, 2 refreshes and
+  juddered. A 75 Hz screen, where no game rate fits, shows the game's own frames. New **Variable refresh screen**
+  (off): with FreeSync or G-Sync on, Automatic makes as many as fit in time instead. A fixed 2x, 3x or 4x that
+  does not fit the screen shows a note under it.
+- **Scaling to the window is bilinear by default**: AMD FSR 1 is on only when picked in Settings > Graphics or by
+  Auto-set.
+- **Less copying of game memory on dedicated graphics cards**: with the memory in `mirror` (what Automatic picks on a
+  dedicated card), a page only the GPU wrote was uploaded again from the game's copy, and the shadow took back in what
+  the GPU had just written out; neither does now. On a GTX 1050 Ti, 2.1 ms less per frame on average.
+- **Updating keeps the setup's choices**: the setup that runs by itself after an update copied the whole RomFS
+  (23 GB) even when the player had chosen to link it, and an update that found a leftover of the one before in
+  `update-previous/` stopped with an error instead of retrying.
 - **Issues**: a report of a known error is closed at once as its duplicate (a reply from its author reopens it), and
   a report on an older release, quiet for 3 days, is asked to try the latest and closed after 7 days without a reply.
 - **Motion controls for every player** (discussion 302): the gyroscope and accelerometer were read from player 1's
@@ -72,13 +153,41 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   midway (8 of 8, against 30 % of the game's fragment shaders). A discarded pixel now stays as a helper to the end of
   the shader (Vulkan's demote, as Switch emulators and DXVK do) instead of ending in the middle of it. Verified on the
   captures (same images) and not on an NVIDIA card.
-- **Steam Remote Play Together, off by default**: friends who are not in the room join local multiplayer through Steam,
-  which streams the window and the sound; each guest's controller, or keyboard when they have none, becomes the next
-  player. mkw runs under the App ID of a Steam game you own that supports Remote Play Together (RetroArch, 1118310, is
-  free): `steam_appid` in `mkw.ini`, or the menu's General tab, where an App ID can be typed and is kept in a list.
-  Picking local multiplayer with too few controllers asks whether the other players connect controllers or join over
-  Steam. Steam's library is not in the release: `tools/build/steamlib.py` puts it next to mkw. Set-up and the App
-  IDs tried: [docs/remote-play.md](docs/remote-play.md).
+- **A setup that failed once in the shaders step no longer fails every time after** (#325, cause and fix by
+  @Talaric0): when NVIDIA's disassembler gave a garbled capture, the rejected spec was already in `sm86/`, and every
+  later setup reused it and stopped in `translate.py` (`KeyError: 'BITS_…'` or `classes carry no Opcode constant`). A
+  capture is now parsed aside and kept only when accepted, and a spec left broken by an earlier release is built
+  again. Before 0.1.12: delete the game folder's `sm86` folder and run Set up again.
+- **The minimap without garbage on AMD** (#365, diagnosed by @elenotrindade): AMD lays out some depth buffers larger
+  than the Switch 2 does (the minimap's 676x676 one takes 0x2e0170 bytes for 0x204000), and bound at the game's address
+  its extra bytes overwrote the minimap's colour target right after it. A depth or stencil buffer that does not fit its
+  space now gets its own memory (`MKW_POOL_SPILL=1` restores the old binding). Same picture on the race and title
+  captures on a Radeon 660M, where 7 depth buffers did not fit.
+- **A processor without AVX2 gets a message instead of nothing** (#262): the game is still built for AVX2 (a build
+  without it is planned in discussion 82), and on an AMD FX or an Intel Core older than the 4th generation `mkw.exe`
+  closed before writing any log. It now says so in a box before anything else runs.
+
+### Tested
+
+From these packages, before publishing:
+
+- The whole setup from the Linux AppImage (Radeon 660M, RADV, game 1.0.0) in 16 minutes (generate 57 s, compile 8 min,
+  shaders 6 min), its warm-up to the title without a fault.
+- The whole setup from the Windows zip (Windows 11, GTX 1050 Ti, 6 threads) in 23 minutes, its warm-up to the end
+  without a fault; its log now names the PC's real memory (`machine: 6 threads, 15.9 GB, 10.9 GB free`, where 0.1.11
+  said 8.0 GB).
+- Before the tag, on `main`: the race and title captures replayed on the Radeon 660M with the minimap's depth change
+  (the same images as without it: 0.053 and 0.0015 against the game), the shaders step's spec built and rejected on
+  purpose (a rejected capture leaves no spec behind), and the setup's tests (40 passed).
+
+### Known issues
+
+- NVIDIA "instruction pointer invalid" (#22): the second fix is checked on the captures (same images), not on an
+  NVIDIA card yet; `skip_programs = 1c7a765b` in `mkw.ini` still avoids the Shell Cup's crash if it comes back.
+- Some AMD cards on Linux still hang later on, in a race or a menu, with the compute path (#50).
+- Black ground on Intel Arc and AMD Polaris (#319, #314): the terrain's texture tiles past the 768 MiB budget stay
+  empty there.
+- A processor without AVX2 cannot run the game yet (discussion 82); it now says so instead of closing silently.
 
 ## 0.1.11
 

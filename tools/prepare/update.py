@@ -56,9 +56,15 @@ def emit(*words: object) -> None:
 def ca_file() -> str | None:
     """pip's bundled CA file when the system's store is empty to this Python, else None (python-build-standalone
     ships no certifi; a minimal Linux running the AppImage may have no /etc/ssl, and NixOS keeps its bundle where this
-    OpenSSL does not look, issue #102)."""
-    if os.environ.get("SSL_CERT_FILE") or ssl.create_default_context().cert_store_stats().get("x509_ca"):
+    OpenSSL does not look, issue #102; a Windows certificate store with a certificate Python cannot read raises
+    OSError "invalid ASN1 tag" when the context is made, issue #456, and counts as empty)."""
+    if os.environ.get("SSL_CERT_FILE"):
         return None
+    try:
+        if ssl.create_default_context().cert_store_stats().get("x509_ca"):
+            return None
+    except OSError:
+        pass
     for pat in (
         "lib*/python3*/site-packages/pip/_vendor/certifi/cacert.pem",
         "Lib/site-packages/pip/_vendor/certifi/cacert.pem",
