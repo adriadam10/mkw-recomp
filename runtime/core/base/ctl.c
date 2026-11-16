@@ -18,6 +18,7 @@
 //   seq                  the game's active sequence nodes (MKW_SEQ_WATCH, seqwatch.c)
 //   capture DIR [N]      the next N presented frames (2) as a capture for mkw --replay (runtime/gfx/cap; MKW_CAPTURE=1)
 //   pause | step [N] | resume   the game stops on its next frame, goes N frames on (1) and stops, runs again (freeze.c)
+//   set KEY VALUE        a live setting as the menu sets it (cfg_set, MKW_ prefixed), not saved to mkw.ini
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +45,11 @@ void ctl_run(char *line) {
     if (!strcmp(cmd, "shot") && *arg) {
         rt_shot_request(arg);
         rt_log("ctl: shot %s queued at frame %llu", arg, (unsigned long long)frame);
+    } else if (!strcmp(cmd, "set") && *arg) {   // a live setting, as the menu sets it (not saved to mkw.ini)
+        char *sp = strchr(arg, ' ');
+        if (sp) *sp = 0;
+        cfg_set(arg, sp ? sp + 1 : "");
+        rt_log("ctl: set %s = %s at frame %llu", arg, sp ? sp + 1 : "", (unsigned long long)frame);
     } else if (!strcmp(cmd, "screen") && *arg) {
         vk_present_screen_shot(arg);
         rt_log("ctl: screen %s queued at frame %llu", arg, (unsigned long long)frame);

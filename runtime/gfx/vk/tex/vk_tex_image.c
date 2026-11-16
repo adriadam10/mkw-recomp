@@ -61,6 +61,18 @@ static int format_compressed(VkFormat f) {   // vkCmdClearColorImage takes no bl
 static int bind_pool_memory(VkCtx *c, Tex *e, VkImage img) {
     VkMemoryRequirements req;
     vkGetImageMemoryRequirements(c->device, img, &req);
+    // A Vulkan image larger than its NVN storage overwrites the pool memory after it. AMD lays out a 676x676 D32S8 in
+    // 0x2e0170 bytes for NVN's 0x204000, and the minimap's depth wrote into its colour target at +0x204200 (#365,
+    // diagnosed by elenotrindade). A depth or stencil image is not read through other formats in that memory, so it
+    // gets its own; a colour one stays bound, as the game may alias it. MKW_POOL_SPILL=1 binds them all as before.
+    static int spill_env = -1;
+    if (spill_env < 0) spill_env = cfg_get("MKW_POOL_SPILL") && atoi(cfg_get("MKW_POOL_SPILL"));
+    if ((e->f.depth || e->f.stencil) && req.size > e->t.L.size && !spill_env) {
+        rt_log("vk_tex: depth %#llx %ux%u fmt %#x takes %#llx bytes for NVN's %#llx: own memory (MKW_POOL_SPILL)",
+               (unsigned long long)e->pub.addr, e->key.d.width, e->key.d.height, e->key.d.format,
+               (unsigned long long)req.size, (unsigned long long)e->t.L.size);
+        return 0;
+    }
     VkMemSpan sp;
     if (!vk_mem_resolve(e->pub.addr, req.size, &sp) || !sp.alloc || sp.alloc_offset % req.alignment) return 0;
     VmaAllocationInfo info;

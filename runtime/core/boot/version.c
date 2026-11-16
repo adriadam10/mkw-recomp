@@ -22,6 +22,20 @@
 #include "version.h"
 #include "host.h"
 
+// race_scene.c's nodes, by their name getter's vtable slot (build/seq_nodes.tsv, build/seq_nodes-180.tsv). A GP's
+// order (dn1, dn2, 15/11/2026): ReadyRace (the world map), StartIntroMovie, WaitIntroMovie (the cup opening), then
+// IsSequenceFlag ~130 frames after the movie (the countdown): the race; ChatUIReady at its finish, under the
+// standings (vf1). Free roam: ReadyFreeRun, then ChatUIReady as it begins. StartRace and WaitRaceStart never start.
+#define RACE_EVENTS(ready, start_movie, wait_movie, flag, finish, gp_end, gp_list, title, vs, tt, to_title, parts, \
+                    chat, free)                                                                               \
+    {{"ReadyRace", ready, RT_RACE_ARM}, {"StartIntroMovie", start_movie, RT_RACE_ARM},                       \
+     {"WaitIntroMovie", wait_movie, RT_RACE_ARM}, {"IsSequenceFlag", flag, RT_RACE_START},                   \
+     {"RaceFinishFaderOpenCheck", finish, RT_RACE_LEAVE}, {"GrandprixEndMovie", gp_end, RT_RACE_LEAVE},      \
+     {"GrandprixListup", gp_list, RT_RACE_LEAVE}, {"TitleMenuMain", title, RT_RACE_LEAVE},                   \
+     {"VSCourseSelect", vs, RT_RACE_LEAVE}, {"MenuTimeAttackMain", tt, RT_RACE_LEAVE},                       \
+     {"ReturnToTitleMenu", to_title, RT_RACE_LEAVE}, {"PartsSelectEx", parts, RT_RACE_LEAVE},                \
+     {"ChatUIReady", chat, RT_RACE_CHAT}, {"ReadyFreeRun", free, RT_RACE_FREE_ARM}}
+
 static const RtVersion versions[] = {
     {
         .number = 100,
@@ -41,6 +55,8 @@ static const RtVersion versions[] = {
         .random_ctor2_lr = 0x15585a8,
         .ui_text_lr = 0x169aeb4,
         .ui_focus_fn = 0xce8564,
+        .race_events = RACE_EVENTS(0x316e2a0, 0x3172538, 0x3177780, 0x316ac10, 0x316dfb0, 0x31697c0, 0x3169910,
+                                   0x3174f08, 0x3176490, 0x316c268, 0x316f400, 0x316cf10, 0x3165fe0, 0x316e100),
         .sdk_name_pool = 0xb74c26,
         .sdk_name_offsets = 0xb79b90,
         .sdk_pointers = 0xd95168,
@@ -66,6 +82,8 @@ static const RtVersion versions[] = {
         .ui_text_lr = 0x1805f20,
         .ui_focus_fn = 0x7fd810,
         .camera_service = 0x378ecb8,   // RELATIVE at main+0x36f4148; 9 functions load it
+        .race_events = RACE_EVENTS(0x353f5c0, 0x35448c0, 0x354a5d8, 0x353b3a0, 0x353f180, 0x3539c68, 0x3539db8,
+                                   0x3547698, 0x35492e8, 0x353ce78, 0x35409c8, 0x353df10, 0x3534d90, 0x353f420),
         .sdk_name_pool = 0xc26452,
         .sdk_name_offsets = 0xc2b870,
         .sdk_pointers = 0xe45aa8,

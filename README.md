@@ -130,6 +130,9 @@ Beyond the console, all optional and off (or at the console's value) by default:
   screens, VSync, mailbox or immediate presentation.
 - **Frame generation**: frames made between the game's (a race at 30 fps shown at 60, or at 240 on a 240 Hz screen).
   Smoother, not faster: the picture is up to one frame later, and fast motion and the minimap can smear.
+- **Frame rate**: 20 and 15 fps besides the console's 60 and 30; Automatic drops to them when frames take too long,
+  so a slow graphics card keeps the race at its real speed. **Low latency** (on by default: it changes no picture,
+  only when each frame starts) starts each frame as late as the card allows, so a press reaches the screen sooner.
 - **Graphics**: texture filtering and quality, detail distance and shadow quality above or below the console's.
 - **Sound**: 5.1 surround.
 - **Controls**: every key and button rebindable, mouse camera, Nintendo, Xbox or PlayStation button icons, motion
@@ -190,6 +193,8 @@ uv run tools/build/build.py              # build/mkw; --target windows builds mk
 build/mkw
 ```
 
+Shortcuts for these flows and the release ones: `make build`, `make appimage` (`make help` lists them all).
+
 From a packed dump (`.nup`, `.nx`) and for Linux on AArch64: [tools/build/README.md](tools/build/README.md#a-packed-dump)
 and [its AArch64 section](tools/build/README.md#linux-aarch64).
 
@@ -208,7 +213,8 @@ see [tools/shaders/README.md](tools/shaders/README.md). Everything generated goe
 | `.github/` | CI, issue and pull request templates |
 
 At the root: `pyproject.toml` and `uv.lock` (the Python environment of the tools), `.gitignore`, `LICENSE`,
-`CONTRIBUTING.md`, `CHANGELOG.md` (each release's changes, its notes) and `AGENTS.md` (a guide for coding agents).
+`CONTRIBUTING.md`, `CHANGELOG.md` (each release's changes, its notes), `AGENTS.md` (a guide for coding agents) and
+`Makefile` (shortcuts for the build flows: `make help`).
 
 ## Design decisions (30/10/2026)
 

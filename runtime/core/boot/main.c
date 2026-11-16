@@ -24,6 +24,7 @@
 #include <asm/hwcap.h>
 #include <sys/auxv.h>
 #endif
+#include <SDL3/SDL_messagebox.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -197,6 +198,23 @@ void rt_udf(Cpu *c, uint64_t pc) {
     rt_fatal("undefined instruction at %s (lr %s)", ldr_describe(pc, at, sizeof at),
              ldr_describe(c->x[30], lr, sizeof lr));
 }
+
+#if defined(__x86_64__)
+// The runtime and the game code are built for x86-64-v3 (tools/build/build.py ARCH_FLAGS), so on a CPU without AVX2,
+// FMA or BMI2 (AMD FX, Intel before Haswell) the first such instruction kills the process before any log or window:
+// issue #262 (FX-8320) only saw mkw.exe not open. This runs first of all constructors (101; the others, e.g.
+// tick_scale_init's 128-bit multiply, may already use BMI2) and is itself built for the baseline x86-64.
+__attribute__((constructor(101), target("arch=x86-64"))) static void require_x86_64_v3(void) {
+    __builtin_cpu_init();
+    if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma") && __builtin_cpu_supports("bmi2")) return;
+    const char *msg = "This processor lacks AVX2, which mkw-recomp needs for now (for example an AMD FX or an Intel "
+                      "Core older than the 4th generation). A version without it is planned: "
+                      "https://github.com/adriadam10/mkw-recomp/discussions/82";
+    fprintf(stderr, "cpu: %s\n", msg);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "mkw-recomp", msg, NULL);
+    _Exit(3);
+}
+#endif
 
 // CNTPCT_EL0 at RT_TICK_HZ. The scale is set before main, so no thread reads it half written.
 static PlatScale tick_scale;
@@ -474,7 +492,7 @@ static int usage(const char *argv0) {
     fprintf(stderr, "usage: %s [--exefs DIR] [--romfs DIR|FILE.nup|FILE.nx] [--nup FILE] [--profile DIR] [--launcher | --play | --selftest | --probe-loader | "
                     "--probe-cfg | --probe-kernel | --probe-audio | --probe-services | --probe-fs | --probe-gfx-abi | "
                     "--probe-nvn | --probe-nvn-tex | --probe-window | --probe-vkmem | "
-                    "--probe-vkexec | --probe-astc | --probe-framegen | --probe-texpre | --texpre | --boot |--seconds S [--shot PNG]]\n", argv0);
+                    "--probe-vkexec | --probe-astc | --probe-framegen | --probe-fps | --probe-texpre | --texpre | --boot |--seconds S [--shot PNG]]\n", argv0);
     return 2;
 }
 
@@ -653,6 +671,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "--probe-vkexec")) return probe_vkexec();
     if (!strcmp(mode, "--probe-astc")) return probe_astc();
     if (!strcmp(mode, "--probe-framegen")) return probe_framegen();
+    if (!strcmp(mode, "--probe-fps")) return probe_fps();
     if (!strcmp(mode, "--probe-vkdevice")) return probe_vkdevice();
 
     if (!strcmp(mode, "--probe-texpre")) return probe_texpre();

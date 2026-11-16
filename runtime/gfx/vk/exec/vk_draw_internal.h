@@ -35,7 +35,9 @@ void warn_once(int key, const char *fmt, ...);   // vk_exec_draw.c
 typedef struct {
     VkPipeline pipe[2];                  // bound per bind point: 0 graphics, 1 compute
     VkPipeState st;                      // the state vk_pipeline_set_dynamic last recorded
-    int st_valid;
+    int st_valid;                        // st is what the bound pipeline was given (cleared at each graphics bind)
+    int dyn_valid;                       // st is still what the dynamic state was set from (kept across binds: every
+                                         // graphics pipeline lists the same dynamic states; MKW_DYN_DIFF)
     VkBuffer vb[17];                     // vertex buffers last bound
     VkDeviceSize vo[17], vsz[17], vstr[17];
     int vcls[17];                        // their pool class and pool record, for the census

@@ -9,6 +9,13 @@
 
 typedef struct { const char *name; uint64_t entries; } RtInitCount;
 
+// A sequence node class whose start tells race_scene.c where the game is: its name getter's vtable slot (main offset,
+// build/seq_nodes*.tsv) and what its start means
+enum { RT_RACE_ARM = 1, RT_RACE_START, RT_RACE_LEAVE, RT_RACE_FREE_ARM, RT_RACE_CHAT };
+typedef struct { const char *name; uint64_t name_slot; int role; } RtRaceEvent;
+#define RT_RACE_EVENTS 16
+#define RT_RACE_HOST 0xe00   // patch page offset of race_scene.c's first host function, one every 0x10 (patches.c)
+
 typedef struct {
     int number;                // RtGame.version: 100, 180
     const char *display;       // as the game shows it (nn::oe::GetDisplayVersion): "1.0.0"
@@ -29,6 +36,7 @@ typedef struct {
     uint64_t ui_text_lr;       // return address of the 2D text setup's projection getter call (set aspect)
     uint64_t ui_focus_fn;      // a menu button taking the cursor (seqwatch.c, MKW_UI_FOCUS)
     uint64_t camera_service;   // the global holding the camera service object (patches.c, set camera; 1.8.0)
+    RtRaceEvent race_events[RT_RACE_EVENTS];   // race_scene.c; none: 20 and 15 fps apply everywhere
     // sdk offsets: the NVN2 driver's proc table (tools/gpu/nvn2_procs.py TABLES, the same rows)
     uint64_t sdk_name_pool, sdk_name_offsets, sdk_pointers;
     int sdk_last_index;

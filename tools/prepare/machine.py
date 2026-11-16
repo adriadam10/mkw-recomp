@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/build"))
-import build  # (mem_total_gb)
+import build  # (mem_total_gb, windows_memory_gb)
 
 
 def emit(*words: object) -> None:
@@ -129,14 +129,10 @@ def own_children() -> None:
 def mem_available_gb() -> float:
     """Memory free for new work now (MemAvailable on Linux, ullAvailPhys on Windows); 8 when unknown."""
     if os.name == "nt":
-        import ctypes
-
-        class Status(ctypes.Structure):  # MEMORYSTATUSEX
-            _fields_ = [("length", ctypes.c_uint32), ("load", ctypes.c_uint32), ("total", ctypes.c_uint64),
-                        ("avail", ctypes.c_uint64), ("rest", ctypes.c_uint64 * 5)]  # fmt: skip
-
-        st = Status(length=ctypes.sizeof(Status))
-        return st.avail / 2**30 if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)) else 8.0
+        try:
+            return build.windows_memory_gb()[1]
+        except OSError:
+            return 8.0
     try:
         with open("/proc/meminfo") as f:
             for line in f:

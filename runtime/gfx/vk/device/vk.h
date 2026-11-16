@@ -104,8 +104,15 @@ void vk_fsr_release(void);   // before the device goes away
 VkImageView vk_hdr_ui_target(VkCommandBuffer cb, uint32_t w, uint32_t h);
 void vk_hdr_ui_compose(VkCommandBuffer cb, VkImageView dst_view, VkFormat fmt, uint32_t w, uint32_t h);
 void vk_hdr_ui_release(void);   // before the device goes away
-// Queues the oldest present vk_present_blit or vk_present_blit_ahead left waiting.
-void vk_present_flip(void);
+// Queues the oldest present vk_present_blit or vk_present_blit_ahead left waiting; its present id (MKW_LATENCY with
+// present wait), else 0.
+uint64_t vk_present_flip(void);
+// ---- MKW_LATENCY (vk_latency.c): controller read to screen
+int vk_lat_on(void);
+uint64_t vk_lat_next_id(void);                                   // the next host present's id, 0 without present wait
+void vk_lat_flip(uint64_t slot, int first, int game, uint64_t id);   // a host present of the frame shown at slot
+void vk_lat_swapchain(int begin, VkSwapchainKHR sc);             // around vkCreateSwapchainKHR (it retires the old)
+void vk_lat_device(VkDevice device, int has_present_wait);                        // after the device: starts the present wait thread
 // vk_present_blit for frame generation: presents already waiting stay waiting, so the frames of one game frame are
 // all blitted at once and each vk_present_flip then queues the next at its time.
 void vk_present_blit_ahead(VkImage src, VkImageLayout layout, VkFormat fmt, int w, int h, const int crop[4]);
@@ -680,7 +687,7 @@ VkPipeline vk_mesh_cs_compact_pipeline(VkPipelineLayout *layout);   // runtime/s
 // sets the rest: vkCmdSetViewportWithCount, vkCmdSetScissorWithCount, depth bias, blend constants, stencil compare and
 // write masks and references; vertex buffers with vkCmdBindVertexBuffers2 (strides NULL when
 // vk_pipeline_vertex_input_dynamic(), else from VkPipeState.vstream).
-void vk_pipeline_set_dynamic(VkCommandBuffer cb, const VkPipeState *s);
+void vk_pipeline_set_dynamic(VkCommandBuffer cb, const VkPipeState *s, const VkPipeState *last);   // last: NULL sets all
 int vk_pipeline_vertex_input_dynamic(void);    // 1: vertex input is VK_EXT_vertex_input_dynamic_state
 // What the bound state says of the shader of stage (GFX_STAGE_VS: attr_type from the vertex attribute formats;
 // GFX_STAGE_FS: out_type from the colour target formats).

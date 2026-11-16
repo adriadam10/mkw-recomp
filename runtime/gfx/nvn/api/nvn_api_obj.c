@@ -684,7 +684,7 @@ static void sleep_until(uint64_t deadline) {
 // dark tree for one frame; dumps lf6-lf9 and fe2, 06/11/2026). release[i]: the fence of the submits before the present
 // that replaced image i. The window object is the game's (its size is fixed): the fences live in a table of their own.
 // MKW_ACQUIRE_GPU (default 1; "ab"): 0 paces by time only, as before.
-static struct { const win_t *w; uint64_t release[4]; int last; } relt[4];
+static struct { const win_t *w; uint64_t release[4], acquired[4]; int last; } relt[4];   // acquired: MKW_LOW_LATENCY
 static PlatMutex rel_lock = PLAT_MUTEX_INIT;
 static int acq_mode = -1;
 static uint64_t acq_n, acq_waits, acq_ns;
@@ -708,6 +708,21 @@ static void release_note(const win_t *w, int idx) {   // QueuePresentTexture of 
         relt[k].last = idx;
     }
     plat_mutex_unlock(&rel_lock);
+}
+
+static void acquired_note(const win_t *w, int idx, uint64_t t) {
+    plat_mutex_lock(&rel_lock);
+    int k = rel_slot(w);
+    if (k >= 0 && idx < 4) relt[k].acquired[idx] = t;
+    plat_mutex_unlock(&rel_lock);
+}
+
+static uint64_t acquired_of(const win_t *w, int idx) {
+    plat_mutex_lock(&rel_lock);
+    int k = rel_slot(w);
+    uint64_t t = k >= 0 && idx < 4 ? relt[k].acquired[idx] : 0;
+    plat_mutex_unlock(&rel_lock);
+    return t;
 }
 
 static void acquire_wait(const win_t *w, int idx) {
@@ -745,12 +760,22 @@ NVN_API(nvnWindowAcquireTexture) {
     int idx = o->active ? o->next++ % o->active : 0;
     *out = idx;
     uint64_t at = idx < 4 ? o->avail[idx] : 0;
+    lat_mark("acquire");
     if (at) {
         uint64_t p0 = perf_begin();
         sleep_until(at);
         perf_end(PERF_PACE, p0);
     }
     acquire_wait(o, idx);
+    // MKW_LOW_LATENCY (core/boot/frame_jit.c): no earlier than the frame's measured work before its slot
+    uint64_t jit = frame_jit_start(o->pace ? o->pace + present_period(o) : 0);
+    if (jit > kern_now_ns()) {
+        uint64_t p0 = perf_begin();
+        sleep_until(jit);
+        perf_end(PERF_PACE, p0);
+    }
+    lat_mark("acquire returns");
+    acquired_note(o, idx, kern_now_ns());
     // The sync means "the display no longer reads this image". Presents are copies queued in submit order, so it is
     // already satisfied: fenced = 3 with fence 0.
     if (s) {
@@ -778,6 +803,8 @@ NVN_API(nvnQueuePresentTexture) {
     const tex_t *t = (const tex_t *)o->tex[idx];
     uint64_t period = present_period(o), now = kern_now_ns();
     uint64_t slot = now + pace(&o->pace, now, period);
+    lat_game_present(slot);   // MKW_LATENCY, before the present thread can flip it
+    frame_jit_present(slot, acquired_of(o, idx));
     gfx_backend()->present(t, o->crop, slot);
     o->ticket[idx] = o->presents;
     o->avail[idx] = slot + period;

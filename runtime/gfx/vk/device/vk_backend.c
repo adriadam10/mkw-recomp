@@ -47,6 +47,20 @@ static void wait_until(uint64_t at) {
     while (kern_now_ns() < at) plat_yield();
 }
 
+// Waits until at like wait_until, watching the timeline: how long before at the GPU finished value (the frame's last
+// blit), to the 0.5 ms; -1 when it had not by then.
+static int64_t ready_slack(uint64_t at, uint64_t value) {
+    uint64_t ready = 0;
+    for (;;) {
+        uint64_t now = kern_now_ns();
+        if (!ready && vk_sync_fence_done() >= value) ready = now;
+        if (now >= at) break;
+        if (at - now > 1000000) plat_wait_ns(500000);
+        else plat_yield();
+    }
+    return ready ? (int64_t)(at - ready) : -1;
+}
+
 static void present_main(void *arg) {
     (void)arg;
     uint64_t last = 0, last_queued = 0;
@@ -79,14 +93,15 @@ static void present_main(void *arg) {
         // with frame generation the first frame at the display time, or now when that has passed, the next ones one
         // step apart: the game's frame goes out last
         uint64_t first = nf && t0 > j.at ? t0 : j.at;
+        frame_jit_slack(j.at, ready_slack(nf ? first : j.at, f));   // MKW_LOW_LATENCY (core/boot/frame_jit.c)
         for (int k = 1; k < nf; k++) {
             wait_until(first + (uint64_t)(k - 1) * step);
-            vk_present_flip();
+            vk_lat_flip(j.at, k == 1, 0, vk_present_flip());   // MKW_LATENCY: the first made frame
         }
         uint64_t target = nf ? first + (uint64_t)(nf - 1) * step : j.at;
         wait_until(target);
         uint64_t t1 = kern_now_ns();
-        vk_present_flip();
+        vk_lat_flip(j.at, nf <= 1, 1, vk_present_flip());
         // MKW_TRACE=present: one line per present: the host present's interval, the interval of the game's present
         // calls (when the host present went out before back-edge pacing), the wait and how far past its target it went;
         // with frame generation, the game's frame and how many were shown before it

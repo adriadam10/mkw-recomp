@@ -144,3 +144,17 @@ issue = 315
 wiki = "are-from-different-versions-romfs--crash-in-lifted-function-f_700078ab50"
 all = ["are from different versions (RomFS"]
 what = "`exefs` and `romfs` come from different game versions (the setup now refuses them)"
+
+[[signature]]
+issue = 325
+wiki = "shaders-step-translatepy-failed-with-keyerror-bits_-or-classes-carry-no-opcode-constant"
+all = ["translate.py failed", "KeyError: 'BITS_"]
+fixed = "v0.1.12"
+what = "a garbled capture of NVIDIA's disassembler left a broken shader spec in `sm86/` that every later setup reused"
+
+[[signature]]
+issue = 325
+wiki = "shaders-step-translatepy-failed-with-keyerror-bits_-or-classes-carry-no-opcode-constant"
+all = ["classes carry no Opcode constant"]
+fixed = "v0.1.12"
+what = "a garbled capture of NVIDIA's disassembler left a broken shader spec in `sm86/` that every later setup reused"

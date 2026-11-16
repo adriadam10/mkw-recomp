@@ -33,6 +33,7 @@
 #define UI_ROWS_HOST 0xf60       // patch page offset of host_ui_rows (set aspect)
 #define CAMERA_EVENT_HOST 0xf50  // patch page offset of host_camera_event (set camera, 1.8.0)
 #define UI_ROWS2_HOST 0xf40      // patch page offset of host_ui_rows2 (set aspect, 1.8.0)
+                                 // 0xe00-0xef0: race_scene.c, one per node (RT_RACE_HOST)
 // The guest functions the sets call or recognise, per game version (version.h; 1.0.0: main+0x233358 RenderBuffer
 // creation, main+0x8eb6b0 the render-buffer allocator setup that main+0x37b520 allocates from, main+0x67aa40 operator
 // new(size, heap, alignment), main+0x8eb9dc one pool of that allocator, main+0x922088 and main+0x15585a8 two
@@ -416,6 +417,7 @@ void rt_patch_hosts(void) {
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_ROWS_HOST, host_ui_rows);
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_ROWS2_HOST, host_ui_rows2);
     if (g->npatch_sets) frame_rate_host(g->patch_page);
+    if (g->npatch_sets) race_scene_host(g->patch_page);
     if (g->npatch_sets) rt_register_host(g->patch_page + CAMERA_EVENT_HOST, host_camera_event);
     if (rt_version()->camera_service) {
         camera_absent_fn = hostfn_register("camera: absent", camera_absent);

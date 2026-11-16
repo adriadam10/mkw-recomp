@@ -1,5 +1,7 @@
 # tools/build
 
+Shortcuts for these flows: [`make help`](../../Makefile) at the repo root.
+
 | Script | What it does | Usage |
 |---|---|---|
 | `icon.py` | Draws `mkw.exe`'s icon in code (our own chequered flag, no game art) into a `.ico` of 256, 48, 32 and 16 px; `build.py --target windows` calls it before the `runtime/platform/mkw.rc` resource; a `.png` name, the AppImage's 256 px icon; a `.c` name, `app_icon_set` with a 128 px copy that `build.py` builds into every target, so the window carries it (the Wayland taskbar shows it through `xdg_toplevel_icon`); `.svg`, the logo | `uv run tools/build/icon.py OUT.ico\|OUT.png\|OUT.svg` |
