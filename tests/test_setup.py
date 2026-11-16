@@ -476,21 +476,18 @@ def test_redo_exefs_if_missing(tmp_path: Path) -> None:
     assert state["done"] == {"exefs": "k"}
 
 
-def test_zig_cache_inside_the_game_folder_when_tmp_and_o_are_split(monkeypatch, tmp_path: Path) -> None:
-    # #439: rename between the cache's tmp/ and o/ failed with CrossDevice
+def test_zig_caches_inside_the_game_folder(monkeypatch, tmp_path: Path) -> None:
+    # #439: in the user's cache folder zig's tmp/ to o/ rename failed with CrossDevice on one file system
+    monkeypatch.delenv("ZIG_GLOBAL_CACHE_DIR", raising=False)
+    monkeypatch.delenv("ZIG_LOCAL_CACHE_DIR", raising=False)
+    machine.use_own_zig_cache(tmp_path / "game")
+    own = str(tmp_path / "game/setup-work/zig-cache")
+    assert os.environ["ZIG_GLOBAL_CACHE_DIR"] == own and os.environ["ZIG_LOCAL_CACHE_DIR"] == own
+
+
+def test_zig_cache_the_players_own(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("ZIG_GLOBAL_CACHE_DIR", str(tmp_path / "cache"))
-
-    def split(src, dst):
-        raise OSError(18, "Invalid cross-device link")
-
-    monkeypatch.setattr(os, "rename", split)
-    machine.use_own_zig_cache_if_split(tmp_path / "game")
-    assert os.environ["ZIG_GLOBAL_CACHE_DIR"] == str(tmp_path / "game/setup-work/zig-cache")
-
-
-def test_zig_cache_kept_when_rename_works(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("ZIG_GLOBAL_CACHE_DIR", str(tmp_path / "cache"))
-    machine.use_own_zig_cache_if_split(tmp_path / "game")
+    machine.use_own_zig_cache(tmp_path / "game")
     assert os.environ["ZIG_GLOBAL_CACHE_DIR"] == str(tmp_path / "cache")
 
 

@@ -273,8 +273,12 @@ static void held_wait(Held *h) {
 // replay's recording is on the race frame's critical path (frame-carrera). rc-ab1..4
 // (6 cores with SMT, Radeon 660M, 08/11/2026): race frame -1.17 ms (means), -1.03 (medians) with the scene balanced.
 // wrc1/wrc1i (i5-8400, 6 cores without SMT, GTX 1050 Ti): +4.8 ms, a whole core taken from the game's threads. Fewer
-// cores were not measured. Assumes the last core's logical processors are the
-// highest-numbered ones (Linux and Windows number SMT siblings together). Applied at each present, on the replay thread.
+// cores were not measured. The core is the last of the fastest ones (plat_cpu_fast): the last core alone was an
+// efficiency core on a hybrid CPU, processor 27 of an i7-14700F at 4.2 GHz against 5.4, and the race frame took
+// +4.0 ms (means, +5.1 medians, scene balanced: rc1/rc1i, RX 6700 XT, 16/11/2026) against the replay thread left
+// unpinned. The others are every processor but those of that core (plat_cpu_core_of): taking the lower-numbered ones
+// assumed SMT siblings numbered together, which AMD's are not on Linux (0 and 16 on 16 cores), and left the game's
+// threads half the processors there. Applied at each present, on the replay thread.
 static void replay_core(void) {
     static int mode = -1, applied = 0;
     static uint64_t all, own, others;
@@ -283,9 +287,11 @@ static void replay_core(void) {
         int cores = plat_cpu_cores(&all, &first);
         mode = rt_knob("REPLAY_CORE", cores >= 6 && __builtin_popcountll(all) > cores ? "1" : "0");
         if (mode && cores >= 2) {
-            int c = 63 - __builtin_clzll(first);
-            own = 1ull << c, others = all & ((1ull << c) - 1);
-            rt_log("vk: the replay thread alone on processor %d, the others on %#llx%s (MKW_REPLAY_CORE)", c,
+            uint64_t fast = plat_cpu_fast() & first, pick = fast ? fast : first;
+            int c = 63 - __builtin_clzll(pick);
+            own = 1ull << c, others = all & ~plat_cpu_core_of(c);
+            rt_log("vk: the replay thread alone on processor %d (the last of %d %s cores), the others on %#llx%s "
+                   "(MKW_REPLAY_CORE)", c, __builtin_popcountll(pick), pick == first ? "physical" : "fastest",
                    (unsigned long long)others, mode == 2 ? " in the B blocks" : "");
         } else {
             mode = 0;

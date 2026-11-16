@@ -49,35 +49,25 @@ def default_cc(game: Path, target: str) -> list[str]:
         if not (lib / "std/std.zig").is_file():
             raise Failed(f"{lib} is incomplete: extract the release again")
         os.environ["ZIG_LIB_DIR"] = str(lib)
-        use_own_zig_cache_if_split(game)
+        use_own_zig_cache(game)
         return [str(zig), "cc", "-target", "x86_64-windows-gnu" if target == "windows" else f"{build.ARCH}-linux-gnu"]
     return ["clang"]
 
 
-def zig_cache_dir() -> Path:
-    """Where zig keeps its cache unless told: ZIG_GLOBAL_CACHE_DIR, else the user's cache folder (zig/)."""
+ZIG_CACHE = "zig-cache"  # in <game>/setup-work, kept by the cleanup step like obj/
+
+
+def use_own_zig_cache(game: Path) -> None:
+    """zig's caches (global and local) inside the game folder, setup-work/zig-cache, unless the player set
+    ZIG_GLOBAL_CACHE_DIR. In the user's cache folder zig's rename from its tmp/ into o/ failed with CrossDevice on a
+    Linux whose /home is one file system, and a one-file rename tried from Python there worked (#439, 16/11/2026: the
+    player's own ZIG_GLOBAL_CACHE_DIR was what made it build). The game folder is where the setup writes everything
+    else."""
     if os.environ.get("ZIG_GLOBAL_CACHE_DIR"):
-        return Path(os.environ["ZIG_GLOBAL_CACHE_DIR"])
-    base = os.environ.get("LOCALAPPDATA") if os.name == "nt" else os.environ.get("XDG_CACHE_HOME")
-    return Path(base or Path.home() / ".cache") / "zig"
-
-
-def use_own_zig_cache_if_split(game: Path) -> None:
-    """zig writes each object into the cache's tmp/ and renames it into o/; where the two are on different file
-    systems (a home on an overlay or merged mount) every rename fails with CrossDevice and its libc cannot be built
-    (#439). Tried here with one file: when it fails, the cache goes inside the game folder, setup-work/zig-cache."""
-    cache = zig_cache_dir()
-    probe = cache / "tmp" / ".probe"
-    try:
-        (cache / "o").mkdir(parents=True, exist_ok=True)
-        probe.parent.mkdir(parents=True, exist_ok=True)
-        probe.write_text("")
-        os.rename(probe, cache / "o" / ".probe")
-        (cache / "o" / ".probe").unlink()
-    except OSError:
-        own = game / "setup-work" / "zig-cache"
-        own.mkdir(parents=True, exist_ok=True)
-        os.environ["ZIG_GLOBAL_CACHE_DIR"] = str(own)
+        return
+    own = game / "setup-work" / ZIG_CACHE
+    own.mkdir(parents=True, exist_ok=True)
+    os.environ["ZIG_GLOBAL_CACHE_DIR"] = os.environ["ZIG_LOCAL_CACHE_DIR"] = str(own)
 
 
 def crt_spec(game: Path, cc: list[str]) -> Path | None:

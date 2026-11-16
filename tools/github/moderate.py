@@ -62,6 +62,9 @@ TEXT = {
     "dup_old": "Thanks for the report. This looks like #{issue}: {what}, fixed in {fixed}. You are on {ver}: please "
     "update to the [latest release]({repo_url}/releases/latest). This one is closed as its duplicate; if it still "
     "happens there, reply here with its `logs/mkw.log` and it is reopened.",
+    "dup_next": "Thanks for the report. This looks like #{issue}: {what}. It is fixed in `main` and comes in {fixed}, "
+    "which is not out yet: please follow #{issue}, it is closed with a link when {fixed} is published. This one is "
+    "closed as its duplicate; if it still happens on {fixed}, reply here with its `logs/mkw.log` and it is reopened.",
     "retry": "This was reported on {ver}, and {latest} is out with many fixes since. Please try the "
     "[latest release]({repo_url}/releases/latest) and reply here: whether it still happens, with its `logs/mkw.log` "
     f"attached. Without a reply this issue is closed in {RETRY_DAYS} days.",
@@ -212,7 +215,8 @@ class Moderator:
         if files and not newest and not sig and MARK.format("warm") not in said:
             self.gh.comment(n, "warm", TEXT["warm"])
         if sig and MARK.format("dup") not in said:
-            key = "dup_old" if sig.fixed else "dup"
+            # #483 (16/11/2026): "fixed in v0.1.13, please update" while v0.1.12 was the newest release
+            key = ("dup_old" if sig.fixed in self.releases else "dup_next") if sig.fixed else "dup"
             text = TEXT[key].format(issue=sig.issue, what=sig.what, fixed=sig.fixed, ver=ver, repo_url=self.repo_url)
             if sig.wiki:
                 text += TEXT["wiki"].format(repo_url=self.repo_url, wiki=sig.wiki)

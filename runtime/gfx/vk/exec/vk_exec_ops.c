@@ -552,10 +552,17 @@ int vk_exec_bind_state(VkExec *ex, uint32_t op, const void *payload) {
         break;
     }
     case OP_PUSH_CONST: {   // the recorder clamped offset and size to the bank (nvn_api_cmd.c push_const)
+        // A graphics push reaches every graphics stage's c24, not only the stage it names: MKW pushes its SMAA
+        // metrics (1/w, 1/h, w, h) once with stage 0, and the blend-weight pass reads them in its fragment shader as
+        // the edge search's step. With a zero step the search never left its pixel and took all of its unrolled
+        // reads on every edge pixel: 1.0.0 race at 2560x1440, the pass 1.05 -> 13.1 ms of GPU, game speed 0.7x.
         const p_push_const *b = payload;
         if (b->stage >= 0 && b->stage < NVN_BIND_STAGES && b->offset >= 0 && b->size >= 0 &&
-            (uint32_t)b->offset + (uint32_t)b->size <= NVN_C24_BYTES)
-            memcpy(ex->c24[b->stage] + b->offset, b->data, (size_t)b->size);
+            (uint32_t)b->offset + (uint32_t)b->size <= NVN_C24_BYTES) {
+            for (int st = 0; st < NVN_BIND_STAGES; st++)
+                if (b->stage == NVN_STAGE_CS ? st == NVN_STAGE_CS : st != NVN_STAGE_CS)
+                    memcpy(ex->c24[st] + b->offset, b->data, (size_t)b->size);
+        }
         break;
     }
     default: return 0;

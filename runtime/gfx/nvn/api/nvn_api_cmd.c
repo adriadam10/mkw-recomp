@@ -486,6 +486,8 @@ NVN_API(nvnCommandBufferUpdateUniformBuffer) {
 // Compute's constants are kept as stage 5 (NVN_STAGE_CS, vk_draw_internal.h) whatever stage the game passes: MKW's
 // photo mode pushes them with stage 0 (ph8, 16/11/2026: "PushComputeConstants stage 0 offset 0 size 32"), which as
 // the vertex stage reached no compute program. The replay puts them in the dispatch's c0 (vk_exec_bind.c c0_info).
+// A graphics push reaches every graphics stage in the replay (vk_exec_ops.c OP_PUSH_CONST): MKW's SMAA passes push with
+// stage 0 and read the bank in their fragment shaders too.
 #define PUSH_STAGE_CS 5
 static void push_const(Cpu *c, int compute) {
     uint64_t off = arg_x(c, 2), n = arg_x(c, 3);

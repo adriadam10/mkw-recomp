@@ -542,6 +542,23 @@ static void tail_bind_now(VkCtx *c, SparseImg *s) {
     s->tail_pending = 0;
 }
 
+// imageGranularity is "in texels or compressed texel blocks": NVIDIA gives BC7 256x256 (texels), Intel's Windows driver
+// 64x64 (blocks), both the standard 64 KiB block. Binds go in texels, so 64x64 taken as texels bound each block 16 times
+// and spent 16 times the slots: 1 048 576 tiles left non-resident on an Arc B580 against 32 768 on an RTX 3050, roads
+// and trees black or missing (#476, #475, #355). A BC format whose granularity as texels is not 64 KiB but is as
+// blocks is converted.
+void vk_sparse_granularity_texels(VkFormat f, uint32_t *gw, uint32_t *gh) {
+    if (f < VK_FORMAT_BC1_RGB_UNORM_BLOCK || f > VK_FORMAT_BC7_SRGB_BLOCK) return;
+    int half = f <= VK_FORMAT_BC1_RGBA_SRGB_BLOCK || f == VK_FORMAT_BC4_UNORM_BLOCK || f == VK_FORMAT_BC4_SNORM_BLOCK;
+    uint64_t bpb = half ? 8 : 16;
+    if ((uint64_t)(*gw / 4) * (*gh / 4) * bpb == 65536 || (uint64_t)*gw * *gh * bpb != 65536) return;
+    static int logged;
+    if (!logged++)
+        rt_log("vk: sparse: the driver gives compressed formats' block size in 4x4 blocks (%ux%u for VkFormat %d): "
+               "taken as %ux%u texels", *gw, *gh, (int)f, *gw * 4, *gh * 4);
+    *gw *= 4, *gh *= 4;
+}
+
 int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_t addr, uint64_t size, VkImage *out,
                      VkSparseTail *tail) {
     VkCtx *c = vk_ctx();
@@ -575,6 +592,7 @@ int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_
     s->w = ci.extent.width, s->h = ci.extent.height, s->layers = ci.arrayLayers;
     s->ntw = (uint32_t)lay[1], s->nth = (uint32_t)lay[2];
     s->gw = fp[0].imageGranularity.width, s->gh = fp[0].imageGranularity.height;
+    vk_sparse_granularity_texels(ci.format, &s->gw, &s->gh);
     if (!s->gw || !s->gh || s->ntw % s->gw || s->nth % s->gh || lay[0] > 16) {
         if (plat_inc32(&nwarn) <= 8)
             rt_log("vk: sparse: NVN tile %ux%u is not whole Vulkan blocks of %ux%u (VkFormat %d)", s->ntw, s->nth, s->gw,

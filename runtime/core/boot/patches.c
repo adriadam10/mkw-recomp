@@ -64,7 +64,9 @@ static uint64_t map_bytes(uint32_t size) { return 3 * 2 * (uint64_t)size * size;
 // 1.8.0's photo mode (with its stickers) makes targets of its own: at 1440 lines the game's pool has no room for them
 // and main+0xa66e0 reads a null block as soon as Minus is pressed in free roam (#305; foto5 crashed, foto4 at 1080
 // lines did not, 1.0.0 at 1440 did not: foto1). 128 MiB at 1440 lines, growing with the pixels, is a margin, not a
-// measure (the runtime's region only takes memory as the pool uses it); foto6 checks it at 1440.
+// measure (the runtime's region only takes memory as the pool uses it); foto6 checks it at 1440. Photo mode also makes
+// a whole second shadow map while the race's stays (#440: "shadow map 4096x4096" and a 96 MiB image on entering it,
+// then 3840x2160 targets, and a 0x1fe0000 block found no room in a 170 MiB pool): that map is counted whole on top.
 #define PHOTO_MIB_1440 128u
 
 // Hypothesis, measured in s255g: the game's 250 MiB pool holds the console's 1440-line targets with its 3072 map, so
@@ -73,7 +75,8 @@ static uint64_t second_pool_bytes(void) {
     uint64_t b = (uint64_t)rb_extra_mib << 20;
     if (shadow_size > 3072) b += map_bytes(shadow_size) - map_bytes(3072);
     uint64_t lines = scene_lines ? scene_lines : 1440;   // original: the window's lines, at most 1440
-    if (rt_version()->number >= 180) b += ((uint64_t)PHOTO_MIB_1440 << 20) * lines * lines / (1440ull * 1440);
+    if (rt_version()->number >= 180)
+        b += ((uint64_t)PHOTO_MIB_1440 << 20) * lines * lines / (1440ull * 1440) + map_bytes(shadow_size ? shadow_size : 3072);
     if (scene_lines > 1440)
         b += ((250ull << 20) - map_bytes(3072)) * ((uint64_t)scene_lines * scene_lines - 1440ull * 1440) / (1440ull * 1440);
     return (b + 0xffff) & ~0xffffull;

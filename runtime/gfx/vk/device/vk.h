@@ -395,7 +395,11 @@ void vk_mem_defer_idle(int on);                    // around destroying what the
 void vk_mem_defer_use(uint64_t use);               // around a deferred destruction: MKW_GPU_GUARD's last part using it
 uint64_t vk_mem_defer_fence(uint64_t fence);       // returns the previous value; around a deferred destruction: wait for that submission (0: off)
 void vk_mem_collect(void);                         // frees what has completed
-typedef struct { uint64_t imported_pools, physical_pools, virtual_pools, import_failures, upload_batches; } VkMemStats;
+// phys_host_chunks: physical pool chunks backed outside device-local memory (it was full); phys_failed_chunks: left empty.
+typedef struct {
+    uint64_t imported_pools, physical_pools, virtual_pools, import_failures, upload_batches, phys_host_chunks,
+        phys_failed_chunks;
+} VkMemStats;
 void vk_mem_stats(VkMemStats *s);
 void vk_mem_shutdown(void);                        // before vk_shutdown: waits idle, frees every memory and texture object
 
@@ -459,6 +463,7 @@ const VkTexImage *vk_texture_get(const tex_t *t);   // created and made current;
 const VkTexImage *vk_texture_by_id(int id, view_t *view, int *has_view);
 VkFormat vk_srgb_twin(VkFormat f);                    // the sRGB / UNORM twin of an 8-bit colour format, else UNDEFINED
 int vk_format_numeric(VkFormat f);                    // GFX_TYPE_* its components read as in a shader
+void vk_sparse_granularity_texels(VkFormat f, uint32_t *gw, uint32_t *gh);   // a driver's imageGranularity as texels
 uint32_t vk_texture_slot_format(int id, uint64_t *addr);   // NVN format the game registered in slot id (0: none)
 // The replay looks up many slots per draw: it takes the texture lock once around them (vk_texture_lock) and uses the
 // _locked lookups; vk_texture_slots_gen changes whenever a slot may resolve to another image or view.

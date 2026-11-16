@@ -16,7 +16,8 @@ Steps, into --game (by default the folder of mkw / mkw.exe):
   shaders   the SM86 spec built here from NVIDIA's nvdisasm (sm86/spec/spec.py, into sm86/; never shipped), then
             tools/shaders/extract.py and translate.py into spirv/
   warm      the game run once for a minute: the driver's pipeline cache and the pipeline keys for the first start
-  cleanup   setup-work removed but its obj/: the next update compiles only the chunks whose C changed (gamecode.py)
+  cleanup   setup-work removed but its obj/ and zig-cache/: the next update compiles only the chunks whose C changed
+            (gamecode.py), and zig does not build its libc again
 
 The copy is loose exefs/ and romfs/ folders, or a .nup package (the Switch 2 dump format, nup.py): --source names the
 package file itself. From a package, exefs/ is extracted, romfs/ extracted (copy) or the package itself
@@ -75,6 +76,7 @@ from gamesource import check, is_nx, loose_romfs, unpack
 from gamecopy import clear_dir, copy_tree, remove_stale
 from nup import Nup
 from machine import (
+    ZIG_CACHE,
     Failed,
     default_cc,
     default_glslc,
@@ -392,7 +394,7 @@ def main() -> None:
                 warm(game, work, runtime)
             elif step == "cleanup":
                 for p in work.glob("*"):
-                    if p.is_dir() and p.name != "obj":
+                    if p.is_dir() and p.name not in ("obj", ZIG_CACHE):
                         shutil.rmtree(p, ignore_errors=True)
                 # the languages the game does not ship (ca, gl, eu), from this version's translations (the step runs
                 # at every setup, so an update brings its new texts); about a second

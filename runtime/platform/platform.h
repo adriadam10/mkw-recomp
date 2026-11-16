@@ -37,6 +37,12 @@ uint64_t plat_self_cpu_ns(void);            // CPU time of the calling thread, f
 // The logical processors the process may use (bit n = processor n, the first 64), into *all, and the lowest of each
 // physical core among them into *first; returns the number of physical cores, 0 when unknown.
 int plat_cpu_cores(uint64_t *all, uint64_t *first);
+// The processors among all on the same physical core as processor cpu (cpu itself included); 1 << cpu when unknown.
+uint64_t plat_cpu_core_of(int cpu);
+// The processors among those the process may use that sit on its fastest cores: a hybrid CPU's performance cores
+// (Intel 12th to 14th generation, AMD Zen 5 with Zen 5c), by the highest maximum clock on Linux and the highest
+// efficiency class on Windows. Every processor when they are all alike or it cannot tell; 0 when unknown.
+uint64_t plat_cpu_fast(void);
 int plat_process_affinity(uint64_t mask);   // every thread of the process to the processors in mask; 1 on success
 
 // Interrupting a thread (kernel.c's asynchronous preemption). A thread makes its own handle; another thread stops it
