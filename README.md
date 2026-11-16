@@ -222,7 +222,7 @@ At the root: `pyproject.toml` and `uv.lock` (the Python environment of the tools
 
 | Topic | Decision | Why |
 |---|---|---|
-| CPU | AArch64→C lifter based on [totk-pc-recomp](https://github.com/valentderah/totk-pc-recomp)'s (MIT), extended to ARMv8.1-8.3: LSE atomics, CAS, LDAPR; PAC as identity, MTE tags as 0 | Same engine family as MKW, and it already scales to a large executable |
+| CPU | AArch64→C lifter based on [totk-pc-recomp](https://github.com/valentderah/totk-pc-recomp) (MIT), extended to ARMv8.1-8.3: LSE atomics, CAS, LDAPR; PAC as identity, MTE tags as 0 | Same engine family as MKW, and it already scales to a large executable |
 | System | The SDK's `nn::*` functions replaced by name; signatures from the mangled names of `main`'s 1 289 imports | No console services to emulate |
 | Graphics | NVN2 over Vulkan: 529 of its 699 functions share their name with NVN1 (signatures known from totk-pc-recomp and nxnative); 170 are new | Recompilation, not GPU emulation |
 | Shaders | Our own SM86→SPIR-V translator, offline, with a decoder generated from the DocumentSASS / nvsass-disassembler specification | Covers mesh/task and what Maxwell lacks |
