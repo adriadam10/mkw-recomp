@@ -38,7 +38,6 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import pb  # noqa: E402  (tools/npln/pb.py: protobuf wire format)
 import services  # noqa: E402  (tools/npln/services.py: the NPLN methods)
 
 log = logging.getLogger("npln")
