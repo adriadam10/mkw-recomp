@@ -93,6 +93,43 @@ int probe_fps(void) {
     feed_real(&a, 14.0, 0.5, 21.0, 2400, &changes);
     expect("game measures 14 ms, frames take 21", after, 2, changes, 5);
 
+    // mp1/mp2 (Steam Deck, 2 players): 38 ms measured, 45 ms frames (interval 3) and, every ~20 s, stalls of ~300 ms
+    // frames for ~8 s (the CPU held at 400 MHz). No interval holds a 300 ms frame: going to 4 for each one, then
+    // holding it (doubled on each return) kept the race at 15 fps where it runs 20 between the stalls.
+    fps_auto_reset(&a);
+    changes = 0;
+    feed_real(&a, 38.0, 2.0, 45.0, 120, &changes);
+    int at3 = 0, normal = 0;
+    for (int cycle = 0; cycle < 8; cycle++) {
+        for (int i = 0; i < 27; i++) {
+            int prev = a.iv;
+            if (fps_auto_step(&a, 300.0, 300.0) != prev) changes++;
+        }
+        for (int i = 0; i < 240; i++) {
+            int prev = a.iv;
+            double m = 38.0 + (i & 1 ? 2.0 : -2.0);
+            if (fps_auto_step(&a, m, real_of(45.0, prev)) != prev) changes++;
+            normal++, at3 += a.iv == 3;
+        }
+    }
+    int pct = normal ? at3 * 100 / normal : 0;
+    printf("     fps: stalls of 300 ms between 45 ms frames: interval 3 in %d %% of the frames between them\n", pct);
+    expect("45 ms frames with 8 s stalls of 300 ms", a.iv, 3, changes + (pct < 90) * 99, 4);
+
+    // a machine that is that slow from the start: to 4 at once, no stall allowance (nothing fitted before)
+    fps_auto_reset(&a);
+    changes = 0;
+    iv = feed(&a, 200.0, 5.0, 10, &changes);   // 2 s of 200 ms frames
+    expect("200 ms frames from the start, 10 frames", iv, 4, changes, 1);
+
+    // fitting 45 ms frames, then 200 ms frames for good: after the stall allowance it goes to 4
+    fps_auto_reset(&a);
+    changes = 0;
+    feed_real(&a, 38.0, 2.0, 45.0, 120, &changes);
+    changes = 0;
+    iv = feed(&a, 200.0, 5.0, 300, &changes);   // 60 s
+    expect("45 ms, then 200 ms frames for 60 s", iv, 4, changes, 1);
+
     printf("fps: %s\n", fails ? "FAILED" : "all passed");
     return fails ? 1 : 0;
 }

@@ -16,6 +16,13 @@
 #define HOLD_MAX_S 60
 #define PINGPONG_S 10
 #define UP_MARGIN 1.08   // gp15b: 50-54 ms spikes at interval 3 moved it to 4 one or two times every 5 s
+// A stall: frames past twice what the slowest interval holds (133 ms), which no interval fits (a CPU held at a low
+// clock, a load), after frames that fitted the interval. It moves nothing for up to STALL_MAX_S: mp1/mp2 (Steam Deck,
+// 2 players, interval 3) went to 4 on each stall of 300 ms frames and held it, doubled on each return, so the race ran
+// at 15 fps between them where 20 held at full speed. Longer than that, it is the machine's speed and counts as any
+// frame.
+#define STALL_FACTOR 2.0
+#define STALL_MAX_S 20
 
 static double median(const FpsAuto *a, unsigned count) {
     double v[FPS_AUTO_HIST];
@@ -64,8 +71,11 @@ int fps_auto_step(FpsAuto *a, double measured_ms, double real_ms) {
     if (a->hold) a->hold--;
     if (!a->hold_s) a->hold_s = HOLD_MIN_S;
     if (a->since >= UP_FRAMES && a->n >= UP_FRAMES) {
-        double m = median(a, UP_FRAMES), r = a->n_real >= UP_FRAMES ? median_real(a) : 0;
-        int up = fitting(m > r ? m : r, UP_MARGIN);
+        double m = median(a, UP_FRAMES), r = a->n_real >= UP_FRAMES ? median_real(a) : 0, v = m > r ? m : r;
+        int stalled = a->fits && v > FPS_AUTO_MAX * PERIOD_MS * STALL_FACTOR;
+        a->stall_ms = stalled ? a->stall_ms + (real_ms > measured_ms ? real_ms : measured_ms) : 0;
+        int up = stalled && a->stall_ms < STALL_MAX_S * 1000.0 ? a->iv : fitting(v, UP_MARGIN);
+        if (!stalled) a->fits = up <= a->iv;
         if (up > a->iv) {
             int undid_down = a->downed && a->since < (unsigned)(PINGPONG_S * 60 / a->iv);
             a->hold_s = undid_down ? (a->hold_s * 2 > HOLD_MAX_S ? HOLD_MAX_S : a->hold_s * 2) : HOLD_MIN_S;
