@@ -239,7 +239,7 @@ typedef enum {
     // CONFIRM "... %s ..." (the name)
     UI_LAUNCH_PLAYERS, UI_PLAYER_NOTE, UI_PLAYER_NAME_HINT, UI_PLAYER_CHOOSE, UI_PLAYER_CHOSEN,
     UI_PLAYER_NEW, UI_PLAYER_REMOVE, UI_PLAYER_CONFIRM, UI_PLAYER_FAILED,
-    // Steam Remote Play Together (steam/steam_rpt.c), the Game tab's group: the buttons; CONNECTED "%d connected" (the
+    // Steam Remote Play Together (steam/steam_rpt.c), the General tab's group: the buttons; CONNECTED "%d connected" (the
     // guests) beside Invite; the notes of a greyed-out group (no App ID, the start screen, Steam not available)
     UI_MENU_GROUP_RPT, UI_MENU_RPT_INVITE, UI_MENU_RPT_INVITE_DESC, UI_MENU_RPT_LINK, UI_MENU_RPT_LINK_DESC,
     UI_MENU_RPT_CONNECTED, UI_MENU_RPT_NO_OVERLAY, UI_MENU_RPT_WAITING,
@@ -254,7 +254,7 @@ typedef enum {
     // local multiplayer with too few controllers and Steam ready (steam_invite = ask, menu_choice): the question
     // CHOICE "%d ... %d" (players, controllers) and its two buttons
     UI_MENU_RPT_CHOICE, UI_MENU_RPT_CHOICE_LOCAL, UI_MENU_RPT_CHOICE_STEAM,
-    // the Game tab's App ID row (steam_appid): its values off and auto (the game Steam started); CUSTOM "%s" (a number
+    // the General tab's App ID row (steam_appid): its values off and auto (the game Steam started); CUSTOM "%s" (a number
     // from mkw.ini that the list lacks)
     UI_MENU_RPT_APPID, UI_MENU_RPT_APPID_DESC, UI_MENU_RPT_APPID_OFF, UI_MENU_RPT_APPID_AUTO, UI_MENU_RPT_APPID_CUSTOM,
     // the row under it that takes a typed App ID (opt_digits; steam_appids keeps them for the list): label, description,
