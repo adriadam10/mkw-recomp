@@ -1,6 +1,6 @@
 // Catalog of the text the host shows the player (ui_text.h). One array per catalog language, indexed by UiTextId: a new
 // string gets an id in ui_text.h and an entry in every language that has one (a missing entry falls back to English).
-// Every language's array is generated from i18n/<lang>.po (tools/i18n/catalog.py, English from i18n/mkw.pot); the
+// Every language's array is generated from i18n/ui/<lang>.po (tools/i18n/catalog.py, English from i18n/ui/mkw.pot); the
 // menu, the start screen and the setup page read them in the menu language, the software keyboard in the game's.
 #include <stdatomic.h>
 #include <string.h>

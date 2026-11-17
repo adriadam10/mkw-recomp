@@ -1,0 +1,58 @@
+name: Discussion moderation
+
+# tools/github/moderate_discussions.py on each new discussion and comment: bug reports sent to the issue forms (or to
+# the issue of their known error) and questions the FAQ answers (tools/github/topics.toml) answered, both closed; their
+# author's reply reopens them. Of the first 59 discussions, 13 were bug reports and 20 repeated questions (17/11/2026).
+on:
+  discussion:
+    types: [created]
+  discussion_comment:
+    types: [created]
+  # By hand: every open discussion as if new (backlog) or one; dry run prints without acting
+  workflow_dispatch:
+    inputs:
+      task:
+        type: choice
+        options: [backlog, discussion]
+        default: backlog
+      discussion:
+        description: Discussion number (task discussion)
+        required: false
+      dry_run:
+        type: boolean
+        default: true
+
+permissions:
+  discussions: write
+  contents: read
+
+concurrency:
+  group: discussions-${{ github.event.discussion.number || github.event_name }}
+
+jobs:
+  moderate:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: tools/github
+      - name: Moderate
+        env:
+          EVENT: ${{ github.event_name }}
+          NUMBER: ${{ github.event.discussion.number }}
+          TASK: ${{ inputs.task }}
+          ONE: ${{ inputs.discussion }}
+          APPLY: ${{ inputs.dry_run && ' ' || '--apply' }}
+        run: |
+          cd tools/github
+          case "$EVENT" in
+            discussion) python3 moderate_discussions.py discussion "$NUMBER" --apply ;;
+            discussion_comment) python3 moderate_discussions.py comment "$NUMBER" --apply ;;
+            workflow_dispatch)
+              case "$TASK" in
+                discussion) python3 moderate_discussions.py discussion "$ONE" $APPLY ;;
+                *) python3 moderate_discussions.py backlog $APPLY ;;
+              esac ;;
+          esac

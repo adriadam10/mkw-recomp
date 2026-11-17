@@ -44,6 +44,11 @@ uint64_t plat_cpu_core_of(int cpu);
 // efficiency class on Windows. Every processor when they are all alike or it cannot tell; 0 when unknown.
 uint64_t plat_cpu_fast(void);
 int plat_process_affinity(uint64_t mask);   // every thread of the process to the processors in mask; 1 on success
+// Called by a thread doing background work (pipeline builds, prewarming, video decoding): plat_process_affinity leaves
+// it, and the threads it starts with plat_thread_new, on every processor the process had at start, so a hybrid CPU's
+// efficiency cores keep that work while the frame's threads stay on the fast ones (vk_backend.c replay_core). Linux
+// only; on Windows the process mask bounds every thread, so it does nothing there.
+void plat_thread_background(void);
 
 // Interrupting a thread (kernel.c's asynchronous preemption). A thread makes its own handle; another thread stops it
 // wherever it runs, reads where it is, may send it elsewhere, and lets it go on. While it is stopped the caller must not

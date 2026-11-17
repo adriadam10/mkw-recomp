@@ -9,7 +9,7 @@
 // through rt_sj_owner, which keeps a host setjmp point in a frame that lives as long as the owner does. A dispatch
 // that finds no function at an address inside a live owner is that longjmp (rt_sj_resume): the guest registers are
 // restored already, so the host jumps back to the owner's frame and the body continues at c->pc. The idea is
-// Hookshot's (GPL-3.0, docs/research.md); the code is ours. Every owner in MKW's main runs its work after setjmp
+// Hookshot's (GPL-3.0, docs/project/research.md); the code is ours. Every owner in MKW's main runs its work after setjmp
 // and before it returns, so the owner's own frame is enough (Hookshot also wraps owners that return first).
 #ifdef _WIN32
 #define __USE_MINGW_SETJMP_NON_SEH   // as runtime/core/kernel/kernel_int.h: longjmp restores registers, no SEH unwind

@@ -13,6 +13,7 @@
 #include <SDL3/SDL.h>
 
 #include "cfg.h"
+#include "dsu.h"
 #include "hacks.h"
 #include "host.h"
 #include "input.h"
@@ -38,6 +39,7 @@ static volatile int32_t pad_labels[4];  // ... and the labels of its south, east
 static int pad_east_a;               // ... and labels its east face button A (Nintendo layout under MKW_PAD_LAYOUT=auto)
 static int pad_layout = -1;          // PAD_LAYOUT_* in effect for the open gamepad, -1 to pick again; live (cfg_version)
 static unsigned pad_layout_seen;
+static volatile int32_t pad_dz_shown = -1;       // the open gamepad's default left dead zone in tenths of a %, for the menu (any thread), -1 none
 static volatile int32_t pad_layout_shown = -1;   // pad_layout for the menu (any thread), -1 without a gamepad
 static volatile int32_t last_device;           // INPUT_DEVICE_* the player used last, 0 none yet (input_last_device)
 static SDL_JoystickID sensor_pad[8]; // by player: the gamepad whose sensors the motion thread set up, 0 none
@@ -106,13 +108,29 @@ static float dead_zone_get(void) {
     return dead_zone;
 }
 
-// A stick's two axes (SDL's, y down) as the game's (y up): a round dead zone around the centre, and the tilt past it
+// The dead zone of a gamepad's stick (right: the right one). MKW_STICK_DEADZONE when the player set it; else, for an
+// Xbox controller, Microsoft's own values for its sticks (XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE 7849 and _RIGHT_ 8689 of
+// 32767: 24 % and 26.5 %), which do not come back to the centre as a Nintendo stick does. An Xbox Elite Series 2 on
+// Linux (xone, 17/11/2026) came to rest at 11-21 % of full tilt after a release and stayed there, the same value for up
+// to 7.6 s (an input recording): past the 8 % default the course select's cursor kept going on its own, in whichever
+// direction the stick settled; at 25 it stopped. Steam's virtual gamepad (Steam Input, Big Picture) is left at the
+// default: Steam has applied its own dead zone already.
+static float dead_zone_for(SDL_Gamepad *g, int right) {
+    const char *set = cfg_get("MKW_STICK_DEADZONE");
+    if (set && *set) return dead_zone_get();
+    SDL_GamepadType t = SDL_GetGamepadType(g);
+    if ((t == SDL_GAMEPAD_TYPE_XBOX360 || t == SDL_GAMEPAD_TYPE_XBOXONE) && SDL_GetGamepadVendor(g) != 0x28de)
+        return (right ? 8689 : 7849) / (float)STICK_MAX;
+    return dead_zone_get();
+}
+
+// A stick's two axes (SDL's, y down) as the game's (y up): a round dead zone d around the centre, and the tilt past it
 // rescaled to the whole range, so a worn stick that rests off centre stays still without losing the small moves just
 // outside it (the old one was per axis, 2500 of 32767, and jumped from 0 to 2500).
-static void stick(int16_t x, int16_t y, int32_t out[2]) {
+static void stick(int16_t x, int16_t y, float d, int32_t out[2]) {
     float fx = (x < -STICK_MAX ? -STICK_MAX : x) / (float)STICK_MAX;
     float fy = (y < -STICK_MAX ? -STICK_MAX : y) / (float)STICK_MAX;
-    float m = sqrtf(fx * fx + fy * fy), d = dead_zone_get();
+    float m = sqrtf(fx * fx + fy * fy);
     if (m <= d) {
         out[0] = out[1] = 0;
         return;
@@ -227,6 +245,7 @@ static void scan_pads(void) {
     if (pad && !SDL_GamepadConnected(pad)) {
         SDL_CloseGamepad(pad); pad = NULL; sensor_pad[0] = 0; sensor_ok[0] = 0;
         plat_xchg32(&pad_layout_shown, -1);
+        plat_xchg32(&pad_dz_shown, -1);
         for (int i = 0; i < 4; i++) plat_xchg32(&pad_labels[i], PAD_LABEL_NONE);
         rt_log("input: gamepad disconnected");
     }
@@ -236,6 +255,7 @@ static void scan_pads(void) {
             rt_log("input: gamepad of player %d disconnected", p + 1);
         }
     log_joysticks();
+    input_wheel_map();
     int n = 0;
     SDL_JoystickID *ids = SDL_GetGamepads(&n);
     int steam = steam_rpt_state() == STEAM_RPT_READY, guests = steam ? steam_rpt_guests() : 0, direct = 0;
@@ -297,6 +317,10 @@ static void pad_adopt(void) {
     int motion = SDL_GamepadHasSensor(pad, SDL_SENSOR_GYRO) && SDL_GamepadHasSensor(pad, SDL_SENSOR_ACCEL);
     rt_log("input: gamepad \"%s\" (%s, %s, east button %s)", SDL_GetGamepadName(pad), pad_rumble ? "rumble" : "no rumble",
            motion ? "gyro and accelerometer" : "no motion sensors", pad_east_a ? "labelled A" : "not labelled A");
+    const char *set = cfg_get("MKW_STICK_DEADZONE");
+    plat_xchg32(&pad_dz_shown, (int32_t)lroundf(dead_zone_for(pad, 0) * 1000));
+    rt_log("input: stick dead zones %.1f %% left, %.1f %% right (%s)", dead_zone_for(pad, 0) * 100,
+           dead_zone_for(pad, 1) * 100, set && *set ? "MKW_STICK_DEADZONE" : "this controller's default; MKW_STICK_DEADZONE sets one");
 }
 
 // Under lock: the layout of the open gamepad, picked again when a setting or the gamepad changed; logs each change.
@@ -358,12 +382,14 @@ static void start(void) {
     binds_refresh();
     const char *e = cfg_get("MKW_INPUT");
     if (e && !strcmp(e, "none")) { state = -1; rt_log("input: disabled (MKW_INPUT=none)"); return; }
+    input_wheel_hint();
     if (!SDL_Init(SDL_INIT_GAMEPAD)) { state = -1; rt_log("input: SDL gamepad init failed (%s), keyboard only", SDL_GetError()); }
     else state = 1;
     if (state == 1) {
         attach_virtual_pads();
         switch2_start();   // Switch 2 controllers over Bluetooth, as virtual gamepads (MKW_SWITCH2)
         scan_pads();
+        input_power_start();   // its own thread: the low battery notice
         if (!pad) rt_log("input: no gamepad (keyboard only until one is connected)");
     }
     if (state == -1) state = 2;   // keyboard only
@@ -400,8 +426,8 @@ static void gamepad_read(SDL_Gamepad *g, int layout, uint64_t *b, int32_t sl[2],
     uint8_t pd[PAD_COUNT] = {0};
     gamepad_physical(g, pd);
     *b |= input_map_pad_buttons(pd, layout);
-    stick(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTY), sl);
-    stick(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTY), sr);
+    stick(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTY), dead_zone_for(g, 0), sl);
+    stick(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTY), dead_zone_for(g, 1), sr);
 }
 
 // Under lock, state 1: player 1's gamepad inputs by position; 0 without a connected gamepad.
@@ -636,6 +662,11 @@ int input_last_device(void) {
     return (int32_t)plat_cas32(&pad_layout_shown, -1, -1) >= 0 ? INPUT_DEVICE_PAD : INPUT_DEVICE_KEYBOARD;
 }
 
+double input_stick_deadzone_default(void) {
+    int32_t v = (int32_t)plat_cas32(&pad_dz_shown, -1, -1);
+    return v < 0 ? -1 : v / 10.0;
+}
+
 int input_pad_layout(void) {
     return (int)plat_cas32(&pad_layout_shown, 0, 0);
 }
@@ -676,6 +707,27 @@ int input_capture(int reset, int *id) {
     memcpy(prev_p, p, sizeof p);
     prev_esc = esc;
     return got;
+}
+
+int input_gamepads_running(void) {
+    plat_mutex_lock(&lock);
+    int on = state == 1;
+    plat_mutex_unlock(&lock);
+    return on;
+}
+
+int input_pad_power_sdl(int player, char *name, size_t name_size, uint32_t *id, int *percent) {
+    int st = -2;   // no gamepad
+    plat_mutex_lock(&lock);
+    SDL_Gamepad *g = player <= 0 ? pad : player < INPUT_MAX_PLAYERS ? extra[player] : NULL;
+    if (state == 1 && g && SDL_GamepadConnected(g)) {
+        const char *n = SDL_GetGamepadName(g);
+        snprintf(name, name_size, "%s", n ? n : "");
+        *id = SDL_GetGamepadID(g);
+        st = SDL_GetGamepadPowerInfo(g, percent);
+    }
+    plat_mutex_unlock(&lock);
+    return st;
 }
 
 int input_rumble_triggers_enabled(void) {
@@ -744,10 +796,15 @@ int input_motion_enabled(void) {
 }
 
 // 250 Hz: the gamepads update (reports read, rumble expiry) and each player's newest gyro and accelerometer sample goes
-// into that player's fusion. Players 2-8 have their own (#302: player 2's gyro did nothing). Without a gamepad with
-// sensors, or with motion off (MKW_MOTION=0, live), nothing is fed and the six-axis sensor reads at rest.
+// into that player's fusion. Players 2-8 have their own (#302: player 2's gyro did nothing). A player whose gamepad has
+// no sensors (an XInput pad) or who has none takes a DSU server's instead when MKW_DSU=1 (dsu.c, #435): player N the
+// server's slot MKW_DSU_SLOT + N - 1. Without either, or with motion off (MKW_MOTION=0, live), nothing is fed and the
+// six-axis sensor reads at rest.
 static void motion_main(void *arg) {
     (void)arg;
+    int source[INPUT_MAX_PLAYERS] = {0};   // what fed each player last: 0 nothing, 1 its gamepad, 2 DSU (for the log)
+    int first_slot = 0;                    // MKW_DSU_SLOT, live
+    unsigned slot_seen = ~0u;
     _Static_assert(sizeof sensor_pad / sizeof sensor_pad[0] == INPUT_MAX_PLAYERS, "one sensor slot per player");
     for (;;) {
         plat_wait_ns(4000000);
@@ -764,11 +821,18 @@ static void motion_main(void *arg) {
         plat_mutex_unlock(&lock);
         if (!input_motion_enabled()) continue;
         uint64_t now = kern_now_ns();
+        if (slot_seen != cfg_version()) slot_seen = cfg_version(), first_slot = cfg_int("MKW_DSU_SLOT");
         for (int p = 0; p < INPUT_MAX_PLAYERS; p++) {
-            if (!have[p]) continue;
             double acc[3], gyro[3];
-            input_motion_axes(a[p], g[p], acc, gyro);
-            motion_feed(motion_player(p), acc, gyro, now);
+            int from = 0;   // 1 the gamepad's own sensors, 2 the DSU server (dsu.c), 0 none
+            if (have[p]) input_motion_axes(a[p], g[p], acc, gyro), from = 1;
+            else if (dsu_motion(first_slot + p, acc, gyro)) from = 2;
+            if (from != source[p]) {
+                if (from == 2) rt_log("input: player %d motion from DSU slot %d", p + 1, first_slot + p);
+                else if (source[p] == 2) rt_log("input: player %d: DSU slot %d stopped sending", p + 1, first_slot + p);
+                source[p] = from;
+            }
+            if (from) motion_feed(motion_player(p), acc, gyro, now);
         }
     }
 }
@@ -782,6 +846,7 @@ void input_motion_start(void) {
         else {
             if (!plat_thread_spawn(motion_main, NULL, "motion", 0)) rt_fatal("input: cannot start the motion thread");
             motion_thread = 1;
+            dsu_start();   // its own thread, idle until MKW_DSU=1 (live)
         }
     }
     plat_mutex_unlock(&lock);

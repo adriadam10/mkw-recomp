@@ -134,7 +134,7 @@ def fetch(args: argparse.Namespace) -> None:
     if done != total or "sha256:" + h.hexdigest() != digest:
         part.unlink()
         raise ValueError(f"{asset['name']} came damaged ({done} of {total} bytes or another sha256): try again")
-    if args.os == "linux":
+    if args.os in ("linux", "linux-aarch64"):
         out = dest / asset["name"]
         part.replace(out)
         out.chmod(0o755)

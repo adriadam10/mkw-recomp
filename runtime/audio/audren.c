@@ -87,9 +87,13 @@ static void voice_reset(ServerVoice *v) {
     memset(v->biquad_state, 0, sizeof v->biquad_state);
 }
 
-static void update_voice(AudioRenderer *r, const AudrenVoiceIn *in) {
-    need(in->id < (uint32_t)r->param.voice_count, "voice id out of range");
-    ServerVoice *v = &r->voices[in->id];
+static void update_voice(AudioRenderer *r, unsigned slot, const AudrenVoiceIn *in) {
+    // State and returned status belong to the input array slot. An unused record may be entirely zeroed (libnx
+    // audrvVoiceDrop); indexing by its id would repeatedly reset playing voice 0. Same rule in Ryujinx.Audio
+    // StateUpdater.UpdateVoices1/2 @ 6af327bdd50366163d80bc692f6bf47ec1c1993e (MIT); no implementation copied.
+    need(slot < (uint32_t)r->param.voice_count, "voice slot out of range");
+    if (in->in_use) need(in->id < (uint32_t)r->param.voice_count, "voice id out of range");
+    ServerVoice *v = &r->voices[slot];
     if (in->is_new || !in->in_use) voice_reset(v);
     v->in = *in;
     v->use_float_biquads = 0;
@@ -251,8 +255,8 @@ static void request_update(AudioRenderer *r, const uint8_t *input, uint64_t in_s
             }
         } else
             memcpy(&v, voices + i * voice_stride, sizeof v);
-        update_voice(r, &v);
-        ServerVoice *server = &r->voices[v.id];
+        update_voice(r, (unsigned)i, &v);
+        ServerVoice *server = &r->voices[i];
         server->use_float_biquads = (uint8_t)float_voices;
         if (float_voices) memcpy(server->float_biquads, v2.biquads, sizeof v2.biquads);
     }

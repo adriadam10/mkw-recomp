@@ -15,7 +15,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "sm86/translate"))
+sys.path[:0] = [str(ROOT / "sm86/translate"), str(ROOT / "sm86/translate/frontend")]
 sys.path.insert(0, str(ROOT / "tools/shaders"))
 
 import glsl

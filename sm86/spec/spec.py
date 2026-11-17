@@ -297,10 +297,21 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", type=Path, default=ROOT / "build/sm86")
     ap.add_argument("--cache", type=Path, default=ROOT / "scratchpad/nvidia", help="downloads and unpacked tools")
-    ap.add_argument("--cc", default="cc", help='C compiler command, or a JSON list (["C:/a b/zig.exe", "cc"])')
+    ap.add_argument("--cc", default=default_cc(), help='C compiler command, or a JSON list (["C:/a b/zig.exe", "cc"])')
     ap.add_argument("--crt", type=Path, help="Windows: the package's prebuilt C runtime (setup/lib/crt/link.json)")
     args = ap.parse_args()
     build(args.out, args.cache, cc_command(args.cc), args.crt)
+
+
+def default_cc() -> str:
+    """A source checkout on Windows has no `cc`: tools/build/README.md asks only for uv, CMake and Ninja, and spec.py
+    then stopped with a bare FileNotFoundError. windeps.py has already fetched llvm-mingw's clang, which builds
+    intercept_win.c (checked 17/11/2026: same instructions.json as with --cc set to it by hand)."""
+    if WINDOWS and not shutil.which("cc"):
+        clang = ROOT / "build/win/llvm-mingw/bin/x86_64-w64-mingw32-clang.exe"
+        if clang.exists():
+            return json.dumps([clang.as_posix()])
+    return "cc"
 
 
 def cc_command(arg: str) -> list[str]:

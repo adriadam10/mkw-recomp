@@ -1,0 +1,20 @@
+# The Ideas form. Its texts go into the discussion's body, which tools/github/discuss.py reads for failure words: the
+# checkbox and field labels stay free of them.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One idea per discussion, please. Search the [earlier ideas](https://github.com/adriadam10/mkw-recomp/discussions/categories/ideas) first and add to one if it is already there.
+        Not here: online play, which lives in separate projects ([FAQ](https://github.com/adriadam10/mkw-recomp/wiki/FAQ#online-play)), and game versions other than 1.0.0 and 1.8.0.
+  - type: checkboxes
+    attributes:
+      label: Before posting
+      options:
+        - label: I searched the earlier ideas and the FAQ
+          required: true
+  - type: textarea
+    attributes:
+      label: Idea
+      description: What it would do, and where (start screen, F1 menu, in the race)
+    validations:
+      required: true

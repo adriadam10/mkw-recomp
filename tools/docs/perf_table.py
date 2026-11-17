@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.12"
 # ///
-"""Sorts the table of docs/performance.md: by version, then by internal resolution (Adrià 16/11/2026).
+"""Sorts the table of docs/project/performance.md: by version, then by internal resolution (Adrià 16/11/2026).
 
 Why: a row is added per report, in the order the reports come, so versions and resolutions ended up mixed and two
 machines could not be compared at a glance. The order: `pre-release`, then the numbered versions (0.1.6 < 0.1.10),
@@ -17,7 +17,7 @@ import re
 import sys
 from pathlib import Path
 
-DOC = Path(__file__).resolve().parents[2] / "docs/performance.md"
+DOC = Path(__file__).resolve().parents[2] / "docs/project/performance.md"
 VERSION, RESOLUTION = 0, 4   # the columns, counting from the first (| Version | GPU | CPU | OS | Internal resolution |)
 
 
@@ -50,7 +50,7 @@ def main() -> int:
     if rows == lines[a:b]:
         return 0
     if "--check" in sys.argv:
-        print("docs: docs/performance.md: table not sorted by version and resolution; run `uv run tools/docs/perf_table.py`",
+        print("docs: docs/project/performance.md: table not sorted by version and resolution; run `uv run tools/docs/perf_table.py`",
               file=sys.stderr)
         return 1
     DOC.write_text("\n".join(lines[:a] + rows + lines[b:]))

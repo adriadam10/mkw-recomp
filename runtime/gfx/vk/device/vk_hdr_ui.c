@@ -1,5 +1,5 @@
 // The F1 menu on an HDR10 swapchain (gfx_hdr.c): ImGui draws it into an RGBA8 image of the swapchain's size (cleared to
-// 0) instead of into the swapchain image, and runtime/shaders/hdr_ui.frag blends that onto the game's PQ picture with
+// 0) instead of into the swapchain image, and runtime/shaders/hdr/hdr_ui.frag blends that onto the game's PQ picture with
 // the menu's white at the system's paper white. Drawn straight into a PQ image, the menu's sRGB bytes would read as PQ
 // codes: its white at 10 000 nits. Hookshot (Switch 2, GPL-3.0, idea only) does the same for its menu.
 // From totk-pc-recomp runtime/vk_hdr.c vk_hdr_ui_target / vk_hdr_ui_compose (MIT); its picture encoding is not taken:

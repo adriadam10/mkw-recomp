@@ -30,6 +30,8 @@ import re
 import sys
 import time
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 import numpy as np
@@ -793,16 +795,28 @@ def main():
     results = {name: [] for name in info}
     done_at, errors = {}, []
     t_emit = time.perf_counter()
+    # An executor, not mp.Pool: a Pool replaces a worker that died (killed, out of memory, a crash in numpy) and waits
+    # for its lost chunk forever; setup sat at 0 % CPU with only the two-minute stack dumps in its log (#506). The
+    # executor raises BrokenProcessPool, and generate fails with its error instead.
     ctx = mp.get_context('spawn')
-    with ctx.Pool(max(1, args.jobs), initializer=_worker_init, initargs=(paths, starts_abs, table, opts, image)) as pool:
-        for i, r in enumerate(pool.imap_unordered(_emit_chunk, [t for _, t in tasks], chunksize=1)):
-            results[r['module']].append(r)
-            if r['error']:
-                errors.append(r['error'])
-            done_at[r['module']] = time.perf_counter() - t_emit
-            if (i + 1) % 200 == 0 or i + 1 == len(tasks):
-                print(f'emitted {i + 1}/{len(tasks)} chunks, {time.perf_counter() - t_emit:.0f}s', file=sys.stderr,
-                      flush=True)
+    with ProcessPoolExecutor(max(1, args.jobs), mp_context=ctx, initializer=_worker_init,
+                             initargs=(paths, starts_abs, table, opts, image)) as pool:
+        futures = [pool.submit(_emit_chunk, t) for _, t in tasks]
+        try:
+            for i, r in enumerate(f.result() for f in as_completed(futures)):
+                results[r['module']].append(r)
+                if r['error']:
+                    errors.append(r['error'])
+                done_at[r['module']] = time.perf_counter() - t_emit
+                if (i + 1) % 200 == 0 or i + 1 == len(tasks):
+                    print(f'emitted {i + 1}/{len(tasks)} chunks, {time.perf_counter() - t_emit:.0f}s',
+                          file=sys.stderr, flush=True)
+        except BrokenProcessPool as e:
+            for f in futures:
+                f.cancel()
+            done = sum(len(rs) for rs in results.values())
+            raise SystemExit(f'a generate worker process ended without its result (killed, out of memory or crashed; '
+                             f'{done} of {len(tasks)} chunks done): {e}') from None
 
     for name, d in info.items():
         rs = sorted(results[name], key=lambda r: r['number'])

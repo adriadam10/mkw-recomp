@@ -143,6 +143,9 @@ uint64_t plat_cpu_fast(void) {
 
 int plat_process_affinity(uint64_t mask) { return SetProcessAffinityMask(GetCurrentProcess(), (DWORD_PTR)mask) != 0; }
 
+// The process mask bounds every thread's (SetThreadAffinityMask fails outside it): nothing to keep apart here.
+void plat_thread_background(void) {}
+
 uint64_t plat_thread_cpu_ns(uint32_t tid) {
     HANDLE th = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE, tid);
     FILETIME a, b, k, u;

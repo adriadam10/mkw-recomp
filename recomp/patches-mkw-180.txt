@@ -156,6 +156,10 @@ site aspect main 1805f1c 97ff9e79 947fac15   # same; 1.0.0's 169aeb0
 # 1.0.0's main+0x168a22c is main+0x17f4cb0 here, with DrawInfo in x21 and the rows loaded into q0 and q4 (q2 holds
 # another row by then): host_ui_rows2 (patches.c) in place of host_ui_rows.
 site aspect main 17f5084 ad4092a0 947fefaf   # ldp q0, q4, [x21, #0x10] -> bl host_ui_rows2 (patch page + 0xf40)
+# nn::vfx2's view copy to the GPU in main+0x139aa0 (1.0.0's d60a0, issue #425): bl memcpy -> bl host_fx_view (patch
+# page + 0xf20). The group draw that calls it (main+0x137b40, through main+0x139570) passes its group as a mask
+# (1 << group) that main+0x139570 keeps in w22: RtVersion.fx_group_* (version.c).
+site aspect main 139b60 94a9d254 94dadcf0
 
 # Race FOV for tall Window (host_camera_fov, patches.c): main+0x88f30 is 1.0.0's main+0x45f524 (the only caller of
 # main+0x8a5b0, 1.0.0's 460c10); the same block stores the FOV at [entry+0xa0] and its sinf/cosf/tanf at +0xa4..0xac,

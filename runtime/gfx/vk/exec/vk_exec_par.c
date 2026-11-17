@@ -699,7 +699,15 @@ static void send_ready(int wait) {
         if (P.sent == from) return;
         VkCommandBuffer cbs[MAX_CHUNKS];
         for (int k = from; k < P.sent; k++) cbs[k - from] = P.ch[k].cb;
-        if (!from) vk_exec_pass_end(P.ex), P.first_ns += kern_now_ns() - P.t_job;   // the part before ends outside a pass
+        // The part before ends outside a pass, and with its feedback-layout targets back in GENERAL: the chunks begin
+        // with none (vk_exec_chunk_begin), so a depth target the head left in ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT was
+        // attached by chunk 0 in GENERAL (the validation layer at vkQueueSubmit2: expects GENERAL, current layout
+        // ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT, depth and stencil aspects, val1 17/11/2026).
+        if (!from) {
+            if (P.ex->nfbl) vk_exec_barrier(P.ex);
+            else vk_exec_pass_end(P.ex);
+            P.first_ns += kern_now_ns() - P.t_job;
+        }
         P.ex->cb = vk_sync_split_with(cbs, P.sent - from);
         if (!wait) return;
     }

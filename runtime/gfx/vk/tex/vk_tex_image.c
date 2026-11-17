@@ -332,6 +332,7 @@ static uint32_t tex_pool_type;
 static PlatThread *tex_pool_thread;
 
 static void tex_pool_main(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     int blocks = (int)(intptr_t)arg;
     VkCtx *c = vk_ctx();
     VkImageCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,

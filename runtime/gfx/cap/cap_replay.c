@@ -228,7 +228,7 @@ int cap_replay_main(int argc, char **argv) {
                 cap_in_read(in, rec, hd[0]);
                 cap_in_read(in, offs, 4 * hd[1]);
                 // MKW_CAP_RECS=<dir> (a measurement): recordings over 64 KiB saved there as they are in the capture, to
-                // compare one frame's ops with the next (tools/analisis/recdiff.py).
+                // compare one frame's ops with the next (tools/analisis/nvn/recdiff.py).
                 const char *rd = cfg_get("MKW_CAP_RECS");
                 if (rd && hd[0] > (64u << 10)) {
                     char rp[1024];

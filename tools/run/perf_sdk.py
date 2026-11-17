@@ -18,7 +18,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools/analisis"))
+sys.path.insert(0, str(ROOT / "tools/analisis/runtime"))
 from sdk_gaps import namespace
 
 LINE = re.compile(r"^\s*([\d.]+)%\s*\|([^|]*)\|\[.\]\s+(\S+)")  # user-space samples; "-t |" fields

@@ -1,0 +1,93 @@
+# Questions the Discussions keep getting, read by discuss.py: a new discussion whose title matches `any` and none of
+# `not` (regular expressions, case-insensitive; the body is left out, it names too much in passing) is answered with
+# `reply`, the FAQ section `faq` (anchor in the wiki's FAQ page) and the discussion that settled it first (`seen`), and
+# closed as its duplicate; its author's reply reopens it.
+# The first matching topic wins, so the narrow ones go first. A row goes in when the same question comes twice; each
+# pattern is checked against every discussion so far in tests/github/test_discussions.py (a wrong match closes a good
+# question).
+
+[[topic]]
+id = "skip-launcher"
+seen = 194
+faq = "can-i-skip-the-start-screen"
+# "laun?ch?er": players write "Laucher" (#233)
+any = [
+    "\\b(skip|bypass|without|straight|direct|auto.?(boot|start))\\w*\\b.*\\b(laun?ch?er|start ?screen)",
+    "\\bdirect(ly)?\\b.*\\bcommand line|--play",
+]
+reply = "The start screen can be skipped: start the game with `--play` (the same as `MKW_NO_LAUNCHER=1`), as the program's argument in a shortcut, Steam, Playnite or LaunchBox. After an update, open it once without `--play`: the start screen is what sets the game up again for the new version."
+
+[[topic]]
+id = "versions"
+seen = 3
+faq = "which-game-versions-work"
+any = ["(?<![\\d.])1\\.[0-9](\\.[0-9])?(?![.\\d])", "\\.(nup|nx)\\b|\\bnup\\b"]
+# A request for something on a version ("Thai language support for version 1.8.0", #193) is not about the version
+not = ["\\b(language|translat\\w*)\\b"]
+reply = "Mario Kart World **1.0.0** and **1.8.0** work (1.8.0 from v0.1.9), dumped from your own console; the versions in between are not planned, since each one is a different program to recompile and patch. The start screen takes the dump as a folder or as a `.nup` / `.nx` file (**Game files → Choose .nup or .nx file**)."
+
+[[topic]]
+id = "online"
+seen = 246
+faq = "online-play"
+any = ["\\b(online|netplay|link.?play|matchmaking|public lobb\\w*|internet play)\\b"]
+reply = "Online play is outside this repository: code that talks to or stands in for Nintendo's online services, and servers or rooms for playing over the internet, belong in a separate project ([CONTRIBUTING]({repo_url}/blob/main/CONTRIBUTING.md) has the rule). What stays here is split screen and [LAN play]({repo_url}/wiki/LAN-play) with other PCs on a local network."
+
+[[topic]]
+id = "update"
+seen = 407
+faq = "how-do-i-update"
+any = ["\\b(updat\\w*|upgrad\\w*)\\b"]
+not = ["\\bdriver"]
+reply = "When a new release is out, the start screen offers **Update to vX**: it downloads it, replaces the program and sets up again only what changed, with no full recompile. A zip downloaded by hand works too: open it, choose your old game folder on **Game files** and press **Set up**; it reuses what is already there."
+
+[[topic]]
+id = "save"
+seen = 209
+faq = "where-is-my-save"
+any = ["\\bsave ?(file|data|game|location|folder)s?\\b|\\bwhere\\b.*\\bsaves?\\b"]
+reply = "The save is in `profile/` in the game folder (other players' in `profile/players/<n>/`); the wiki says [where the game folder is]({repo_url}/wiki/Installation#where-things-live). A save from an emulator can be copied there (back up what is there first), from the same game version that made it."
+
+[[topic]]
+id = "local-multiplayer"
+seen = 115
+faq = "does-local-multiplayer-work"
+any = ["\\b(split.?screen|local (multiplayer|co-?op)|[2-4] ?(players?|p)\\b|two players?|multiplayer\\??$)"]
+not = ["\\d+ ?fps|\\bfps\\b|\\bframes?\\b"]
+reply = "Local multiplayer works, split screen for 2–4 players, with **one controller per player** (the keyboard is only player 1). Two players run at 60 fps, three and four at 30 like the console."
+
+[[topic]]
+id = "discord"
+seen = 539
+faq = "is-there-a-discord"
+any = ["\\bdiscord\\b"]
+not = ["rich presence|\\brpc\\b"]
+reply = "Yes: **https://discord.gg/8uYBkjQkEg** (see #539 for how to get in). Bugs still go to issues, with their `logs/mkw.log`."
+
+[[topic]]
+id = "shader-cache"
+seen = 312
+faq = "can-i-download-a-shader-cache"
+any = ["\\bshaders? ?(cache|pack)\\b|\\bpipeline cache\\b"]
+reply = "There is no shader cache to download: the setup's warm-up compiles the known pipelines, and each new one is saved and rebuilt at the next start."
+
+[[topic]]
+id = "avx2"
+seen = 82
+faq = "does-my-cpu-need-avx2"
+any = ["\\bavx2?\\b"]
+reply = "The CPU needs AVX2 today. A build without it is planned, with no date."
+
+[[topic]]
+id = "macos"
+seen = 0
+faq = "macos"
+any = ["\\b(mac ?os|macbook|apple silicon|m[1-4] (mac|pro|max))\\b"]
+reply = "There is no macOS build. Linux on ARM (AArch64) has an AppImage."
+
+[[topic]]
+id = "upscalers"
+seen = 0
+faq = "dlss-fsr-34-xess"
+any = ["\\b(dlss|xess|fsr ?[234](\\.\\d)?)\\b"]
+reply = "DLSS, FSR 2/3/4 and XeSS need motion vectors the game does not produce. FSR 1 scaling and frame generation are built in; rebuilding motion vectors is planned for later."

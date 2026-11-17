@@ -95,6 +95,7 @@ typedef struct { const uint8_t *src; size_t sn; uint8_t *dst; size_t dn; } Frame
 typedef struct { Frame *f; int n; volatile int32_t next, bad; } FrameJob;
 
 static void frame_worker(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     FrameJob *j = arg;
     for (int i; (i = plat_inc32(&j->next) - 1) < j->n;)
         if (ZSTD_decompress(j->f[i].dst, j->f[i].dn, j->f[i].src, j->f[i].sn) != j->f[i].dn) plat_inc32(&j->bad);
@@ -298,6 +299,7 @@ static int rechunk_one(const char *name) {
 }
 
 static void enc_worker(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     EncList *L = arg;
     uint64_t in_b = 0, out_b = 0, tx = 0;
     int failed = 0;

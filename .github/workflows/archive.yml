@@ -12,7 +12,7 @@ on:
     inputs:
       hours:
         description: Wayback pages changed in the last hours
-        default: "26"
+        default: "74"
       max:
         description: At most this many Wayback pages
         default: "120"
@@ -53,4 +53,5 @@ jobs:
           sparse-checkout: tools/github
       - uses: astral-sh/setup-uv@v10.3.3
       - name: Changed pages
-        run: uv run tools/github/archive.py wayback --hours "${{ inputs.hours || 26 }}" --max "${{ inputs.max || 120 }}" --apply
+        # Three days back: what archive.org refused on one run is tried on the next two (archive.py, WAYBACK_FRESH)
+        run: uv run tools/github/archive.py wayback --hours "${{ inputs.hours || 74 }}" --max "${{ inputs.max || 120 }}" --apply

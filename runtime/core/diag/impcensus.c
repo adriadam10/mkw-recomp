@@ -9,7 +9,7 @@
 // census; the cost is a range check per guest call and a hash probe per call from main into the SDK.
 //
 //   file   one line per function: module, offset, calls, first frame, "symbol+offset" (ldr_describe), written at exit
-//          (prof_write); tools/analisis/sdk_gaps.py --census reads it
+//          (prof_write); tools/analisis/runtime/sdk_gaps.py --census reads it
 #include <stdio.h>
 #include <string.h>
 

@@ -176,7 +176,7 @@ def mem_gb() -> float:
 
 def run(cmd: list[str], env: dict[str, str] | None = None, progress_prefix: str = "") -> None:
     """A tool's run; its 'progress n total' lines (translate.py) pass through, the rest goes to stderr."""
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", env=env)
     tail = []
     for line in p.stdout:
         if progress_prefix and line.startswith(progress_prefix):

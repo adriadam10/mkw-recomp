@@ -4,7 +4,7 @@
 # regression and stays open for a person to read.
 # A row goes in when a reply groups issues by cause; keep the strings specific (a bare "failed (-4)" is every GPU loss).
 # `wiki` is the anchor of its section in the wiki's Troubleshooting page (what the player can do), linked from the
-# reply; a row goes in with its section. tests/test_issues.py checks that every row has one.
+# reply; a row goes in with its section. tests/github/test_issues.py checks that every row has one.
 
 [[signature]]
 issue = 22

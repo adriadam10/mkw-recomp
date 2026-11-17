@@ -122,7 +122,8 @@ void setup_start(const char *exe_dir, const char *game_dir, const char *source, 
     if (setup_state().running) return;
     char python[1200], script[1200];
     SDL_LockMutex(g_lock);
-    g_state = SetupState{1, -1, {}, 0, 0, 0, {}, {}};
+    unsigned generation = g_state.generation + 1;
+    g_state = SetupState{1, -1, {}, 0, 0, 0, {}, {}, generation};
     SDL_UnlockMutex(g_lock);
     if (!find_tool(exe_dir, "prepare/prepare.py", python, script, sizeof python)) {
         set_finished(-1, "no_setup", "");

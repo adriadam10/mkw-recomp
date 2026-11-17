@@ -10,7 +10,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from machine import emit
+from machine import Failed, emit
 
 COPY_JOBS = 6  # files copied at once: NTFS creates ~170 small files a second from one stream, ~460 from six (Windows test PC, 08/11/2026)
 
@@ -84,3 +84,49 @@ def copy_tree(src: Path, dst: Path, total: int, version: str = "") -> None:
                 emit("progress", done, total)
     if version:
         remove_stale(dst, src, kept, version)
+
+
+# What a setup writes besides a copied RomFS, measured on a 1.8.0 build (17/11/2026): the generated C 0.95 GiB, its
+# objects 0.65, the SPIR-V 0.98, the game library 0.24 and the shader stages 0.16.
+GIB = 1 << 30
+BUILD_BYTES = 3 * GIB
+ROMFS_BYTES = 22 * GIB  # a .nx package's RomFS, whose size it does not say: 1.8.0's is 21.9 GiB in 206 202 files
+
+
+def romfs_bytes(src: Path) -> int:
+    """What a copy of src's RomFS takes: a loose folder's own size, a .nup's file sizes, else (a .nx) ROMFS_BYTES."""
+    if src.is_dir():
+        return tree_bytes(src)
+    from nup import Nup, is_nup  # noqa: PLC0415 - only when a package is copied
+
+    if is_nup(src):
+        return sum(e.size for e in Nup(src).files("romfs").values())
+    from gamesource import is_nx  # noqa: PLC0415
+
+    return ROMFS_BYTES if is_nx(src) else 0
+
+
+def tree_bytes(d: Path) -> int:
+    """The bytes already in d: what a copy cut short left (copy_one keeps a file of the right size)."""
+    total = 0
+    for top, _, files in os.walk(d):
+        for f in files:
+            try:
+                total += os.stat(os.path.join(top, f)).st_size
+            except OSError:
+                pass
+    return total
+
+
+def check_space(game: Path, need: int) -> None:
+    """Fails before the setup writes anything when the game folder's drive has less than need free: a disk filled
+    half-way through the RomFS copy failed with the system's "No space left on device" after up to 20 GiB and left the
+    cut copy taking that room (a Steam Deck of 64 GB, a full SD card). The start screen says it in the player's
+    language, and that keeping the RomFS where it is needs no copy."""
+    at = game
+    while not at.exists() and at.parent != at:
+        at = at.parent
+    free = shutil.disk_usage(at).free
+    if need and free < need:
+        detail = f"{need / GIB:.1f} GB, {free / GIB:.1f} GB free in {at}"
+        raise Failed(f"not enough free space for the setup: it needs {detail}", "space", detail)

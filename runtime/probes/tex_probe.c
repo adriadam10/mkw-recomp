@@ -257,7 +257,8 @@ static int test_astc(void) {
 // ---- formats ----
 static unsigned n_mapped, n_supported, n_unmapped, n_unsupported, n_fallback;
 
-// imageGranularity in texels (NVIDIA) or in 4x4 blocks (Intel's Windows driver, #476): both come out in texels.
+// imageGranularity in texels (NVIDIA) or in compressed blocks (Intel's Windows driver: BC #476, ASTC #540): both come
+// out in texels.
 static int test_granularity(void) {
     static const struct { VkFormat f; uint32_t gw, gh, want_w, want_h; } c[] = {
         {VK_FORMAT_BC7_SRGB_BLOCK, 256, 256, 256, 256},   // NVIDIA, RTX 3050 (#443's log)
@@ -266,6 +267,10 @@ static int test_granularity(void) {
         {VK_FORMAT_BC1_RGBA_UNORM_BLOCK, 512, 256, 512, 256},
         {VK_FORMAT_BC1_RGBA_UNORM_BLOCK, 128, 64, 512, 256},
         {VK_FORMAT_R8G8B8A8_UNORM, 128, 128, 128, 128},
+        {VK_FORMAT_ASTC_8x8_SRGB_BLOCK, 64, 64, 512, 512},      // Intel Iris Xe, native ASTC (#540's log)
+        {VK_FORMAT_ASTC_8x8_UNORM_BLOCK, 512, 512, 512, 512},   // the same in texels
+        {VK_FORMAT_ASTC_4x4_UNORM_BLOCK, 64, 64, 256, 256},
+        {VK_FORMAT_ASTC_4x4_SRGB_BLOCK, 256, 256, 256, 256},
     };
     for (size_t i = 0; i < sizeof c / sizeof *c; i++) {
         uint32_t w = c[i].gw, h = c[i].gh;

@@ -1,5 +1,5 @@
 // The memory caps a player gets with nothing set, from their machine. Pure functions (no Vulkan), so
-// tests/test_defaults.py builds them alone and checks them on the GPUs players have reported.
+// tests/runtime/test_defaults.py builds them alone and checks them on the GPUs players have reported.
 #ifndef VK_DEFAULTS_H
 #define VK_DEFAULTS_H
 

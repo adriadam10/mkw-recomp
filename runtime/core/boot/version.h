@@ -38,6 +38,11 @@ typedef struct {
     uint64_t random_ctor_lr;   // sead::Random::Random, after its GetSystemTick call (set seed)
     uint64_t random_ctor2_lr;  // another Random constructor, the same
     uint64_t ui_text_lr;       // return address of the 2D text setup's projection getter call (set aspect)
+    uint64_t fx_group_lr;      // the effect group draw's return from its call to the view copy's caller (set aspect,
+                               // issue #425); 0: the screen effects keep the widened view
+    uint8_t fx_group_frame;    // the frame record holding the draw group: 1 the view copy's, 2 its caller's
+    uint8_t fx_group_word;     // the group's 8-byte word in that frame record (x29-relative)
+    uint64_t fx_screen_group;  // the screen effects' value there (Knockout Tour's checkpoint rainbow)
     uint64_t ui_focus_fn;      // a menu button taking the cursor (seqwatch.c, MKW_UI_FOCUS)
     uint64_t camera_service;   // the global holding the camera service object (patches.c, set camera; 1.8.0)
     uint64_t aspect_first_lr;  // return of the camera aspect's first fdiv (set aspect): its projection stays 16:9 when

@@ -47,6 +47,7 @@ struct PlatThread {
     void *arg;
     volatile int32_t tid;   // the kernel's id once the thread runs, for plat_thread_set_priority
     char name[16];          // the kernel keeps 15 characters
+    int bg;                 // started by a background thread (plat_thread_background): one too
 };
 
 // A signal stack for the calling thread, so the fault and crash handlers still run when its own stack is exhausted.
@@ -61,12 +62,17 @@ void alt_stack(void) {
     sigaltstack(&ss, NULL);
 }
 
+static __thread int bg_self;
+static void background_end(void);
+
 static void *thread_main(void *p) {
     PlatThread *t = p;
     alt_stack();
     __atomic_store_n(&t->tid, (int32_t)syscall(SYS_gettid), __ATOMIC_RELEASE);
     if (t->name[0]) pthread_setname_np(pthread_self(), t->name);
+    if (t->bg) plat_thread_background();
     t->fn(t->arg);
+    background_end();
     return NULL;
 }
 
@@ -79,6 +85,7 @@ PlatThread *plat_thread_new_ex(PlatThreadFn fn, void *arg, const char *name, siz
     if (!t) return NULL;
     t->fn = fn;
     t->arg = arg;
+    t->bg = bg_self;
     if (name) snprintf(t->name, sizeof t->name, "%s", name);
     pthread_attr_t a;
     pthread_attr_init(&a);
@@ -155,8 +162,48 @@ uint64_t plat_cpu_fast(void) {
     return fast;
 }
 
+// Background threads (plat_thread_background): their ids, kept out of plat_process_affinity, and the processors the
+// process had before any change, which they keep. An id leaves the list when its thread ends (thread_main), before
+// Linux can give it to a new thread.
+#define BG_MAX 256
+static pthread_mutex_t bg_lock = PTHREAD_MUTEX_INITIALIZER;
+static pid_t bg_tid[BG_MAX];
+static int bg_n;
+static cpu_set_t bg_set;   // the process's processors at the first plat_process_affinity or plat_thread_background
+static int bg_set_known;
+
+static void bg_set_once(void) {   // under bg_lock
+    if (bg_set_known) return;
+    if (sched_getaffinity(0, sizeof bg_set, &bg_set)) {
+        CPU_ZERO(&bg_set);
+        for (long i = 0, n = sysconf(_SC_NPROCESSORS_ONLN); i < n && i < CPU_SETSIZE; i++) CPU_SET(i, &bg_set);
+    }
+    bg_set_known = 1;
+}
+
+void plat_thread_background(void) {
+    if (bg_self) return;
+    pid_t tid = (pid_t)syscall(SYS_gettid);
+    pthread_mutex_lock(&bg_lock);
+    bg_set_once();
+    if (bg_n < BG_MAX) bg_tid[bg_n++] = tid, bg_self = 1;
+    cpu_set_t s = bg_set;
+    pthread_mutex_unlock(&bg_lock);
+    if (bg_self) sched_setaffinity(0, sizeof s, &s);   // the mask a plat_process_affinity before this call gave it
+}
+
+static void background_end(void) {
+    if (!bg_self) return;
+    pid_t tid = (pid_t)syscall(SYS_gettid);
+    pthread_mutex_lock(&bg_lock);
+    for (int i = 0; i < bg_n; i++)
+        if (bg_tid[i] == tid) bg_tid[i] = bg_tid[--bg_n];
+    pthread_mutex_unlock(&bg_lock);
+    bg_self = 0;
+}
+
 // Linux has no process-wide affinity: each thread of /proc/self/task gets the mask, and threads started later inherit
-// it from the thread that starts them.
+// it from the thread that starts them. Background threads (plat_thread_background) are left on bg_set.
 int plat_process_affinity(uint64_t mask) {
     cpu_set_t set;
     CPU_ZERO(&set);
@@ -165,8 +212,16 @@ int plat_process_affinity(uint64_t mask) {
     DIR *d = opendir("/proc/self/task");
     if (!d) return 0;
     int ok = 1;
-    for (struct dirent *e; (e = readdir(d));)
-        if (e->d_name[0] != '.' && sched_setaffinity((pid_t)atoi(e->d_name), sizeof set, &set)) ok = 0;
+    pthread_mutex_lock(&bg_lock);   // held through the walk: a background thread ending now cannot free its id
+    bg_set_once();
+    for (struct dirent *e; (e = readdir(d));) {
+        if (e->d_name[0] == '.') continue;
+        pid_t tid = (pid_t)atoi(e->d_name);
+        int bg = 0;
+        for (int i = 0; i < bg_n && !bg; i++) bg = bg_tid[i] == tid;
+        if (!bg && sched_setaffinity(tid, sizeof set, &set)) ok = 0;
+    }
+    pthread_mutex_unlock(&bg_lock);
     closedir(d);
     return ok;
 }

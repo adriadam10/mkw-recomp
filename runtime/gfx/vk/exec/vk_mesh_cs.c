@@ -123,7 +123,7 @@ int vk_mesh_cs_on(void) {
     return on;
 }
 
-// The pass that packs the mesh workgroups the task workgroups asked for (runtime/shaders/mesh_compact.comp): made once,
+// The pass that packs the mesh workgroups the task workgroups asked for (runtime/shaders/mesh/mesh_compact.comp): made once,
 // its layout only push constants (three addresses and the task count). VK_NULL_HANDLE when it could not be made.
 static VkPipeline compact_pipe;
 static VkPipelineLayout compact_layout;

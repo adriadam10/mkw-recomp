@@ -1,6 +1,6 @@
 """Compile a runtime compute shader (runtime/shaders/X.comp) into runtime/gfx/vk/spv/X_spv.h as a uint32 array.
 
-Usage: uv run tools/shaders/embed_spv.py runtime/shaders/bc7_encode.comp
+Usage: uv run tools/shaders/embed_spv.py runtime/shaders/texture/bc7_encode.comp
 """
 
 import hashlib

@@ -1,0 +1,11 @@
+# The General form. Its texts go into the discussion's body, which tools/github/discuss.py reads for failure words.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **A crash, an error, a glitch or a slowdown?** Open an issue with the [bug report](https://github.com/adriadam10/mkw-recomp/issues/new?template=bug_report.yml) or [performance](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml) form and attach `logs/mkw.log`: reports posted here are sent there and closed.
+  - type: textarea
+    attributes:
+      label: Message
+    validations:
+      required: true

@@ -5,7 +5,7 @@ README; the same was wanted here (05/11/2026). Three measures, each "done" count
 - NVN2: of the 697 functions of the driver's proc table, those the runtime defines (NVN_API, or NVN2_IGNORED for the
   optional features that are off) or runs as the SDK's own code (nvn2_use_sdk_proc); the rest stop with their name. Also: of those the game reads (nvn_usage.py).
 - SDK: of the imports of main, those replaced by name (HOST_OVERRIDE) plus those that are pure library code and run
-  right as the SDK's recompiled code (tools/analisis/sdk_class.py); apart, those on the runtime's kernel and those
+  right as the SDK's recompiled code (tools/analisis/runtime/sdk_class.py); apart, those on the runtime's kernel and those
   that go to a console service without a replacement, with how many of these the game called in a race
   (MKW_IMPORT_CENSUS). Counting only the replaced ones read as 1 100 missing functions.
 - Shaders: of the SM86 opcodes in MKW's programs, those translated in every form they take; an opcode with a form the
@@ -30,7 +30,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools/analisis"))
+sys.path.insert(0, str(ROOT / "tools/analisis/runtime"))
 DATA = Path(__file__).resolve().parent / "progress.json"
 BUILD = ROOT / "build"
 WIDTH = 20  # characters of a bar

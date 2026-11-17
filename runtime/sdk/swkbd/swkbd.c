@@ -4,7 +4,7 @@
 //
 // nn::swkbd::ShowKeyboard: text entry for the game. On the Switch the call starts the keyboard library applet, which
 // takes the screen until the player confirms or cancels. MKW 1.0.0 imports it once (one call site, with MakePreset,
-// SetHeaderText, SetGuideText and SetSubText: tools/analisis/q.py imports swkbd); what it asks for is not traced yet.
+// SetHeaderText, SetGuideText and SetSubText: tools/analisis/bin/q.py imports swkbd); what it asks for is not traced yet.
 //
 // Front end: text_entry_run (swkbd.h), run on the guest thread that called (the call blocks, as on the Switch). The thread gives its virtual core up meanwhile, so the other guest threads keep running; it holds no
 // lock across the wait. The text starts as the game's initial text, else a default name from the catalog (ui_text.c),

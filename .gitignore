@@ -3,6 +3,7 @@
 /game
 generated/
 /dev/
+/discord/
 scratchpad/
 # Python
 __pycache__/

@@ -209,6 +209,35 @@ static void handle(const SDL_Event *e) {
 
 void app_icon_set(SDL_Window *w);   // build/obj/rt/app_icon.c, drawn by tools/build/icon.py
 
+// Started by Steam on a Wayland desktop (cfg_steam_video_driver): XWayland lets Steam give the controller to the game,
+// but SDL's X11 driver cannot tell HDR (wsys_hdr: SDR there). So X11 only when the picture is SDR anyway: MKW_HDR off,
+// or no display in HDR as Wayland reports it (SDL fills the displays' HDR from wp_color_management at init, no window).
+static const char *steam_video_driver(void) {
+    const char *drv = cfg_steam_video_driver();
+    if (!drv) return NULL;
+    int hdr = 0, hdr_off = !strcmp(cfg_value("MKW_HDR"), "off");
+    if (!hdr_off) {
+        SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland");
+        if (SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+            int n = 0;
+            SDL_DisplayID *ids = SDL_GetDisplays(&n);
+            for (int i = 0; ids && i < n && !hdr; i++)
+                hdr = SDL_GetBooleanProperty(SDL_GetDisplayProperties(ids[i]), SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false);
+            SDL_free(ids);
+            SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        }
+        SDL_ResetHint(SDL_HINT_VIDEO_DRIVER);
+    }
+    if (hdr) {
+        rt_log("gfx: started by Steam in a Wayland session with a display in HDR: native Wayland keeps HDR, Steam may "
+               "not give the controller to the game (MKW_HDR=off for SDL's %s driver)", drv);
+        return NULL;
+    }
+    rt_log("gfx: started by Steam in a Wayland session, SDR (%s): SDL's %s driver, so Steam sees the window take the "
+           "focus (MKW_STEAM_X11=0 for native Wayland)", hdr_off ? "MKW_HDR off" : "no display in HDR", drv);
+    return drv;
+}
+
 static void window_main(void *arg) {
     (void)arg;
     g_window_tid = plat_thread_id();
@@ -218,6 +247,8 @@ static void window_main(void *arg) {
     const char *bg = cfg_get("MKW_BACKGROUND_WINDOW");
     SDL_SetHint(SDL_HINT_APP_ID, bg && strcmp(bg, "0") ? "mkw-recomp-run" : "mkw-recomp");
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "0");
+    const char *steam_drv = steam_video_driver();   // started by Steam on a Wayland desktop, SDR: XWayland
+    if (steam_drv) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, steam_drv);
     g_video_ok = SDL_Init(SDL_INIT_VIDEO);
     if (!g_video_ok) rt_log("gfx: SDL video init failed (%s)", SDL_GetError());
     // SDL's Vulkan queries need its Vulkan loader, which a window would load at creation: the instance and the device

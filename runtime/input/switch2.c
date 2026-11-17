@@ -4,7 +4,7 @@
 // stick calibration, gyro offset, features, then reports; the player lights are written once a second, since the link
 // drops after about ten seconds without a write from the host. Everything here runs on the transport's thread, but
 // for the gamepad's Rumble callback, which only stores the motors' values.
-// We own no such controller: what is checked without one is the protocol (tests/test_switch2.py).
+// We own no such controller: what is checked without one is the protocol (tests/runtime/test_switch2.py).
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,8 +23,13 @@ typedef struct S2Pad {
     SDL_Joystick *js;
     _Atomic uint32_t rumble;      // low << 16 | high, as the game last set them (Rumble callback, any thread)
     int index;                    // for the player lights
+    int band;                     // battery band last logged (S2_BATTERY_*)
     struct S2Pad *next;
 } S2Pad;
+
+// The pads' batteries for other threads (switch2_battery): SDL id << 32 | band << 16 | mV, by pad index; 0 empty
+enum { S2_BATTERY_SLOTS = 8 };
+static _Atomic uint64_t battery[S2_BATTERY_SLOTS];
 
 struct S2Session {
     S2Link *link;
@@ -141,6 +146,7 @@ static int attach(S2Pad *p) {
 }
 
 static void detach(S2Pad *p) {
+    if (p->index < S2_BATTERY_SLOTS) atomic_store(&battery[p->index], 0);
     if (p->js) SDL_CloseJoystick(p->js);
     if (p->id) SDL_DetachVirtualJoystick(p->id);
     p->js = NULL, p->id = 0;
@@ -177,6 +183,30 @@ static void push_motion(S2Session *s, const s2_dev *dev, uint64_t at) {
     float g[3] = {rot[0], rot[2], -rot[1]};
     SDL_SendJoystickVirtualSensorData(s->pad->js, SDL_SENSOR_ACCEL, at, a, 3);
     SDL_SendJoystickVirtualSensorData(s->pad->js, SDL_SENSOR_GYRO, at, g, 3);
+}
+
+// After a report: the pad's battery for switch2_battery, and a log line with the voltage when its band changes (the
+// bands are unmeasured: players' logs tell the voltages a controller really goes through)
+static void battery_update(S2Pad *p) {
+    uint16_t mv = s2_pad_battery_mv(&p->st);
+    int band = s2_battery_band_next(p->band, mv);
+    if (band != p->band && band != S2_BATTERY_UNKNOWN) {
+        static const char *const names[] = {"unknown", "low", "medium", "high"};
+        rt_log("input: %s battery %u mV (%s)", p->pro ? "Pro Controller 2" : "Joy-Con 2", mv, names[band]);
+    }
+    p->band = band;
+    if (p->index < S2_BATTERY_SLOTS)
+        atomic_store(&battery[p->index], (uint64_t)p->id << 32 | (uint64_t)band << 16 | mv);
+}
+
+int switch2_battery(uint32_t sdl_id, int *mv) {
+    for (int i = 0; sdl_id && i < S2_BATTERY_SLOTS; i++) {
+        uint64_t v = atomic_load(&battery[i]);
+        if ((uint32_t)(v >> 32) != sdl_id) continue;
+        if (mv) *mv = (int)(v & 0xFFFF);
+        return (int)(v >> 16 & 0xFFFF);
+    }
+    return S2_BATTERY_UNKNOWN;
 }
 
 static s2_dev *dev_of(S2Pad *p, uint16_t pid) {
@@ -281,6 +311,7 @@ void switch2_report(S2Session *s, const uint8_t *d, size_t n, uint64_t at) {
     int32_t st[4];
     if (!p->js || !s2_pad_input(&p->st, &b, st)) return;
     push_buttons(p, b, st);
+    battery_update(p);
     // a pair's motion is its right Joy-Con's, as SDL gives one gyro per gamepad
     if (s2_pad_motion_dev(&p->st, 1) == dev) push_motion(s, dev, t);
 }

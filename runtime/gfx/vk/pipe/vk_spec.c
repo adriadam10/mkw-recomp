@@ -7,7 +7,7 @@
 //   least 120 presents; the words that kept one value then make its variant (gfx_shader_variant: the SPIR-V with those
 //   constants' defaults set). From then on each draw reads only the fixed words and takes the variant when all match,
 //   the generic shader otherwise; the caller also takes the generic one while the variant's pipeline is being built,
-//   so no draw is skipped for it (Dolphin's hybrid ubershader mode, docs/research.md), and it is built from the
+//   so no draw is skipped for it (Dolphin's hybrid ubershader mode, docs/project/research.md), and it is built from the
 //   low queue (vk_pipeline_graphics_async_low). A variant missing in over
 //   a quarter of its first 256 draws goes back to watching, up to 3 times (values set in the menus can change in the
 //   race); the old variant stays alive, as recorded draws may still use it. MKW_SPEC_MAX caps the live variants (512):

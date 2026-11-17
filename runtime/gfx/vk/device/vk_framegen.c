@@ -1,7 +1,7 @@
-// Frame generation (MKW_FRAMEGEN=off|auto|2|3|4, off by default: the console does not do it): frames made between
+// Frame generation (MKW_FRAMEGEN=off|auto|2|3|4|120, off by default: the console does not do it): frames made between
 // the game's, from its last two, so a game at 30 fps is shown at 60 (2x) and one at 60 at 120 on a fast display.
 // MKW hands out no motion vectors, so the motion comes from the pictures (optical flow), on the present thread and the
-// GPU only: nothing on the game thread or the replay thread (docs/roadmap.md).
+// GPU only: nothing on the game thread or the replay thread (docs/project/roadmap.md).
 //
 // Per game frame (vk_fg_frame, the present thread, before the game frame's timeline value is signalled):
 //   1. the crop rectangle of the game's picture is copied into a picture of our own (the game draws over its own next
@@ -356,7 +356,16 @@ static int mult_now(void) {
     const char *v = cfg_value("MKW_FRAMEGEN");
     if (!strcmp(v, "off") || turbo_speed() > 1 || ov_movie_playing()) return 0;
     int m;
-    if (!strcmp(v, "auto") && !vrr()) {
+    if (!strcmp(v, "120")) {
+        // Target 120 shown fps without speeding up the game: 60 x2 or 30 x4. Unlike Auto this does not ask a
+        // 240 Hz screen for 240 fps. Below 30 game fps, the existing four-frame limit takes precedence.
+        int iv = game_ticks();
+        m = 2 * iv;
+        double hz = vk_present_refresh_hz();
+        // Do not synthesize pictures the display cannot show; tolerate fractional rates such as 119.88 Hz.
+        int refresh_room = hz > 0 ? (int)(hz * iv / 60.0 + 0.03) : m;
+        if (m > refresh_room) m = refresh_room;
+    } else if (!strcmp(v, "auto") && !vrr()) {
         // the most frames that split the refreshes evenly; none (a 75 Hz screen: no game rate fits) shows the game's
         // own frames. Within what the swapchain has room for.
         int room = vk_present_ahead_max();
@@ -385,11 +394,12 @@ static int mult_now(void) {
 
 int vk_fg_wanted(void) { return strcmp(cfg_value("MKW_FRAMEGEN"), "off") != 0; }
 
-// The menu's note: a fixed 2x/3x/4x that does not split this screen's refreshes evenly at the game's rate now
+// The menu's note: the selected factor does not split this screen's refreshes evenly at the game's rate now.
 int vk_fg_uneven(void) {
     const char *v = cfg_value("MKW_FRAMEGEN");
     if (!strcmp(v, "off") || !strcmp(v, "auto") || vrr() || !F.frames) return 0;
-    return !fits(atoi(v));
+    int m = mult_now();
+    return m >= 2 && !fits(m);
 }
 
 // MKW_FG_DUMP=<game frame> (checking, with MKW_FG_DUMP_DIR, default "."): from that game frame of frame generation on,

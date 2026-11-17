@@ -22,7 +22,7 @@ jobs:
   # Which jobs a change needs. `code` is everything but what no build or test reads (docs, translations of texts,
   # GitHub's own templates and the workflows of other events), so a new folder builds by default. The .po files
   # are compiled into the runtime, but `checks` generates and compiles their C in a second: a translation alone
-  # runs `checks` and `setup-windows` (tests/test_ui_text.py), not the three builds. A skipped job counts as passed
+  # runs `checks` and `setup-windows` (tests/runtime/test_ui_text.py), not the three builds. A skipped job counts as passed
   # for a required check and for dependabot-automerge.yml.
   changes:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
               - '**'
               - '!**/*.md'
               - '!docs/**'
-              - '!i18n/*.po'
+              - '!i18n/ui/*.po'
               - '!LICENSE'
               - '!Makefile'
               - '!.github/ISSUE_TEMPLATE/**'
@@ -74,7 +74,7 @@ jobs:
         run: uv run tools/git/cfg_rows.py
       - name: Setup command lines (no game)
         run: uv run pytest tests -q
-      - name: Menu texts compile (the C build.py makes from i18n/*.po)
+      - name: Menu texts compile (the C build.py makes from i18n/ui/*.po)
         run: |
           uv run tools/i18n/catalog.py gen "$RUNNER_TEMP/i18n"
           cc -fsyntax-only -I runtime/gfx/nvn/host "$RUNNER_TEMP"/i18n/*.c

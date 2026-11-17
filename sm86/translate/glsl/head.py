@@ -212,7 +212,7 @@ def task_head(head: list[str]) -> list[str]:
 # Task/mesh as compute, for devices without VK_EXT_mesh_shader (the idea from AnyPS5
 # #6528, no code): the same translated body, other wrappers. Buffers by address (push constants): trec the task records
 # (TASK_REC words a workgroup: the payload, then task_count, at most MESH_PER_TASK: a ballot count in MKW's 7 task
-# programs), mmap the mesh workgroups the tasks asked for, packed as task << 5 | index (runtime/shaders/mesh_compact.comp
+# programs), mmap the mesh workgroups the tasks asked for, packed as task << 5 | index (runtime/shaders/mesh/mesh_compact.comp
 # between the two passes, which also writes the indirect dispatch and draw), mvo the vertices (MESH_VWORDS words each:
 # position and the MESH_GENERICS generics) and mto the triangles as absolute vertex indices, those past the mesh's
 # count written degenerate. The draw is indexed, through MESH_CS_VS.
@@ -245,7 +245,7 @@ TASK_MAIN_CS = f"""void main() {{
 
 MESH_MAIN_CS = (
     f"""void main() {{
-    // with a task: the packed workgroup's task and index (runtime/shaders/mesh_compact.comp), launched only as many
+    // with a task: the packed workgroup's task and index (runtime/shaders/mesh/mesh_compact.comp), launched only as many
     // as the tasks asked for
     uint g = gl_WorkGroupID.x, t = HAS_TASK ? mmap.d[g] >> 5 : 0u, v = gl_LocalInvocationIndex;
     bool live = true;

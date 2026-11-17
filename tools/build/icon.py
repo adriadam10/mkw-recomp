@@ -2,7 +2,7 @@
 """Draws the icon of mkw.exe by code (our own: a checkered flag on a rounded square, no art of the game) and writes it as
 an .ico with PNG images of 256, 48, 32 and 16 pixels. tools/build/build.py --target windows calls it before the
 resource (runtime/platform/mkw.rc names "mkw.ico"); the file is made in build/, never committed. With an .svg name it
-writes the same drawing as vector shapes instead (the repo's logo, docs/logo.svg: text, so it can be versioned); with a
+writes the same drawing as vector shapes instead (the repo's logo, docs/images/logo.svg: text, so it can be versioned); with a
 .png name, one 256-pixel image (the Linux AppImage's icon, tools/build/release.py); with a .c name, the C source of
 app_icon_set(SDL_Window *), which gives the window a 128-pixel copy (build.py, every target): Wayland compositors with
 xdg_toplevel_icon (KWin) show it in the taskbar instead of a generic icon when no desktop file matches the app id.

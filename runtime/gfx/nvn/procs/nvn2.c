@@ -283,7 +283,9 @@ NVN2_IGNORED(nvnCommandBufferPopDebugGroupCompute)
 NVN2_IGNORED(nvnCommandBufferInsertDebugMarkerGraphics)
 NVN2_IGNORED(nvnCommandBufferInsertDebugMarkerCompute)
 // New in 1.8.0's sdk (tools/gpu/gen_nvn2_procs.py): scheduling hints for the console's GPU, nothing a Vulkan queue
-// takes. The other procs new there keep their weak stub, which stops with the proc's name if the game calls it.
+// takes. The other procs new there keep their weak stub, which stops with the proc's name if the game calls it. None
+// is called: 1.8.0's proc loader (main+0xdd0da0) stores each pointer through a GOT slot, and no other function of
+// main reads the slot of a new proc, these three included (q.py refs, 16/11/2026); subsdk0/1 load no NVN procs.
 NVN2_IGNORED(nvnCommandBufferSetGraphicsWorkloadPriority)
 NVN2_IGNORED(nvnCommandBufferSetComputeWorkloadPriority)
 NVN2_IGNORED(nvnCommandBufferSetResourceOccupancy)

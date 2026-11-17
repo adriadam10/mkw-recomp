@@ -1,4 +1,4 @@
-"""Why sm86/translate/flow.py keeps one program as a `switch`: its branch graph, whether flow._structure builds a
+"""Why sm86/translate/frontend/flow.py keeps one program as a `switch`: its branch graph, whether flow._structure builds a
 structured form, and where flow_sim finds that form running other instructions than the graph (seed, step, the
 instructions of each around it).
 
@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "sm86/translate"))
+sys.path[:0] = [str(ROOT / "sm86/translate"), str(ROOT / "sm86/translate/frontend")]
 sys.path.insert(0, str(ROOT / "tools/shaders"))
 
 import flow  # noqa: E402

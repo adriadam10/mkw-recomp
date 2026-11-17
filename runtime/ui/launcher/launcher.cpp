@@ -43,11 +43,13 @@
 #include "imgui_internal.h"   // RenderTextEllipsis
 #include "ui/launcher/launcher.h"
 #include "ui/launcher/launcher_backdrop.h"
+#include "ui/launcher/launcher_brand.h"
 #include "ui/launcher/launcher_logo.h"
 #include "ui/launcher/launcher_look.h"
 #include "ui/launcher/launcher_players.h"
 #include "ui/launcher/launcher_setup.h"
 #include "ui/launcher/launcher_tools.h"
+#include "ui/launcher/launcher_finddumps.h"
 #include "ui/launcher/launcher_lastrun.h"
 #include "ui/launcher/launcher_update.h"
 #include "ui/launcher/mods.h"
@@ -59,6 +61,7 @@
 extern "C" {
 #include "cfg.h"
 #include "gamelib.h"
+#include "input.h"
 #include "platform/platform.h"
 #include "sysinfo.h"
 #include "ui_text.h"
@@ -90,6 +93,7 @@ static struct {
     char exe_dir[1024];
     Uint32 picked_event;            // dialogs can finish on another thread: consume their result on the UI thread
     int picking;
+    int steam_art;                  // Add to Steam pressed: the library images are drawn before the next frame
     int directory_restart;
     char source[1024];              // the player's copy: a folder, or a .nup file, from the dialogs
     int link_romfs;                 // 0 copy it into the game folder, 1 use it where it is
@@ -99,6 +103,7 @@ static struct {
     char game_version[32], setup_port[48], setup_source[1024], setup_mode[8];
     int pads;                       // the gamepads SDL sees, and the first one's name (pads_refresh)
     char pad_name[128];
+    SDL_Gamepad *pad_open[8];       // the first eight, open for their batteries (input_power_from_sdl)
     char updated[96];               // the release the previous run installed (launcher_update.h)
     int relaunch;                   // an update is in place: start the new program when the window is gone
     double intro_t0;                // when the main page was first shown (its intro, once a run); 0 not yet
@@ -175,12 +180,30 @@ static void read_setup_info(void) {
 
 // The gamepads SDL sees: their count and the first one's name. Called at start and when one is connected or removed.
 static void pads_refresh(void) {
+    input_wheel_map();   // a wheel SDL has no mapping for, as a gamepad (#488); its GAMEPAD_ADDED calls here again
     int n = 0;
     SDL_JoystickID *ids = SDL_GetGamepads(&n);
     const char *name = ids && n > 0 ? SDL_GetGamepadNameForID(ids[0]) : nullptr;
     L.pads = ids ? n : 0;
     snprintf(L.pad_name, sizeof L.pad_name, "%s", name ? name : "");
+    for (SDL_Gamepad *&g : L.pad_open)
+        if (g) SDL_CloseGamepad(g), g = nullptr;
+    for (int i = 0; i < L.pads && i < (int)(sizeof L.pad_open / sizeof *L.pad_open); i++) L.pad_open[i] = SDL_OpenGamepad(ids[i]);
     SDL_free(ids);
+}
+
+// The battery of the i-th gamepad SDL sees, as pad_row shows it (input_power_text); its name in w->name.
+static bool pad_power(int i, InputPower *w, char *text, int size) {
+    *w = InputPower{INPUT_POWER_NONE, -1, 0, ""};
+    SDL_Gamepad *g = i < (int)(sizeof L.pad_open / sizeof *L.pad_open) ? L.pad_open[i] : nullptr;
+    if (!g) return false;
+    const char *n = SDL_GetGamepadName(g);
+    snprintf(w->name, sizeof w->name, "%s", n ? n : "");
+    int pct = -1;
+    SDL_PowerState st = SDL_GetGamepadPowerInfo(g, &pct);
+    input_power_from_sdl(st, pct, SDL_GetGamepadID(g), w);
+    input_power_text(w, text, size);
+    return true;
 }
 
 // The GitHub repository the releases and the issues are in: MKW_UPDATE_REPO (tests, forks), else upstream's.
@@ -354,7 +377,18 @@ static bool pad_row(float w, float hgt) {
     char text[200];
     if (L.pads > 0) {
         int n = snprintf(text, sizeof text, menu_text(UI_LAUNCH_PAD), L.pad_name);
+        InputPower w;
+        char power[64];
+        // its battery when it gives one (discussion #516); hovered, every controller's
+        if (pad_power(0, &w, power, sizeof power) && w.state != INPUT_POWER_UNKNOWN && n > 0 && n < (int)sizeof text)
+            n += snprintf(text + n, sizeof text - n, " · %s", power);
         if (L.pads > 1 && n > 0 && n < (int)sizeof text) snprintf(text + n, sizeof text - n, " +%d", L.pads - 1);
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            for (int i = 0; pad_power(i, &w, power, sizeof power); i++)
+                ImGui::Text(menu_text(UI_MENU_PAD_PLAYER), i + 1, w.name), ImGui::SameLine(), ImGui::TextDisabled("%s", power);
+            ImGui::EndTooltip();
+        }
     } else {
         snprintf(text, sizeof text, "%s", menu_text(UI_LAUNCH_PAD_NONE));
     }
@@ -498,15 +532,161 @@ static bool shortcut_asked(void) {
     return v && *v && strcmp(v, "0");
 }
 
+enum { JOB_BACKUP = 1, JOB_STEAM };   // the Tools page's jobs (launcher_tools.h), the card's Add to Steam too
+static bool shortcut_target(char *exe, size_t cap);
+
+// Add to Steam: tools/prepare/steam.py adds this program as a non-Steam game, with its library images, so Big Picture
+// and Gaming Mode (Bazzite, a Steam Deck) start it; the Tools page and the card below both run it.
+// The images are drawn first (steam_art_draw, between two frames), then the job runs with them.
+static void steam_add(void) { L.steam_art = 1; }
+
+enum { ART_PORTRAIT, ART_WIDE, ART_HERO, ART_LOGO, ART_ICON };
+
+// The width of art_header's logo and title at logo m px and title t px.
+static float art_header_w(float m, float t) { return m * 1.28f + L.big->CalcTextSizeA(t, FLT_MAX, 0, "Mario Kart World").x; }
+
+// The port's logo and the title, as the main page's header, its top left at p: the logo m px, the title t px.
+static void art_header(ImDrawList *dl, ImVec2 p, float m, float t, bool sub) {
+    launcher_logo(dl, p, m);
+    float x = p.x + m + m * 0.28f, sh = t * 0.42f, gap = t * 0.08f, th = t + (sub ? gap + sh : 0);
+    float y = p.y + (m - th) * 0.5f;
+    dl->AddText(L.big, t, ImVec2(x, y), LOOK_TEXT, "Mario Kart World");
+    if (sub) dl->AddText(nullptr, sh, ImVec2(x + t * 0.03f, y + t + gap), LOOK_HEADING, menu_text(UI_LAUNCH_SUBTITLE));
+}
+
+// One of Steam's library images in the start screen's look: its backdrop (the waving chequered flag, or the player's
+// splash.png), the port's logo and the title; no art of the game. Drawn by ImGui into a render target and saved as
+// PNG, between two frames of the start screen.
+static bool art_one(int kind, int w, int h, const char *path) {
+    SDL_Texture *t = SDL_CreateTexture(L.ren, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, w, h);
+    if (!t) return false;
+    SDL_SetRenderTarget(L.ren, t);
+    SDL_SetRenderDrawColor(L.ren, 0, 0, 0, 0);
+    SDL_RenderClear(L.ren);
+    ImGuiIO &io = ImGui::GetIO();
+    ImGui_ImplSDLRenderer3_NewFrame();
+    io.DisplaySize = ImVec2((float)w, (float)h);
+    io.DisplayFramebufferScale = ImVec2(1, 1);
+    ImGui::NewFrame();
+    ImDrawList *dl = ImGui::GetBackgroundDrawList();
+    float fw = (float)w, fh = (float)h;
+    ImU32 dark = IM_COL32(18, 21, 27, 230), none = IM_COL32(18, 21, 27, 0);
+    if (kind == ART_PORTRAIT || kind == ART_WIDE || kind == ART_HERO) backdrop_draw(dl, fw, fh, true);
+    if (kind == ART_PORTRAIT) {   // a box's front: the logo and the title centred low, over a dark band
+        dl->AddRectFilledMultiColor(ImVec2(0, fh * 0.45f), ImVec2(fw, fh), none, none, dark, dark);
+        float m = fw * 0.34f, t = fw * 0.105f;
+        launcher_logo(dl, ImVec2((fw - m) * 0.5f, fh * 0.50f), m);
+        ImVec2 ts = L.big->CalcTextSizeA(t, FLT_MAX, 0, "Mario Kart World");
+        dl->AddText(L.big, t, ImVec2((fw - ts.x) * 0.5f, fh * 0.50f + m + t * 0.35f), LOOK_TEXT, "Mario Kart World");
+        const char *sub = menu_text(UI_LAUNCH_SUBTITLE);
+        float st = t * 0.42f;
+        ImVec2 ss = ImGui::GetFont()->CalcTextSizeA(st, FLT_MAX, 0, sub);
+        dl->AddText(nullptr, st, ImVec2((fw - ss.x) * 0.5f, fh * 0.50f + m + t * 1.45f), LOOK_HEADING, sub);
+    } else if (kind == ART_WIDE) {   // the main page's header on the left, over a dark side
+        dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(fw * 0.7f, fh), dark, none, none, dark);
+        float m = fh * 0.30f;
+        art_header(dl, ImVec2(fw * 0.07f, (fh - m) * 0.5f), m, m * 0.62f, true);
+    } else if (kind == ART_LOGO) {   // over Steam's hero: the header alone, on nothing, as wide as fits
+        float m = fh * 0.8f, k = fminf(1.0f, fw * 0.96f / art_header_w(m, m * 0.62f));
+        m *= k;
+        art_header(dl, ImVec2((fw - art_header_w(m, m * 0.62f)) * 0.5f, (fh - m) * 0.5f), m, m * 0.62f, false);
+    } else if (kind == ART_ICON) {
+        launcher_logo(dl, ImVec2(0, 0), fw);
+    }
+    ImGui::Render();
+    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), L.ren);
+    SDL_Surface *px = SDL_RenderReadPixels(L.ren, nullptr);
+    if (px && (kind == ART_LOGO || kind == ART_ICON)) {   // on nothing: the edges blended with the clear black, undone
+        SDL_Surface *c = SDL_ConvertSurface(px, SDL_PIXELFORMAT_RGBA32);
+        SDL_DestroySurface(px);
+        px = c;
+        for (int y = 0; px && y < px->h; y++) {
+            uint8_t *r = (uint8_t *)px->pixels + (size_t)y * px->pitch;
+            for (int x = 0; x < px->w; x++, r += 4)
+                if (r[3] && r[3] < 255)
+                    for (int i = 0; i < 3; i++) r[i] = (uint8_t)(r[i] * 255 / r[3] > 255 ? 255 : r[i] * 255 / r[3]);
+        }
+    }
+    bool ok = px && SDL_SavePNG(px, path);
+    SDL_DestroySurface(px);
+    SDL_SetRenderTarget(L.ren, nullptr);
+    SDL_DestroyTexture(t);
+    return ok;
+}
+
+// Add to Steam's images into <game>/steam-art, then tools/prepare/steam.py with them (--art): Big Picture and Gaming
+// Mode show a console's library, and a grey tile or a bare flag looked like a tool there (17/11/2026). Called between
+// two frames of the start screen.
+static void steam_art_draw(void) {
+    L.steam_art = 0;
+    char dir[PLAT_PATH_MAX * 2], path[PLAT_PATH_MAX * 2 + 32], exe[PLAT_PATH_MAX * 2];
+    snprintf(dir, sizeof dir, "%s/steam-art", cfg_game_dir());
+    SDL_CreateDirectory(dir);
+    static const struct { int kind, w, h; const char *name; } kArt[] = {
+        {ART_PORTRAIT, 600, 900, "portrait.png"}, {ART_WIDE, 920, 430, "wide.png"}, {ART_HERO, 1920, 620, "hero.png"},
+        {ART_LOGO, 1280, 360, "logo.png"},        {ART_ICON, 256, 256, "icon.png"}};
+    int drawn = 0;
+    restyle(2.0f);   // fonts drawn at twice the 1080-line size: the titles are up to 200 px high, not stretched from 60
+    for (const auto &a : kArt) {
+        snprintf(path, sizeof path, "%s/%s", dir, a.name);
+        drawn += art_one(a.kind, a.w, a.h, path);
+    }   // the next frame's restyle puts the window's own scale back
+    rt_log("launcher: Steam's library images drawn: %d of 5 in %s", drawn, dir);
+    if (!shortcut_target(exe, sizeof exe)) return;
+    const char *args[] = {"add", "--name", "Mario Kart World", "--exe", exe, "--dir", L.exe_dir,
+                          drawn == 5 ? "--art" : nullptr, dir, nullptr};
+    tool_start(L.exe_dir, JOB_STEAM, "prepare/steam.py", args);
+}
+
+// Add to Steam's result in words ("" while it has none): added, added with Steam to restart, or why it failed.
+static void steam_note(const ToolState &job, char *note, size_t cap, bool *failed) {
+    int users = 0, running = 0;
+    *failed = job.job == JOB_STEAM && job.phase == TOOL_FAILED;
+    note[0] = 0;
+    if (job.job == JOB_STEAM && job.phase == TOOL_DONE && sscanf(job.line, "%d %d", &users, &running) == 2)
+        snprintf(note, cap, "%s", menu_text(running ? UI_TOOLS_STEAM_RESTART : UI_TOOLS_STEAM_DONE));
+    else if (*failed)
+        snprintf(note, cap, menu_text(UI_TOOLS_FAILED),
+                 !strncmp(job.line, "nosteam", 7) ? menu_text(UI_TOOLS_STEAM_NONE) : job.line);
+}
+
+// The card's Add to Steam was pressed this start: the card stays, with its result, until the start screen closes.
+static bool steam_card;
+
+// The next button on this line when it fits the card, else on the next one (three buttons overflow the main page's
+// column in Spanish and German).
+static void same_line_if_fits(const char *label, float right) {
+    float gap = 8 * L.scale, need = ImGui::CalcTextSize(label).x + 2 * ImGui::GetStyle().FramePadding.x;
+    float x = ImGui::GetItemRectMax().x + gap;
+    if (x + need <= right) ImGui::SameLine(0, gap);
+}
+
 static void shortcut_card(float w) {
+    ToolState job = tool_state();
     card_begin(w);
+    float right = ImGui::GetCursorScreenPos().x + w - 2 * card_pad();
     ImGui::TextUnformatted(menu_text(UI_LAUNCH_SHORTCUT_ASK));
     bool make = ImGui::Button(menu_text(UI_LAUNCH_SHORTCUT_MAKE));
-    ImGui::SameLine(0, 8 * L.scale);
+    same_line_if_fits(menu_text(UI_TOOLS_STEAM), right);
+    // Steam's Big Picture and Gaming Mode start the game from its library: one press here instead of finding the Tools
+    // page (a controller-only player on Bazzite or a Steam Deck)
+    ImGui::BeginDisabled(job.phase == TOOL_RUNNING);
+    bool steam = ImGui::Button(menu_text(UI_TOOLS_STEAM));
+    ImGui::EndDisabled();
+    same_line_if_fits(menu_text(UI_LAUNCH_NOT_NOW), right);
     bool later = ImGui::Button(menu_text(UI_LAUNCH_NOT_NOW));
+    char note[800];
+    bool failed = false;
+    if (steam_card) steam_note(job, note, sizeof note, &failed);
+    if (steam_card && note[0]) {
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + w - 2 * card_pad());
+        ImGui::TextColored(col4(failed ? LOOK_WARN : LOOK_OK), "%s", note);
+        ImGui::PopTextWrapPos();
+    }
     card_end(LOOK_LINE, LOOK_ROW);
     if (make) make_shortcut();
-    if (make || later) {
+    if (steam) steam_add(), steam_card = true;
+    if (make || later || steam) {
         cfg_set("MKW_SHORTCUT_ASKED", "1");
         opt_save_soon();
     }
@@ -550,8 +730,38 @@ static void state_line(bool ok, const char *text) {
     ImGui::TextColored(col4(ok ? LOOK_OK : LOOK_WARN), "%s", text);
 }
 
+// Where the game will read its files (main.c portable_paths, handed over by launcher_set_romfs and _exefs).
+static char g_romfs[PLAT_PATH_MAX * 2], g_exefs[PLAT_PATH_MAX * 2];
+
+// The game files the setup left that are not there now, or NULL: a RomFS package or folder (the "link" mode keeps the
+// player's own copy where it was) or the exefs/ folder. Issue #486: a Steam Deck whose package had gone from where the
+// setup found it booted from Play into a fatal error, and in Gaming Mode the game just closed. Checked at most once a
+// second, so a card or drive connected while the start screen is open is seen; the log says it when it changes, not on
+// every check.
+static const char *files_gone(void) {
+    static uint64_t at;
+    static const char *gone;
+    uint64_t now = SDL_GetTicks();
+    if (at && now - at < 1000) return gone;
+    at = now;
+    const char *was = gone;
+    gone = NULL;
+    if (!rt_game_present()) return gone;   // not set up: the files page says that already
+    if (g_romfs[0] && !plat_dir_exists(g_romfs) && !plat_file_exists(g_romfs)) gone = g_romfs;
+    else if (g_exefs[0] && !plat_dir_exists(g_exefs)) gone = g_exefs;
+    if (gone != was) {
+        if (gone) rt_log("launcher: the game files are not at %s", gone);
+        else rt_log("launcher: the game files are back");
+    }
+    return gone;
+}
+
 // The game files' state in words, with the version the last setup installed when it is known.
 static void files_state_text(bool ready, char *out, size_t cap) {
+    if (files_gone()) {
+        snprintf(out, cap, "%s", menu_text(UI_LAUNCH_FILES_GONE));
+        return;
+    }
     if (ready && L.game_version[0]) snprintf(out, cap, menu_text(UI_LAUNCH_FILES_READY_AS), L.game_version);
     else snprintf(out, cap, "%s", menu_text(ready ? UI_LAUNCH_FILES_READY : UI_LAUNCH_FILES_MISSING));
 }
@@ -584,7 +794,7 @@ static bool status_link(bool ready) {
 // (launcher_backdrop.cpp): the player's splash.png, or the logo's flag.
 static void page_main(float w, float h) {
     float s = L.scale, left = 96 * s, cw = 440 * s, edge = 56 * s, lh = ImGui::GetTextLineHeight();
-    bool files = rt_game_present(), ready = files && update_state().phase != UPDATE_FETCHING;
+    bool files = rt_game_present() && !files_gone(), ready = files && update_state().phase != UPDATE_FETCHING;
     // the column's height, to centre it: logo and title, the gap, Play, the controllers, the menu, the gap and Quit
     float mark = 84 * s, items = item_height(), gap = 12 * s;
     float play_h = fmaxf(52.0f, 76 * s), pad_h = fmaxf(36.0f, 48 * s);
@@ -665,7 +875,7 @@ static void page_main(float w, float h) {
     intro_apply(dl, v0, intro(7));
     ImGui::PopStyleVar();
     v0 = dl->VtxBuffer.Size;
-    if (files && !shortcut_asked()) {
+    if (files && (!shortcut_asked() || steam_card)) {
         shortcut_card(cw);
     } else if (L.shortcut_note[0]) {
         ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + cw);
@@ -682,18 +892,30 @@ static void page_main(float w, float h) {
     }
     ImGui::SetCursorScreenPos(ImVec2(left, h - 48 * s - lh));
     if (status_link(files)) L.page = PAGE_FILES;
-    // the project's GitHub page above the version, as a link (the repository's own name: nothing to translate)
+    // the project's GitHub page and Discord server above the version, as their marks (brand names: nothing to
+    // translate), GitHub on the right as the text link was
     {
-        char url[96], shown[96];
-        snprintf(url, sizeof url, "https://github.com/%s", repo());
-        snprintf(shown, sizeof shown, "github.com/%s", repo());
-        ImVec2 ts = ImGui::CalcTextSize(shown);
-        float y = h - 48 * s - lh - 2 * (lh + 6 * s);
-        ImGui::SetCursorScreenPos(ImVec2(w - edge - ts.x, y));
-        Hot g = hot_button("##github", ts);
-        if (g.cursor) focus_ring(ImVec2(w - edge - ts.x, y), ImVec2(w - edge, y + ts.y));
-        dl->AddText(ImVec2(w - edge - ts.x, y), mix(LOOK_HEADING, LOOK_TEXT, g.t), shown);
-        if (g.hit) SDL_OpenURL(url);
+        char github[96];
+        snprintf(github, sizeof github, "https://github.com/%s", repo());
+        struct {
+            Brand brand;
+            const char *id, *name, *url;
+        } links[] = {{BRAND_DISCORD, "##discord", "Discord", "https://discord.gg/8uYBkjQkEg"},
+                     {BRAND_GITHUB, "##github", "GitHub", github}};
+        float is = roundf(34 * s), gap = 18 * s;
+        float x = w - edge - 2 * is - gap, y = h - 48 * s - lh - 2 * (lh + 6 * s) - (is - lh) - 8 * s;
+        for (auto &k : links) {
+            ImVec2 a(x, y), b(x + is, y + is);
+            ImGui::SetCursorScreenPos(a);
+            Hot g = hot_button(k.id, ImVec2(is, is));
+            if (g.cursor) focus_ring(a, b);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", k.name);
+            ImTextureID t = launcher_brand_icon(L.ren, k.brand, (int)is);
+            if (t) dl->AddImage(t, a, b, ImVec2(0, 0), ImVec2(1, 1), mix(LOOK_HEADING, LOOK_TEXT, g.t));
+            else dl->AddText(a, mix(LOOK_HEADING, LOOK_TEXT, g.t), k.name);
+            if (g.hit) SDL_OpenURL(k.url);
+            x += is + gap;
+        }
     }
     intro_apply(dl, v0, intro(8));   // the lower left comes in last, after Quit's own intro(7)
     ImGui::End();
@@ -806,7 +1028,8 @@ static void setup_error_text(const SetupState &st, char *out, size_t cap) {
                 {"romfs", UI_SETUP_ERR_ROMFS},         {"failed", UI_SETUP_ERR_FAILED},
                 {"io", UI_SETUP_ERR_IO},               {"stopped", UI_SETUP_ERR_STOPPED},
                 {"cancelled", UI_SETUP_ERR_CANCELLED}, {"no_setup", UI_SETUP_ERR_NO_SETUP},
-                {"moved", UI_SETUP_ERR_MOVED},         {"mismatch", UI_SETUP_ERR_MISMATCH}};
+                {"moved", UI_SETUP_ERR_MOVED},         {"mismatch", UI_SETUP_ERR_MISMATCH},
+                {"space", UI_SETUP_ERR_SPACE}};
     char why[600];
     snprintf(why, sizeof why, "%s", st.error);
     for (const auto &w : kWhy)
@@ -940,6 +1163,34 @@ static void game_dir_notes(void) {
     }
 }
 
+// The copies tools/prepare/finddumps.py found in the usual places (launcher_finddumps.h), one row each to pick with
+// a controller: in Steam's Gaming Mode the file dialogs above do not open. With no copy chosen yet the first of a
+// known version is (a .nup of a version the setup does not take would only fail it), else the first.
+static void found_copies(void) {
+    FoundDump f[FOUND_MAX];
+    int running = 0, n = finddumps_list(f, FOUND_MAX, &running);
+    if (!n) {
+        if (running) ImGui::TextColored(col4(LOOK_DIM), "%s", menu_text(UI_LAUNCH_FOUND_SEARCHING));
+        return;
+    }
+    if (!L.source[0]) {
+        int pick = 0;
+        while (pick < n && !strcmp(f[pick].version, "?")) pick++;
+        snprintf(L.source, sizeof L.source, "%s", f[pick < n ? pick : 0].path);
+    }
+    ImGui::Dummy(ImVec2(0, 4 * L.scale));
+    ImGui::TextColored(col4(LOOK_HEADING), "%s", menu_text(UI_LAUNCH_FOUND));
+    for (int i = 0; i < n; i++) {
+        const char *kind = !strcmp(f[i].kind, "folder") ? menu_text(UI_LAUNCH_FOUND_FOLDER)
+                         : !strcmp(f[i].kind, "nx")     ? ".nx"
+                                                        : ".nup";
+        char label[sizeof f[i].path + 96];
+        snprintf(label, sizeof label, "Mario Kart World %s  \xc2\xb7  %s  \xc2\xb7  %s##found%d", f[i].version, kind,
+                 f[i].path, i);
+        if (ImGui::Selectable(label, !strcmp(L.source, f[i].path))) snprintf(L.source, sizeof L.source, "%s", f[i].path);
+    }
+}
+
 // The setup's three steps: the player's copy, how its RomFS is kept, then Set up with the folder it installs to.
 static void setup_steps(const SetupState &st, bool ready, float act_h) {
     float s = L.scale;
@@ -957,6 +1208,7 @@ static void setup_steps(const SetupState &st, bool ready, float act_h) {
         L.picking = 1;
         SDL_ShowOpenFileDialog(picked, nullptr, L.win, kPack, 1, nullptr, false);
     }
+    found_copies();
     step_end();
     step_head(2, false, menu_text(UI_LAUNCH_ROMFS_MODE));
     float cw = fminf((ImGui::GetContentRegionAvail().x - 12 * s) * 0.5f, 440 * s);
@@ -1048,7 +1300,14 @@ static void page_files(float w, float h) {
     ImGui::BeginDisabled(L.picking);
     char state[160];
     files_state_text(ready, state, sizeof state);
-    state_line(ready, state);
+    state_line(ready && !files_gone(), state);
+    if (const char *gone = ready ? files_gone() : nullptr) {   // where they were, and what brings them back
+        char help[PLAT_PATH_MAX * 2 + 400];
+        snprintf(help, sizeof help, menu_text(UI_LAUNCH_FILES_GONE_HELP), gone);
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + fminf(ImGui::GetContentRegionAvail().x, 620 * L.scale));
+        ImGui::TextWrapped("%s", help);
+        ImGui::PopTextWrapPos();
+    }
     update_card(fminf(ImGui::GetContentRegionAvail().x, 620 * L.scale));   // a folder not set up starts on this page
     if (L.updated[0]) {
         char note[300];
@@ -1069,7 +1328,8 @@ static void page_files(float w, float h) {
         ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_NO_TOOLS));
     } else if (ready) {
         ImGui::Dummy(ImVec2(0, 8 * L.scale));
-        if (st.running || st.finished) ImGui::SetNextItemOpen(true, ImGuiCond_Always);   // its steps stay in view
+        static bool open_test = getenv("MKW_LAUNCHER_SETUP_OPEN") != nullptr;   // (test) unfolded, for a shot
+        if (st.running || st.finished || open_test) ImGui::SetNextItemOpen(true, ImGuiCond_Always);   // its steps stay in view
         if (ImGui::CollapsingHeader(menu_text(UI_LAUNCH_SETUP_AGAIN))) {
             ImGui::TextColored(col4(LOOK_HEADING), "%s", menu_text(UI_LAUNCH_SETUP_AGAIN_HINT));
             ImGui::Dummy(ImVec2(0, 6 * L.scale));
@@ -1418,7 +1678,6 @@ static void page_mods(float w, float h) {
 }
 
 // ---- the Tools page: the player's saves, the shortcuts, the updates (with Undo) and reporting a problem
-enum { JOB_BACKUP = 1, JOB_STEAM };
 
 // A heading over a group of the Tools page's rows, in a row of its own.
 static void tools_group(UiTextId title) {
@@ -1494,23 +1753,11 @@ static void page_tools(float w, float h) {
         tools_group(UI_TOOLS_SHORTCUTS);
         tools_row(menu_text(UI_LAUNCH_SHORTCUT), L.shortcut_note);
         if (ImGui::Button(menu_text(UI_LAUNCH_SHORTCUT_MAKE), ImVec2(0, act_h))) make_shortcut();
-        done = job.job == JOB_STEAM && job.phase == TOOL_DONE, failed = job.job == JOB_STEAM && job.phase == TOOL_FAILED;
-        int users = 0, running = 0;
-        if (done && sscanf(job.line, "%d %d", &users, &running) == 2)
-            snprintf(note, sizeof note, "%s", menu_text(running ? UI_TOOLS_STEAM_RESTART : UI_TOOLS_STEAM_DONE));
-        else if (failed)
-            snprintf(note, sizeof note, menu_text(UI_TOOLS_FAILED),
-                     !strncmp(job.line, "nosteam", 7) ? menu_text(UI_TOOLS_STEAM_NONE) : job.line);
-        else snprintf(note, sizeof note, "%s", menu_text(UI_TOOLS_STEAM_NOTE));
+        steam_note(job, note, sizeof note, &failed);
+        if (!note[0]) snprintf(note, sizeof note, "%s", menu_text(UI_TOOLS_STEAM_NOTE));
         tools_row(menu_text(UI_TOOLS_STEAM), note, failed);
         ImGui::BeginDisabled(busy);
-        if (ImGui::Button(menu_text(UI_TOOLS_ADD), ImVec2(0, act_h))) {
-            char exe[PLAT_PATH_MAX * 2];
-            if (shortcut_target(exe, sizeof exe)) {
-                const char *args[] = {"add", "--name", "Mario Kart World", "--exe", exe, "--dir", L.exe_dir, nullptr};
-                tool_start(L.exe_dir, JOB_STEAM, "prepare/steam.py", args);
-            }
-        }
+        if (ImGui::Button(menu_text(UI_TOOLS_ADD), ImVec2(0, act_h))) steam_add();
         ImGui::EndDisabled();
 
         tools_group(UI_TOOLS_UPDATES);
@@ -1585,16 +1832,19 @@ static bool open_window(void) {
     bool background = bg && *bg && strcmp(bg, "0");
     SDL_SetHint(SDL_HINT_APP_ID, background ? "mkw-recomp-run" : "mkw-recomp");
     if (background) SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
+    if (const char *drv = cfg_steam_video_driver()) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, drv);   // as the game's window (cfg.h)
+    input_wheel_hint();
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         rt_log("launcher: SDL_Init failed: %s", SDL_GetError());
         return false;
     }
     float ds = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     if (!(ds > 0)) ds = 1;
-    // Always a window: the game's MKW_FULLSCREEN is the game's; the start screen goes fullscreen only by its own F11.
+    // A window: the game's MKW_FULLSCREEN is the game's; the start screen goes fullscreen by its own F11, and from
+    // Steam's Big Picture or Gaming Mode (it opened there: a setup to run, a notice), as Big Picture is.
     // Hidden until its first frame is drawn (launcher_run): shown at once, it is black while the first frame is made.
     SDL_WindowFlags f = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN |
-                        (background ? SDL_WINDOW_NOT_FOCUSABLE : 0);
+                        (background ? SDL_WINDOW_NOT_FOCUSABLE : 0) | (cfg_steam_console() && !L.shot_at ? SDL_WINDOW_FULLSCREEN : 0);
     L.win = SDL_CreateWindow("Mario Kart World", (int)(1280 * ds), (int)(720 * ds), f);
     if (L.win) app_icon_set(L.win);
     L.ren = L.win ? SDL_CreateRenderer(L.win, nullptr) : nullptr;
@@ -1618,9 +1868,24 @@ static void save_shot(const char *suffix) {
     SDL_DestroySurface(s);
 }
 
-extern "C" void launcher_set_romfs(const char *romfs) { mods_set_romfs(romfs); }
-extern "C" void launcher_set_exefs(const char *exefs) { mods_set_exefs(exefs); }
+extern "C" void launcher_set_romfs(const char *romfs) {
+    snprintf(g_romfs, sizeof g_romfs, "%s", romfs);
+    mods_set_romfs(romfs);
+}
+extern "C" void launcher_set_exefs(const char *exefs) {
+    snprintf(g_exefs, sizeof g_exefs, "%s", exefs);
+    mods_set_exefs(exefs);
+}
 extern "C" void launcher_set_profile(const char *profile) { launcher_players_set_base(profile); }
+
+static void setup_paths_finished(const SetupState *state) {
+    static unsigned seen;
+    if (!state->finished || seen == state->generation) return;
+    seen = state->generation;
+    // prepare.py wrote the linked package/folder (or "romfs" for a copy) into mkw.ini in another process. Play
+    // reexecs and sees it, but without this refresh the Mods page kept startup's missing or previous RomFS.
+    if (state->finished > 0 && cfg_reload_key("MKW_ROMFS")) launcher_refresh_romfs();
+}
 
 extern "C" void launcher_gb_install(const char *url) {
     const char *p = !strncmp(url, "mkw-recomp:", 11) ? url + 11 : url;
@@ -1635,11 +1900,87 @@ extern "C" void launcher_gb_install(const char *url) {
     }
 }
 
+// Started by Steam's Big Picture or Gaming Mode (on a Steam Deck, Bazzite): Steam marks the games it starts there with
+// SteamGamepadUI=1 (SteamTenfoot=1 before 2023), and Gaming Mode runs them under gamescope.
+static int steam_console(void) { return cfg_steam_console(); }
+
+// The last game run ended in a fatal error (logs/mkw.log, the previous run's until the next Play moves it): the start
+// screen shows its notice (launcher_lastrun.h) instead of starting a game that may stop the same way.
+static int last_run_fatal(void) {
+    char p[PLAT_PATH_MAX * 2];
+    snprintf(p, sizeof p, "%s/logs/mkw.log", cfg_game_dir());
+    FILE *f = fopen(p, "rb");
+    if (!f) return 0;
+    static char tail[65536];
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f), from = n > (long)sizeof tail - 1 ? n - (long)sizeof tail + 1 : 0;
+    fseek(f, from, SEEK_SET);
+    size_t got = fread(tail, 1, sizeof tail - 1, f);
+    fclose(f);
+    tail[got] = 0;
+    return strstr(tail, "FATAL") != nullptr || strstr(tail, "fatal signal") != nullptr;
+}
+
+// View / Select (Minus) held on any gamepad in the first 400 ms: the player asks for the start screen.
+static int start_screen_asked(void) {
+    if (!SDL_InitSubSystem(SDL_INIT_GAMEPAD)) return 0;
+    int asked = 0;
+    for (int t = 0; t < 8 && !asked; t++) {
+        SDL_UpdateGamepads();
+        int n = 0;
+        SDL_JoystickID *ids = SDL_GetGamepads(&n);
+        for (int i = 0; ids && i < n && !asked; i++) {
+            SDL_Gamepad *g = SDL_OpenGamepad(ids[i]);
+            if (g) SDL_UpdateGamepads(), asked = SDL_GetGamepadButton(g, SDL_GAMEPAD_BUTTON_BACK), SDL_CloseGamepad(g);
+        }
+        SDL_free(ids);
+        if (!asked) SDL_Delay(50);
+    }
+    SDL_QuitSubSystem(SDL_INIT_GAMEPAD);
+    return asked;
+}
+
+// MKW_START_SCREEN (General tab): auto skips the start screen when Steam's Big Picture or Gaming Mode started the game,
+// as a console starts a game from its own menu (a controller-only player on Bazzite or a Steam Deck), skip always,
+// always never. It opens anyway when it has something to do or say: the game files not set up or gone from where the
+// setup left them (issue #486: a Steam Deck in Gaming Mode whose .nup was not there any more), a setup to
+// run again after an update, a code mod to build, the last run's fatal error, or View / Select held at start. Skipped,
+// it does what Play does (the mods merged, the player's profile) and the game starts.
+static int console_start(int updated, int other) {
+    if (L.shot_at || L.gb_open) return 0;
+    const char *mode = cfg_value("MKW_START_SCREEN");
+    int skip = !strcmp(mode, "skip") || (!strcmp(mode, "auto") && steam_console());
+    if (!skip) return 0;
+    char state[PLAT_PATH_MAX * 3];
+    snprintf(state, sizeof state, "%s/setup-state.json", cfg_game_dir());
+    const char *why = !rt_game_present()                                   ? "the game files are not set up"
+                    : files_gone()                                         ? "the game files are not where the setup left them"
+                    : updated || other                                     ? "the game files are to be set up again"
+                    : mods_code_changed() && plat_file_exists(state)       ? "a code mod is to be built"
+                    : last_run_fatal()                                     ? "the last run ended in an error"
+                    : start_screen_asked()                                 ? "View / Select held"
+                                                                           : nullptr;
+    if (why) {
+        rt_log("launcher: start screen shown (MKW_START_SCREEN=%s): %s", mode, why);
+        return 0;
+    }
+    mods_merge_sync(L.exe_dir);   // as Play does
+    char player[PLAT_PATH_MAX * 2];
+    launcher_player_dir(player, sizeof player);
+    if (player[0]) mods_before_play(player);
+    rt_log("launcher: start screen skipped (MKW_START_SCREEN=%s%s): the game starts", mode,
+           steam_console() ? ", started by Steam's Big Picture or Gaming Mode" : "");
+    return 1;
+}
+
 extern "C" int launcher_run(void) {
     L.result = -1;
     L.focus_main = 1;
     exe_dir(L.exe_dir, sizeof L.exe_dir);
     parse_test();
+    int updated = update_just_installed(L.exe_dir, L.updated, sizeof L.updated);
+    int other = !updated && !L.shot_at && setup_from_other_version();
+    if (console_start(updated, other)) return LAUNCHER_PLAY;
     if (!open_window()) return LAUNCHER_PLAY;   // no start screen: the game itself says what is wrong
     L.picked_event = SDL_RegisterEvents(1);
     ImGui::CreateContext();
@@ -1662,7 +2003,7 @@ extern "C" int launcher_run(void) {
         }
     }
     L.tools = setup_available(L.exe_dir);
-    if (!rt_game_present() && !L.shot_at) L.page = PAGE_FILES;
+    if ((!rt_game_present() || files_gone()) && !L.shot_at) L.page = PAGE_FILES;
     pads_refresh();
     char state[PLAT_PATH_MAX * 3];
     snprintf(state, sizeof state, "%s/setup-state.json", cfg_game_dir());
@@ -1675,8 +2016,6 @@ extern "C" int launcher_run(void) {
         if (exe[0] && !plat_url_scheme("mkw-recomp", "MKW Recomp mods", exe, "--gb-install"))
             rt_log("launcher: the mkw-recomp: links (GameBanana 1-Click) could not be registered");
     }
-    int updated = update_just_installed(L.exe_dir, L.updated, sizeof L.updated);
-    int other = !updated && !L.shot_at && setup_from_other_version();
     if ((updated || other) && L.tools && plat_file_exists(state)) {
         if (other) rt_log("launcher: the game files were set up by another version: setting up again what changed");
         L.page = PAGE_FILES;   // set up again what the new version changed, from the last setup's copy
@@ -1687,6 +2026,8 @@ extern "C" int launcher_run(void) {
         update_check_start(L.exe_dir);
     }
     if (!L.shot_at || getenv("MKW_LAUNCHER_LASTRUN")) lastrun_start(L.exe_dir, cfg_game_dir());
+    // MKW_LAUNCHER_FIND=1 (test): the search in a shot too, as at a plain start
+    if (L.tools && (!L.shot_at || getenv("MKW_LAUNCHER_FIND"))) finddumps_start(L.exe_dir, cfg_game_dir());
     if (getenv("MKW_LAUNCHER_SHORTCUT")) make_shortcut();   // (test) as the button does
     if (const char *t = getenv("MKW_LAUNCHER_SETUP")) {   // (test) the setup started from that folder, as Set up does
         snprintf(L.source, sizeof L.source, "%s", t);
@@ -1698,9 +2039,11 @@ extern "C" int launcher_run(void) {
     rt_log("launcher: start screen, game files %s, setup tools %s", rt_game_present() ? "ready" : "not set up",
            L.tools ? "present" : "missing");
     for (long frame = 1; L.result < 0; frame++) {
-        if (L.play_after_setup && setup_state().finished) {   // the code mods' build ended: play if it went well
+        SetupState setup = setup_state();
+        setup_paths_finished(&setup);   // before the code-mod merge below, or a new import from this frame's input
+        if (L.play_after_setup && setup.finished) {   // the same snapshot: a new completion must refresh paths first
             L.play_after_setup = 0;
-            if (setup_state().finished > 0) {
+            if (setup.finished > 0) {
                 mods_code_built();
                 mods_merge_sync(L.exe_dir);
                 char player[PLAT_PATH_MAX * 2];
@@ -1726,6 +2069,7 @@ extern "C" int launcher_run(void) {
             }
             if (e.type == SDL_EVENT_QUIT) L.result = LAUNCHER_QUIT;
             if (e.type == SDL_EVENT_GAMEPAD_ADDED || e.type == SDL_EVENT_GAMEPAD_REMOVED) pads_refresh();
+            if (e.type == SDL_EVENT_JOYSTICK_ADDED && !SDL_IsGamepad(e.jdevice.which)) input_wheel_map();
             if (e.type == SDL_EVENT_KEY_DOWN && e.key.scancode == SDL_SCANCODE_F11 && !e.key.repeat)
                 SDL_SetWindowFullscreen(L.win, !(SDL_GetWindowFlags(L.win) & SDL_WINDOW_FULLSCREEN));
             if (L.shot_at) continue;
@@ -1737,6 +2081,7 @@ extern "C" int launcher_run(void) {
         int pw, ph;
         SDL_GetCurrentRenderOutputSize(L.ren, &pw, &ph);
         restyle(menu_look_scale((uint32_t)ph));
+        if (L.steam_art || (frame == 2 && getenv("MKW_LAUNCHER_STEAM_ART"))) steam_art_draw();   // (test) as Add to Steam
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         io.DisplaySize = ImVec2((float)pw, (float)ph);   // pixels: the style and fonts follow the height
@@ -1792,7 +2137,10 @@ extern "C" int launcher_run(void) {
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
+    launcher_brand_free();
     backdrop_free();
+    for (SDL_Gamepad *&g : L.pad_open)
+        if (g) SDL_CloseGamepad(g), g = nullptr;
     SDL_DestroyRenderer(L.ren);
     SDL_DestroyWindow(L.win);
     SDL_Quit();

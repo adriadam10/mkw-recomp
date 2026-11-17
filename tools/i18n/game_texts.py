@@ -5,7 +5,7 @@
 dumped as "label<TAB>text" lines, and rebuilt in a language the game does not ship.
 
 The dump is the vocabulary a menu translation reuses (Time Trials, Free Roam, the cups...). A game translation
-(i18n/game/<lang>.tsv, same lines) holds only our text, never Nintendo's: build reads the player's own copy, replaces
+(i18n/game/base/<lang>.tsv, same lines) holds only our text, never Nintendo's: build reads the player's own copy, replaces
 each translated label (the rest stays in the base language: a partial translation works) and writes the archives with
 the manifest.tsv of a RomFS overlay (runtime/sdk/fs/romfs.c), which the runtime serves in place of the originals.
 
@@ -31,6 +31,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TRANSLATIONS = ROOT / "i18n" / "game"
+BASE_TSV = TRANSLATIONS / "base"  # <lang>.tsv; the <version>/ folders beside it hold what each update reworded
 # The game language each translation replaces (the one the game is told): Spain's languages over its Spanish
 BASE = {"ca": "EUes", "gl": "EUes", "eu": "EUes"}
 TAG = re.compile(r"\{(0[EF](?: [0-9A-F]{4})*)\}")
@@ -213,7 +214,7 @@ def read_translation(lang: str, version: int = 0) -> dict[str, str]:
     from versions import VERSIONS
 
     numbers = {v.name: v.number for v in VERSIONS}
-    out = read_tsv(TRANSLATIONS / f"{lang}.tsv")
+    out = read_tsv(BASE_TSV / f"{lang}.tsv")
     for sub in sorted((d for d in TRANSLATIONS.iterdir() if d.name in numbers), key=lambda d: numbers[d.name]):
         if numbers[sub.name] <= version and (sub / f"{lang}.tsv").is_file():
             out |= read_tsv(sub / f"{lang}.tsv")
@@ -277,7 +278,7 @@ def build(lang: str, out: Path, romfs: Path | None = None, strict: bool = True, 
         sha = hashlib.sha256
         manifest.append(f"{rel}\t{len(data)}\t{sha(data).hexdigest()}\t{sha(orig).hexdigest()}")
     out.mkdir(parents=True, exist_ok=True)
-    (out / "manifest.tsv").write_text(f"# {lang} over {base}, from i18n/game/{lang}.tsv\n" + "\n".join(manifest) + "\n")
+    (out / "manifest.tsv").write_text(f"# {lang} over {base}, from i18n/game/base/{lang}.tsv\n" + "\n".join(manifest) + "\n")
     n = len(folder_lines(folder))
     print(f"{lang}: {len(texts)} of {n} texts translated, {len(manifest)} archives in {out}", file=sys.stderr)
 
@@ -285,7 +286,7 @@ def build(lang: str, out: Path, romfs: Path | None = None, strict: bool = True, 
 def build_all(game: Path, romfs: Path) -> None:
     """Every translation into game/lang/<lang>/ (the setup's last step, tools/prepare/prepare.py)."""
     version = game_version(game / "exefs")
-    for path in sorted(TRANSLATIONS.glob("*.tsv")):
+    for path in sorted(BASE_TSV.glob("*.tsv")):
         build(path.stem, game / "lang" / path.stem, romfs, strict=False, version=version)
 
 
@@ -318,7 +319,7 @@ def main() -> int:
             else:
                 sys.stdout.write(text)
     elif args.cmd == "todo":
-        path = TRANSLATIONS / f"{args.lang}.tsv"
+        path = BASE_TSV / f"{args.lang}.tsv"
         done = read_translation(args.lang, game_version(game_dir() / "exefs")) if path.exists() else {}
         sys.stdout.write("".join(f"{k}\t{v}\n" for k, v in folder_lines(mals / BASE[args.lang], True) if k not in done))
     else:

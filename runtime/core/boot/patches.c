@@ -34,6 +34,7 @@
 #define UI_ROWS_HOST 0xf60       // patch page offset of host_ui_rows (set aspect)
 #define CAMERA_EVENT_HOST 0xf50  // patch page offset of host_camera_event (set camera, 1.8.0)
 #define UI_ROWS2_HOST 0xf40      // patch page offset of host_ui_rows2 (set aspect, 1.8.0)
+#define FX_VIEW_HOST 0xf20       // patch page offset of host_fx_view (set aspect)
                                  // 0xe00-0xef0: race_scene.c, one per node (RT_RACE_HOST)
 // The guest functions the sets call or recognise, per game version (version.h; 1.0.0: main+0x233358 RenderBuffer
 // creation, main+0x8eb6b0 the render-buffer allocator setup that main+0x37b520 allocates from, main+0x67aa40 operator
@@ -258,7 +259,7 @@ static void host_aspect(Cpu *c) {
 // In place of the bl to nn::ui2d::DrawInfo's projection getter (main+0x1682c9c: the 4x4 at [x0+0x10] to [x1]) from the
 // two draw constant-buffer setups of the 2D layouts: the same copy, and a 16:9 projection gets its x row narrowed by
 // 16:9 over the output's aspect, so the 2D keeps its shape in the middle 16:9 of a wider picture: the idea of oot-mod's
-// 2D canvas hook (craftycorvid/oot-mod c5ccd1c, MIT; docs/research.md). MKW's layouts are drawn in perspective (uw6-menu: rows 1.358 0 0 0 /
+// 2D canvas hook (craftycorvid/oot-mod c5ccd1c, MIT; docs/project/research.md). MKW's layouts are drawn in perspective (uw6-menu: rows 1.358 0 0 0 /
 // 0 2.414 0 0 / 0 0 -1.0002 1301.94 / 0 0 -1 1303.68, 45 degrees at 16:9), not through the orthographic cameras of
 // main+0x460c10 (uw5-menu: none of those calls). Row-major, x row first: x and y unskewed, its aspect m[5] / m[0].
 static int is_16x9(const float *m) {
@@ -359,6 +360,55 @@ static void host_ui_rows2(Cpu *c) {
     memcpy(m, (const void *)(uintptr_t)(c->x[21] + 0x10), sizeof m);
     if (is_16x9(m)) aspect_ui_fit(m, aspect_scale);
     memcpy(&c->v[0], m, 16), memcpy(&c->v[4], m + 4, 16);
+}
+
+// The screen effects (issue #425: Knockout Tour's checkpoint rainbow, Drv_SurvivalScreenEffect) are a frame mesh and
+// emitters held a few units in front of the camera, sized for a 16:9 view: under the widened projection they covered
+// only its middle 16:9 (wi425b dump: their vertex shader places them with nn::vfx2's view constants, c8, projection
+// rows 4-7, which carry the race camera's x scale 0.6727 at 21:9). A view reaches the GPU buffer a draw binds as c8
+// through a memcpy of its ViewParam (0x250 bytes) in main+0x22d1f4 or in its twins main+0xd60a0 and main+0x166bfa0;
+// the screen effects' goes through main+0xd60a0's, where host_fx_view makes the copy and, for them, gives the GPU
+// copy 16:9's x scale: the projection's and the view-projection's x rows times the widening, the x columns of their
+// inverses divided by it (rows of 16 bytes: projection 4-7, view-projection 8-11, inverse projection 16-19, inverse
+// view-projection 20-23). The screen effects are draw group 7 of the group draw main+0x14df10 (its w3, kept in x27
+// and saved by main+0xd58f8's prologue at [x29 + 0x18]; the world's effects are groups 2 and 12): RtVersion
+// fx_group_lr is main+0xd58f8's return there, fx_group_frame/word where the group is saved and fx_screen_group the
+// group (wi425i-j). MKW_FX_WIDE_LR=all
+// (diagnosis) widens every copy there; with MKW_PROBE, each copy in the window logs its site, slot, group, return
+// addresses and GPU buffer.
+static int fx_wide_all = -1;
+
+static void host_fx_view(Cpu *c) {
+    float *vp = (float *)(uintptr_t)c->x[0];
+    memcpy(vp, (const void *)(uintptr_t)c->x[1], c->x[2]);
+    if (aspect_scale <= 1) return;
+    int all = __atomic_load_n(&fx_wide_all, __ATOMIC_ACQUIRE);
+    if (all < 0) {
+        const char *e = cfg_get("MKW_FX_WIDE_LR");
+        all = e && !strcmp(e, "all");
+        if (all) rt_log("patches: every effect view at 16:9 (MKW_FX_WIDE_LR all)");
+        __atomic_store_n(&fx_wide_all, all, __ATOMIC_RELEASE);
+    }
+    // the copy's frame record (x29) holds its caller's (main+0xd58f8's) frame and return address; one up, the group
+    // draw's return address; the group is a register one of the two prologues saved
+    const RtVersion *v = rt_version();
+    const uint64_t *f1 = (const uint64_t *)(uintptr_t)c->x[29];
+    const uint64_t *f2 = (const uint64_t *)(uintptr_t)f1[0];
+    const uint64_t *fg = v->fx_group_frame == 1 ? f1 : f2;
+    uint64_t lr1 = f1[1], lr2 = f2 ? f2[1] : 0, group = fg ? fg[v->fx_group_word] : 0;
+    int wide = all || (v->fx_group_lr && lr2 == rt_main_addr(v->fx_group_lr) && group == v->fx_screen_group);
+    if (seqwatch_probe()) {
+        uint64_t base = rt_main_addr(4) - 4;
+        rt_log("patches: probe fxview frame %llu site main+%#llx slot %d group %#llx lr main+%#llx main+%#llx dst %#llx "
+               "x %g%s", (unsigned long long)frame_step_ticks(), (unsigned long long)(c->x[30] - base), (int)c->x[23],
+               (unsigned long long)group, (unsigned long long)(lr1 - base), (unsigned long long)(lr2 - base),
+               (unsigned long long)c->x[0], vp[16], wide ? " -> 16:9" : "");
+    }
+    if (!wide) return;
+    for (int i = 0; i < 4; i++) {
+        vp[16 + i] *= aspect_scale, vp[32 + i] *= aspect_scale;          // rows 4 and 8
+        vp[64 + 4 * i] /= aspect_scale, vp[80 + 4 * i] /= aspect_scale;  // column 0 of rows 16-19 and 20-23
+    }
 }
 
 static int has_set(const RtGame *g, const char *name) {
@@ -505,6 +555,7 @@ void rt_patch_hosts(void) {
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_PROJ_HOST, host_ui_proj);
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_ROWS_HOST, host_ui_rows);
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_ROWS2_HOST, host_ui_rows2);
+    if (g->npatch_sets) rt_register_host(g->patch_page + FX_VIEW_HOST, host_fx_view);
     if (g->npatch_sets) frame_rate_host(g->patch_page);
     if (g->npatch_sets) race_scene_host(g->patch_page);
     if (g->npatch_sets) rt_register_host(g->patch_page + CAMERA_EVENT_HOST, host_camera_event);

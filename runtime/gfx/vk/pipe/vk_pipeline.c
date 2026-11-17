@@ -1256,6 +1256,7 @@ static void autosave_once(void) {
 // On its own thread: the save (vkGetPipelineCacheData and the file write, about 60 ms) and the key appends (a flush to
 // the disk each) ran on the present thread, and the render thread waited for it to take the next frame.
 static void autosave_main(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     (void)arg;
     plat_thread_priority(PLAT_PRIO_BELOW_NORMAL);
     for (;;) {

@@ -1,9 +1,9 @@
 # /// script
 # requires-python = ">=3.12"
 # ///
-"""The text catalogs of the menu, the start screen, the setup page and the overlay as gettext files: i18n/mkw.pot holds
+"""The text catalogs of the menu, the start screen, the setup page and the overlay as gettext files: i18n/ui/mkw.pot holds
 the English (each entry's msgctxt is its UiTextId of runtime/gfx/nvn/host/ui_text.h, its msgid the English text) and
-i18n/<lang>.po each translation. build.py turns them into C (one const char *text_<lang>[UI_TEXT_COUNT] array per
+i18n/ui/<lang>.po each translation. build.py turns them into C (one const char *text_<lang>[UI_TEXT_COUNT] array per
 language, in build/), so the ids stay checked by the compiler and nothing is read at run time.
 
 Why .po and not C by hand: translators fix a text in Poedit, Weblate or Crowdin, or in any editor, without C quoting
@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-I18N = ROOT / "i18n"
+I18N = ROOT / "i18n" / "ui"
 POT = I18N / "mkw.pot"
 # The catalog languages after English, as ui_text.c's rows name them (Switch language codes: ui_text_lang): the game's,
 # then menu languages it does not ship

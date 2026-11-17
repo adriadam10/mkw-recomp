@@ -1,5 +1,6 @@
 // Host input sampling (runtime/input.c, with input_sdl.c): SDL3 gamepad and the keyboard as one Switch npad.
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 
 // Bits of libnx HidNpadButton (A=0 B=1 X=2 Y=3 StickL=4 StickR=5 L=6 R=7 ZL=8 ZR=9 Plus=10 Minus=11 Left=12 Up=13 Right=14
@@ -10,6 +11,11 @@ void input_poll(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_
 // reports nothing; input_block(0) when it closes: nothing until all buttons and stick directions are released.
 void input_poll_ui(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
 void input_block(int on);
+// Racing wheels (wheel.c, #488): input_wheel_hint before SDL's gamepad init reads gamecontrollerdb.txt from the game
+// folder when there is one; input_wheel_map gives each wheel SDL has no mapping for a gamepad mapping, so
+// SDL_GetGamepads lists it. Same thread as the other SDL gamepad calls.
+void input_wheel_hint(void);
+void input_wheel_map(void);
 // Local multiplayer, players 1-8 (player index 0-7). Player 1 is input_poll: the keyboard, the first gamepad and the
 // script. Each other player is one more gamepad, in connection order, plus the script's "p<N>" lines; MKW_VIRTUAL_PADS=N
 // attaches N virtual gamepads at start to try it without controllers. Any thread.
@@ -44,6 +50,9 @@ int input_pad_read(uint64_t *buttons, int32_t *lx, int32_t *ly);
 // input, the gamepad when one is connected. Any thread.
 enum { INPUT_DEVICE_KEYBOARD = 1, INPUT_DEVICE_PAD = 2 };
 int input_last_device(void);
+// The open gamepad's default left stick dead zone in % when MKW_STICK_DEADZONE is unset (an Xbox pad's is Microsoft's,
+// not the 8 % of the settings table); -1 without a gamepad. Any thread.
+double input_stick_deadzone_default(void);
 // The gamepad layout in effect (PAD_LAYOUT_*, input_map.h; MKW_PAD_LAYOUT, live); -1 without a gamepad. Any thread.
 int input_pad_layout(void);
 // The label on a face button of the open gamepad (input_map.h PAD_SOUTH..PAD_NORTH, as SDL reports it); PAD_LABEL_NONE for another
@@ -72,6 +81,25 @@ int input_hack_key(int which);
 void input_cursor_suspend(int on);
 int input_cursor_released(void);   // Esc or a non-client activation released the cursor (probe)
 
+// Battery of the player's gamepad (index 0-7; input_power.c). state INPUT_POWER_*; percent 0-100, -1 when the gamepad
+// gives none; coarse: percent is a band's (a Switch 2 controller over Bluetooth gives a voltage: 10 low, 50 medium,
+// 90 high). Returns state. Any thread.
+enum { INPUT_POWER_NONE, INPUT_POWER_UNKNOWN, INPUT_POWER_BATTERY, INPUT_POWER_CHARGING, INPUT_POWER_CHARGED,
+       INPUT_POWER_WIRED };
+typedef struct { int state, percent, coarse; char name[64]; } InputPower;
+int input_pad_power(int player, InputPower *out);
+// The same from what SDL says of a gamepad (SDL_GetGamepadPowerInfo's state and percent, its joystick id): the start
+// screen, which reads the gamepads without input.c. Keeps out->name.
+int input_power_from_sdl(int sdl_state, int percent, uint32_t sdl_id, InputPower *out);
+// The battery as the player reads it, in the menu language: "80 %", "Charging, 80 %", "Low"... (out holds 64 bytes).
+const char *input_power_text(const InputPower *p, char *out, int out_size);
+// input_power.c's watch (started with the gamepads): a notice when a player's battery runs low, once per discharge.
+void input_power_start(void);
+// The game's gamepad input is up (SDL gamepads opened by input.c): not on the start screen, which reads SDL itself.
+int input_gamepads_running(void);
+// input.c, for input_power.c: SDL's SDL_PowerState of the player's gamepad (-2 none), its name, joystick id and percent.
+int input_pad_power_sdl(int player, char *name, size_t name_size, uint32_t *id, int *percent);
+
 // Rumble: SDL_RumbleGamepad on the player's gamepad (index 0-7), low (heavy, left) and high (light, right) motor
 // 0..65535 for ms milliseconds. 1 if a gamepad with rumble took it. Callable from any thread.
 int input_rumble(int player, uint16_t low, uint16_t high, uint32_t ms);
@@ -81,7 +109,8 @@ uint16_t rumble_motor(float a, float curve, float strength);
 int input_rumble_triggers_enabled(void);
 
 // Motion (MKW_MOTION=0 turns it off, live). input_motion_start starts the sensor thread once: every 4 ms it reads the
-// gamepad's gyro and accelerometer (when it has them) and feeds motion_global(). Callable from any thread.
+// gamepad's gyro and accelerometer (when it has them, else a DSU server's with MKW_DSU=1, dsu.h) and feeds each
+// player's motion_player(). Callable from any thread.
 void input_motion_start(void);
 // MKW_MOTION is not "0" (a live setting: read again when cfg_version changes). Off: the sensor reads at rest.
 int input_motion_enabled(void);

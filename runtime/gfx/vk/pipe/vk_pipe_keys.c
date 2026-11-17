@@ -148,6 +148,7 @@ static void prebuild_report(void) {
 }
 
 static void pipe_worker(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     int me = (int)(intptr_t)arg;
     plat_mutex_lock(&P.lock);
     for (;;) {
@@ -610,6 +611,7 @@ static int id_cmp(const void *x, const void *y) { return memcmp(x, y, 32); }
 
 // Builds queued prebuild jobs until the low queue is empty, beside the pipe_worker pool (same bookkeeping).
 static void warm_builder(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     (void)arg;
     plat_mutex_lock(&P.lock);
     while (A.low) {
@@ -800,8 +802,10 @@ void prebuild_start(void) {
     plat_mutex_unlock(&P.lock);
 }
 
-// A compute pipeline for cs in layout l; VK_NULL_HANDLE on failure. No lock needed (P.cache is driver-synchronised).
-static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
+// A compute pipeline for cs in layout l, with FIRST_STORE (sm86 glsl/first_store.py) set to first when not 0;
+// VK_NULL_HANDLE on failure. No lock needed (P.cache is driver-synchronised).
+#define FIRST_STORE_ID 0x7ff0u
+static VkPipeline compute_create(const GfxShader *cs, const Layout *l, uint32_t first) {
     uint64_t words;
     const uint32_t *code = gfx_shader_spirv(cs, &words);
     VkShaderModule m = make_module(code, words);
@@ -811,6 +815,9 @@ static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
                                       .stage = {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                                                 .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = m, .pName = "main"},
                                       .layout = l->layout};
+    VkSpecializationMapEntry fse = {FIRST_STORE_ID, 0, sizeof first};
+    VkSpecializationInfo fsi = {1, &fse, sizeof first, &first};
+    if (first) ci.stage.pSpecializationInfo = &fsi;
     pin_subgroup32(&ci.stage, &rqc, code, words);
     if (!ci.stage.pNext && vk_caps.cs_wide) {   // vk_caps.c cs_wide: Adreno's wave limit for barriers
         rqc = (VkPipelineShaderStageRequiredSubgroupSizeCreateInfo){
@@ -843,10 +850,10 @@ static Layout *compute_layout(const GfxShader *cs, Bindings *B, const char **why
     return l;
 }
 
-VkPipeline vk_pipeline_compute(const GfxShader *cs, const VkPipeInfo **info) {
+VkPipeline vk_pipeline_compute_first(const GfxShader *cs, uint32_t first, const VkPipeInfo **info) {
     if (info) *info = NULL;
     if (!cs || !ensure_init()) return VK_NULL_HANDLE;
-    struct { const GfxShader *cs; uint32_t compute; } k = {cs, 1};
+    struct { const GfxShader *cs; uint32_t compute; } k = {cs, 1 + first};
     uint64_t h = key_hash(&k, sizeof k);
     plat_mutex_lock(&P.lock);
     Pipe *p = pipe_find(&k, sizeof k, h);
@@ -859,7 +866,7 @@ VkPipeline vk_pipeline_compute(const GfxShader *cs, const VkPipeInfo **info) {
         VkPipeline pipe = VK_NULL_HANDLE;
         if (!why) {
             uint64_t p0 = perf_begin();
-            pipe = compute_create(cs, l);
+            pipe = compute_create(cs, l, first);
             perf_end(PERF_PIPE, p0);
             if (!pipe) why = "pipeline creation failed";
         }
@@ -877,3 +884,5 @@ VkPipeline vk_pipeline_compute(const GfxShader *cs, const VkPipeInfo **info) {
     return p->info.pipeline;
 }
 
+
+VkPipeline vk_pipeline_compute(const GfxShader *cs, const VkPipeInfo **info) { return vk_pipeline_compute_first(cs, 0, info); }

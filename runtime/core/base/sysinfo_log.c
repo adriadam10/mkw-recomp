@@ -1,5 +1,5 @@
 // Locate the folder for "Open log folder" independently of the Vulkan system-info report, so launcher paths can
-// be checked without a GPU or graphics headers (tests/test_game_dir.py).
+// be checked without a GPU or graphics headers (tests/launcher/test_game_dir.py).
 #include <stdio.h>
 
 #include "cfg.h"

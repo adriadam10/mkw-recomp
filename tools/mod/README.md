@@ -88,4 +88,4 @@ Rules the generate enforces (`recomp/patches.py`, `recomp/gen.py`):
 
 `gen.py --mods DIR` (default: the `mods/` beside `--exefs`) merges every mod's patches into the generated table, so the game's own tables stay the game's own. An exefs mod without patches is refused at import rather than imported and then doing nothing.
 
-Porting an exefs mod is reading its `.pchtxt` and turning each entry into a `site` (or a `span`), then checking the words against the game build the port targets. `tools/analisis/disasm.py` and `q.py` give the surrounding code when an entry needs rewriting into an equivalent that is not a branch.
+Porting an exefs mod is reading its `.pchtxt` and turning each entry into a `site` (or a `span`), then checking the words against the game build the port targets. `tools/analisis/bin/disasm.py` and `q.py` give the surrounding code when an entry needs rewriting into an equivalent that is not a branch.

@@ -1,4 +1,4 @@
-"""Check that sm86/translate/flow.py keeps each program's control flow: run the original branch graph and the
+"""Check that sm86/translate/frontend/flow.py keeps each program's control flow: run the original branch graph and the
 structured GLSL it builds side by side, off the GPU, and compare the instructions they execute.
 
 Why: a wrongly structured loop runs to LOOP_CAP in every pixel and hangs the GPU (run93, 31/10/2026: an amdgpu ring
@@ -8,7 +8,7 @@ evaluation of a branch, so equal programs give equal traces. Predicated EXITs ar
 
 Usage: uv run tools/shaders/flow_check.py [--shaders build/shaders] [--sample N] [--seeds 16]
 Prints the programs whose unverified structuring (flow._structure) runs other instructions: flow.structure refuses
-those and the translator keeps their switch. The simulation itself is sm86/translate/flow_sim.py.
+those and the translator keeps their switch. The simulation itself is sm86/translate/frontend/flow_sim.py.
 """
 
 import argparse
@@ -19,7 +19,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "sm86/translate"))
+sys.path[:0] = [str(ROOT / "sm86/translate"), str(ROOT / "sm86/translate/frontend")]
 sys.path.insert(0, str(ROOT / "tools/shaders"))
 
 import flow

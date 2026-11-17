@@ -3,7 +3,7 @@
 #pragma once
 #include "imgui.h"
 
-// The port's logo (tools/build/icon.py, docs/logo.svg) at size px with its top left at p.
+// The port's logo (tools/build/icon.py, docs/images/logo.svg) at size px with its top left at p.
 void launcher_logo(ImDrawList *dl, ImVec2 p, float size);
 
 // The ease-out cube of progress p in 0..1: quick start, soft landing.

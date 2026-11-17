@@ -1,4 +1,4 @@
-"""Fill the Mods page's new strings in every catalog language (i18n/<lang>.po).
+"""Fill the Mods page's new strings in every catalog language (i18n/ui/<lang>.po).
 
 Why a script and not Poedit twenty times: the strings are short launcher labels with
 printf conversions that must survive verbatim; the table below is reviewed once, applied
@@ -9,7 +9,7 @@ entries stay, fuzzy stays fuzzy).
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-I18N = ROOT / "i18n"
+I18N = ROOT / "i18n" / "ui"
 
 # msgctxt -> {lang: text}. % conversions match the English msgid exactly.
 T = {

@@ -34,7 +34,7 @@ def unpack(runtime: Path, pkg: Path, dest: Path | str, *prefixes: str) -> str:
     ("exefs", "romfs/Mals"). Returns its "unpack: N files, B bytes" line (the log lines come first); dest "-" counts only."""
     exe = runtime / ("mkw.exe" if os.name == "nt" else "mkw")
     p = subprocess.Popen([str(exe), "--unpack", str(pkg), str(dest), *prefixes], stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, text=True)  # fmt: skip
+                         stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")  # fmt: skip
     head, tail = "", []
     for line in p.stdout:
         if line.startswith("progress "):

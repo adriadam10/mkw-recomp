@@ -30,10 +30,15 @@ int cfg_game_dir_invalid(void);
 // Not thread-safe: nothing else may call cfg_get meanwhile.
 int cfg_load(const char *path);
 
+// Reload one key from the selected installation's mkw.ini after a child process changed it (setup's ROMFS).
+// Other live/dirty keys and previously returned strings stay intact. The reloaded key is clean; the environment
+// still wins. 1 when found, 0 if the file or a nonempty value is missing (the old value stays). Call after cfg_init.
+int cfg_reload_key(const char *name);
+
 // Live settings (the in-game menu). cfg_set stores value as the mkw.ini value of name (MKW_ prefixed), marks it for
 // cfg_save and bumps cfg_version. cfg_get returns it unless the environment sets name. Any thread.
 void cfg_set(const char *name, const char *value);
-// Bumped by every cfg_set. A consumer that keeps a parsed value compares this with the number it last saw (one atomic
+// Bumped by every cfg_set and a changed reloaded value. A consumer that keeps a parsed value compares this with the number it last saw (one atomic
 // load) and parses again when it changed.
 unsigned cfg_version(void);
 // 1 when the environment sets name: cfg_set cannot change what cfg_get returns (the menu greys the setting out).
@@ -73,3 +78,16 @@ const char *cfg_value(const char *name);
 int cfg_int(const char *name);
 double cfg_double(const char *name);
 int cfg_bool(const char *name);
+
+// Steam (ui/launcher/launcher.cpp, gfx_window_sdl.c). cfg_steam_started: Steam started this game (SteamGameId or
+// SteamAppId, a non-Steam shortcut too). cfg_steam_console: from Big Picture or Gaming Mode (SteamGamepadUI=1,
+// SteamTenfoot=1 before 2023, or a gamescope session), where cfg_get's defaults include fullscreen.
+// cfg_steam_video_driver: "x11" when Steam started the game in a Wayland desktop session, for SDL_HINT_VIDEO_DRIVER,
+// else NULL. Steam (an X11 client) cannot see a native Wayland window take the focus: in Big Picture on KDE Plasma
+// (Bazzite, 17/11/2026) the controller kept driving Steam's own layout, its right stick as a mouse, and none of its
+// buttons reached the game. Through XWayland Steam sees the window, gives it the controller and its overlay. Left alone
+// when the player set SDL_VIDEODRIVER, inside gamescope (X11 already) and with MKW_STEAM_X11=0. The game's window takes
+// it only with an SDR picture (gfx_window_sdl.c steam_video_driver): SDL's X11 driver cannot tell HDR.
+int cfg_steam_started(void);
+int cfg_steam_console(void);
+const char *cfg_steam_video_driver(void);

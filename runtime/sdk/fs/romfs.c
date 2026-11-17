@@ -588,6 +588,14 @@ static void init_once(void *param) {
     (void)param;
     double t0 = now_s();
     const char *src = rt_config()->romfs;
+    // A path that is neither a folder nor a package that opens: said as such, not as an empty folder (issue #486: a
+    // .nup gone from where the setup linked it read "RomFS directory ... missing or empty").
+    if (!pack_is(src) && !plat_dir_exists(src)) {
+        if (plat_file_exists(src))
+            rt_fatal("RomFS %s is a file but not a .nup or .nx package this build can open", src);
+        rt_fatal("RomFS %s not found: moved, renamed, or on a card or drive not connected now (the start screen's Game "
+                 "files page sets the game up again)", src);
+    }
     if (pack_is(src)) load_package_index(src);
     else load_loose_index(src);
     overlay_init();

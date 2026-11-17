@@ -913,7 +913,7 @@ static void probe_fonts(void) {
            (unsigned long long)size, path);
 }
 
-// The host catalog (ui_text.c, generated from i18n/*.po): every language has its own text for every menu id, the
+// The host catalog (ui_text.c, generated from i18n/ui/*.po): every language has its own text for every menu id, the
 // software keyboard keeps its game-language rows, and menu_text follows MKW_MENU_LANG in each language.
 static void probe_menu_text(void) {
     static const char *const langs[] = {"en", "ja", "fr", "de", "it", "es", "nl", "pt", "pt-BR", "ru", "zh-Hans",
@@ -932,7 +932,7 @@ static void probe_menu_text(void) {
         for (size_t i = 1; i < N; i++)
             CHECK(!strcmp(ui_text_in(langs[i], (UiTextId)id), ui_text_in("en", (UiTextId)id)), "language name %d differs in %s", id, langs[i]);
     CHECK(!strcmp(ui_text_in("en", UI_MENU_LANGNAME_RU), "Русский"), "Russian is not shown as Russian");
-    // the overlay formats keep their conversions (tests/test_ui_text.py checks every entry)
+    // the overlay formats keep their conversions (tests/runtime/test_ui_text.py checks every entry)
     CHECK(strstr(ui_text_in("ru", UI_MENU_OV_GAME_PCT), "%.0f%%") && strstr(ui_text_in("ru", UI_MENU_OV_MAX_MS), "%.1f"),
           "overlay format lost its conversion");
     // menu_text follows the setting live, in every language

@@ -1,5 +1,5 @@
 """A release's notes: that version's section of CHANGELOG.md (summary, changes, what was tested, extra known issues) put
-into docs/release-template.md (install, updating, known issues, reporting: the same in every release).
+into docs/project/release-template.md (install, updating, known issues, reporting: the same in every release).
 
 Why: v0.1.0-v0.1.2 were written by hand, each with its own shape and the same install text copied and drifting. One
 CHANGELOG.md, the common convention, keeps every version's changes in one file; GitHub's own generated notes list
@@ -55,7 +55,7 @@ def main() -> None:
     ap.add_argument("--out", type=Path, help="write here instead of stdout")
     args = ap.parse_args()
     got = parse(version_section((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), args.version), args.version)
-    template = (ROOT / "docs/release-template.md").read_text(encoding="utf-8")
+    template = (ROOT / "docs/project/release-template.md").read_text(encoding="utf-8")
     notes = template.format(
         summary=got["summary"], changes=got["changes"], tested=got["tested"], known=got.get("known", "")
     )

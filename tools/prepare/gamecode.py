@@ -18,6 +18,9 @@ import build  # (GEN_FLAGS, gen_modules, module_glue, game_id: the same game cod
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from machine import Failed, crt_link, emit, package_dir
 
+# The compiler's messages as text: zig writes UTF-8 (paths with "Área de Trabalho" in it), which the locale's code page
+# could not decode, and the reader thread's error left stdout None (#527: setup failed at compile on a Portuguese Windows)
+UTF8 = {"encoding": "utf-8", "errors": "replace"}
 LINK_TIMEOUT = 30 * 60  # far past a slow link: only a hung linker (issue #2: "stuck" after the last object)
 
 
@@ -111,7 +114,7 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
     t0 = time.monotonic()
     try:
         r = subprocess.run(link or [*cc, "-shared", "-o", str(part), f"@{rsp}", *extra], capture_output=True,
-                           text=True, check=False, timeout=LINK_TIMEOUT)  # fmt: skip
+                           **UTF8, check=False, timeout=LINK_TIMEOUT)  # fmt: skip
     except subprocess.TimeoutExpired as e:
         raise Failed(f"linking the game code took over {LINK_TIMEOUT // 60} min: {tail_of(e.stderr)}") from None
     print(f"link: {time.monotonic() - t0:.1f} s, rc {r.returncode}\n{r.stderr}", file=sys.stderr)
@@ -124,14 +127,26 @@ def compile_game(game: Path, exefs: Path, work: Path, cc: list[str], target: str
 
 def compile_one(cc: list[str], flags: list[str], src: Path, out: Path, stamp: Path, key: str) -> str:
     """One object: "" when built, else the error for the player; a damaged source raises DamagedSource instead."""
-    r = subprocess.run([*cc, "-std=gnu11", *flags, "-c", str(src), "-o", str(out)], capture_output=True, text=True,
-                       check=False)  # fmt: skip
+    cmd = [*cc, "-std=gnu11", *flags, "-c", str(src), "-o", str(out)]
+    r = subprocess.run(cmd, capture_output=True, **UTF8, check=False)
+    if r.returncode and crashed(r.stderr):
+        # A compiler crash (ICE) on a chunk that compiles everywhere else is the machine, not the source (#506: a
+        # different chunk each time, only with parallel jobs, on an i7-13700KF): one more try, and its first lines
+        # (the crash's signature, which the tail cut) kept in setup.log.
+        print(f"compile: {src.name}: the compiler crashed, trying again:\n{r.stderr.strip()[:1500]}", file=sys.stderr)
+        r = subprocess.run(cmd, capture_output=True, **UTF8, check=False)
     if r.returncode:
         if damaged(src):
             raise DamagedSource(f"compiling the game code failed: {src.name} has NUL bytes (a damaged write)")
+        print(f"compile: {src.name} failed:\n{r.stderr.strip()[:3000]}", file=sys.stderr)
         return f"{src.name}: {r.stderr.strip()[-300:]}"
     stamp.write_text(key)
     return ""
+
+
+def crashed(stderr: str) -> bool:
+    """clang's crash report, as opposed to an error in the source."""
+    return "PLEASE submit a bug report" in stderr or "FILES TO THE BUG REPORT" in stderr
 
 
 def chunk_base(cc: list[str], base_cpu: str, gen_headers: list[Path], src: Path) -> str:
@@ -147,7 +162,7 @@ def common_key(cc: list[str], headers: list[Path], base: str = "") -> str:
     h = hashlib.sha256(
         base.encode()
         if base
-        else subprocess.run([*cc, "--version"], capture_output=True, text=True, check=False).stdout.encode()
+        else subprocess.run([*cc, "--version"], capture_output=True, **UTF8, check=False).stdout.encode()
     )
     for p in headers:
         h.update(p.relative_to(p.parents[1]).as_posix().encode() + p.read_bytes())
@@ -172,7 +187,7 @@ def probe_link(cc: list[str], obj: Path, windows: bool) -> None:
     src, lib = obj / "probe.c", obj / ("probe.dll" if windows else "probe.so")
     src.write_text("int probe(void) { return 0; }\n")
     t0 = time.monotonic()
-    r = subprocess.run([*cc, "-shared", "-o", str(lib), str(src)], capture_output=True, text=True, check=False)
+    r = subprocess.run([*cc, "-shared", "-o", str(lib), str(src)], capture_output=True, **UTF8, check=False)
     print(f"link probe: {time.monotonic() - t0:.1f} s, rc {r.returncode}\n{r.stderr}", file=sys.stderr)
 
 

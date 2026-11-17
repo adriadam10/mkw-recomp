@@ -1,6 +1,6 @@
 # Changelog
 
-Each version's section is that release's notes: `tools/build/notes.py` puts it into `docs/release-template.md` (install,
+Each version's section is that release's notes: `tools/build/notes.py` puts it into `docs/project/release-template.md` (install,
 updating, known issues, reporting) for the GitHub release. A section has a summary paragraph, `### Changes` (each with
 its issue, #N), `### Tested` (what was run from the packages before publishing) and optionally `### Known issues`.
 
@@ -23,9 +23,9 @@ getting their values (#423 by @AngeloAscheri, #485 by @FIocker), Automatic frame
 again, race frames recorded in parallel by default (split screen too), a 4 GB card that no longer draws a dark band, a
 memory leak that lost the GPU in the title's demo loop, and the split-screen view that drew with the other player's
 culling. New: Vert+ for tall windows by @simonwjackson, Discord
-Rich Presence by @jony25, Classic VS by @andreknieriem, and a Windows release built on Windows itself by @Elenedeath.
-Thanks to @AngeloAscheri, @FIocker, @VictorMerk, @SavageCore, @simonwjackson, @jony25, @andreknieriem, @Elenedeath
-and @guillo1990.
+Rich Presence by @jony25, Classic VS by @andreknieriem, LAN play over a VPN by @Gael50, and a Windows release built on
+Windows itself by @Elenedeath. Thanks to @AngeloAscheri, @FIocker, @VictorMerk, @SavageCore, @simonwjackson, @jony25,
+@andreknieriem, @Gael50, @Elenedeath and @guillo1990.
 
 ### Changes
 
@@ -91,6 +91,10 @@ and @guillo1990.
   Settings > General.
 - **Classic VS** (#452 by @andreknieriem): Settings > Hacks, off. Every VS race laps on one course, as Classic Grand
   Prix does for cups.
+- **LAN play over a VPN** (#345 by @Gael50): a VPN such as Tailscale carries no broadcast, so the LAN lobby never
+  found the other PCs. `MKW_LAN_PEERS` in `mkw.ini` lists them (addresses or names): the lobby's broadcasts also go to
+  each one, the LAN address is the one on the route to the first, and Tailscale's /32 gets its whole 100.64.0.0/10
+  range as the mask. Still local network addresses only. Tested by NoxiousGit: 3 races over Tailscale on two PCs.
 - **The replay thread pins itself to a fast core on hybrid CPUs** (#480 by @AngeloAscheri): the thread that records the
   race frame's big submit sat alone on the last physical core, which on an i7-14700F is an efficiency core (4.2 GHz
   against 5.4): +4.0 ms a frame. It now takes the last of the fastest cores (-2.5 ms against unpinned), and the other
@@ -533,7 +537,7 @@ Galician and Basque, 5.1 sound, and fixes for crashes and freezes reported since
 - **Languages**: the menu (F1), the start screen and the setup page in English, Japanese, French, German, Italian,
   Spanish (Spain and Latin America), Dutch, Portuguese (Portugal and Brazil), Russian, Simplified and Traditional
   Chinese, Korean, Catalan, Galician, Basque, Polish, Turkish and Ukrainian; Automatic follows the system's language.
-  These first translations are ours: corrections from native speakers are very welcome (`i18n/*.po`, by pull request).
+  These first translations are ours: corrections from native speakers are very welcome (`i18n/ui/*.po`, by pull request).
   The setup's errors (a folder without the game, an encrypted or other version, an incomplete copy) are shown in the
   menu language.
 - **The game in Catalan, Galician and Basque**: Settings > Game > Language. The game's own texts are rebuilt from your

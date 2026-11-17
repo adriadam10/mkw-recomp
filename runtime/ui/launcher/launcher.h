@@ -10,6 +10,8 @@ int launcher_run(void);   // after cfg_init, before mem_init; LAUNCHER_PLAY: sta
 // The romfs the game will boot (argv, MKW_ROMFS/mkw.ini, the exe folder or the baked-in default): the Mods page
 // merges and imports against it, so overlays validate against the same originals the game reads.
 void launcher_set_romfs(const char *romfs);
+// Boot's resolver, on the launcher thread after setup reloads ROMFS; keeps explicit argv overrides.
+void launcher_refresh_romfs(void);
 // The profile folder the game will use: the Profiles page lists and makes its players (core/base/players.h), and a
 // new set of mods backs up the save of the player about to play.
 void launcher_set_profile(const char *profile);

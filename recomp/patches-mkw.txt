@@ -153,6 +153,10 @@ site aspect main 169aeb0 97ff9f7b 9475d830   # same
 # A view-projection product made on the CPU (main+0x168a22c) reads the projection's rows itself: host_ui_rows loads
 # them with the x row narrowed. The bl overwrites x30, which the function's prologue saved.
 site aspect main 168a624 ad408e82 94761a4f   # ldp q2, q3, [x20, #0x10] -> bl host_ui_rows (patch page + 0xf60)
+# nn::vfx2's view constants (ViewParam, 0x250 bytes) reach the GPU buffer a group draw binds as c8 through a memcpy in
+# main+0xd60a0: host_fx_view makes that copy and, for the screen effects (Knockout Tour's checkpoint rainbow, issue
+# #425), gives the GPU copy 16:9's x scale. The bl's return address is the original's.
+site aspect main d6160 949d5604 94cceb70    # bl memcpy -> bl host_fx_view (patch page + 0xf20)
 
 # LAN play (MKW_LAN=1): the title menu's fourth entry is Wireless Play (ldn, the console's radio, which a PC does not
 # have) or LAN Play, after L+R and a left stick click on it. The page keeps that choice in a byte at +0x77c: its setup

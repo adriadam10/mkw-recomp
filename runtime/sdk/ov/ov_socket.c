@@ -18,12 +18,18 @@
 //
 // MKW_LAN on, LAN only: Bind and SendTo refuse any address outside a local network (lan_only), and GetAddrInfo resolves
 // nothing, so no datagram can go to a server on the internet.
+// MKW_LAN_PEERS: the PCs of a virtual LAN that carries no broadcast (Tailscale, ZeroTier, a VPN), as IPv4 addresses or
+// names, separated by commas or spaces. A broadcast of the lobby also goes to each of them (ov_lan_peers), and the LAN
+// address is the one of the route to the first (its 100.x Tailscale address, ov_lanaddr.c), so the others can answer.
+// MKW_LAN_IP in 127.0.0.0/8: sockets bound to any address bind to it instead, so two instances on one PC (127.0.0.1
+// and 127.0.0.2, each the other's MKW_LAN_PEERS) each get their own port 49152 (tests).
 // MKW_LAN off (the default) keeps main's stub, a console whose network is down: every socket call -1, errno ENETDOWN,
 // IsInitialized 1, no WSAStartup, so the online menu takes its no-connection path as before (issue #63).
 //
 // eventfd exists only on Linux; Windows answers ENOSYS. In main only gRPC's wakeup_fd_eventfd.cc (main+0x10208c0, the
 // online services) calls EventFd*, after its availability check (main+0x1020a30); Pia never does.
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -45,6 +51,7 @@ typedef SOCKET HostSock;
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/eventfd.h>
@@ -203,6 +210,7 @@ int ov_lan_only(uint32_t h) {   // h: the IPv4 address in host order
            (h >> 22) == (100u << 2 | 1) || (h >> 16) == 0xa9fe || (h >> 28) == 0xe || h == 0xffffffffu;
 }
 static int lan_only(struct in_addr a) { return ov_lan_only(ntohl(a.s_addr)); }
+int ov_lan_local(uint32_t addr) { return ov_lan_only(ntohl(addr)); }
 
 // 0, or -1 with ENETUNREACH (logged, a few times) for an address outside a local network
 static int lan_check(const struct sockaddr_in *a, const char *call) {
@@ -214,6 +222,72 @@ static int lan_check(const struct sockaddr_in *a, const char *call) {
         rt_log("socket: %s to %s refused: LAN play reaches only local network addresses", call, t);
     }
     return fail(G_ENETUNREACH), -1;
+}
+
+static int net_startup(void) {
+#ifdef _WIN32
+    static int started;   // apart from ready (the game's Initialize): nifm reads the peers too (ov_lanaddr.c)
+    WSADATA wsa;
+    if (!started && WSAStartup(MAKEWORD(2, 2), &wsa)) return -1;
+    started = 1;
+#endif
+    return 0;
+}
+
+// ---- MKW_LAN_PEERS, parsed again when the setting changes (names resolved then, IPv4 only)
+static PlatMutex peers_lock = PLAT_MUTEX_INIT;
+static char peers_text[512];
+static uint32_t peers[OV_LAN_PEERS_MAX];
+static int npeers = -1;   // -1: not parsed yet
+
+static int peers_get(uint32_t *out, int max) {
+    const char *e = cfg_get("MKW_LAN_PEERS");
+    if (!e) e = "";
+    plat_mutex_lock(&peers_lock);
+    if (npeers < 0 || strncmp(e, peers_text, sizeof peers_text)) {
+        snprintf(peers_text, sizeof peers_text, "%s", e);
+        npeers = 0;
+        char buf[512], *save = NULL;
+        snprintf(buf, sizeof buf, "%s", e);
+        for (char *t = strtok_r(buf, ", ;\t", &save); t && npeers < OV_LAN_PEERS_MAX; t = strtok_r(NULL, ", ;\t", &save)) {
+            struct in_addr a = {0};
+            if (inet_pton(AF_INET, t, &a) != 1 && !net_startup()) {
+                struct addrinfo hint = {.ai_family = AF_INET, .ai_socktype = SOCK_DGRAM}, *r = NULL;
+                if (!getaddrinfo(t, NULL, &hint, &r) && r) a = ((struct sockaddr_in *)r->ai_addr)->sin_addr;
+                if (r) freeaddrinfo(r);
+            }
+            char ip[INET_ADDRSTRLEN] = "?";
+            inet_ntop(AF_INET, &a, ip, sizeof ip);
+            if (!a.s_addr || !ov_lan_local(a.s_addr)) {
+                rt_log("lan: MKW_LAN_PEERS: %s skipped (%s)", t, a.s_addr ? "not a local network address" : "unknown");
+                continue;
+            }
+            peers[npeers++] = a.s_addr;
+            rt_log("lan: peer %s (%s): the lobby's broadcasts go to it too", t, ip);
+        }
+    }
+    int n = npeers < max ? npeers : max;
+    memcpy(out, peers, (size_t)n * sizeof *out);
+    plat_mutex_unlock(&peers_lock);
+    return n;
+}
+
+static volatile uint32_t lan_bcast;   // the broadcast of the last address ov_lan_address gave, network order
+
+void ov_lan_set_broadcast(uint32_t addr) { lan_bcast = addr; }
+
+int ov_lan_peer_first(uint32_t *addr) { return peers_get(addr, 1) == 1; }
+
+int ov_lan_peers(uint32_t addr, uint32_t *out, int max) {
+    if (addr != 0xffffffffu && addr != lan_bcast) return 0;
+    return peers_get(out, max);
+}
+
+uint32_t ov_lan_bind_address(void) {
+    const char *e = cfg_get("MKW_LAN_IP");
+    struct in_addr a = {0};
+    if (e && *e && inet_pton(AF_INET, e, &a) == 1 && (ntohl(a.s_addr) >> 24) == 127) return a.s_addr;
+    return 0;
 }
 
 static int msg_flags(int f, int *dontwait) {
@@ -315,6 +389,7 @@ static void ov_bind(Cpu *c) {
     int r = -1;
     LAN_OR_DOWN(c);
     if (!slot_get((int)arg_x(c, 0), &sl) && !addr_in(arg_p(c, 1), (uint32_t)arg_x(c, 2), &a) && !lan_check(&a, "Bind")) {
+        if (!a.sin_addr.s_addr) a.sin_addr.s_addr = ov_lan_bind_address();
         r = bind(sl.s, (struct sockaddr *)&a, sizeof a);
         if (r < 0) fail(host_errno());
     }
@@ -428,7 +503,17 @@ static void ov_sendto(Cpu *c) {
     }
     // ponytail: a datagram send does not wait on a LAN, so MSG_DONTWAIT changes nothing here
     mem_commit_range(arg_x(c, 1), arg_x(c, 2));
+    // A broadcast of the LAN lobby: also, one datagram each, to the PCs of MKW_LAN_PEERS (a virtual LAN such as
+    // Tailscale carries no broadcast). Sent: the broadcast's own result may then be a failure, the lobby is reached.
+    uint32_t fan[OV_LAN_PEERS_MAX];
+    int nfan = to ? ov_lan_peers(to->sin_addr.s_addr, fan, OV_LAN_PEERS_MAX) : 0, fanned = 0;
+    for (int i = 0; i < nfan; i++) {
+        struct sockaddr_in p = *to;
+        p.sin_addr.s_addr = fan[i];
+        if (sendto(sl.s, arg_p(c, 1), (int)arg_x(c, 2), hf, (struct sockaddr *)&p, sizeof p) >= 0) fanned = 1;
+    }
     int64_t n = sendto(sl.s, arg_p(c, 1), (int)arg_x(c, 2), hf, (struct sockaddr *)to, to ? sizeof a : 0);
+    if (n < 0 && fanned) n = (int64_t)arg_x(c, 2);
     if (n < 0) fail(host_errno());
     ret_x(c, (uint64_t)n);
 }

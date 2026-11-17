@@ -1,6 +1,6 @@
 """Reads an issue's text without GitHub: which release it reports, its GPU, whether it is empty, asks for a pirated game,
 lacks a log or matches a known error (signatures.toml), and what a maintainer's reply decides. moderate.py acts on it;
-tests/test_issues.py checks it on the shapes players have sent (the bug form, RecompLauncher's report, a bare title).
+tests/github/test_issues.py checks it on the shapes players have sent (the bug form, RecompLauncher's report, a bare title).
 """
 
 import re

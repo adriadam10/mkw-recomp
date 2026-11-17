@@ -11,6 +11,7 @@ dev = [
     "pytest>=8.4",
     "capstone>=5.0.9",
     "cogapp>=3.6.0",
+    "pytest-xdist>=3.8.0",
 ]
 
 [tool.ruff]
@@ -25,3 +26,7 @@ select = ["E9", "F"]
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+# One worker per core (pytest-xdist): the tests build C and run Zig/Clang links, each independent of the others.
+addopts = "-n auto"

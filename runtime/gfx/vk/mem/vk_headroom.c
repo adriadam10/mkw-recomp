@@ -94,6 +94,7 @@ static void top_up(const VkCtx *c, uint32_t type) {
 }
 
 static void headroom_main(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     (void)arg;
     __atomic_store_n(&H.tid, plat_thread_id(), __ATOMIC_RELEASE);
     plat_thread_priority(PLAT_PRIO_BELOW_NORMAL);

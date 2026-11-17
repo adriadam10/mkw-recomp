@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Reports go into [docs/performance.md](https://github.com/adriadam10/mkw-recomp/blob/main/docs/performance.md) with the date of the issue, so later reports show what changed.
+        Reports go into [docs/project/performance.md](https://github.com/adriadam10/mkw-recomp/blob/main/docs/project/performance.md) with the date of the issue, so later reports show what changed.
 
         - Turn on the performance overlay in Full mode (F1 → Screen → Performance overlay, or F10 in game) and read the frame time there.
         - Play the scene once and restart the game, so the shader and pipeline caches are warm.

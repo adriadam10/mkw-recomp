@@ -79,7 +79,7 @@ def unpack(archive, dst):
     tar = shutil.which("bsdtar") or shutil.which("tar")
     if not tar:
         return "unpack", "no tar to read this archive"
-    listing = subprocess.run([tar, "-tf", archive], capture_output=True, text=True)
+    listing = subprocess.run([tar, "-tf", archive], capture_output=True, text=True, errors="replace")
     if listing.returncode:
         return "unpack", (listing.stderr.strip().splitlines() or ["not an archive tar reads"])[-1]
     names = [n for n in listing.stdout.splitlines() if n and not n.endswith("/")]

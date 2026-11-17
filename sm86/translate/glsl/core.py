@@ -19,7 +19,7 @@ import struct
 import flow
 from program import Insn, Sph
 
-from glsl import subroutines
+from glsl import first_store, subroutines
 from glsl.alu import AluOps
 from glsl.common import FMUL_SCALE, MUFU, PT, RZ, TURNS, URZ, Unsupported, pred, reg
 from glsl.head import (
@@ -497,8 +497,14 @@ def translate(
             pass
     elif structurable:
         structured = [f"        {x}" for x in stmts if x]
+    first_form = 0  # an append counter reset by the first invocation only (glsl/first_store.py)
+    if structured is not None and stage == "cs" and shape and any("atomic" in x for x in structured):
+        structured, first_form = first_store.split(structured, shape)
     gsearch = b.global_search_fns() + b.ipa_dyn_fns()  # before the declarations: it reads bank 0 and may mark buffers written
     head = declarations(b, stage, shape)
+    if first_form:
+        head.append(first_store.declaration())
+        b.reflection["first_store"] = first_form
     regs = ", ".join([f"r{n} = 0u" for n in sorted(b.regs)] + [f"ur{n} = 0u" for n in sorted(b.uregs)]) or "rdummy = 0u"
     preds = ", ".join([f"p{n} = false" for n in range(7)] + [f"up{n} = false" for n in range(7)])
     # precise: no FMUL + FADD fused into an FMA by the compiler (NoContraction, as eden-nx2 marks each FADD, FMUL and

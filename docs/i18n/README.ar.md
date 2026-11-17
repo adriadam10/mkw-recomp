@@ -1,6 +1,6 @@
-<!-- translated from README.md dae9dd5efeb2 -->
+<!-- translated from README.md 16076e62707f body 49cf17464874 -->
 
-<p align="center"><img src="../logo.svg" width="128" alt="mkw-recomp logo"></p>
+<p align="center"><img src="../images/logo.svg" width="128" alt="mkw-recomp logo"></p>
 
 <h1 align="center">mkw-recomp</h1>
 
@@ -17,11 +17,12 @@
 <p align="center">
   <b><a href="https://github.com/adriadam10/mkw-recomp/releases">الإصدارات</a></b> ·
   <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">الويكي</a></b> ·
+  <b><a href="https://discord.gg/8uYBkjQkEg">Discord</a></b> ·
   <a href="../../CHANGELOG.md">سجل التغييرات</a> ·
   <a href="../../CONTRIBUTING.md">المساهمة</a> ·
-  <a href="../../docs/research.md#sources">المصادر</a> ·
-  <a href="../../docs/roadmap.md">خارطة الطريق</a> ·
-  <a href="../../docs/performance.md">الأداء</a> ·
+  <a href="../../docs/project/research.md#sources">المصادر</a> ·
+  <a href="../../docs/project/roadmap.md">خارطة الطريق</a> ·
+  <a href="../../docs/project/performance.md">الأداء</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/issues">المشكلات</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/discussions">النقاشات</a> ·
   <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">الأرشيف</a>
@@ -35,7 +36,8 @@
   <b>العربية</b> ·
   <a href="README.hi.md">हिन्दी</a> ·
   <a href="README.pt-BR.md">Português (Brasil)</a> ·
-  <a href="README.pt-PT.md">Português (Portugal)</a>
+  <a href="README.pt-PT.md">Português (Portugal)</a> ·
+  <a href="README.de.md">Deutsch</a>
 </p>
 <!-- i18n-bar:end -->
 
@@ -64,7 +66,7 @@ AArch64 على Linux)؛ لا يوجد مفسّر ولا JIT للمعالج. ول
 
 ## خارطة الطريق
 
-العمل الرئيسي المتبقي، بالترتيب؛ والتفاصيل في [docs/roadmap.md](../../docs/roadmap.md).
+العمل الرئيسي المتبقي، بالترتيب؛ والتفاصيل في [docs/project/roadmap.md](../../docs/project/roadmap.md).
 
 - **60 إطارًا في الثانية في السباقات.** اليوم إطار السباق سلسلة متتابعة: تُنهي اللعبة إطارها (~3 ms\*)، ثم تسجّل الواجهة
   الخلفية لـ Vulkan الإرسال الكبير للعبة (~19 ms\*)، ثم ينفّذه الـ GPU (~10 ms\*)، وعندها فقط يبدأ الإطار التالي.
@@ -82,7 +84,7 @@ AArch64 على Linux)؛ لا يوجد مفسّر ولا JIT للمعالج. ول
 
 ## الأداء
 
-أزمنة الإطارات المقيسة، كل منها بالإصدار الذي اختُبر، موجودة في [docs/performance.md](../../docs/performance.md). لإضافة جهازك، افتح
+أزمنة الإطارات المقيسة، كل منها بالإصدار الذي اختُبر، موجودة في [docs/project/performance.md](../../docs/project/performance.md). لإضافة جهازك، افتح
 [تقرير أداء](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml): يدخل الجدول بالإصدار المذكور فيه. هذه
 الأزمنة هي إطارات اللعبة نفسها: توليد الإطارات يعرض إطارات أكثر لكنه لا يقصّرها. ‏16.7 ms تعني 60 إطارًا في الثانية؛ ومع ضبط
 Frame rate على Automatic (كما في الجهاز) ينخفض إلى 30 إطارًا عندما يتعذر بلوغ 60، والإطار الذي يتجاوز 33.3 ms يجعل السباق
@@ -242,7 +244,7 @@ build/mkw
 هذا المشروع مرخص بموجب [رخصة MIT](../../LICENSE). الكود المأخوذ من مشاريع أخرى يحتفظ بترخيصه إلى جانبه (ملفات `LICENSE.*` في
 [recomp/](../../recomp/) و[runtime/](../../runtime/) و[sm86/decode/](../../sm86/decode/) و[runtime/third_party/](../../runtime/third_party/README.md)):
 ‏totk-pc-recomp وnvsass-disassembler وDear ImGui وbc7enc وstb_image وAMD FidelityFX FSR 1 وRoboto. وكل مصدر استُخدم، مع ترخيصه
-وما أُخذ منه (الكود من مشاريع MIT فقط؛ ومن مشاريع GPL الأفكار فقط)، مذكور في [docs/research.md](../../docs/research.md#sources).
+وما أُخذ منه (الكود من مشاريع MIT فقط؛ ومن مشاريع GPL الأفكار فقط)، مذكور في [docs/project/research.md](../../docs/project/research.md#sources).
 
 ‏Mario Kart World ‏© Nintendo. هذا المشروع غير تابع لـ Nintendo ولا معتمد منها، ولا يحتوي على أي كود أو أصول من اللعبة، ولا
 يساعد في الحصول عليها.

@@ -277,6 +277,33 @@ static void mark_compute_writes(VkExec *ex, const VkPipeInfo *info) {
     }
 }
 
+// MKW_FIRST_STORE (default 1; 0 off, "ab": in the B blocks): a program whose first invocation alone resets a counter
+// the other workgroups append to with atomics (sm86 glsl/first_store.py; MKW's scenery lists) runs that reset as a
+// dispatch of one workgroup of its own before the rest, behind a barrier. In one dispatch nothing orders workgroup 0
+// ahead of the others: a later one that appended before the reset lost its entries, and trees and bushes went in
+// and out frame by frame (nxnative docs/reference/shaders.md, "A store only a dispatch's first invocation makes":
+// 50 % of a rebuild lost on Apple GPUs). Direct dispatches only, of the shape the test covers (1 or 2 dimensions).
+static VkPipeline first_store_pre(const GfxShader *cs, const p_dispatch *d, VkPipeline *main) {
+    static int mode = -1;
+    if (mode < 0) mode = rt_knob("FIRST_STORE", "1");
+    int form = gfx_shader_first_store(cs);
+    if (!form || !RT_KNOB_ON(mode) || d->z != 1 || (form == 1 && d->y != 1)) return VK_NULL_HANDLE;
+    VkPipeline pre = vk_pipeline_compute_first(cs, 1, NULL), rest = vk_pipeline_compute_first(cs, 2, NULL);
+    if (!pre || !rest) return VK_NULL_HANDLE;
+    static const GfxShader *logged[8];
+    static int nlogged;
+    int seen = 0;
+    for (int i = 0; i < nlogged; i++) seen |= logged[i] == cs;
+    if (!seen && nlogged < 8) {   // racy between chunks at worst a line twice
+        logged[nlogged++] = cs;
+        const uint8_t *k = gfx_shader_key(cs);
+        rt_log("vk: cs %02x%02x%02x%02x: its first invocation's reset dispatched on its own first (MKW_FIRST_STORE)",
+               k[0], k[1], k[2], k[3]);
+    }
+    *main = rest;
+    return pre;
+}
+
 static void op_dispatch(VkExec *ex, const p_dispatch *d) {
     if (d->x <= 0 || d->y <= 0 || d->z <= 0) return;
     if (!ex->prog) return warn_once(W_PROGRAM, "a dispatch without a bound program is skipped");
@@ -304,6 +331,14 @@ static void op_dispatch(VkExec *ex, const p_dispatch *d) {
     if (vk_spec_census_on()) spec_census(ex, cs, NVN_STAGE_CS);
     if (pt && vk_pt_draw_mode()) vk_pt_draw(ex->cb, cs, NULL);
     else if (pt) vk_pt_mark(ex->cb, 1u << 31 | (uint32_t)(ex->prog->serial & 0x7fffffff));
+    VkPipeline rest = VK_NULL_HANDLE, pre = first_store_pre(cs, d, &rest);
+    if (pre) {   // the same layout: the resources bound above stay
+        bind_pipeline(ex, VK_PIPELINE_BIND_POINT_COMPUTE, pre);
+        vkCmdDispatch(ex->cb, 1, 1, 1);
+        ex->recorded++;
+        vk_exec_barrier(ex);
+        bind_pipeline(ex, VK_PIPELINE_BIND_POINT_COMPUTE, rest);
+    }
     vk_cs_hash(ex, d->caller, 0, 0);   // MKW_CS_HASH (diag/vk_cs_hash.c)
     uint32_t crumb = vk_crumb_begin(ex->cb, VK_CRUMB_DISPATCH, (uint32_t)d->x, (uint32_t)d->y, (uint32_t)d->z, 0, NULL, 0);
     vk_crumb_cs(crumb, gfx_shader_key(cs));

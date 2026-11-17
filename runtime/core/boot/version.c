@@ -55,6 +55,10 @@ static const RtVersion versions[] = {
         .random_ctor_lr = 0x922088,
         .random_ctor2_lr = 0x15585a8,
         .ui_text_lr = 0x169aeb4,
+        .fx_group_lr = 0x14e328,    // main+0x14df10's bl to main+0xd58f8, which copies the view in main+0xd60a0
+        .fx_group_frame = 2,        // main+0x14df10's w3 in x27, saved by main+0xd58f8's prologue at [x29 + 0x18]
+        .fx_group_word = 3,
+        .fx_screen_group = 7,       // wi425j: the rainbow's pass; 2 and 12 are the world's effects
         .aspect_first_lr = 0x460d44,
         .fov_entry_x = 24,   // main+0x45fba4: fmul s8, s0, s13, entry in x24
         .fov_half_v = 13,
@@ -86,6 +90,11 @@ static const RtVersion versions[] = {
         .random_ctor_lr = 0xbe9b78,
         .random_ctor2_lr = 0x16a0ef0,
         .ui_text_lr = 0x1805f20,
+        .fx_group_lr = 0x137f4c,    // main+0x137b40's (1.0.0's 14df10) bl to main+0x139570, which copies the view in
+                                    // main+0x139aa0; its twin main+0x136f30 (return 13734c) draws the world's group 12
+        .fx_group_frame = 1,        // the group as a mask (w4 = 1 << w3) in w22 of main+0x139570, saved by
+        .fx_group_word = 6,         // main+0x139aa0's prologue at [x29 + 0x30]
+        .fx_screen_group = 0x80,    // wi425l: 1 << 7, the rainbow's group as in 1.0.0
         .aspect_first_lr = 0x8a6d8,   // 1.0.0's 460d44 (its fdiv at 8a6d4)
         .fov_entry_x = 20,            // main+0x894a4, 1.0.0's 45fba4: fmul s8, s0, s14, entry in x20
         .fov_half_v = 14,

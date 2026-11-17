@@ -222,6 +222,7 @@ static void queue_drop(Dec *d) {   // lock held
 
 // The decoder thread: one packet at a time, libvpx outside the lock (only this thread touches d->vpx while busy).
 static void dec_main(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     Dec *d = arg;
     plat_mutex_lock(&lock);
     for (;;) {

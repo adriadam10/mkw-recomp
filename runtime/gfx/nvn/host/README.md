@@ -12,4 +12,4 @@ the texts the host shows.
 | `gfx_spirv_io.c` | The integer-inputs patch of a vertex shader and the integer-outputs patch of a fragment shader: the inputs whose attribute format, or the outputs whose colour target, is UINT/SINT become u/ivec4, their loads and stores bitcast (issue #64) |
 | `gfx_spirv_img.c` | The integer-images patch of a compute program: the textures and storage images whose bound view is UINT/SINT become integer images, including separate image/sampler construction, their reads and writes bitcast (VUID format-07753, issue #64); failures return a diagnostic reason |
 | `ui_text.c`, `ui_text.h` | Texts the host shows the player (software keyboard, menu and start screen; menu in English, Russian and Spanish) |
-| `ui_text_cat.h` | What every language's catalog shares (the language names, the arrays' declarations); the catalogs themselves are generated from `i18n/*.po` |
+| `ui_text_cat.h` | What every language's catalog shares (the language names, the arrays' declarations); the catalogs themselves are generated from `i18n/ui/*.po` |

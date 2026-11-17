@@ -1,0 +1,11 @@
+#version 450
+// --probe-gpu-clocks (probes/clk_probe.c): fixed ALU work per invocation, so a batch's GPU time changes only with the
+// GPU's clock. The store behind an impossible test keeps the loop from being removed.
+layout(local_size_x = 64) in;
+layout(push_constant) uniform P { uint iters; } pc;
+layout(std430, binding = 0) buffer B { float v[]; } b;
+void main() {
+    float x = float(gl_GlobalInvocationID.x) * 1e-6, y = 1.0001;
+    for (uint i = 0; i < pc.iters; i++) { x = fma(x, y, 0.5); y = fma(y, x, -0.25); }
+    if (x == 12345.678) b.v[gl_GlobalInvocationID.x & 1023u] = y;
+}

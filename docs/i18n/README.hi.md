@@ -1,6 +1,6 @@
-<!-- translated from README.md dae9dd5efeb2 -->
+<!-- translated from README.md dae9dd5efeb2 body 64ebb7c6f3fe -->
 
-<p align="center"><img src="../logo.svg" width="128" alt="mkw-recomp logo"></p>
+<p align="center"><img src="../images/logo.svg" width="128" alt="mkw-recomp logo"></p>
 
 <h1 align="center">mkw-recomp</h1>
 
@@ -17,11 +17,12 @@
 <p align="center">
   <b><a href="https://github.com/adriadam10/mkw-recomp/releases">रिलीज़</a></b> ·
   <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">विकी</a></b> ·
+  <b><a href="https://discord.gg/8uYBkjQkEg">Discord</a></b> ·
   <a href="../../CHANGELOG.md">बदलाव</a> ·
   <a href="../../CONTRIBUTING.md">योगदान</a> ·
-  <a href="../../docs/research.md#sources">स्रोत</a> ·
-  <a href="../../docs/roadmap.md">रोडमैप</a> ·
-  <a href="../../docs/performance.md">प्रदर्शन</a> ·
+  <a href="../../docs/project/research.md#sources">स्रोत</a> ·
+  <a href="../../docs/project/roadmap.md">रोडमैप</a> ·
+  <a href="../../docs/project/performance.md">प्रदर्शन</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/issues">इश्यू</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/discussions">चर्चाएँ</a> ·
   <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">आर्काइव</a>
@@ -35,7 +36,8 @@
   <a href="README.ar.md">العربية</a> ·
   <b>हिन्दी</b> ·
   <a href="README.pt-BR.md">Português (Brasil)</a> ·
-  <a href="README.pt-PT.md">Português (Portugal)</a>
+  <a href="README.pt-PT.md">Português (Portugal)</a> ·
+  <a href="README.de.md">Deutsch</a>
 </p>
 <!-- i18n-bar:end -->
 
@@ -62,7 +64,7 @@ Nintendo SDK के फ़ंक्शन (`nn::*`) नाम से हमा�
 
 ## रोडमैप
 
-मुख्य बाकी काम, प्राथमिकता के क्रम में; विवरण [docs/roadmap.md](../../docs/roadmap.md) में हैं।
+मुख्य बाकी काम, प्राथमिकता के क्रम में; विवरण [docs/project/roadmap.md](../../docs/project/roadmap.md) में हैं।
 
 - **रेस में 60 fps।** आज रेस का एक फ़्रेम एक क्रमिक श्रृंखला है: गेम अपना फ़्रेम पूरा करता है (~3 ms\*), फिर Vulkan बैक एंड गेम
   का बड़ा सबमिट रिकॉर्ड करता है (~19 ms\*), फिर GPU उसे चलाता है (~10 ms\*), और उसके बाद ही अगला फ़्रेम शुरू होता है।
@@ -80,7 +82,7 @@ Nintendo SDK के फ़ंक्शन (`nn::*`) नाम से हमा�
 
 ## प्रदर्शन
 
-मापे गए फ़्रेम समय, हर एक अपने संस्करण के साथ, [docs/performance.md](../../docs/performance.md) में हैं। अपनी मशीन जोड़ने के लिए एक
+मापे गए फ़्रेम समय, हर एक अपने संस्करण के साथ, [docs/project/performance.md](../../docs/project/performance.md) में हैं। अपनी मशीन जोड़ने के लिए एक
 [प्रदर्शन रिपोर्ट](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml) खोलें: वह रिपोर्ट के संस्करण
 के साथ तालिका में जुड़ जाती है। ये समय गेम के अपने फ़्रेम हैं: फ़्रेम जनरेशन ज़्यादा फ़्रेम दिखाता है पर उन्हें छोटा नहीं करता।
 16.7 ms यानी 60 fps; Frame rate को Automatic (कंसोल वाला) पर रखने पर 60 न पहुँचने पर यह 30 fps पर आ जाता है, और 33.3 ms से
@@ -244,7 +246,7 @@ build/mkw
 ([recomp/](../../recomp/), [runtime/](../../runtime/), [sm86/decode/](../../sm86/decode/) और
 [runtime/third_party/](../../runtime/third_party/README.md) में `LICENSE.*` फ़ाइलें): totk-pc-recomp, nvsass-disassembler,
 Dear ImGui, bc7enc, stb_image, AMD FidelityFX FSR 1 और Roboto। इस्तेमाल किया गया हर स्रोत, उसके लाइसेंस और उससे क्या लिया गया
-(कोड सिर्फ़ MIT प्रोजेक्टों से; GPL प्रोजेक्टों से सिर्फ़ विचार), [docs/research.md](../../docs/research.md#sources) में सूचीबद्ध है।
+(कोड सिर्फ़ MIT प्रोजेक्टों से; GPL प्रोजेक्टों से सिर्फ़ विचार), [docs/project/research.md](../../docs/project/research.md#sources) में सूचीबद्ध है।
 
 Mario Kart World © Nintendo है। यह प्रोजेक्ट Nintendo से संबद्ध या उसके द्वारा समर्थित नहीं है, इसमें गेम का कोई कोड या एसेट
 नहीं है, और यह उन्हें पाने में मदद नहीं करता।

@@ -4,7 +4,8 @@ Why: a README per folder, updated in the same change that adds, moves or removes
 was checked: on 05/11/2026 nine folders had no README, ten READMEs left out files of their folder and the root README
 described the state of five days before. Checks, on the files git tracks (index):
   1. Every folder has a README.md, except third-party code (a folder with a LICENSE file, and below it).
-  2. That README names each file and subfolder of its folder: by name, by a backticked glob (`*_spv.h`) or as `dir/`.
+  2. That README names each file and subfolder of its folder: by name, by a backticked glob (`*_spv.h`) or as `dir/`;
+     and a folder with subfolders has no other files than its README and licences (the root and .github/ aside).
   3. Every relative link `[x](path)` of a .md points to a file that exists.
   4. The progress bars of README.md (progress.py), when it has them, are the generated ones (cog).
   5. A commit that touches the shader translator (sm86/) carries the measurements behind those bars: with build/spirv
@@ -13,7 +14,7 @@ described the state of five days before. Checks, on the files git tracks (index)
      the README still at 11 511).
   6. A note, not a refusal, when a translation of the README (docs/i18n/README.<lang>.md) was made from an older
      README.md than the one committed (tools/docs/i18n_readme.py --check; Adrià 13/11/2026: it warns).
-  7. The table of docs/performance.md is sorted by version, then by internal resolution (perf_table.py --check).
+  7. The table of docs/project/performance.md is sorted by version, then by internal resolution (perf_table.py --check).
 
 Usage: uv run tools/docs/check.py          (tools/git/pre-commit and the CI run it; exit 1 lists every problem)
 """
@@ -80,14 +81,26 @@ def check_folders(children: dict[str, set[str]]) -> list[str]:
         missing = sorted(n for n in names if n != "README.md" and not named(n, text, globs))
         if missing:
             errors.append(f"{folder + '/' if folder else ''}README.md: does not name {', '.join(missing)}")
+        errors += loose_files(folder, names)
     return errors
+
+
+def loose_files(folder: str, names: set[str]) -> list[str]:
+    """A folder with subfolders holds only folders, its README and licences: 17/11/2026 seven folders (tests/,
+    tools/analisis/, runtime/shaders/...) had files next to their subfolders, the rule written and never checked."""
+    if not folder or folder.startswith(".github") or not any(n.endswith("/") for n in names):
+        return []
+    loose = sorted(n for n in names if not n.endswith("/") and n != "README.md" and not n.startswith("LICENSE"))
+    if not loose:
+        return []
+    return [f"{folder}/: files next to subfolders ({', '.join(loose)}): move them into a subfolder by responsibility"]
 
 
 def check_links(files: list[str]) -> list[str]:
     errors = []
     for md in files:
         # the README's translated bodies link as from the root: their links are checked in the built README.<lang>.md
-        if not md.endswith(".md") or md.startswith("docs/i18n/body/"):
+        if not md.endswith(".md") or md.endswith(".body.md"):
             continue
         for target in LINK.findall((ROOT / md).read_text()):
             if re.match(r"[a-z]+:|#", target):
@@ -111,7 +124,9 @@ def check_readme() -> list[str]:
 
 def check_progress(staged: set[str]) -> list[str]:
     spirv = ROOT / "build" / "spirv"
-    if not any(f.startswith("sm86/") for f in staged) or not (spirv / "failed.tsv").exists():
+    # Docs and licences under sm86/ cannot change which programs translate (PR #529 note).
+    code = {f for f in staged if f.startswith("sm86/") and not f.endswith(".md") and "/LICENSE" not in f}
+    if not code or not (spirv / "failed.tsv").exists():
         return []
     results = list(spirv.glob("*.result"))
     newest = max((r.stat().st_mtime for r in results), default=0)
@@ -138,7 +153,7 @@ def note_translations() -> None:
     import i18n_readme
 
     for p in i18n_readme.stale():
-        print(f"docs: note: {p} was translated from an older README.md: update docs/i18n/body/ and run "
+        print(f"docs: note: {p} was translated from an older README.md: update docs/i18n/<lang>.body.md and run "
               "tools/docs/i18n_readme.py", file=sys.stderr)  # fmt: skip
 
 

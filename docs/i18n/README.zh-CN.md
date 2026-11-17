@@ -1,6 +1,6 @@
-<!-- translated from README.md dae9dd5efeb2 -->
+<!-- translated from README.md 16076e62707f body 987984a7ca70 -->
 
-<p align="center"><img src="../logo.svg" width="128" alt="mkw-recomp logo"></p>
+<p align="center"><img src="../images/logo.svg" width="128" alt="mkw-recomp logo"></p>
 
 <h1 align="center">mkw-recomp</h1>
 
@@ -17,11 +17,12 @@
 <p align="center">
   <b><a href="https://github.com/adriadam10/mkw-recomp/releases">发布</a></b> ·
   <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">帮助 Wiki</a></b> ·
+  <b><a href="https://discord.gg/8uYBkjQkEg">Discord</a></b> ·
   <a href="../../CHANGELOG.md">更新日志</a> ·
   <a href="../../CONTRIBUTING.md">参与贡献</a> ·
-  <a href="../../docs/research.md#sources">来源</a> ·
-  <a href="../../docs/roadmap.md">路线图</a> ·
-  <a href="../../docs/performance.md">性能</a> ·
+  <a href="../../docs/project/research.md#sources">来源</a> ·
+  <a href="../../docs/project/roadmap.md">路线图</a> ·
+  <a href="../../docs/project/performance.md">性能</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/issues">问题</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/discussions">讨论</a> ·
   <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">存档</a>
@@ -35,7 +36,8 @@
   <a href="README.ar.md">العربية</a> ·
   <a href="README.hi.md">हिन्दी</a> ·
   <a href="README.pt-BR.md">Português (Brasil)</a> ·
-  <a href="README.pt-PT.md">Português (Portugal)</a>
+  <a href="README.pt-PT.md">Português (Portugal)</a> ·
+  <a href="README.de.md">Deutsch</a>
 </p>
 <!-- i18n-bar:end -->
 
@@ -60,7 +62,7 @@ PC 程序。你需要自己的游戏副本，并从你自己的主机中导出�
 
 ## 路线图
 
-主要的待办工作，按优先顺序；详情见 [docs/roadmap.md](../../docs/roadmap.md)。
+主要的待办工作，按优先顺序；详情见 [docs/project/roadmap.md](../../docs/project/roadmap.md)。
 
 - **比赛 60 fps。** 目前比赛的每一帧是串行的：游戏完成它的帧（约 3 ms\*），然后 Vulkan 后端录制游戏的大批提交
   （约 19 ms\*），然后 GPU 执行（约 10 ms\*），之后下一帧才开始。
@@ -78,7 +80,7 @@ PC 程序。你需要自己的游戏副本，并从你自己的主机中导出�
 
 ## 性能
 
-实测的帧时间及其所用版本见 [docs/performance.md](../../docs/performance.md)。要添加你的机器，请提交一份
+实测的帧时间及其所用版本见 [docs/project/performance.md](../../docs/project/performance.md)。要添加你的机器，请提交一份
 [性能报告](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml)：它会以报告中的版本加入表格。这些时间是
 游戏自身的帧：插帧会显示更多帧，但不会缩短它们。16.7 ms 即 60 fps；帧率设为自动（与主机相同）时，达不到 60 会降到
 30 fps，而超过 33.3 ms 的帧会让比赛慢于实时。
@@ -231,7 +233,7 @@ build/mkw
 [runtime/](../../runtime/)、[sm86/decode/](../../sm86/decode/) 和 [runtime/third_party/](../../runtime/third_party/README.md) 中的
 `LICENSE.*` 文件）：totk-pc-recomp、nvsass-disassembler、Dear ImGui、bc7enc、stb_image、AMD FidelityFX FSR 1 和 Roboto。
 使用过的每个来源及其许可证和所取内容（代码仅取自 MIT 项目；对 GPL 项目只取思路）都列在
-[docs/research.md](../../docs/research.md#sources) 中。
+[docs/project/research.md](../../docs/project/research.md#sources) 中。
 
 《马力欧赛车 世界》© Nintendo。本项目与任天堂无关，也未获其认可，不包含任何游戏代码或资源，也不协助获取它们。
 

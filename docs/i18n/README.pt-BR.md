@@ -1,6 +1,6 @@
-<!-- translated from README.md dae9dd5efeb2 -->
+<!-- translated from README.md dae9dd5efeb2 body 4b3bb4d2c1cd -->
 
-<p align="center"><img src="../logo.svg" width="128" alt="mkw-recomp logo"></p>
+<p align="center"><img src="../images/logo.svg" width="128" alt="mkw-recomp logo"></p>
 
 <h1 align="center">mkw-recomp</h1>
 
@@ -17,11 +17,12 @@
 <p align="center">
   <b><a href="https://github.com/adriadam10/mkw-recomp/releases">Versões</a></b> ·
   <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">Wiki de ajuda</a></b> ·
+  <b><a href="https://discord.gg/8uYBkjQkEg">Discord</a></b> ·
   <a href="../../CHANGELOG.md">Mudanças</a> ·
   <a href="../../CONTRIBUTING.md">Contribuir</a> ·
-  <a href="../../docs/research.md#sources">Fontes</a> ·
-  <a href="../../docs/roadmap.md">Roteiro</a> ·
-  <a href="../../docs/performance.md">Desempenho</a> ·
+  <a href="../../docs/project/research.md#sources">Fontes</a> ·
+  <a href="../../docs/project/roadmap.md">Roteiro</a> ·
+  <a href="../../docs/project/performance.md">Desempenho</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/issues">Issues</a> ·
   <a href="https://github.com/adriadam10/mkw-recomp/discussions">Discussões</a> ·
   <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">Arquivo</a>
@@ -35,7 +36,8 @@
   <a href="README.ar.md">العربية</a> ·
   <a href="README.hi.md">हिन्दी</a> ·
   <b>Português (Brasil)</b> ·
-  <a href="README.pt-PT.md">Português (Portugal)</a>
+  <a href="README.pt-PT.md">Português (Portugal)</a> ·
+  <a href="README.de.md">Deutsch</a>
 </p>
 <!-- i18n-bar:end -->
 
@@ -64,7 +66,7 @@ No começo, e avançando rápido. Em 12/11/2026:
 
 ## Roteiro
 
-O principal trabalho em aberto, em ordem; os detalhes estão em [docs/roadmap.md](../../docs/roadmap.md).
+O principal trabalho em aberto, em ordem; os detalhes estão em [docs/project/roadmap.md](../../docs/project/roadmap.md).
 
 - **60 fps nas corridas.** Hoje um quadro de corrida é uma cadeia em série: o jogo termina seu quadro (~3 ms\*), depois
   o back end Vulkan grava o grande envio do jogo (~19 ms\*), depois a GPU o executa (~10 ms\*), e só então começa o
@@ -85,7 +87,7 @@ O principal trabalho em aberto, em ordem; os detalhes estão em [docs/roadmap.md
 
 ## Desempenho
 
-Os tempos de quadro medidos, cada um com a versão testada, estão em [docs/performance.md](../../docs/performance.md). Para incluir a
+Os tempos de quadro medidos, cada um com a versão testada, estão em [docs/project/performance.md](../../docs/project/performance.md). Para incluir a
 sua máquina, abra um
 [relatório de desempenho](https://github.com/adriadam10/mkw-recomp/issues/new?template=performance.yml): ele entra na
 tabela com a versão indicada. Os tempos são os quadros do próprio jogo: a geração de quadros mostra mais quadros, mas
@@ -260,7 +262,7 @@ Este projeto está sob a [Licença MIT](../../LICENSE). O código tirado de outr
 lado dele (arquivos `LICENSE.*` em [recomp/](../../recomp/), [runtime/](../../runtime/), [sm86/decode/](../../sm86/decode/) e
 [runtime/third_party/](../../runtime/third_party/README.md)): totk-pc-recomp, nvsass-disassembler, Dear ImGui, bc7enc,
 stb_image, AMD FidelityFX FSR 1 e Roboto. Cada fonte usada, com a sua licença e o que foi tirado dela (código só de
-projetos MIT; de projetos GPL, só ideias), está listada em [docs/research.md](../../docs/research.md#sources).
+projetos MIT; de projetos GPL, só ideias), está listada em [docs/project/research.md](../../docs/project/research.md#sources).
 
 Mario Kart World é © Nintendo. Este projeto não é afiliado nem endossado pela Nintendo, não contém código nem recursos
 do jogo e não ajuda a obtê-los.

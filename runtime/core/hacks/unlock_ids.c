@@ -1,6 +1,6 @@
 // The item ids of Mario Kart World 1.0.0 (game data Product.100) that unlock.c owns: every driver and costume,
 // vehicle and sticker, in the game data's order. Numbers only, from Ca1nM/mario-kart-world-save-editor (MIT, mkw_ids.py
-// at b12cbe6; docs/research.md).
+// at b12cbe6; docs/project/research.md).
 #include <stdint.h>
 
 #include "unlock.h"

@@ -3,7 +3,7 @@
 // state instead of frame numbers (Adrià, 01/11/2026: scripts by frame skipped the cup movie or stalled on a screen).
 //
 // Every node class has a small virtual returning its name; build/seq_nodes.tsv for 1.0.0 and build/seq_nodes-180.tsv
-// for 1.8.0 (tools/analisis/seq_nodes.py; the same vtable layout in both, compared with --shared on 13/11/2026) list
+// for 1.8.0 (tools/analisis/bin/seq_nodes.py; the same vtable layout in both, compared with --shared on 13/11/2026) list
 // each getter and the vtable slot holding it. Measured with every slot watched (live28, 01/11/2026): slot +10 from the
 // name runs once when a node starts (TitleMenuMain at frame 466) and +12 once when it ends (TitleWait at 465); +11
 // runs while it is active, +9/+13 when the graph is built, +17 every frame for every node. A node that finishes on
@@ -131,7 +131,7 @@ void seqwatch_init(void) {
     const char *path = cfg_get("MKW_SEQ_NODES");
     if (!path || !*path) path = rt_version()->number == 100 ? "build/seq_nodes.tsv" : own;
     FILE *f = fopen(path, "r");
-    if (!f) { rt_log("seq: no %s (uv run tools/analisis/seq_nodes.py): watch off", path); return; }
+    if (!f) { rt_log("seq: no %s (uv run tools/analisis/bin/seq_nodes.py): watch off", path); return; }
     char line[256];
     while (fgets(line, sizeof line, f) && nnodes < MAX_NODES) {
         unsigned long long getter, slot;

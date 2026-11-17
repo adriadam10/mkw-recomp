@@ -2,7 +2,7 @@
 
 Why: build/mkw is not position independent and loads at 0x200000, and the log gives offsets from that base; the
 sessions to 01/11/2026 named addresses by hand 29 times, adding (or forgetting) the base. A lifted function f_<addr>
-is also named in the guest (main+0x... and its symbol) through tools/analisis/q.py.
+is also named in the guest (main+0x... and its symbol) through tools/analisis/bin/q.py.
 
 Usage: uv run tools/run/sym.py exe+0x121f3c6 [0x1220b16 ...]   (bare hex: an offset from the base, like exe+)
        uv run tools/run/sym.py < build/run/NAME.log      every such address in the text (first 40, unique)
@@ -33,7 +33,7 @@ def guest(name: str) -> str:
     if not m:
         return ""
     q = subprocess.run(
-        [sys.executable, str(ROOT / "tools/analisis/q.py"), "at", "0x" + m[1]],
+        [sys.executable, str(ROOT / "tools/analisis/bin/q.py"), "at", "0x" + m[1]],
         check=False,
         capture_output=True,
         text=True,

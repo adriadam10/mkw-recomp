@@ -207,6 +207,32 @@ static inline int s2_pad_input(const s2_pad_state *p, uint64_t *buttons, int32_t
     return 1;
 }
 
+// Battery: the report gives the cell's voltage in mV (battery_mv), not a level. No curve to a percentage is known (a
+// straight line from 3300 to 4150 mV reads under half with a full Pro Controller 2: KW0j/connectyourpro issue 5), so it
+// is shown as three bands; the edges are Switch2Connect's (TommyWabg, GPL-3.0: the idea only), unmeasured here. The
+// recorded Joy-Con 2 reports above read 3464-3495 mV.
+enum { S2_BATTERY_UNKNOWN, S2_BATTERY_LOW, S2_BATTERY_MEDIUM, S2_BATTERY_HIGH };
+enum { S2_BATTERY_MEDIUM_MV = 3125, S2_BATTERY_HIGH_MV = 3250, S2_BATTERY_HYSTERESIS_MV = 25 };
+static inline int s2_battery_band(uint16_t mv) {
+    if (mv < 2500 || mv > 5000) return S2_BATTERY_UNKNOWN;   // 0 before the first report, or not a cell's voltage
+    return mv > S2_BATTERY_HIGH_MV ? S2_BATTERY_HIGH : mv > S2_BATTERY_MEDIUM_MV ? S2_BATTERY_MEDIUM : S2_BATTERY_LOW;
+}
+// The band after was for a new reading: it moves only 25 mV past an edge, as the voltage jitters under rumble
+static inline int s2_battery_band_next(int was, uint16_t mv) {
+    int now = s2_battery_band(mv);
+    if (was == S2_BATTERY_UNKNOWN || now == S2_BATTERY_UNKNOWN || now == was) return now;
+    int held = s2_battery_band((uint16_t)(now > was ? mv - S2_BATTERY_HYSTERESIS_MV : mv + S2_BATTERY_HYSTERESIS_MV));
+    return held == S2_BATTERY_UNKNOWN ? now : held;
+}
+// A pad's voltage: its lowest controller's (a pair of Joy-Con 2 stops with the first that runs out); 0 none reported
+static inline uint16_t s2_pad_battery_mv(const s2_pad_state *p) {
+    const s2_dev *d[3] = {&p->pro, &p->left, &p->right};
+    uint16_t lo = 0;
+    for (int i = 0; i < 3; i++)
+        if (d[i]->have && s2_battery_band(d[i]->r.battery_mv) && (!lo || d[i]->r.battery_mv < lo)) lo = d[i]->r.battery_mv;
+    return lo;
+}
+
 // The pad's Home, A and B as raw buttons of its controllers (the Home hold-to-quit prompt reads them, as it reads GameController's)
 static inline int s2_pad_home(const s2_pad_state *p) { return ((p->pro.have ? p->pro.r.buttons : 0) | (p->left.have ? p->left.r.buttons : 0) | (p->right.have ? p->right.r.buttons : 0)) & S2_HOME ? 1 : 0; }
 static inline void s2_pad_ab(const s2_pad_state *p, int *a, int *b) {

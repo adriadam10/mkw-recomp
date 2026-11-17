@@ -545,18 +545,29 @@ static void tail_bind_now(VkCtx *c, SparseImg *s) {
 // imageGranularity is "in texels or compressed texel blocks": NVIDIA gives BC7 256x256 (texels), Intel's Windows driver
 // 64x64 (blocks), both the standard 64 KiB block. Binds go in texels, so 64x64 taken as texels bound each block 16 times
 // and spent 16 times the slots: 1 048 576 tiles left non-resident on an Arc B580 against 32 768 on an RTX 3050, roads
-// and trees black or missing (#476, #475, #355). A BC format whose granularity as texels is not 64 KiB but is as
-// blocks is converted.
+// and trees black or missing (#476, #475, #355). The same driver gives native ASTC 8x8 as 64x64 blocks (512x512
+// texels): an Iris Xe left 524 288 tiles out and drew textures black (#540). A BC or ASTC format whose granularity as
+// texels is not 64 KiB but is as blocks is converted.
 void vk_sparse_granularity_texels(VkFormat f, uint32_t *gw, uint32_t *gh) {
-    if (f < VK_FORMAT_BC1_RGB_UNORM_BLOCK || f > VK_FORMAT_BC7_SRGB_BLOCK) return;
-    int half = f <= VK_FORMAT_BC1_RGBA_SRGB_BLOCK || f == VK_FORMAT_BC4_UNORM_BLOCK || f == VK_FORMAT_BC4_SNORM_BLOCK;
-    uint64_t bpb = half ? 8 : 16;
-    if ((uint64_t)(*gw / 4) * (*gh / 4) * bpb == 65536 || (uint64_t)*gw * *gh * bpb != 65536) return;
+    static const uint8_t astc_wh[14][2] = {{4, 4}, {5, 4}, {5, 5}, {6, 5}, {6, 6},   {8, 5},   {8, 6},
+                                           {8, 8}, {10, 5}, {10, 6}, {10, 8}, {10, 10}, {12, 10}, {12, 12}};
+    uint32_t bw = 4, bh = 4;
+    uint64_t bpb = 16;
+    if (f >= VK_FORMAT_BC1_RGB_UNORM_BLOCK && f <= VK_FORMAT_BC7_SRGB_BLOCK) {
+        int half = f <= VK_FORMAT_BC1_RGBA_SRGB_BLOCK || f == VK_FORMAT_BC4_UNORM_BLOCK || f == VK_FORMAT_BC4_SNORM_BLOCK;
+        bpb = half ? 8 : 16;
+    } else if (f >= VK_FORMAT_ASTC_4x4_UNORM_BLOCK && f <= VK_FORMAT_ASTC_12x12_SRGB_BLOCK) {
+        unsigned i = (unsigned)(f - VK_FORMAT_ASTC_4x4_UNORM_BLOCK) / 2;   // UNORM and SRGB alternate, 16 bytes a block
+        bw = astc_wh[i][0], bh = astc_wh[i][1];
+    } else {
+        return;
+    }
+    if ((uint64_t)(*gw / bw) * (*gh / bh) * bpb == 65536 || (uint64_t)*gw * *gh * bpb != 65536) return;
     static int logged;
     if (!logged++)
-        rt_log("vk: sparse: the driver gives compressed formats' block size in 4x4 blocks (%ux%u for VkFormat %d): "
-               "taken as %ux%u texels", *gw, *gh, (int)f, *gw * 4, *gh * 4);
-    *gw *= 4, *gh *= 4;
+        rt_log("vk: sparse: the driver gives compressed formats' block size in %ux%u blocks (%ux%u for VkFormat %d): "
+               "taken as %ux%u texels", bw, bh, *gw, *gh, (int)f, *gw * bw, *gh * bh);
+    *gw *= bw, *gh *= bh;
 }
 
 int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_t addr, uint64_t size, VkImage *out,

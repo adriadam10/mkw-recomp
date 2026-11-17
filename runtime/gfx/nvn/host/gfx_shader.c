@@ -43,6 +43,7 @@ struct GfxShader {
     uint32_t local[3];
     uint32_t *spec;                                        // "spec": word k = bank << 16 | byte (specialization ids 2k, 2k+1)
     int nspec;
+    int first_store;                                       // "first_store" (glsl/first_store.py): 0, 1 or 2
     const struct GfxShader *variant_of;                    // gfx_shader_variant: the generic shader; NULL for one
     struct GfxShader *cs_variant;                          // task/mesh: the compute form (gfx_shader_cs_variant)
     int cs_of_mesh;                                        // this is the compute form of a task or mesh program
@@ -516,6 +517,7 @@ static void reflect(GfxShader *s) {
         json_objects(js, kinds[k], add_res, s, k);
     }
     reflect_spec(s);
+    s->first_store = s->stage == GFX_STAGE_CS ? (int)json_int(js, js + strlen(js), "first_store", 0) : 0;
     reflect_spirv(s);
 }
 
@@ -602,6 +604,7 @@ const GfxShader *gfx_shader_load_input(const uint8_t iid[32]) {
 static struct { const uint8_t (*iids)[32]; const GfxShader **out; size_t n; volatile int64_t next, miss; } PW;
 
 static void prewarm_worker(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     (void)arg;
     for (int64_t i; (i = plat_inc64(&PW.next) - 1) < (int64_t)PW.n;)
         if (!(PW.out[i] = gfx_shader_load_input(PW.iids[i]))) plat_inc64(&PW.miss);
@@ -630,6 +633,7 @@ const uint32_t *gfx_shader_spirv(const GfxShader *s, uint64_t *words) {
 }
 
 int gfx_shader_stage(const GfxShader *s) { return s->stage; }
+int gfx_shader_first_store(const GfxShader *s) { return s->first_store; }
 
 // A copy of s whose specialization constants default to val[k] for each word k with fix[k] (SCU<k> true, SCV<k> =
 // val[k]), the same as spirv-opt --set-spec-const-default-value: the pipeline code sees an ordinary shader, so the

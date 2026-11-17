@@ -10,6 +10,7 @@
 //     --probe-nvn, --probe-nvn-tex, --probe-window, --probe-vkmem, --probe-vkexec    graphics probes
 //     --probe-astc      the compute ASTC decoder against astc_decode_ldr; needs no game files
 //     --probe-framegen  frame generation's passes on two pictures (MKW_FG_PROBE=DIR); needs no game files
+//     --probe-gpu-clocks  whether the driver lowers the GPU clock in idle gaps (MKW_CLK_FILL, MKW_GPU_CLOCKS); no game files
 
 //     --boot            run the game to the first NVN call
 //     --seconds S       run the game (implies --boot's start-up) until the world clock (game time since the loaded
@@ -512,7 +513,7 @@ static int usage(const char *argv0) {
     fprintf(stderr, "usage: %s [--exefs DIR] [--romfs DIR|FILE.nup|FILE.nx] [--nup FILE] [--profile DIR] [--launcher | --play | --selftest | --probe-loader | "
                     "--probe-cfg | --probe-kernel | --probe-audio | --probe-services | --probe-fs | --probe-gfx-abi | "
                     "--probe-nvn | --probe-nvn-tex | --probe-window | --probe-vkmem | "
-                    "--probe-vkexec | --probe-astc | --probe-framegen | --probe-fps | --probe-discord | --probe-texpre | --texpre | --boot |--seconds S [--shot PNG]]\n", argv0);
+                    "--probe-vkexec | --probe-astc | --probe-framegen | --probe-gpu-clocks | --probe-fps | --probe-discord | --probe-dsu | --probe-texpre | --texpre | --boot |--seconds S [--shot PNG]]\n", argv0);
     return 2;
 }
 
@@ -580,17 +581,25 @@ static int want_launcher(int argc, char **argv) {
     return asked || !rt_game_builtin();
 }
 
-static int run_launcher(int argc, char **argv) {
-    cfg_init();   // mkw.ini: the settings pages read and write it
-    // the Mods page merges against the same romfs the game will boot: argv wins, else MKW_ROMFS / mkw.ini,
-    // else the selected installation, else the baked-in default (nup packages cannot merge: no loose files)
-    const char *romfs = NULL;
-    for (int i = 1; i + 1 < argc; i++)
-        if (!strcmp(argv[i], "--romfs") || !strcmp(argv[i], "--nup")) romfs = argv[i + 1];
+static const char *launcher_romfs_arg;
+
+// Called again by the launcher after setup updates ROMFS: importing and merging must see the path the next game
+// process will read, with exactly the same precedence as startup. An explicit argv path survives setup.
+void launcher_refresh_romfs(void) {
+    const char *romfs = launcher_romfs_arg;
     if (!romfs)
         romfs = portable_path(cfg_game_dir(), "MKW_ROMFS", "romfs", NULL, pp_romfs, sizeof pp_romfs,
                               rt_default_romfs);
-    if (romfs) launcher_set_romfs(romfs);
+    launcher_set_romfs(romfs ? romfs : "");
+}
+
+static int run_launcher(int argc, char **argv) {
+    cfg_init();   // mkw.ini: the settings pages read and write it
+    // the Mods page merges against the same romfs the game will boot: argv wins, else MKW_ROMFS / mkw.ini,
+    // else the selected installation, else the baked-in default
+    for (int i = 1; i + 1 < argc; i++)
+        if (!strcmp(argv[i], "--romfs") || !strcmp(argv[i], "--nup")) launcher_romfs_arg = argv[i + 1];
+    launcher_refresh_romfs();
     // the players (Profiles page) live in the profile folder the game will use: --profile, else MKW_PROFILE_DIR /
     // mkw.ini, else profile/ in the selected installation
     const char *profile = NULL;
@@ -706,8 +715,10 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "--probe-vkexec")) return probe_vkexec();
     if (!strcmp(mode, "--probe-astc")) return probe_astc();
     if (!strcmp(mode, "--probe-framegen")) return probe_framegen();
+    if (!strcmp(mode, "--probe-gpu-clocks")) return probe_gpu_clocks();
     if (!strcmp(mode, "--probe-fps")) return probe_fps();
     if (!strcmp(mode, "--probe-discord")) return probe_discord();
+    if (!strcmp(mode, "--probe-dsu")) return probe_dsu();
     if (!strcmp(mode, "--probe-vkdevice")) return probe_vkdevice();
 
     if (!strcmp(mode, "--probe-texpre")) return probe_texpre();

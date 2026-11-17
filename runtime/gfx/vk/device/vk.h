@@ -112,6 +112,8 @@ int vk_lat_on(void);
 uint64_t vk_lat_next_id(void);                                   // the next host present's id, 0 without present wait
 void vk_lat_flip(uint64_t slot, int first, int game, uint64_t id);   // a host present of the frame shown at slot
 void vk_lat_swapchain(int begin, VkSwapchainKHR sc);             // around vkCreateSwapchainKHR (it retires the old)
+void vk_pstate_init(VkPhysicalDevice phys);   // vk_pstate.c: an AMD GPU's clocks held (MKW_GPU_CLOCKS), after the device
+void vk_pstate_frame(void);                   // each present: MKW_GPU_CLOCKS=ab switches with the A/B blocks
 void vk_lat_device(VkDevice device, int has_present_wait);                        // after the device: starts the present wait thread
 // vk_present_blit for frame generation: presents already waiting stay waiting, so the frames of one game frame are
 // all blitted at once and each vk_present_flip then queues the next at its time.
@@ -697,11 +699,14 @@ void vk_pipeline_async_busy(unsigned *inflight, int *building);
 // No-op without vk_pipeline_async_enable, with MKW_PIPE_PREBUILD=0 or with MKW_GPU=null.
 void vk_pipeline_prewarm(void);
 VkPipeline vk_pipeline_compute(const GfxShader *cs, const VkPipeInfo **info);
+// The same with the program's FIRST_STORE set (gfx_shader_first_store): 1 only the first invocation's stores, 2 all
+// but them; same layout as vk_pipeline_compute's
+VkPipeline vk_pipeline_compute_first(const GfxShader *cs, uint32_t first, const VkPipeInfo **info);
 // Task/mesh as compute (vk_mesh_cs.c): whether DrawMeshTasks goes that way, and its device-local scratch for a
 // submission (fence): buffer, offset and GPU address; 0 when no memory.
 int vk_mesh_cs_on(void);
 int vk_mesh_cs_alloc(uint64_t fence, VkDeviceSize size, VkBuffer *buf, VkDeviceSize *off, VkDeviceAddress *addr);
-VkPipeline vk_mesh_cs_compact_pipeline(VkPipelineLayout *layout);   // runtime/shaders/mesh_compact.comp
+VkPipeline vk_mesh_cs_compact_pipeline(VkPipelineLayout *layout);   // runtime/shaders/mesh/mesh_compact.comp
 // Records every dynamic state that VkPipeState determines, after binding a graphics pipeline: cull mode, front face,
 // topology, depth and stencil tests and ops, depth bias enable, rasterizer discard, vertex input, and, where the GPU
 // has them dynamic, depth clamp, polygon mode, blend enables, equations, write masks and alpha to coverage. The replay

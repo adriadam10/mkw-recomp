@@ -1,4 +1,4 @@
-"""Fill new or changed menu texts in every catalog language (i18n/<lang>.po) from a JSON table.
+"""Fill new or changed menu texts in every catalog language (i18n/ui/<lang>.po) from a JSON table.
 
 Why: a new English text in mkw.pot leaves twenty .po entries empty, and a changed one marks them fuzzy; editing twenty
 files by hand loses printf conversions and wrapped lines. The table is {msgctxt: {lang: text}}; only an empty entry
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-I18N = ROOT / "i18n"
+I18N = ROOT / "i18n" / "ui"
 sys.path.insert(0, str(ROOT / "tools/i18n"))
 import catalog  # noqa: E402
 

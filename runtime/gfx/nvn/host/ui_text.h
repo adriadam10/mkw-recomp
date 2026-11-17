@@ -79,6 +79,7 @@ typedef enum {
     UI_MENU_MOUSE_SENS, UI_MENU_MOUSE_SENS_DESC,
     UI_MENU_STICK_DEADZONE, UI_MENU_STICK_DEADZONE_DESC,
     UI_MENU_SWITCH2, UI_MENU_SWITCH2_DESC,
+    UI_MENU_DSU, UI_MENU_DSU_DESC,   // Cemuhook / DSU motion (input/dsu.c)
     UI_MENU_BUTTON_ICONS, UI_MENU_BUTTON_ICONS_DESC, UI_MENU_ICONS_NINTENDO, UI_MENU_ICONS_XBOX,
     UI_MENU_ICONS_PLAYSTATION, UI_MENU_ICONS_KEYBOARD, UI_MENU_ICONS_IN_USE,   // "in use: %s"
 
@@ -91,6 +92,13 @@ typedef enum {
     UI_BINDS_TAKEN,           // "%s was taken from %s": the key, the action that lost it
     UI_BINDS_SWAPPED,         // "%s swapped with %s": the two actions
     UI_NOTICE_PADS_MISSING,   // "%d players need a controller each: %d connected" (ov_input.c, controller applet)
+    // Controller batteries (input/input_power.c): the Controls tab's rows, the start screen and the low battery notice
+    UI_MENU_PADS,             // group heading over the players' rows
+    UI_MENU_PAD_PLAYER,       // "Player %d: %s": the player and the controller's name
+    UI_MENU_PAD_BATTERY_DESC, UI_MENU_PADS_NONE,
+    UI_POWER_LOW, UI_POWER_MEDIUM, UI_POWER_HIGH,   // a Switch 2 controller's band over Bluetooth
+    UI_POWER_CHARGING, UI_POWER_CHARGED, UI_POWER_WIRED, UI_POWER_UNKNOWN,
+    UI_NOTICE_BATTERY_LOW,    // "Player %d's controller is running out of battery (%s)"
     UI_BINDS_RESET, UI_BINDS_RESET_DESC,
     // the actions, in action order (input_map.h B_A .. B_SR_DOWN)
     UI_BIND_A, UI_BIND_B, UI_BIND_X, UI_BIND_Y, UI_BIND_LCLICK, UI_BIND_RCLICK, UI_BIND_L, UI_BIND_R, UI_BIND_ZL,
@@ -239,6 +247,15 @@ typedef enum {
     // CONFIRM "... %s ..." (the name)
     UI_LAUNCH_PLAYERS, UI_PLAYER_NOTE, UI_PLAYER_NAME_HINT, UI_PLAYER_CHOOSE, UI_PLAYER_CHOSEN,
     UI_PLAYER_NEW, UI_PLAYER_REMOVE, UI_PLAYER_CONFIRM, UI_PLAYER_FAILED,
+    UI_SETUP_ERR_SPACE,   // "... %s ...": what the setup needs and what is free, where (tools/prepare/gamecopy.py)
+    // General tab: the start screen at start (launcher.cpp console_start), its choices after Automatic
+    UI_MENU_START_SCREEN, UI_MENU_START_SCREEN_DESC, UI_MENU_START_ALWAYS, UI_MENU_START_SKIP,
+    // the game files the setup left are not where it left them (launcher.cpp files_gone): the state line, and under it
+    // HELP "... %s ..." (where they were)
+    UI_LAUNCH_FILES_GONE, UI_LAUNCH_FILES_GONE_HELP,
+    // the setup's copies found in the usual places (launcher.cpp found_copies): the list's title, the line while it
+    // looks, and the kind of a loose copy
+    UI_LAUNCH_FOUND, UI_LAUNCH_FOUND_SEARCHING, UI_LAUNCH_FOUND_FOLDER,
     // Steam Remote Play Together (steam/steam_rpt.c), the General tab's group: the buttons; CONNECTED "%d connected" (the
     // guests) beside Invite; the notes of a greyed-out group (no App ID, the start screen, Steam not available)
     UI_MENU_GROUP_RPT, UI_MENU_RPT_INVITE, UI_MENU_RPT_INVITE_DESC, UI_MENU_RPT_LINK, UI_MENU_RPT_LINK_DESC,

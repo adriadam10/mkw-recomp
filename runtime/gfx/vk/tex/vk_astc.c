@@ -2,7 +2,7 @@
 // decoder (tex_astc.c) would have written, and the native ASTC formats where the device samples them itself.
 //
 // MKW_ASTC = auto (default): native when the device reports textureCompressionASTC_LDR and the format's features,
-// else gpu. gpu: compute decode into RGBA8 (runtime/shaders/astc_decode.comp). native: like auto, but logs when the
+// else gpu. gpu: compute decode into RGBA8 (runtime/shaders/texture/astc_decode.comp). native: like auto, but logs when the
 // device cannot. cpu: astc_decode_ldr_mt on the uploading thread, as before. check: gpu, and every upload is also
 // decoded on the CPU and compared (waits for the GPU; for testing only).
 //

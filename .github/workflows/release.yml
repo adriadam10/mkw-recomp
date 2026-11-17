@@ -145,15 +145,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write  # the provenance below
+      attestations: write
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
-      - name: Notes (docs/release-template.md with the version's section of CHANGELOG.md)
+      - name: Notes (docs/project/release-template.md with the version's section of CHANGELOG.md)
         run: uv run tools/build/notes.py --version "${GITHUB_REF_NAME#v}" --out notes.md
       - uses: actions/download-artifact@v8
         with:
           path: release
           merge-multiple: true
+      # an antivirus that flags mkw.exe by its behaviour (#541: one engine of 70) cannot tell our build from another:
+      # with this, `gh attestation verify mkw.exe --repo adriadam10/mkw-recomp` says it came from this workflow
+      - name: mkw.exe out of the zip, attested on its own
+        run: unzip -j release/*-windows-x64.zip mkw-recomp/mkw.exe -d exe
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            release/*
+            exe/mkw.exe
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
