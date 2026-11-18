@@ -81,6 +81,10 @@ void opt_info(const char *id, const char *label, const char *value, UiTextId des
 // lo..hi in steps of step (left and right held for a second go ten times as fast); fmt formats the value ("%.0f %%").
 bool opt_slider(const char *key, UiTextId label, float lo, float hi, UiTextId desc, float step = 1,
                 const char *fmt = "%g");
+// The same with an automatic choice one step below lo (the setting "auto", shown as auto_name); right from it starts
+// at start (what automatic stands for now), left from lo goes back to it. Whole numbers only.
+bool opt_slider_auto(const char *key, UiTextId label, int lo, int hi, UiTextId desc, const char *fmt,
+                     const char *auto_name, int start);
 
 // Binding rows (remapping on the Controls tab): a label and three cells, each selectable on its own (left / right move between them).
 // opt_bind_header: the column titles above them. opt_bind_row: key is the setting's name without MKW_ (BIND_A; the

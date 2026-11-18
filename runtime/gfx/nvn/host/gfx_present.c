@@ -579,6 +579,13 @@ static void save_capture(const char *path) {
     }
     rt_write_png(path, px, (uint32_t)g_cap_w, (uint32_t)g_cap_h);
     free(px);
+    // MKW_SCREEN_RAW=1: the swapchain's own words too (<path>.raw, 32 bits a pixel; HDR10 PQ when in HDR), to measure
+    // the nits of a picture the PNG clips at paper white
+    if (g_sc_hdr && cfg_get("MKW_SCREEN_RAW") && *cfg_get("MKW_SCREEN_RAW") == '1') {
+        char raw[600];
+        snprintf(raw, sizeof raw, "%s.raw", path);
+        plat_file_write(raw, g_cap_ptr, n);
+    }
     rt_log("gfx: swapchain shot %s (%dx%d)", path, g_cap_w, g_cap_h);
 }
 

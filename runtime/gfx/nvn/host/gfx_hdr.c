@@ -12,6 +12,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cfg.h"
@@ -26,6 +27,19 @@ static volatile int32_t g_on;              // the swapchain is HDR10
 static volatile uint32_t g_peak, g_white;  // nits, as told to the game
 static char g_cfg[8];                      // the MKW_HDR the swapchain was made with
 
+// MKW_HDR_PEAK, MKW_HDR_WHITE: the player's nits in place of the system's ("auto"). Windows gives the SDR content
+// brightness slider as paper white, often 400-500 nits on a bright screen: with a 1000-1200 nit peak that leaves the
+// game's highlights little more than a stop above white (log 18/11/2026: peak 1200, paper white 480).
+static uint32_t nits_setting(const char *key, uint32_t system) {
+    int v = atoi(cfg_value(key));
+    return v > 0 ? (uint32_t)v : system;
+}
+
+static void effective(uint32_t *peak, uint32_t *white) {
+    uint32_t w = nits_setting("MKW_HDR_WHITE", g_white), p = nits_setting("MKW_HDR_PEAK", g_peak);
+    *white = w, *peak = p < w ? w : p;
+}
+
 int gfx_hdr_output(uint16_t *peak, uint16_t *white) {
     static int fake = -1;
     if (fake < 0) fake = rt_knob("HDR_FAKE", "0");
@@ -34,8 +48,15 @@ int gfx_hdr_output(uint16_t *peak, uint16_t *white) {
         *peak = PEAK_DEFAULT, *white = WHITE_DEFAULT;
         return 1;
     }
-    *peak = on ? (uint16_t)g_peak : 0;
-    *white = on ? (uint16_t)g_white : WHITE_DEFAULT;
+    uint32_t p, w;
+    effective(&p, &w);
+    static uint32_t logged_p, logged_w;
+    if (on && (p != logged_p || w != logged_w)) {
+        logged_p = p, logged_w = w;
+        rt_log("gfx: HDR to the game: peak %u nits, paper white %u (system %u, %u)", p, w, g_peak, g_white);
+    }
+    *peak = on ? (uint16_t)p : 0;
+    *white = on ? (uint16_t)w : WHITE_DEFAULT;
     return on;
 }
 
@@ -65,8 +86,26 @@ int gfx_hdr_pick(const VkSurfaceFormatKHR *fmts, uint32_t n, VkSurfaceFormatKHR 
         else rt_log("gfx: SDR output: the display offers no HDR10 format%s", vk_ctx()->has_colorspace ? "" :
                     " (no VK_EXT_swapchain_colorspace)");
     }
+    if (found) {   // for gfx_hdr_headroom at the next start
+        char seen[24];
+        snprintf(seen, sizeof seen, "%u/%u", p, w);
+        if (strcmp(cfg_value("MKW_HDR_SYSTEM"), seen)) cfg_set("MKW_HDR_SYSTEM", seen), cfg_save();
+    }
     __atomic_store_n(&g_on, found, __ATOMIC_RELEASE);
     return found;
+}
+
+float gfx_hdr_headroom(void) {
+    uint32_t p, w;
+    if (__atomic_load_n(&g_on, __ATOMIC_ACQUIRE)) {
+        effective(&p, &w);
+    } else {   // before the swapchain: the system's of the last run, with the player's choices over them
+        unsigned sp = 0, sw = 0;
+        if (sscanf(cfg_value("MKW_HDR_SYSTEM"), "%u/%u", &sp, &sw) != 2 || !sp || !sw) return 0.0f;
+        w = nits_setting("MKW_HDR_WHITE", sw), p = nits_setting("MKW_HDR_PEAK", sp);
+        if (p < w) p = w;
+    }
+    return w ? (float)p / (float)w : 0.0f;
 }
 
 void gfx_hdr_metadata(VkSwapchainKHR sc) {
@@ -76,11 +115,13 @@ void gfx_hdr_metadata(VkSwapchainKHR sc) {
     if (!set) set = (PFN_vkSetHdrMetadataEXT)vkGetDeviceProcAddr(c->device, "vkSetHdrMetadataEXT");
     if (!set) return;
     // Rec.2020 primaries and D65, as HDR10; the content as bright as the display's peak, the frame average at paper white
+    uint32_t peak, white;
+    effective(&peak, &white);
     VkHdrMetadataEXT m = {.sType = VK_STRUCTURE_TYPE_HDR_METADATA_EXT,
                           .displayPrimaryRed = {0.708f, 0.292f}, .displayPrimaryGreen = {0.170f, 0.797f},
                           .displayPrimaryBlue = {0.131f, 0.046f}, .whitePoint = {0.3127f, 0.3290f},
-                          .maxLuminance = (float)g_peak, .minLuminance = 0.0f,
-                          .maxContentLightLevel = (float)g_peak, .maxFrameAverageLightLevel = (float)g_white};
+                          .maxLuminance = (float)peak, .minLuminance = 0.0f,
+                          .maxContentLightLevel = (float)peak, .maxFrameAverageLightLevel = (float)white};
     set(c->device, 1, &sc, &m);
 }
 

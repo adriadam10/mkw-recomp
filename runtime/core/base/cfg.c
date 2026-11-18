@@ -41,7 +41,7 @@ static const char *const known[] = {
     "BIND_ZL", "BIND_ZR", "BUTTON_ICONS", "CLASSIC_GP", "CLASSIC_VS", "CORE_DIAG", "CRIT", "CRIT_OUT", "CTL", "DESC_TEMPLATE", "DETAIL_DISTANCE", "DEVICE_PROFILE", "DISCORD", "DISCORD_APP", "DUMP", "DUMP_BUF", "DUMP_DIR", "DUMP_DRAWS", "DUMP_DRAWS_RECT", "DUMP_DRAWS_SKIP", "DSU", "DSU_SERVER", "DSU_SLOT", "DYN_DIFF", "DUMP_LOG",
     "EXEFS", "FEEDBACK", "FG_BIAS", "FG_DUMP", "FG_DUMP_DIR", "FG_LAMBDA", "FG_PROBE", "FIX_C0", "FIX_ZERO", "FLIGHT", "FLIGHT_AT", "FLIGHT_DIR", "FLIGHT_FRAMES", "FLIGHT_SPIKE_MS",
     "FLIGHT_THUMBS", "FPS", "FRAMEGEN", "FREEZE_IDLE", "GLYPH_DUMP", "FREE_CORES", "FULLSCREEN", "GAME_DIR", "GPL", "GPL_DRAW_BUILD", "GPU",
-    "GPU_CRUMBS", "GPU_CRUMBS_DRAW", "HDR", "HDR_FAKE", "HUD_POSITION", "HUD_PROBE", "GPU_INDEX", "GPU_MEM_LIMIT", "GPU_NAME", "INPUT", "INPUT_RECORD", "INPUT_SCRIPT", "LAN", "LAN_IP", "LOGIC_HZ", "LOGIC_HZ_TT", "LAN_PEERS", "LANG", "LATENCY", "LOW_LATENCY",
+    "GPU_CRUMBS", "GPU_CRUMBS_DRAW", "HDR", "HDR_FAKE", "HDR_PEAK", "HDR_SYSTEM", "HDR_TONEMAP", "HDR_WHITE", "RDX_SPLIT", "SCREEN_RAW", "HUD_POSITION", "HUD_PROBE", "GPU_INDEX", "GPU_MEM_LIMIT", "GPU_NAME", "INPUT", "INPUT_RECORD", "INPUT_SCRIPT", "LAN", "LAN_IP", "LOGIC_HZ", "LOGIC_HZ_TT", "LAN_PEERS", "LANG", "LATENCY", "LOW_LATENCY",
     "LOCALE", "MEMORY", "MENU_SHORTCUT", "MESH_COMPUTE", "MENU_LANG", "MENU_TEST",
     "MENU_TEST_DIR", "MENU_TEST_SET", "MINIMAL_LAYOUT", "MIRROR_GAP", "MODS", "MODS_ACK", "MODS_PLAYED", "MOTION",
     "MOUSE_SENS", "PLAYER",   // PLAYER: the launcher's choice (core/base/players.h), no row: Reset all leaves it
@@ -60,7 +60,7 @@ static const char *const known[] = {
 // The mkw.ini section a key cfg_set may write goes to when the file lacks it (mkw.ini.example's sections).
 static const struct { const char *key, *section; } sections[] = {
     {"FULLSCREEN", "display"}, {"WINDOW_SIZE", "display"}, {"PERF_OVERLAY", "display"}, {"VK_PRESENT", "display"},
-    {"GPU_INDEX", "display"}, {"UPSCALER", "display"}, {"HDR", "display"}, {"SHARPNESS", "display"}, {"PICTURE_FIT", "display"},
+    {"GPU_INDEX", "display"}, {"UPSCALER", "display"}, {"HDR", "display"}, {"HDR_TONEMAP", "display"}, {"HDR_PEAK", "display"}, {"HDR_WHITE", "display"}, {"HDR_SYSTEM", "display"}, {"SHARPNESS", "display"}, {"PICTURE_FIT", "display"},
     {"DEVICE_PROFILE", "display"}, {"RESOLUTION", "display"}, {"ASPECT", "display"}, {"HUD_POSITION", "display"}, {"FPS", "display"}, {"LOGIC_HZ", "display"}, {"FRAMEGEN", "display"}, {"VRR", "display"}, {"LOW_LATENCY", "display"},
     {"QUALITY", "graphics"}, {"ANISO", "graphics"}, {"TEX_QUALITY", "graphics"}, {"DETAIL_DISTANCE", "graphics"}, {"SHADOW_SIZE", "graphics"},
     {"MENU_LANG", "language"}, {"LANG", "language"}, {"OPERATION_MODE", "language"}, {"LAN", "language"}, {"LAN_PEERS", "language"},
@@ -105,6 +105,14 @@ static const CfgMeta metas[] = {
     // bilinear by default (Adrià 15/11/2026): FSR 1 only when the player picks it or Auto-set does
     {"UPSCALER", "bilinear", "fsr|bilinear", LIVE}, {"SHARPNESS", "80", "0..100", LIVE},
     {"PICTURE_FIT", "keep", "keep|stretch", LIVE}, {"HDR", "auto", "auto|off", LIVE},   // auto: HDR when the display is (hdr6c, 12/11/2026)
+    // RenoDX tone mapping (gfx_shader.c, tools/shaders/renodx.py): the game's own curve by default, as the console
+    {"HDR_TONEMAP", "vanilla", "vanilla|psychov", RESTART},
+    // the peak and paper white told to the game (gfx_hdr.c); auto: the system's, as the console
+    {"HDR_PEAK", "auto", NULL, LIVE},   // "auto" or 100..10000 nits
+    {"HDR_WHITE", "auto", NULL, LIVE},   // "auto" or 40..1000 nits
+    // the system's peak/paper white nits of the last HDR10 swapchain: the RenoDX programs are loaded before the window
+    // exists (pipeline prebuild), so their headroom comes from here (gfx_hdr_headroom); not a menu row
+    {"HDR_SYSTEM", "", NULL, LIVE},
     {"DEVICE_PROFILE", "auto", "auto|desktop|deck", RESTART},
     {"RESOLUTION", "original", "original|540|720|900|1080|1440|2160", RESTART},
     {"ASPECT", "16:9", "16:9|window|21:9|32:9|48:9", RESTART},

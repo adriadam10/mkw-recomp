@@ -606,6 +606,55 @@ msgstr ""
 "Definições > Sistema > Ecrã > Usar HDR), como faz a consola; o brilho segue as definições de HDR "
 "do sistema. “Não” mostra sempre a imagem normal. Aplica-se de imediato."
 
+msgctxt "UI_MENU_HDR_TONEMAP"
+msgid "HDR tone mapper"
+msgstr ""
+
+msgctxt "UI_MENU_HDR_TONEMAP_DESC"
+msgid ""
+"How the scene's brightness is fitted to the display in HDR. Vanilla is the game's own curve, "
+"which never goes above 1.5 times paper white. PsychoV35 is RenoDX's: the same mid-tones and "
+"colour grade, with highlights that roll off smoothly up to the display's peak. Applies after a "
+"restart, as do peak and paper white changes while it is on."
+msgstr ""
+
+msgctxt "UI_MENU_HDR_TONEMAP_VANILLA"
+msgid "Vanilla"
+msgstr ""
+
+msgctxt "UI_MENU_HDR_TONEMAP_PSYCHOV"
+msgid "PsychoV35"
+msgstr ""
+
+msgctxt "UI_MENU_HDR_TONEMAP_MISSING"
+msgid "Needs tools/shaders/renodx.py run once on the game's spirv folder."
+msgstr ""
+
+msgctxt "UI_MENU_HDR_PEAK"
+msgid "HDR peak brightness"
+msgstr ""
+
+msgctxt "UI_MENU_HDR_PEAK_DESC"
+msgid ""
+"The brightest the game draws. Automatic uses the display's peak as Windows reports it. Applies at "
+"once."
+msgstr ""
+
+msgctxt "UI_MENU_HDR_WHITE"
+msgid "HDR paper white"
+msgstr ""
+
+msgctxt "UI_MENU_HDR_WHITE_DESC"
+msgid ""
+"How bright white menus and the scene's mid-tones are. Automatic uses Windows' SDR content "
+"brightness, which is often much brighter than a game wants; 203 nits is the HDR reference. Lower "
+"values leave the highlights more room. Applies at once."
+msgstr ""
+
+msgctxt "UI_MENU_HDR_NITS"
+msgid "%s nits"
+msgstr ""
+
 msgctxt "UI_MENU_SHARPNESS"
 msgid "FSR sharpness"
 msgstr "Nitidez do FSR"

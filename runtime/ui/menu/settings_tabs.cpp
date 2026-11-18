@@ -17,6 +17,7 @@
 extern "C" {
 #include "cfg.h"
 #include "fs.h"
+#include "gfx.h"
 #include "input.h"
 #include "input_map.h"
 #include "platform/platform.h"
@@ -160,6 +161,8 @@ static const char *present_note(void) {
 }
 
 // ---- the tabs
+static void hdr_rows(void);   // after the HDR row, below
+
 // The window and the picture's shape on it.
 static void tab_screen(float scale) {
     opt_begin("##screen", scale);
@@ -186,7 +189,39 @@ static void tab_screen(float scale) {
         const char *names[2] = {menu_text(UI_MENU_FPS_AUTO), menu_text(UI_MENU_PERF_OFF)};
         opt_choice_list("MKW_HDR", UI_MENU_HDR, vals, names, 2, UI_MENU_HDR_DESC);
     }
+    hdr_rows();
     opt_end();
+}
+
+// The HDR rows after HDR: the tone mapper (gfx_shader.c; its programs come from tools/shaders/renodx.py, so without
+// them the row is greyed out) and the peak and paper white the game is told (gfx_hdr.c), all only while HDR is on.
+static void hdr_rows(void) {
+    uint16_t peak, white;
+    const bool on = gfx_hdr_output(&peak, &white) != 0;
+    {
+        static const char *const vals[] = {"vanilla", "psychov"};
+        const char *names[2] = {menu_text(UI_MENU_HDR_TONEMAP_VANILLA), menu_text(UI_MENU_HDR_TONEMAP_PSYCHOV)};
+        static int have = -1;
+        if (have < 0) {
+            char p[1200];
+            const char *sp = cfg_get("MKW_SPIRV");
+            if (sp && *sp) snprintf(p, sizeof p, "%s/renodx", sp);
+            else snprintf(p, sizeof p, "%s/spirv/renodx", cfg_game_dir());
+            have = plat_dir_exists(p);
+        }
+        if (!have) opt_disable_next(UI_MENU_HDR_TONEMAP_MISSING);
+        else if (!on) opt_disable_next(UI_MENU_HDR_DESC);
+        opt_choice_list("MKW_HDR_TONEMAP", UI_MENU_HDR_TONEMAP, vals, names, 2, UI_MENU_HDR_TONEMAP_DESC);
+    }
+    // 1 nit a step (ten held); automatic below the lowest, right from it starts at the system's value
+    char fmt[32];
+    snprintf(fmt, sizeof fmt, menu_text(UI_MENU_HDR_NITS), "%d");
+    unsigned sp = 1000, sw = 203;
+    sscanf(cfg_value("MKW_HDR_SYSTEM"), "%u/%u", &sp, &sw);
+    if (!on) opt_disable_next(UI_MENU_HDR_DESC);
+    opt_slider_auto("MKW_HDR_PEAK", UI_MENU_HDR_PEAK, 100, 10000, UI_MENU_HDR_PEAK_DESC, fmt, menu_text(UI_MENU_FPS_AUTO), (int)sp);
+    if (!on) opt_disable_next(UI_MENU_HDR_DESC);
+    opt_slider_auto("MKW_HDR_WHITE", UI_MENU_HDR_WHITE, 40, 1000, UI_MENU_HDR_WHITE_DESC, fmt, menu_text(UI_MENU_FPS_AUTO), (int)sw);
 }
 
 // The Quality presets: the values each one gives the four rows below it, in the order

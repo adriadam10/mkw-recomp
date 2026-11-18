@@ -395,6 +395,35 @@ bool opt_slider(const char *key, UiTextId label, float lo, float hi, UiTextId de
     return true;
 }
 
+bool opt_slider_auto(const char *key, UiTextId label, int lo, int hi, UiTextId desc, const char *fmt,
+                     const char *auto_name, int start) {
+    const char *cur = cfg_value(key);
+    int v = atoi(cur), is_auto = v <= 0;   // "auto" (or nothing) reads as 0
+    char shown[48];
+    if (is_auto) snprintf(shown, sizeof shown, "%s", auto_name);
+    else snprintf(shown, sizeof shown, fmt, v);
+    RowView rv = {shown, is_auto != 0, true, NULL};
+    int s = row(key, label, desc, rv);
+    if (!s) return false;
+    int steps = g_held ? 10 : 1;   // held: ten at a time
+    int n;
+    if (is_auto) {
+        if (s < 0) return false;   // left stops at automatic
+        n = start < lo ? lo : start > hi ? hi : start;
+    } else {
+        n = v + (s == 2 ? 1 : s * steps);
+        if (s == 2 && n > hi) n = 0;           // A / click past the top goes round to automatic
+        else if (n < lo) n = s < 0 && v == lo ? 0 : lo;   // left from the lowest: automatic
+        else if (n > hi) n = hi;
+    }
+    if (n == v && !is_auto) return false;
+    char out[16];
+    if (n <= 0) snprintf(out, sizeof out, "auto");
+    else snprintf(out, sizeof out, "%d", n);
+    apply(key, out);
+    return true;
+}
+
 // ---- binding rows (the remapping rows of the Controls tab): a label and three cells, each its own nav item
 
 // Text centred (left-aligned when centred is false) in [x0, x1] on a row from y to y + h, at the font size or smaller so

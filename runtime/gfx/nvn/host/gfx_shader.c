@@ -127,6 +127,77 @@ static uint8_t *prepared_read(const uint8_t key[32], int kind, uint64_t *size) {
     return read_file(p, size);
 }
 
+// MKW_HDR_TONEMAP=psychov: the game's final tone curve programs as tools/shaders/renodx.py rewrote them (RenoDX's
+// PsychoV35 in their HDR mode), from <spirv>/renodx; NULL for the game's own. Read once: the pipelines keep the
+// programs they were built with, so it takes effect after a restart.
+static const char *tonemap_dir(void) {
+    static int v = -1;
+    if (v < 0) {
+        v = !strcmp(cfg_value("MKW_HDR_TONEMAP"), "psychov");
+        if (v) rt_log("gfx_shader: HDR tone mapper PsychoV35 (%s/renodx)", prepared_dir);
+    }
+    return v ? "renodx" : NULL;
+}
+
+// The display's headroom for those programs: peak over paper white as the game is told them (gfx_hdr_headroom), 0
+// when unknown (the programs then keep the game's own 1.5). Taken once, at the first program: a program read again
+// after its SPIR-V was released (spirv_reload) gets the same words as the first time.
+static float headroom_v;
+static void headroom_init(void *param) {
+    (void)param;
+    headroom_v = gfx_hdr_headroom();
+    rt_log("gfx_shader: RenoDX headroom %.2f (peak over paper white)", headroom_v);
+}
+static float rdx_headroom(void) {
+    static PlatOnce once = PLAT_ONCE_INIT;
+    plat_once(&once, headroom_init, NULL);
+    return headroom_v;
+}
+
+// Sets a specialization constant renodx.py declares (constant_id id) to v in the module's words: its default value,
+// as no pipeline gives that id. 1 when found. RDX_SPLIT_ID: MKW_RDX_SPLIT=<pixels>, the picture left of it keeps the
+// game's curve, to compare the two in one frame.
+enum { RDX_HEADROOM_ID = 30000, RDX_SPLIT_ID = 30001 };
+static int rdx_patch(uint32_t *w, uint64_t n, uint32_t id, float v) {
+    uint32_t target = 0;
+    for (uint64_t i = 5; i < n;) {
+        uint32_t op = w[i] & 0xffff, len = w[i] >> 16;
+        if (!len || i + len > n) return 0;
+        if (op == 71 && len == 4 && w[i + 2] == 1 && w[i + 3] == id) target = w[i + 1];   // OpDecorate SpecId
+        if (op == 50 && len == 4 && target && w[i + 2] == target) {   // OpSpecConstant %float %id value
+            memcpy(&w[i + 3], &v, 4);
+            return 1;
+        }
+        i += len;
+    }
+    return 0;
+}
+
+// A program's SPIR-V as the runtime uses it: the RenoDX one with its constants set when the tone mapper is on and
+// renodx.py made one (the same bindings and interface as the game's: it edits only the end), else the prepared one.
+// prepared_load and spirv_reload both read through here, so a released program comes back with the same words.
+static uint8_t *prepared_spv(const uint8_t key[32], uint64_t *size, int log) {
+    const char *tm = tonemap_dir();
+    if (tm) {
+        char hex[65], p[PATH_CAP + 96];
+        gfx_shader_key_hex(key, hex);
+        snprintf(p, sizeof p, "%s/%s/%s.spv", prepared_dir, tm, hex);
+        uint8_t *spv = read_file(p, size);
+        if (spv && *size % 4 == 0) {
+            float h = rdx_headroom();
+            int ok = rdx_patch((uint32_t *)spv, *size / 4, RDX_HEADROOM_ID, h);
+            const char *split = cfg_get("MKW_RDX_SPLIT");
+            if (split && *split) rdx_patch((uint32_t *)spv, *size / 4, RDX_SPLIT_ID, (float)atof(split));
+            if (log) rt_log("gfx_shader: %s from %s, headroom %.2f%s", hex, tm, h, ok ? "" : " (no constant to set)");
+            return spv;
+        }
+        free(spv);
+        snprintf(p, sizeof p, "%s/%s/%s.none", prepared_dir, tm, hex);
+        if (log && plat_file_exists(p)) rt_log("gfx_shader: %s is a tone curve renodx.py could not edit: the game's", hex);
+    }
+    return prepared_read(key, 0, size);
+}
+
 static GfxShader *prepared_load(const uint8_t key[32], const uint8_t *control) {
     uint64_t spv_size = 0, res_size = 0;
     uint8_t *res = prepared_read(key, 1, &res_size);
@@ -134,7 +205,7 @@ static GfxShader *prepared_load(const uint8_t key[32], const uint8_t *control) {
         free(res);
         return NULL;
     }
-    uint8_t *spv = prepared_read(key, 0, &spv_size);
+    uint8_t *spv = prepared_spv(key, &spv_size, 1);
     uint32_t magic = 0;
     if (spv && spv_size >= 20) memcpy(&magic, spv, 4);
     if (!spv || spv_size % 4 || magic != 0x07230203 || !spirv_complete((const uint32_t *)spv, spv_size / 4)) {
@@ -287,7 +358,7 @@ static void spirv_reload(GfxShader *s) {
     plat_mutex_lock(&spirv_lock);
     if (__atomic_load_n(&s->spirv_state, __ATOMIC_ACQUIRE) == SPIRV_RELEASED) {
         uint64_t n = 0;
-        uint8_t *spv = prepared_read(s->key, 0, &n);
+        uint8_t *spv = prepared_spv(s->key, &n, 0);
         if (!spv || n != s->words * 4) {
             char hex[65];
             gfx_shader_key_hex(s->key, hex);
