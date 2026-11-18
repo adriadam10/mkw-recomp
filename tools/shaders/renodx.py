@@ -200,6 +200,14 @@ def rewrite(glsl):
         chan[c] = x.pop()
     if len(set(chan.values())) != 3:
         raise Skip("the channels share a shoulder input")
+    # the HDR mode's test value too, when it is made inside a block (the race's program, f07750bf…)
+    mode_var = mode[0]
+    if not re.search(r"^    (?:precise )?float " + mode_var + r"\b", glsl, re.M):
+        d = list(re.finditer(r"^(\s+)(?:precise )?float " + mode_var + r" = .*;$", glsl, re.M))
+        if len(d) != 1:
+            raise Skip("the HDR mode's test not made once")
+        captured[mode_var] = (d[0].end(), d[0].group(1), "_rdx_mode")
+        mode = ("_rdx_mode", mode[1])
     for x, (pos, ind, name) in sorted(captured.items(), key=lambda kv: -kv[1][0]):
         glsl = glsl[:pos] + "\n%s%s = %s;" % (ind, name, x) + glsl[pos:]
     for c in "xyz":
