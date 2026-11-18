@@ -330,14 +330,18 @@ int frame_present_interval(void);   // the interval of the game's last present (
 #define FPS_AUTO_MAX 4
 #define FPS_AUTO_HIST 120
 typedef struct {
-    double hist[FPS_AUTO_HIST], real[8];
+    double hist[FPS_AUTO_HIST], real[8], rhist[FPS_AUTO_HIST];   // rhist: real periods (fps_auto.c)
     unsigned head, n, since, n_real, hold, hold_s;
     int iv, downed;
+    unsigned probes;   // steps down the probe rule made (fps_auto.c)
     double stall_ms;   // how long the frames have been slower than any interval holds (fps_auto.c)
     int fits;          // the last frames before it fitted the interval
     int hz;            // the vsync rate the interval counts in, 0: 60 (set after fps_auto_reset)
+    int probing;       // the last step down was a probe, not confirmed yet (fps_auto.c)
+    int probe_block;   // a probe failed on the real period: none until fps_auto_race_start
 } FpsAuto;
 void fps_auto_reset(FpsAuto *a);                           // interval 1, no history
+void fps_auto_race_start(FpsAuto *a);                      // a race scene began: probes may be tried again
 int fps_auto_step(FpsAuto *a, double measured_ms, double real_ms);   // a frame's game measure and real period in,
                                                                      // the interval to use out
 int probe_discord(void);                                   // discord_probe.c: Rich Presence against the local Discord
