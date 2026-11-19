@@ -39,7 +39,22 @@ def test_cc_survives_spaces(tmp_path: Path) -> None:
 
 def run_prepare(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, "-I", str(ROOT / "tools/prepare/prepare.py"), *args],
-                          capture_output=True, text=True, timeout=60)  # fmt: skip
+                          capture_output=True, text=True, encoding="utf-8", timeout=60)  # fmt: skip
+
+
+@pytest.mark.parametrize("name", ["Plain", "Café", "玩家"])
+def test_moved_source_event_uses_utf8(tmp_path: Path, name: str) -> None:
+    gone = tmp_path / name
+    state = {"version": 1, "done": {}, "source": str(gone), "romfs_mode": "link"}
+    (tmp_path / "setup-state.json").write_text(json.dumps(state), encoding="utf-8")
+    # The launcher uses -I, so model the Windows pipe's encoding inside the child.
+    driver = ("import runpy,sys; sys.stdout.reconfigure(encoding='cp1252'); "
+              "sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name='__main__')")
+    p = subprocess.run([sys.executable, "-I", "-c", driver, str(ROOT / "tools/prepare/prepare.py"),
+                        "--game", str(tmp_path)], capture_output=True, timeout=60)  # fmt: skip
+    assert p.returncode == 1
+    assert p.stdout.decode("utf-8").splitlines() == [f"error moved {gone}"]
+    assert f"error moved {gone}" in (tmp_path / "logs/setup.log").read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("external", [False, True])

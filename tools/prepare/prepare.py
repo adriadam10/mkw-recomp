@@ -562,4 +562,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # the launcher reads its event pipe as UTF-8
     main()
