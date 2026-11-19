@@ -99,6 +99,35 @@ def test_add_reports_truncated_shortcuts(
     assert vdf.read_bytes() == data
 
 
+@pytest.mark.parametrize("bad_first", [False, True])
+@pytest.mark.parametrize("running", [False, True])
+def test_add_reports_partial_success_and_updates_healthy_profiles(tmp_path, monkeypatch, capsys, bad_first, running):
+    good, bad = tmp_path / "userdata/100", tmp_path / "userdata/200"
+    for profile in (good, bad):
+        (profile / "config").mkdir(parents=True)
+    damaged = bad / "config/shortcuts.vdf"
+    data = b"\x00shortcuts\x00"
+    damaged.write_bytes(data)
+    iterdir = Path.iterdir
+    order = [bad, good] if bad_first else [good, bad]
+
+    def list_profiles(path):
+        return iter(order) if path == tmp_path / "userdata" else iterdir(path)
+
+    monkeypatch.setattr(Path, "iterdir", list_profiles)
+    monkeypatch.setattr(steam, "steam_dir", lambda: tmp_path)
+    monkeypatch.setattr(steam, "steam_running", lambda _: running)
+    monkeypatch.setattr(steam, "write_art", lambda *_: tmp_path / "icon.png")
+    monkeypatch.setattr(sys, "argv", ["steam.py", "add", "--name", NAME, "--exe", EXE, "--dir", "/games/mkw"])
+
+    steam.main()
+    assert capsys.readouterr().out == f"done 1 {int(running)} 1\n"
+    shortcuts = good / "config/shortcuts.vdf"
+    rows = steam.read_map(shortcuts.read_bytes(), 0)[0]["shortcuts"]
+    assert [entry["AppName"] for entry in rows.values()] == [NAME]
+    assert damaged.read_bytes() == data
+
+
 @pytest.mark.parametrize("userdata_kind", ["missing", "file", "empty", "denied"])
 def test_add_reports_unavailable_profiles(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], userdata_kind: str,

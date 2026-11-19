@@ -16,7 +16,8 @@ which "icon" names. With --art, the start screen's own drawing of them in its lo
 the waving chequered flag or the player's splash.png, the logo, the title) instead. An image already there is kept
 unless it is the one this script wrote last (<appid>_mkw-recomp.txt): the player's own (SteamGridDB's) stays.
 
-Prints one line for the start screen: "done <users> <running 0|1>", or "error <code> <detail>" (code: nosteam, io).
+Prints one line for the start screen: "done <updated> <running 0|1> [<skipped>]", or "error <code> <detail>" (nosteam,
+io) if no shortcut was added. The skipped count is present when some profiles could not be updated.
 
 Usage: python tools/prepare/steam.py add --name "Mario Kart World" --exe <program> --dir <its folder> [--art DIR]
 """
@@ -234,15 +235,30 @@ def main() -> None:
         if not users:
             print("error nosteam", flush=True)
             sys.exit(1)
+        appid = zlib.crc32((f'"{args.exe}"' + args.name).encode()) | 0x80000000
+        updated = 0
+        first_error = None
         for u in users:
-            (u / "config").mkdir(exist_ok=True)
-            appid = zlib.crc32((f'"{args.exe}"' + args.name).encode()) | 0x80000000
-            art = write_art(u / "config/grid", appid, args.art)
-            add(u / "config/shortcuts.vdf", args.name, args.exe, args.dir, str(art))
+            try:
+                (u / "config").mkdir(exist_ok=True)
+                art = write_art(u / "config/grid", appid, args.art)
+                add(u / "config/shortcuts.vdf", args.name, args.exe, args.dir, str(art))
+            except (OSError, ValueError) as e:
+                if first_error is None:
+                    first_error = e
+            else:
+                updated += 1
+        if not updated and first_error is not None:
+            raise first_error
     except (OSError, ValueError) as e:
         print("error io", e, flush=True)
         sys.exit(1)
-    print("done", len(users), int(steam_running(steam)), flush=True)
+    skipped = len(users) - updated
+    running = int(steam_running(steam))
+    if skipped:
+        print("done", updated, running, skipped, flush=True)
+    else:
+        print("done", updated, running, flush=True)
 
 
 if __name__ == "__main__":
