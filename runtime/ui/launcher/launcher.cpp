@@ -1873,17 +1873,20 @@ static void page_tools(float w, float h) {
         tools_group(UI_TOOLS_UPDATES);
         UpdateState u = update_state();
         snprintf(text, sizeof text, menu_text(UI_TOOLS_VERSION), rt_port_version);
-        if (u.phase == UPDATE_OFFER || u.phase == UPDATE_FETCHING) snprintf(note, sizeof note, menu_text(UI_LAUNCH_UPDATE_TITLE), u.tag);
-        else snprintf(note, sizeof note, "%s", u.phase == UPDATE_CHECKING ? menu_text(UI_TOOLS_CHECKING) : "");
-        tools_row(text, note);
+        if (u.phase == UPDATE_FAILED) snprintf(note, sizeof note, menu_text(UI_TOOLS_FAILED), u.error);
+        else if (u.phase == UPDATE_CHECKING) snprintf(note, sizeof note, "%s", menu_text(UI_TOOLS_CHECKING));
+        else if (u.phase == UPDATE_CURRENT) snprintf(note, sizeof note, "%s", menu_text(UI_TOOLS_UPDATE_CURRENT));
+        else if (u.tag[0]) snprintf(note, sizeof note, menu_text(UI_LAUNCH_UPDATE_TITLE), u.tag);
+        else note[0] = 0;
+        tools_row(text, note, u.phase == UPDATE_FAILED);
         if (ImGui::Button(menu_text(UI_LAUNCH_WHATS_NEW), ImVec2(0, act_h))) {
             snprintf(note, sizeof note, "https://github.com/%s/releases", repo());
             SDL_OpenURL(note);
         }
         ImGui::SameLine();
         bool busy = u.phase == UPDATE_FETCHING || u.phase == UPDATE_READY || u.phase == UPDATE_PREPARING;
-        ImGui::BeginDisabled(u.phase == UPDATE_CHECKING || busy);
-        if (ImGui::Button(menu_text(UI_TOOLS_CHECK), ImVec2(0, act_h))) update_check_start(L.exe_dir);
+        ImGui::BeginDisabled(u.phase == UPDATE_CHECKING || u.phase == UPDATE_PREPARED || busy);
+        if (ImGui::Button(menu_text(UI_TOOLS_CHECK), ImVec2(0, act_h))) update_check_start(L.exe_dir, true);
         ImGui::EndDisabled();
         char kept[96];
         if (update_previous(L.exe_dir, kept, sizeof kept)) {
@@ -2143,7 +2146,7 @@ extern "C" int launcher_run(void) {
         // update (asking for "copy" here would copy the whole RomFS over a linked one)
         setup_start(L.exe_dir, cfg_game_dir(), nullptr, -1);
     } else if (!L.shot_at || getenv("MKW_UPDATE_AS")) {
-        update_check_start(L.exe_dir);
+        update_check_start(L.exe_dir, false);
     }
     if (!L.shot_at || getenv("MKW_LAUNCHER_LASTRUN")) lastrun_start(L.exe_dir, cfg_game_dir());
     // MKW_LAUNCHER_FIND=1 (test): the search in a shot too, as at a plain start

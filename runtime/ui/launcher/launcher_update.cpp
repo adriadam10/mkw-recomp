@@ -32,6 +32,7 @@ static SDL_Mutex *g_lock;
 static UpdateState g_state;
 static SDL_Process *g_proc;
 static bool g_preparing;    // g_proc is the new package's prepare.py --next, not update.py
+static bool g_manual_check;
 static char g_dest[1200];   // where the download goes
 static char g_game[1200];   // the game folder the update is set up in, beside the version played
 
@@ -107,13 +108,13 @@ static void on_line(char *line) {
         long long b = 0;
         if (sscanf(arg, "%95s %lld", s.tag, &b) == 2) s.bytes = b, s.phase = UPDATE_OFFER;
     } else if (!strcmp(line, "latest")) {
-        s.phase = UPDATE_IDLE;
+        s.phase = g_manual_check ? UPDATE_CURRENT : UPDATE_IDLE;
     } else if (!strcmp(line, "progress") && arg) {
         sscanf(arg, "%lld %lld", &s.done, &s.total);
     } else if (!strcmp(line, "ready") && arg) {
         snprintf(s.path, sizeof s.path, "%s", arg);
         s.phase = UPDATE_READY;
-    } else if (!strcmp(line, "error") && arg) {
+    } else if (!strcmp(line, "error") && arg && (s.phase != UPDATE_CHECKING || g_manual_check)) {
         char *why = strchr(arg, ' ');
         fail(s, why ? why + 1 : arg);
     }
@@ -179,19 +180,21 @@ static int SDLCALL reader(void *) {
     int code = -1;
     SDL_WaitProcess(g_proc, true, &code);
     SDL_DestroyProcess(g_proc);
-    g_proc = nullptr;
     bool prepare = false;
     char mark[1300], tag[96], path[1200];
     ready_mark(mark, sizeof mark);
     SDL_LockMutex(g_lock);
+    g_proc = nullptr;
     if (g_preparing) {   // done or not, the update can be installed: a failure leaves its start to set up as before
         g_state.phase = UPDATE_PREPARED;
         if (code && !g_state.error[0]) snprintf(g_state.error, sizeof g_state.error, "stopped (code %d)", code);
     } else {
-        // A check that fails (offline, GitHub down) offers nothing and says nothing: only a download's failure is shown.
-        if (g_state.phase == UPDATE_CHECKING) g_state.phase = UPDATE_IDLE;
+        // Unexpected EOF or a failed automatic check stays quiet. The Tools page keeps a manual result.
+        if (g_state.phase == UPDATE_CHECKING) {
+            if (g_manual_check) fail(g_state, "the update check stopped");
+            else g_state.phase = UPDATE_IDLE;
+        }
         if (g_state.phase == UPDATE_FETCHING) fail(g_state, code ? "the download stopped" : "no package came");
-        if (g_state.phase == UPDATE_FAILED && !g_state.tag[0]) g_state.phase = UPDATE_IDLE;
         // offered a release already downloaded by an earlier start: set up beside again, no download
         if (g_state.phase == UPDATE_OFFER && read_lines(mark, tag, sizeof tag, path, sizeof path) &&
             !strcmp(tag, g_state.tag) && SDL_GetPathInfo(path, nullptr)) {
@@ -221,18 +224,35 @@ static bool spawn(const char *const *args, bool preparing) {
     return true;
 }
 
-void update_check_start(const char *exe_dir) {
+void update_check_start(const char *exe_dir, bool manual) {
+    if (!manual && !cfg_bool("MKW_UPDATE_CHECK")) return;
     if (!g_lock) g_lock = SDL_CreateMutex();
-    char python[1200], script[1200];
-    if (g_proc || !cfg_bool("MKW_UPDATE_CHECK") || !installable(exe_dir, g_dest, sizeof g_dest) ||
-        !find_tools(exe_dir, python, script, sizeof python))
+    SDL_LockMutex(g_lock);
+    if (g_proc || g_state.phase == UPDATE_READY || g_state.phase == UPDATE_PREPARING ||
+        g_state.phase == UPDATE_PREPARED) {
+        SDL_UnlockMutex(g_lock);
         return;
+    }
+    char python[1200], script[1200];
+    if (!installable(exe_dir, g_dest, sizeof g_dest) || !find_tools(exe_dir, python, script, sizeof python)) {
+        if (manual) {
+            g_state = UpdateState{};
+            fail(g_state, "this installation cannot check for updates");
+        }
+        SDL_UnlockMutex(g_lock);
+        return;
+    }
     snprintf(g_game, sizeof g_game, "%s", cfg_game_dir() ? cfg_game_dir() : "");
+    g_manual_check = manual;
     g_state = UpdateState{};
     g_state.phase = UPDATE_CHECKING;
     g_state.step = -1;
+    SDL_UnlockMutex(g_lock);
     const char *args[] = {python, "-I", script, "check", "--version", rt_port_version, nullptr};
-    if (!spawn(args, false)) g_state.phase = UPDATE_IDLE;
+    if (!spawn(args, false)) {
+        if (manual) set_state(fail, SDL_GetError());
+        else g_state.phase = UPDATE_IDLE;
+    }
 }
 
 void update_fetch_start(const char *exe_dir) {
