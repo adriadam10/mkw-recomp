@@ -286,6 +286,10 @@ void vk_mem_lost_watch(const void *pool, uint64_t addr, uint64_t size, uint32_t 
 void vk_mem_lost_log(uint64_t frame);
 void vk_mem_gpu_pending(uint64_t addr, uint64_t size);
 void vk_gpu_written(uint64_t addr, uint64_t size);
+// MKW_WB_PAR (vk_wb_par.c): fn(ctx, i) for i in [0, n) on the caller and a pool; serial when off or nested
+void vk_wb_par(int n, void (*fn)(void *, int), void *ctx);
+int vk_wb_par_threads(void);   // threads besides the caller (0: off)
+int vk_wb_par_inside(void);    // 1 on a thread running a vk_wb_par item
 uint64_t vk_merge_back_probe(int runs, int cw, uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base,
                              uint64_t *gpu);   // --probe-merge: one write-back by either implementation (vk_mem_merge.c)
 int vk_mem_mirror_probe(uint64_t addr);   // --probe-vkexec: the pool at addr gets its mirror as on a first buffer use;

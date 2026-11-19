@@ -271,6 +271,40 @@ static void merge_back_runs(uint64_t addr, uint64_t size, const uint8_t *s, cons
     *st = (MergeStat){lo, hi, gpu, o.copied};
 }
 
+// MKW_WB_PAR (vk_wb_par.c): a large range in slices cut at multiples of SLICE of the guest address, each
+// the same write-back of its own bytes (merge_back_runs works guest page by guest page and keeps nothing across pages
+// but the run being gathered, which a slice end flushes).
+#define SLICE (128ull << 10)
+#define SLICE_MIN (512ull << 10)
+typedef struct { uint64_t addr, size; const uint8_t *s, *base; LazyBase *lazy; int cw; uint64_t off[66]; MergeStat st[65]; } SliceJob;
+
+static void slice_one(void *ctx, int i) {
+    SliceJob *j = ctx;
+    uint64_t o = j->off[i];
+    merge_back_runs(j->addr + o, j->off[i + 1] - o, j->s + o, j->base ? j->base + o : NULL, j->lazy, j->cw, &j->st[i]);
+}
+
+static int merge_back_sliced(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base, LazyBase *lazy, int cw,
+                             MergeStat *st) {
+    if (size < SLICE_MIN || size > 64 * SLICE || vk_wb_par_inside() || vk_wb_par_threads() <= 0) return 0;
+    static _Thread_local SliceJob j;   // ~2.6 KiB; one caller at a time per thread
+    j.addr = addr, j.size = size, j.s = s, j.base = base, j.lazy = lazy, j.cw = cw;
+    int n = 0;
+    for (uint64_t o = 0; o < size;) {
+        j.off[n++] = o;
+        o = ((addr + o) / SLICE + 1) * SLICE - addr;
+    }
+    j.off[n] = size;
+    vk_wb_par(n, slice_one, &j);
+    *st = (MergeStat){~0ull, 0, 0, 0};
+    for (int i = 0; i < n; i++) {
+        if (j.st[i].gpu && j.off[i] + j.st[i].lo < st->lo) st->lo = j.off[i] + j.st[i].lo;
+        if (j.st[i].gpu && j.off[i] + j.st[i].hi > st->hi) st->hi = j.off[i] + j.st[i].hi;
+        st->gpu += j.st[i].gpu, st->copied += j.st[i].copied;
+    }
+    return 1;
+}
+
 // MKW_MERGE_SIMD (default 1; "ab"): merge_back_runs; 0: merge_back_bytes. Returns the bytes copied.
 uint64_t merge_back(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base, LazyBase *lazy) {
     static int simd = -1;
@@ -278,7 +312,8 @@ uint64_t merge_back(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_
     if (wbc_on < 0) wbc_on = rt_knob("WB_CENSUS", "0");
     uint64_t t0 = wbc_on > 0 ? qpc() : 0;
     MergeStat st;
-    if (RT_KNOB_ON(simd)) merge_back_runs(addr, size, s, base, lazy, cpu_wins(), &st);
+    if (RT_KNOB_ON(simd) && merge_back_sliced(addr, size, s, base, lazy, cpu_wins(), &st)) {}
+    else if (RT_KNOB_ON(simd)) merge_back_runs(addr, size, s, base, lazy, cpu_wins(), &st);
     else merge_back_bytes(addr, size, s, base, lazy, cpu_wins(), &st);
     if (wbc_on > 0) wbc_note(addr, size, st.lo, st.hi, st.gpu, st.gpu - st.copied, qpc() - t0);
     return st.copied;

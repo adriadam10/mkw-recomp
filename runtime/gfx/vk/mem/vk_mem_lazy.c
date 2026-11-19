@@ -132,14 +132,16 @@ uint8_t *lazy_buf(LazyBase *b) { return b->buf; }
 int lazy_page_base(LazyBase *b, uint64_t x, const uint8_t *s, uint64_t n, uint8_t *tmp) {
     uint64_t p = x & ~4095ull;
     if (p < b->plo || p >= b->phi) return 1;
-    plat_mutex_lock(&lazy_lock);
+    // Shared (MKW_WB_PAR): this only reads inbuf and guest memory; the hook, which changes both, takes the
+    // lock exclusively, so the page still cannot change under the compare, and several write-backs compare at once.
+    plat_mutex_lock_shared(&lazy_lock);
     int r = 1;
     if (!inbuf(b, p)) {
         r = memcmp(s, (const void *)(uintptr_t)x, n) ? 2 : 0;
         if (r == 2) memcpy(tmp, (const void *)(uintptr_t)x, n);
         plat_inc64(&s_lazy_cmp);
     }
-    plat_mutex_unlock(&lazy_lock);
+    plat_mutex_unlock_shared(&lazy_lock);
     if (b->check) {   // the base as it would have been, against the one used
         const uint8_t *used = r == 1 ? b->buf + (x - b->lo) : r == 2 ? tmp : s, *want = b->check + (x - b->lo);
         if (memcmp(used, want, n)) {
