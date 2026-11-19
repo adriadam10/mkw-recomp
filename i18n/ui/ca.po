@@ -2415,6 +2415,16 @@ msgstr ""
 "Connector natiu: executa el seu propi programa a l'ordinador al costat del joc. Activa'l només si "
 "confies en el seu origen"
 
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "Opcions"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "Aquest mod no té opcions"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "codi: activar-lo o desactivar-lo torna a crear el codi del joc abans de jugar (uns minuts)"

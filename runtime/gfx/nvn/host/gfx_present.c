@@ -25,6 +25,7 @@
 #include "hacks.h"
 #include "host.h"
 #include "nvn_api.h"
+#include "plugin.h"
 #include "ui/menu/menu.h"
 #include "vk.h"
 #include "platform/platform.h"
@@ -66,6 +67,7 @@ void gfx_window_focus_changed(int in) {
 // done.
 void gfx_window_closed(void) {
     rt_log("gfx: window closed; exiting");
+    plugins_exit();   // the mods' goodbyes (a seat given back), before the saves finish
     fs_save_flush();
     vk_pipeline_save();
     prof_write();   // plat_exit runs no atexit handlers

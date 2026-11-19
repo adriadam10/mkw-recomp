@@ -55,6 +55,7 @@
 #include "ui/launcher/launcher_update.h"
 #include "ui/launcher/mods.h"
 #include "ui/launcher/mods_browse.h"
+#include "ui/launcher/mod_page.h"
 #include "ui/menu/menu_look.h"
 #include "ui/menu/option_rows.h"
 #include "ui/menu/settings_tabs.h"
@@ -1536,7 +1537,33 @@ static bool confirm_modal(const char *id, char *subject, size_t cap, UiTextId as
     return done;
 }
 
+// A mod's options page (mod_page.cpp), in the Mods panel: the mod's title at the right of the heading, what its
+// plugin draws, Back to the list. MKW_LAUNCHER_MOD_PAGE=<mod> opens it once (tests, shots).
+static bool page_mod_options(float w, float h) {
+    static int test_opened = 0;
+    if (!test_opened) {
+        test_opened = 1;
+        if (const char *t = getenv("MKW_LAUNCHER_MOD_PAGE")) {
+            mods_refresh(L.exe_dir);
+            const char *title = t;
+            for (int i = 0; i < mods_count(); i++)
+                if (!strcmp(mods_at(i)->name, t)) title = mods_at(i)->title;
+            mod_page_open(t, title);
+        }
+    }
+    if (!mod_page_is_open()) return false;
+    float bottom = panel_begin("##mods", UI_LAUNCH_MODS, w, h, mod_page_title());
+    ImGui::BeginChild("##mod_page_body", ImVec2(0, -bottom), ImGuiChildFlags_NavFlattened);
+    mod_page_draw(L.scale);
+    ImGui::EndChild();
+    bool leave = panel_back_row() || (back_pressed() && !ImGui::IsAnyItemActive());
+    ImGui::End();
+    if (leave) mod_page_close();
+    return true;
+}
+
 static void page_mods(float w, float h) {
+    if (page_mod_options(w, h)) return;
     float bottom = panel_begin("##mods", UI_LAUNCH_MODS, w, h);
     ImGui::BeginChild("##mods_body", ImVec2(0, -bottom), ImGuiChildFlags_NavFlattened);
     bool ready = rt_game_present();
@@ -1616,8 +1643,17 @@ static void page_mods(float w, float h) {
         ImGui::PushID(i);   // same labels every row (checkbox title can repeat too): unique IDs per row
         bool on = m->enabled;
         if (ImGui::Checkbox(m->title, &on)) mods_toggle(m->name, on);
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(menu_text(UI_MOD_DELETE)).x -
-                        ImGui::GetStyle().FramePadding.x * 2);
+        // Options (a plugin's page: mod_page.cpp) and Delete at the right
+        const ImGuiStyle &rs = ImGui::GetStyle();
+        float del_w = ImGui::CalcTextSize(menu_text(UI_MOD_DELETE)).x + rs.FramePadding.x * 2;
+        float opt_w = m->has_plugin ? ImGui::CalcTextSize(menu_text(UI_MOD_OPTIONS)).x + rs.FramePadding.x * 2 +
+                                          rs.ItemSpacing.x
+                                    : 0;
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - del_w - opt_w);
+        if (m->has_plugin) {
+            if (ImGui::Button(menu_text(UI_MOD_OPTIONS))) mod_page_open(m->name, m->title);
+            ImGui::SameLine();
+        }
         bool can_delete = !delete_cooldown;
         if (!can_delete) ImGui::BeginDisabled();
         if (ImGui::Button(menu_text(UI_MOD_DELETE)))

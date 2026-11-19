@@ -13,6 +13,7 @@
 #include "ui/menu/option_rows.h"
 #include "ui/glyphs/glyphs.h"
 #include "ui/menu/settings_tabs.h"
+#include "plugin/plugin.h"
 
 extern "C" {
 #include "cfg.h"
@@ -645,24 +646,46 @@ void settings_opened_menu(void) {
 
 bool settings_modal(void) { return g_modal || binds_modal(); }
 
+// The tabs in their order: the players' (Screen to General), the mods' (MkwPluginApi.settings_tab: ids from TAB_MOD,
+// in the game only), then Advanced and Hacks. Returns how many.
+enum { TAB_MOD = 100 };
+static int tab_order(int *out) {
+    int n = 0;
+    for (int k = TAB_SCREEN; k <= TAB_GENERAL; k++) out[n++] = k;
+    for (int i = 0; i < plugins_tab_count(); i++) out[n++] = TAB_MOD + i;
+    out[n++] = TAB_ADVANCED;
+    out[n++] = TAB_HACKS;
+    return n;
+}
+
 void settings_tabs(float scale, float bottom) {
+    int order[TAB_COUNT + 16], ntabs = tab_order(order);
     int step = settings_modal()                                                                          ? 0
              : ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false) || ImGui::IsKeyPressed(ImGuiKey_E, false) ? 1
              : ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false) || ImGui::IsKeyPressed(ImGuiKey_Q, false) ? -1
                                                                                                          : 0;
-    if (step) g_tab_request = (g_tab + step + TAB_COUNT) % TAB_COUNT;
+    if (step) {
+        int at = 0;
+        for (int i = 0; i < ntabs; i++)
+            if (order[i] == g_tab) at = i;
+        g_tab_request = order[(at + step + ntabs) % ntabs];
+    }
     if (g_tab_request >= 0) g_focus_page = g_tab_request;   // the new page's first row takes the cursor
 
     if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_NoTabListScrollingButtons)) {
-        for (int k = 0; k < TAB_COUNT; k++) {
+        for (int at = 0; at < ntabs; at++) {
+            int k = order[at];
             char label[128];
-            snprintf(label, sizeof label, "  %s  ###tab%d", menu_text(kTabNames[k]), k);   // the id stays per language
+            snprintf(label, sizeof label, "  %s  ###tab%d", k >= TAB_MOD ? plugins_tab_title(k - TAB_MOD)
+                                                                          : menu_text(kTabNames[k]),
+                     k);   // the id stays per language
             // the testing and shortcut tabs in the dim colour: the ones most players need come first and stand out
             bool quiet = k >= TAB_ADVANCED && k != g_tab;
             if (quiet) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
             bool open = ImGui::BeginTabItem(label, nullptr, g_tab_request == k ? ImGuiTabItemFlags_SetSelected : 0);
             if (quiet) ImGui::PopStyleColor();
             if (!open) continue;
+            if (k >= TAB_MOD && g_tab != k) plugins_tab_shown(k - TAB_MOD);   // its page's first frame again
             g_tab = k;
             if (g_focus_page == k) {
                 opt_focus_first();
@@ -681,6 +704,7 @@ void settings_tabs(float scale, float bottom) {
             case TAB_GENERAL: tab_general(scale); break;
             case TAB_ADVANCED: tab_advanced(scale); break;
             case TAB_HACKS: tab_hacks(scale); break;
+            default: plugins_tab_draw(k - TAB_MOD, scale); break;   // a mod's (MkwPage)
             }
             ImGui::EndTabItem();
         }

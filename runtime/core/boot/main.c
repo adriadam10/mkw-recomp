@@ -554,6 +554,20 @@ static void portable_paths(RtConfig *c) {
 // build/mkw with --launcher. --play, MKW_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
 // MKW_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
 // gone).
+// name is one of the comma-separated entries of list (spaces around an entry ignored, as plugins_load reads it)
+static int mods_list_has(const char *list, const char *name) {
+    size_t n = strlen(name);
+    for (const char *s = list; *s;) {
+        const char *end = strchr(s, ','), *next = end ? end + 1 : s + strlen(s);
+        if (!end) end = next;
+        while (s < end && (*s == ' ' || *s == '\t')) s++;
+        while (end > s && (end[-1] == ' ' || end[-1] == '\t')) end--;
+        if ((size_t)(end - s) == n && !memcmp(s, name, n)) return 1;
+        s = next;
+    }
+    return 0;
+}
+
 static int want_launcher(int argc, char **argv) {
     const char *done = getenv("MKW_LAUNCHED"), *off = getenv("MKW_NO_LAUNCHER");
     if ((done && *done) || (off && !strcmp(off, "1"))) return 0;
@@ -685,9 +699,20 @@ int main(int argc, char **argv) {
     }
     if (cfg.shot && !cfg.seconds) return usage(argv[0]);
     if (*extra_mods) {   // another launcher starts the game with its mod on, without touching the player's mkw.ini
+        // a --mod the player also enabled is listed once: its plugin would otherwise load twice
         const char *on = cfg_get("MKW_MODS");
         char list[4096];
-        snprintf(list, sizeof list, "%s%s%s", on && *on ? on : "", on && *on ? "," : "", extra_mods);
+        snprintf(list, sizeof list, "%s", on && *on ? on : "");
+        char extra[sizeof extra_mods];
+        snprintf(extra, sizeof extra, "%s", extra_mods);
+        for (char *m = extra, *next; m && *m; m = next) {
+            next = strchr(m, ',');
+            if (next) *next++ = 0;
+            if (*m && !mods_list_has(list, m)) {
+                size_t n = strlen(list);
+                snprintf(list + n, sizeof list - n, "%s%s", n ? "," : "", m);
+            }
+        }
         plat_setenv("MKW_MODS", list);
     }
     if (cfg.seconds && mode) return usage(argv[0]);

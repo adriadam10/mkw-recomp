@@ -2409,6 +2409,16 @@ msgstr ""
 "Нативний плагін: запускає власну програму на вашому комп'ютері разом із грою. Вмикайте його, лише "
 "якщо довіряєте джерелу"
 
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "Параметри"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "У цього моду немає параметрів"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "код: увімкнення чи вимкнення заново збирає код гри перед запуском (кілька хвилин)"

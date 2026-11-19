@@ -2313,6 +2313,16 @@ msgid ""
 "trust where it comes from"
 msgstr "ネイティブプラグイン：ゲームと一緒にあなたのコンピューターで独自のプログラムを実行します。入手元を信頼できる場合のみ有効にしてください"
 
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "オプション"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "このModにはオプションがありません"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "コード: オン/オフを切り替えると、プレイ前にゲームのコードを再ビルドします（数分）"

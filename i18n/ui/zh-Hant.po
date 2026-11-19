@@ -2295,6 +2295,16 @@ msgid ""
 "trust where it comes from"
 msgstr "原生外掛：會在你的電腦上與遊戲一同執行它自己的程式。僅在信任其來源時啟用"
 
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "選項"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "此模組沒有選項"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "程式碼：開啟或關閉會在遊玩前重新建置遊戲程式碼（需幾分鐘）"

@@ -2406,6 +2406,16 @@ msgstr ""
 "Yerel eklenti: oyunla birlikte bilgisayarınızda kendi programını çalıştırır. Yalnızca kaynağına "
 "güveniyorsanız etkinleştirin"
 
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "Seçenekler"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "Bu modun seçenekleri yok"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "kod: açıp kapatmak, oynamadan önce oyun kodunu yeniden derler (birkaç dakika)"

@@ -2410,6 +2410,16 @@ msgstr ""
 "Natywna wtyczka: uruchamia własny program na twoim komputerze obok gry. Włącz ją tylko, jeśli "
 "ufasz jej źródłu"
 
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "Opcje"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "Ten mod nie ma opcji"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "kod: włączenie lub wyłączenie przebudowuje kod gry przed uruchomieniem (kilka minut)"

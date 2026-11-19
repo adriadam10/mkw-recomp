@@ -2416,6 +2416,16 @@ msgstr ""
 "Plugin nativo: executa o seu próprio programa no seu computador ao lado do jogo. Ative-o apenas "
 "se confiar na sua origem"
 
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "Opções"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "Este mod não tem opções"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "código: ativá-lo ou desativá-lo recria o código do jogo antes de jogar (alguns minutos)"

@@ -2381,6 +2381,16 @@ msgstr ""
 "ปลั๊กอินเนทีฟ: รันโปรแกรมของตัวเองบนคอมพิวเตอร์ของคุณควบคู่กับเกม "
 "เปิดใช้เฉพาะเมื่อคุณเชื่อถือแหล่งที่มา"
 
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "ตัวเลือก"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "ม็อดนี้ไม่มีตัวเลือก"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "โค้ด: การเปิดหรือปิดจะสร้างโค้ดของเกมใหม่ก่อนเล่น (ไม่กี่นาที)"
