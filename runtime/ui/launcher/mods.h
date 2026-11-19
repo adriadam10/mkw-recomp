@@ -90,6 +90,7 @@ typedef struct {
     int nmods;
     char winner[MOD_NAME_MAX];
     int resolved;   // a pick that still matches the mods in the conflict
+    int has_original;
 } ModConflict;
 int mods_conflict_count(void);
 const ModConflict *mods_conflict_at(int i);

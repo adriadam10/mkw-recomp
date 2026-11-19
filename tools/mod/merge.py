@@ -36,6 +36,7 @@ def game_file(romfs, rel):
         return None
 
 HASH_KEY, DATA_ALIGN = 0x65, 0x100
+MERGE_CACHE_VERSION = 3  # the conflict picker needs to know whether each inner file has an original
 
 
 def align_up(v, a):
@@ -165,7 +166,7 @@ def main():
     # freshness: same source, same mods, same choices, nothing newer than the outputs
     state_path = os.path.join(merged, "state.json")
     manifest_path = os.path.join(mromfs, "manifest.tsv")
-    current = {"version": 2, "mods": enabled, "choices": picks, "romfs": romfs_source}
+    current = {"version": MERGE_CACHE_VERSION, "mods": enabled, "choices": picks, "romfs": romfs_source}
     try:
         fresh = os.path.isfile(manifest_path)
         fresh = fresh and json.load(open(state_path, encoding="utf-8")) == current
@@ -259,19 +260,18 @@ def main():
                 pick = choices.get((rel, name))
                 want = pick.get("winner") if pick else None
                 mods_here = [m for m, _, _ in versions if m in by_mod]
-                resolved = False
-                if want in mods_here or want == "vanilla":
-                    # a pick stands only while the mods it was made between are the ones here: a mod
-                    # joining (or the pick's mod gone) makes it a different question
-                    resolved = set(pick.get("mods") or mods_here) == set(mods_here)
+                has_original = name in base
+                if want == "vanilla" and has_original:
+                    winners[name] = base[name]
+                elif want != "vanilla" and want in mods_here:
+                    winners[name] = by_mod[want]
                 else:
-                    want = mods_here[-1]   # no usable pick: the last-enabled mod, as without choices
-                winners[name] = base.get(name) if want == "vanilla" and name in base else by_mod[want]
-                if want == "vanilla" and name not in base:
-                    winners[name] = by_mod[mods_here[-1]]
+                    # A stored Original pick can outlive the original file.
+                    pick = None
                     want = mods_here[-1]
-                    resolved = False
-                conflicts.append((rel, name, mods_here, want, resolved))
+                    winners[name] = by_mod[want]
+                resolved = pick is not None and set(pick.get("mods") or mods_here) == set(mods_here)
+                conflicts.append((rel, name, mods_here, want, resolved, has_original))
         if not changed and all(vanilla is not None for _, _, v in versions):
             continue   # identical content: nothing to merge
         out = [(n, winners[n] if n in winners else base[n]) for n in order]
@@ -294,11 +294,11 @@ def main():
             osha = hashlib.sha256(orig).hexdigest() if orig is not None else "-"
             mf.write(f"{relq}\t{size}\t{sha256_file(dest)}\t{osha}\n")
     with open(os.path.join(merged, "conflicts.json"), "w", encoding="utf-8") as f:
-        json.dump([{"archive": a, "inner": i, "mods": m, "winner": w, "resolved": r}
-                   for a, i, m, w, r in conflicts], f, indent=2)
+        json.dump([{"archive": a, "inner": i, "mods": m, "winner": w, "resolved": r, "has_original": original}
+                   for a, i, m, w, r, original in conflicts], f, indent=2)
     with open(state_path, "w", encoding="utf-8") as f:
         json.dump(current, f, indent=2)
-    for a, i, m, w, _ in conflicts:
+    for a, i, m, w, _, _ in conflicts:
         try:
             print(f"conflict {a} {i} {','.join(m)} {w}", flush=True)
         except BrokenPipeError:

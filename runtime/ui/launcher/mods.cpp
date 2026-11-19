@@ -809,12 +809,17 @@ static void conflicts_load(void) {
         if (!json_string(&q, "archive", c->archive, sizeof c->archive)) break;
         if (!json_string(&q, "inner", c->inner, sizeof c->inner)) break;
         if (!json_string(&q, "winner", c->winner, sizeof c->winner)) break;
-        c->resolved = strstr(q, "\"resolved\": true") != NULL;
+        const char *end = strchr(q, '}');
+        if (!end) break;
+        const char *resolved = strstr(q, "\"resolved\": true");
+        const char *original = strstr(q, "\"has_original\": true");
+        c->resolved = resolved && resolved < end;
+        c->has_original = original && original < end;
         // the mods array of this object: names until the closing bracket
         const char *m = strstr(p, "\"mods\"");
-        if (!m) break;
+        if (!m || m >= end) break;
         m = strchr(m, '[');
-        if (!m) break;
+        if (!m || m >= end) break;
         m++;
         char name[MOD_NAME_MAX];
         while (c->nmods < 8) {
@@ -830,7 +835,7 @@ static void conflicts_load(void) {
             else break;
         }
         G.nconflicts++;
-        p = q;
+        p = end + 1;
     }
     rt_log("mods: conflicts file %s (%d bytes)", path, (int)n);
 }
@@ -894,7 +899,7 @@ void mods_conflict_pick(const char *archive, const char *inner) {
         while (k < c->nmods && strcmp(c->mods[k], c->winner)) k++;
         const char *win;
         if (k < c->nmods - 1) win = c->mods[k + 1];
-        else if (k == c->nmods - 1) win = "vanilla";
+        else if (k == c->nmods - 1 && c->has_original) win = "vanilla";
         else win = c->nmods ? c->mods[0] : "vanilla";
         rewrite_choices(archive, inner, win, nullptr);
         mods_merge_start(G.exe_dir);

@@ -1749,7 +1749,7 @@ static void page_mods(float w, float h) {
             ImGui::TextUnformatted(c->inner);
             ImGui::PopTextWrapPos();
             ImGui::Indent(16.0f);
-            for (int k = 0; k <= c->nmods; k++) {
+            for (int k = 0; k < c->nmods + c->has_original; k++) {
                 const char *name = k < c->nmods ? c->mods[k] : "vanilla";
                 if (k) ImGui::SameLine();
                 bool sel = !strcmp(c->winner, name);
