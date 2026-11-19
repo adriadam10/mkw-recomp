@@ -118,12 +118,22 @@ def test_names_that_clean_the_same_do_not_collide(profile, tmp_path):
     assert contents(first) == contents(second)
 
 
-def test_cli_and_missing_profile(profile, tmp_path):
-    args = [sys.executable, "-I", str(SCRIPT), "backup", "--profile", str(profile),
-            "--dest", str(tmp_path / "backups"), "--name", "Player"]
-    result = subprocess.run(args, capture_output=True, check=True)
-    assert result.stdout.startswith(b"done ")
-    assert contents(Path(result.stdout.decode().strip()[5:]))["save/slot.txt"] == b"first snapshot"
-    args[args.index(str(profile))] = str(tmp_path / "absent")
-    result = subprocess.run(args, capture_output=True)
-    assert result.returncode == 1 and result.stdout.startswith(b"error noprofile ")
+@pytest.mark.parametrize("name", ["Player", "Café", "玩家"])
+def test_cli_and_missing_profile(profile, tmp_path, name):
+    # The launcher uses -I. Model a legacy Windows pipe explicitly since -I ignores PYTHONIOENCODING.
+    driver = ("import runpy,sys; sys.stdout.reconfigure(encoding='cp1252'); "
+              "sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name='__main__')")
+    args = [sys.executable, "-I", "-c", driver, str(SCRIPT), "backup", "--profile", str(profile),
+            "--dest", str(tmp_path / "backups"), "--name", name]
+    result = subprocess.run(args, capture_output=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    line = result.stdout.decode("utf-8").strip()
+    assert line.startswith("done ")
+    archive = Path(line.removeprefix("done "))
+    assert archive.name.startswith(f"{name}-")
+    assert contents(archive)["save/slot.txt"] == b"first snapshot"
+
+    missing = tmp_path / f"absent {name}"
+    args[args.index(str(profile))] = str(missing)
+    result = subprocess.run(args, capture_output=True, timeout=30)
+    assert result.returncode == 1 and result.stdout.decode("utf-8").strip() == f"error noprofile {missing}"

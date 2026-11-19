@@ -50,6 +50,7 @@ def backup(profile: Path, dest: Path, name: str) -> str:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # the launcher reads this pipe as UTF-8
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("backup")
