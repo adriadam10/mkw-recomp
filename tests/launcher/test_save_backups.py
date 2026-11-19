@@ -5,6 +5,7 @@ profiles, a fixed clock and real ZIPs, without a launcher or game. Usage: uv run
 """
 
 import importlib.util
+import os
 import subprocess
 import sys
 import zipfile
@@ -107,6 +108,28 @@ def test_write_failure_removes_only_its_partial(profile, tmp_path, monkeypatch):
     monkeypatch.setattr(zipfile.ZipFile, "write", fail)
     with pytest.raises(OSError, match="synthetic write failure"):
         saves.backup(profile, dest, "Player")
+    assert earlier.read_bytes() == original
+    assert list(dest.iterdir()) == [earlier]
+
+
+def test_unreadable_save_directory_is_reported(profile, tmp_path, monkeypatch, capsys):
+    dest = tmp_path / "backups"
+    earlier = Path(saves.backup(profile, dest, "Player"))
+    original = earlier.read_bytes()
+    (profile / "nickname.txt").write_text("Player", encoding="utf-8")
+    scandir = os.scandir
+
+    def deny_save_dir(path="."):
+        if not isinstance(path, int) and Path(path) == profile / "save":
+            raise PermissionError("save directory is unreadable")
+        return scandir(path)
+
+    monkeypatch.setattr(os, "scandir", deny_save_dir)
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "backup", "--profile", str(profile), "--dest", str(dest)])
+    with pytest.raises(SystemExit) as result:
+        saves.main()
+    assert result.value.code == 1
+    assert capsys.readouterr().out == "error io save directory is unreadable\n"
     assert earlier.read_bytes() == original
     assert list(dest.iterdir()) == [earlier]
 

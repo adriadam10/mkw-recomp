@@ -9,10 +9,15 @@ Usage: python tools/prepare/saves.py backup --profile <player folder> --dest <ga
 
 import argparse
 import re
+import stat
 import sys
 import time
 import zipfile
 from pathlib import Path
+
+
+def raise_scan_error(error: OSError) -> None:
+    raise error
 
 
 def backup(profile: Path, dest: Path, name: str) -> str:
@@ -39,9 +44,19 @@ def backup(profile: Path, dest: Path, name: str) -> str:
             continue
         try:
             with stream, zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as z:
-                for p in sorted(profile.rglob("*")):
-                    if p.is_file():
-                        z.write(p, p.relative_to(profile))
+                # Skipping an unreadable directory would publish a ZIP with missing saves.
+                for folder, dirs, files in profile.walk(on_error=raise_scan_error):
+                    dirs.sort()
+                    for filename in sorted(files):
+                        path = folder / filename
+                        try:
+                            mode = path.stat().st_mode
+                        except FileNotFoundError:
+                            if path.is_symlink():
+                                continue  # a dangling link has no file contents to back up
+                            raise
+                        if stat.S_ISREG(mode):
+                            z.write(path, path.relative_to(profile))
             tmp.replace(out)  # a backup is whole or absent, never half written
         except BaseException:
             tmp.unlink(missing_ok=True)
