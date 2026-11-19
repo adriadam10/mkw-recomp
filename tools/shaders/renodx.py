@@ -23,7 +23,7 @@ src/shaders/tonemap/psychov/test35.hlsl as src/games/zelda-oot-oz/scene_tonemap.
 defaults; written here in GLSL and checked against RenoDX's path to 1.5e-6 (relative) on 2000 random inputs,
 18/11/2026.
 
-Programs are found by their constants, decompiled with spirv-cross, edited as GLSL, compiled with glslangValidator
+Programs are found by their constants, optimized with spirv-opt (the setup's SPIR-V is O0), decompiled with spirv-cross, edited as GLSL, compiled with glslangValidator
 and checked with spirv-val. The setup runs it after the shaders step, under its own key (tools/prepare/shaderstep.py
 tonemap: a change here redoes only this, seconds, not the translation), with the tools the package carries beside
 glslc (conda-forge's SPIRV-Cross, glslang, SPIRV-Tools; tools/build/dist.py); a Vulkan SDK's Bin works too. A
@@ -278,6 +278,7 @@ def main():
     if a.clean:
         return
     cross, glslang, val = tool(dirs, "spirv-cross"), tool(dirs, "glslangValidator"), tool(dirs, "spirv-val")
+    opt = tool(dirs, "spirv-opt")
     os.makedirs(out)
     made, skipped = 0, []
     with tempfile.TemporaryDirectory() as tmp:
@@ -285,7 +286,16 @@ def main():
             key = os.path.basename(spv)[:-4]
             if not candidate(spv):
                 continue
-            r = subprocess.run([cross, spv], capture_output=True, text=True)
+            # optimized first: the setup's SPIR-V is O0 with the translator's registers as variables (r0.., p0..,
+            # reused), where the dataflow below cannot be followed; -O gives SSA values again, and keeps the bindings
+            # and locations the runtime's reflection of the game's program names (11801bf9 on main 7e49ba8: 0 of 24
+            # edited without it, 19/11/2026)
+            ospv = os.path.join(tmp, key + ".opt.spv")
+            r = subprocess.run([opt, "-O", "--strip-debug", spv, "-o", ospv], capture_output=True, text=True)
+            if r.returncode:
+                skipped.append((key, "spirv-opt: " + r.stderr.strip()[:80]))
+                continue
+            r = subprocess.run([cross, ospv], capture_output=True, text=True)
             if r.returncode:
                 skipped.append((key, "spirv-cross: " + r.stderr.strip()[:80]))
                 continue
@@ -320,6 +330,10 @@ def main():
     for k, why in skipped:
         print("skip %s: %s" % (k[:16], why))
     print("renodx.py: %d programs, %d left as the game's" % (made, len(skipped)))
+    if skipped and not made:
+        # every tone curve found and none edited: the translator's output changed shape (main 7e49ba8's O0 SPIR-V did,
+        # 19/11/2026). An error, so the setup does not record the tone mapper as made and tries again next time
+        sys.exit("renodx.py: no tone curve program could be edited")
 
 
 if __name__ == "__main__":
