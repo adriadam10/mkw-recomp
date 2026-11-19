@@ -714,14 +714,21 @@ static void steam_art_draw(void) {
 
 // Add to Steam's result in words ("" while it has none): added, added with Steam to restart, or why it failed.
 static void steam_note(const ToolState &job, char *note, size_t cap, bool *failed) {
-    int users = 0, running = 0;
+    int users = 0, running = 0, skipped = 0;
     *failed = job.job == JOB_STEAM && job.phase == TOOL_FAILED;
     note[0] = 0;
-    if (job.job == JOB_STEAM && job.phase == TOOL_DONE && sscanf(job.line, "%d %d", &users, &running) == 2)
-        snprintf(note, cap, "%s", menu_text(running ? UI_TOOLS_STEAM_RESTART : UI_TOOLS_STEAM_DONE));
-    else if (*failed)
+    if (job.job == JOB_STEAM && job.phase == TOOL_DONE && sscanf(job.line, "%d %d %d", &users, &running, &skipped) >= 2) {
+        if (skipped) {
+            *failed = true;
+            snprintf(note, cap, menu_text(running ? UI_TOOLS_STEAM_PARTIAL_RESTART : UI_TOOLS_STEAM_PARTIAL),
+                     users, users + skipped);
+        } else {
+            snprintf(note, cap, "%s", menu_text(running ? UI_TOOLS_STEAM_RESTART : UI_TOOLS_STEAM_DONE));
+        }
+    } else if (*failed) {
         snprintf(note, cap, menu_text(UI_TOOLS_FAILED),
                  !strncmp(job.line, "nosteam", 7) ? menu_text(UI_TOOLS_STEAM_NONE) : job.line);
+    }
 }
 
 // The card's Add to Steam was pressed this start: the card stays, with its result, until the start screen closes.

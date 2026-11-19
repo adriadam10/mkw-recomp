@@ -1141,6 +1141,43 @@ T.setdefault("UI_TOOLS_UPDATE_CURRENT", {}).update({
 })
 
 
+# Add to Steam's partial result: only some profiles could be updated (11/2026); keep %d %d in order
+T.setdefault("UI_TOOLS_STEAM_PARTIAL", {}).update({
+    "ca": "S'han actualitzat %d de %d perfils de Steam", "de": "%d von %d Steam-Profilen aktualisiert",
+    "fr": "%d profils Steam sur %d mis à jour", "es": "Actualizados %d de %d perfiles de Steam",
+    "es-419": "Se actualizaron %d de %d perfiles de Steam", "it": "Aggiornati %d profili Steam su %d",
+    "pt": "Atualizados %d de %d perfis do Steam", "pt-BR": "%d de %d perfis do Steam atualizados",
+    "nl": "%d van %d Steam-profielen bijgewerkt", "ru": "Обновлено профилей Steam: %d из %d",
+    "ja": "Steam プロフィールを %d/%d 件更新しました", "ko": "Steam 프로필 %d/%d개 업데이트됨",
+    "zh-Hans": "已更新 %d/%d 个 Steam 用户配置", "zh-Hant": "已更新 %d/%d 個 Steam 使用者設定檔",
+    "gl": "Actualizados %d de %d perfís de Steam", "eu": "Steam-en %d profil eguneratu dira %d-tik",
+    "pl": "Zaktualizowano %d z %d profili Steam", "tr": "%d / %d Steam profili güncellendi",
+    "uk": "Оновлено профілів Steam: %d з %d", "th": "อัปเดตโปรไฟล์ Steam แล้ว %d จาก %d",
+})
+T.setdefault("UI_TOOLS_STEAM_PARTIAL_RESTART", {}).update({
+    "ca": "S'han actualitzat %d de %d perfils de Steam. Reinicia Steam per veure l'accés directe.",
+    "de": "%d von %d Steam-Profilen aktualisiert. Starte Steam neu, um die Verknüpfung zu sehen.",
+    "fr": "%d profils Steam sur %d mis à jour. Redémarrez Steam pour voir le raccourci.",
+    "es": "Actualizados %d de %d perfiles de Steam. Reinicia Steam para ver el acceso directo.",
+    "es-419": "Se actualizaron %d de %d perfiles de Steam. Reinicia Steam para ver el acceso directo.",
+    "it": "Aggiornati %d profili Steam su %d. Riavvia Steam per vedere il collegamento.",
+    "pt": "Atualizados %d de %d perfis do Steam. Reinicia o Steam para ver o atalho.",
+    "pt-BR": "%d de %d perfis do Steam atualizados. Reinicie o Steam para ver o atalho.",
+    "nl": "%d van %d Steam-profielen bijgewerkt. Herstart Steam om de snelkoppeling te zien.",
+    "ru": "Обновлено профилей Steam: %d из %d. Перезапустите Steam, чтобы увидеть ярлык.",
+    "ja": "Steam プロフィールを %d/%d 件更新しました。ショートカットを表示するには Steam を再起動してください。",
+    "ko": "Steam 프로필 %d/%d개 업데이트됨. 바로가기를 보려면 Steam을 다시 시작하세요.",
+    "zh-Hans": "已更新 %d/%d 个 Steam 用户配置。请重启 Steam 以查看快捷方式。",
+    "zh-Hant": "已更新 %d/%d 個 Steam 使用者設定檔。請重新啟動 Steam 以查看捷徑。",
+    "gl": "Actualizados %d de %d perfís de Steam. Reinicia Steam para ver o atallo.",
+    "eu": "Steam-en %d profil eguneratu dira %d-tik. Berrabiarazi Steam lasterbidea ikusteko.",
+    "pl": "Zaktualizowano %d z %d profili Steam. Uruchom Steam ponownie, aby zobaczyć skrót.",
+    "tr": "%d / %d Steam profili güncellendi. Kısayolu görmek için Steam'i yeniden başlatın.",
+    "uk": "Оновлено профілів Steam: %d з %d. Перезапустіть Steam, щоб побачити ярлик.",
+    "th": "อัปเดตโปรไฟล์ Steam แล้ว %d จาก %d รีสตาร์ท Steam เพื่อดูทางลัด",
+})
+
+
 def main():
     # catalog.py's own reader and writer: a long English id is wrapped over several lines in the .po, which a
     # one-line pattern missed (four of the GameBanana tab's texts on 13/11/2026)
