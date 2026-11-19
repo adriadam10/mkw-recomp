@@ -55,11 +55,23 @@ static VkDescriptorPool spare_pool[SPARE_POOLS];
 static Chunk spare_chunk[SPARE_CHUNKS];
 static int nspare_pool, nspare_chunk;
 
+static void written_one(void *ctx, int i) {
+    const CbRes *r = ctx;
+    if (r->written[i].own) vk_gpu_written(r->written[i].addr, r->written[i].size);
+}
+
 static void cb_done(void *arg) {   // completion thread
     CbRes *r = arg;
     VkCtx *c = vk_ctx();
+    // MKW_WB_PAR: a callback with enough bytes to compare shares its ranges out (vk_wb_par.c)
+    uint64_t wbytes = 0;
+    int nown = 0;
     for (int i = 0; i < r->nwritten; i++)
-        if (r->written[i].own) vk_gpu_written(r->written[i].addr, r->written[i].size);
+        if (r->written[i].own) wbytes += r->written[i].size, nown++;
+    if (nown >= 4 && wbytes >= (256u << 10)) vk_wb_par(r->nwritten, written_one, r);
+    else
+        for (int i = 0; i < r->nwritten; i++)
+            if (r->written[i].own) vk_gpu_written(r->written[i].addr, r->written[i].size);
     for (int i = 0; i < r->npools; i++) {
         vkResetDescriptorPool(c->device, r->pools[i], 0);
         plat_mutex_lock(&spare_lock);
