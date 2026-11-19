@@ -124,7 +124,23 @@ static void placed_release(VkCtx *c, PoolRec *r) {
     __atomic_sub_fetch(&placed_n, 1, __ATOMIC_RELAXED), __atomic_sub_fetch(&placed_bytes, (int64_t)n, __ATOMIC_RELAXED);
 }
 
-// CPU-visible storage: the guest pages themselves become the buffer's memory (VK_EXT_external_memory_host).
+static int import_host(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size);
+
+// MKW_IMPORT_FAIL=N (a test): every Nth host memory import is refused as if the driver had, to check the shadow
+// fallback below on pools the driver would take (with MKW_SHADOW=0, the import mode Windows runs in).
+static int import_refused(void) {
+    static int every = -1;
+    static int32_t n;
+    if (every < 0) {
+        const char *e = cfg_get("MKW_IMPORT_FAIL");
+        every = e && *e ? atoi(e) : 0;
+        if (every > 0) rt_log("vk: every %d host memory imports refused (MKW_IMPORT_FAIL, a test)", every);
+    }
+    return every > 0 && plat_inc32(&n) % every == 0;
+}
+
+// CPU-visible storage: the guest pages themselves become the buffer's memory (VK_EXT_external_memory_host), or a
+// shadow copy of them (vk_mem_shadow.c).
 int import_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
     if (c->has_placed && placed_pool(c, r, addr, size)) return 1;
     // A pool whose copy does not fit (MKW: one of 2.4 GB, flags 0x24, over MKW_GPU_MEM_LIMIT; run77-run78 died on it)
@@ -132,6 +148,31 @@ int import_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
     // (Importing every CPU_NO_ACCESS pool too was tried, run82-run86: the pinned pages count in the process's memory
     // and it died sooner, frame 97-103 against 130.)
     if (shadow_on && shadow_pool(c, r, addr, size)) return 1;
+    if (import_host(c, r, addr, size)) return 1;
+    // In import mode (Windows), a pool the driver refuses to import gets a shadow copy instead, and the shadow syncs and
+    // write-backs start running for it (shadow_live). Without it the pool had no GPU storage: its addresses resolved as
+    // unbacked and a zero buffer was bound in their place, so whatever the game drew from them vanished, more of it at
+    // each course as new pools were refused (#438: RX 7600, AMD 26.x on Windows, 4 214 "no GPU storage" in one long
+    // session, each after "host memory import failed (-1000072003)", VK_ERROR_INVALID_EXTERNAL_HANDLE, on pools of
+    // 16-40 KiB flags 0x22 and 0x24, with VRAM to spare; #628 the same on an RX 5700 XT). RADV refuses the same pools
+    // in import mode (MKW_SHADOW=0): the tt8 capture replayed had 57 without storage and died at a counter report "in
+    // no memory pool"; with the fallback none, and the image the same as in the default shadow mode (0.0000, 6 frames;
+    // with MKW_IMPORT_FAIL=3 too), RX 6700 XT, 19/11/2026.
+    if (!shadow_on && shadow_pool(c, r, addr, size)) {
+        if (!__atomic_exchange_n(&shadow_live, 1, __ATOMIC_ACQ_REL))
+            rt_log("mem: shadow storage for the pools whose host memory import fails (first: %#llx+%#llx)",
+                   (unsigned long long)addr, (unsigned long long)size);
+        static int32_t nfall;
+        int32_t k = plat_inc32(&nfall);
+        if (k <= 4 || !(k & (k - 1)))
+            rt_log("vk: pool %#llx+%#llx: a shadow copy instead of the import (%d so far)", (unsigned long long)addr,
+                   (unsigned long long)size, k);
+        return 1;
+    }
+    return 0;
+}
+
+static int import_host(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
     if (!c->has_emh) {
         rt_log("vk: pool %#llx+%#llx: no shadow and no VK_EXT_external_memory_host to import it", (unsigned long long)addr,
                (unsigned long long)size);
@@ -178,7 +219,7 @@ int import_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
                                            .pHostPointer = (void *)(uintptr_t)r->import_lo};
     VkMemoryAllocateInfo ai = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, .pNext = &im, .allocationSize = n,
                                .memoryTypeIndex = (uint32_t)type};
-    if ((res = vkAllocateMemory(c->device, &ai, NULL, &r->mem)) != VK_SUCCESS ||
+    if ((res = import_refused() ? VK_ERROR_INVALID_EXTERNAL_HANDLE : vkAllocateMemory(c->device, &ai, NULL, &r->mem)) != VK_SUCCESS ||
         (res = vkBindBufferMemory(c->device, r->buf, r->mem, 0)) != VK_SUCCESS) {
         rt_log("vk: pool %#llx+%#llx: host memory import failed (%d)", (unsigned long long)addr, (unsigned long long)size, (int)res);
         if (r->mem) vkFreeMemory(c->device, r->mem, NULL);

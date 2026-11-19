@@ -126,6 +126,7 @@ void dirty_frame(uint64_t frame);
 
 // vk_mem_shadow.c: shadow storage
 extern int shadow_on, read_traps, wb_defer;
+extern int shadow_live;   // the shadow machinery runs: shadow_on, or a pool that took a shadow when its import failed
 extern int64_t s_live_n, s_live_bytes;
 int shadow_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size);
 void shadow_touch(PoolRec *r);

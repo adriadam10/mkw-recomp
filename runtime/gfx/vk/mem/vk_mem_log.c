@@ -236,6 +236,7 @@ static void mirror_mode(int discrete) {
 #else
     shadow_on = !sh || !*sh || strcmp(sh, "0");
 #endif
+    shadow_live = shadow_on;
     if (shadow_on) rt_log("mem: shadow storage: CPU-visible pools are host-visible copies of guest memory, not imports%s",
                           sh && *sh ? " (MKW_SHADOW)" : "");
     const char *dc = cfg_get("MKW_DIRTY_CENSUS");

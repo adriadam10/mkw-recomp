@@ -140,7 +140,7 @@ static void capture_pool(PoolRec *r, CapRun **runs, int *nruns, int *cruns, uint
 }
 
 void vk_mem_shadow_capture(uint64_t sub) {
-    if (!shadow_on) return;
+    if (!shadow_live) return;
     if (mode < 0) {
         mode = rt_knob("SHADOW_SUBMIT", "0");
         rt_log("mem: the CPU's writes captured at each submit %s (MKW_SHADOW_SUBMIT)",
