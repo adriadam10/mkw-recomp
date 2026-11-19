@@ -1026,7 +1026,15 @@ void bind_resources(VkExec *ex, const VkPipeInfo *info) {
             VkDescriptorSet set = B.ds_last[s];
             if (!set || B.ds_last_layout[s] != sl || DS.n[s] != dbytes || memcmp(DS.sig[s], ds, dbytes)) {
                 set = alloc_set(ex, sl);
-                write_set(info, s, set, ds, w, i0, i1);
+                // MKW_REC_SET_WRITE (perf-deck, default 1; "ab"): a set with an update template is written by the
+                // recorder thread, in ring order before its bind, instead of here on the replay thread. mp4_dc0 (Steam
+                // Deck, 4 players): 0.55 sets written a draw, ~0.5 us of the draw's 4.3 in "sets and pushes".
+                static int rsw = -1;
+                if (rsw < 0) rsw = rt_knob("REC_SET_WRITE", "1");
+                if (info->tpl[s] && i1 > i0 && RT_KNOB_ON(rsw))
+                    rec_update_tpl(vk_pipeline_update_tpl_fn(), ex->cb, vk_ctx()->device, set, info->tpl[s], ds, dbytes);
+                else
+                    write_set(info, s, set, ds, w, i0, i1);
                 B.ds_last[s] = set, B.ds_last_layout[s] = sl, DS.n[s] = dbytes;
                 memcpy(DS.sig[s], ds, dbytes);
                 BS.set_new++;

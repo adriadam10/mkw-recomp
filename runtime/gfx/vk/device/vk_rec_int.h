@@ -17,7 +17,7 @@ enum {
     R_SetRasterizerDiscardEnable, R_SetScissorWithCount, R_SetStencilCompareMask, R_SetStencilOp, R_SetStencilReference,
     R_SetStencilTestEnable, R_SetStencilWriteMask, R_SetViewportWithCount, R_WriteTimestamp, R_WriteTimestamp2,
     R_PushTpl, R_Push, R_VertexInput, R_Bool, R_PolygonMode, R_DrawMesh, R_BlendEnable, R_BlendEquation, R_WriteMask,
-    R_Marker, R_Checkpoint,
+    R_Marker, R_Checkpoint, R_UpdTpl,
 };
 
 // Packets with arrays: a struct with the call's arguments, the arrays after it, pointers into the packet.
@@ -50,6 +50,8 @@ typedef struct { PFN_vkCmdDrawMeshTasksEXT fn; uint32_t x, y, z; } A_DrawMesh;
 typedef struct { PFN_vkCmdWriteBufferMarkerAMD fn; VkPipelineStageFlagBits stage; VkBuffer b; VkDeviceSize o; uint32_t v; } A_Marker;
 typedef struct { PFN_vkCmdSetCheckpointNV fn; const void *m; } A_Checkpoint;
 typedef struct { void *fn; uint32_t first, n; const void *v; } A_Targets;
+typedef struct { PFN_vkUpdateDescriptorSetWithTemplate fn; VkDevice dev; VkDescriptorSet set; VkDescriptorUpdateTemplate tpl;
+                 const void *data; } A_UpdTpl;
 
 extern VkCommandBuffer rec_cb;   // the part being recorded (set while the recorder is idle)
 extern int rec_live;             // producer: rec_begin started the recorder for rec_cb

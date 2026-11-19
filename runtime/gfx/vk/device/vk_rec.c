@@ -44,10 +44,10 @@ static const char *const r_names[] = {
     "SetFrontFace", "SetPrimitiveRestartEnable", "SetPrimitiveTopology", "SetRasterizerDiscardEnable",
     "SetScissorWithCount", "SetStencilCompareMask", "SetStencilOp", "SetStencilReference", "SetStencilTestEnable",
     "SetStencilWriteMask", "SetViewportWithCount", "WriteTimestamp", "WriteTimestamp2", "PushTpl", "Push",
-    "VertexInput", "Bool", "PolygonMode", "DrawMesh", "BlendEnable", "BlendEquation", "WriteMask", "Marker", "Checkpoint",
+    "VertexInput", "Bool", "PolygonMode", "DrawMesh", "BlendEnable", "BlendEquation", "WriteMask", "Marker", "Checkpoint", "UpdTpl",
 };
-_Static_assert(sizeof r_names / sizeof *r_names == R_Checkpoint + 1, "r_names follows the R_ enum");
-const char *rec_op_name(uint32_t op) { return op <= R_Checkpoint ? r_names[op] : "?"; }
+_Static_assert(sizeof r_names / sizeof *r_names == R_UpdTpl + 1, "r_names follows the R_ enum");
+const char *rec_op_name(uint32_t op) { return op <= R_UpdTpl ? r_names[op] : "?"; }
 
 static uint64_t now_ns(void) { return plat_now_ns(); }
 
@@ -395,6 +395,7 @@ static void exec_packet(uint32_t op, void *p) {
     case R_DrawMesh: { A_DrawMesh *a = p; a->fn(cb, a->x, a->y, a->z); break; }
     case R_Marker: { A_Marker *a = p; a->fn(cb, a->stage, a->b, a->o, a->v); break; }
     case R_Checkpoint: { A_Checkpoint *a = p; a->fn(cb, a->m); break; }
+    case R_UpdTpl: { A_UpdTpl *a = p; a->fn(a->dev, a->set, a->tpl, a->data); break; }
     case R_BlendEnable: { A_Targets *a = p; ((PFN_vkCmdSetColorBlendEnableEXT)a->fn)(cb, a->first, a->n, a->v); break; }
     case R_BlendEquation: { A_Targets *a = p; ((PFN_vkCmdSetColorBlendEquationEXT)a->fn)(cb, a->first, a->n, a->v); break; }
     case R_WriteMask: { A_Targets *a = p; ((PFN_vkCmdSetColorWriteMaskEXT)a->fn)(cb, a->first, a->n, a->v); break; }

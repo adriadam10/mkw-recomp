@@ -177,6 +177,19 @@ void rec_push_tpl(PFN_vkCmdPushDescriptorSetWithTemplateKHR fn, VkCommandBuffer 
     pub();
 }
 
+// A descriptor set write through its update template, made by the recorder in call order (before the bind that
+// follows it in the ring): the driver's write leaves the replay thread (perf-deck, MKW_REC_SET_WRITE in vk_exec_bind.c).
+// Not a command: a set no command of this part reads yet. Outside a recorded part it is made at once.
+void rec_update_tpl(PFN_vkUpdateDescriptorSetWithTemplate fn, VkCommandBuffer cb, VkDevice dev, VkDescriptorSet set,
+                    VkDescriptorUpdateTemplate tpl, const void *data, uint32_t bytes) {
+    if (!OWNED(cb)) { fn(dev, set, tpl, data); return; }
+    A_UpdTpl *a = put(R_UpdTpl, sizeof *a + bytes);
+    uint8_t *at = (uint8_t *)(a + 1);
+    *a = (A_UpdTpl){fn, dev, set, tpl, NULL};
+    a->data = tail_copy(&at, data, bytes);
+    pub();
+}
+
 void rec_push(PFN_vkCmdPushDescriptorSetKHR fn, VkCommandBuffer cb, VkPipelineBindPoint bp, VkPipelineLayout layout,
               uint32_t set, uint32_t n, const VkWriteDescriptorSet *w) {
     if (vk_guard_on()) vk_guard_pushed(cb, bp, set);
