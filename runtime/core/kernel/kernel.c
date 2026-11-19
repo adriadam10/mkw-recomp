@@ -244,7 +244,7 @@ RtThread *thr_new(int prio, int core, uint64_t mask) {
     memset(c, 0, sizeof *c);
     plat_cond_init(&t->cv);
     t->prio = prio;
-    t->core = core;
+    t->core = t->ideal = core;
     t->mask = mask;
     t->cur_core = -1;
     // TLR (0x200) and the "current thread object" the SDK reads through TLR+0x1F8, in one guest-visible block.

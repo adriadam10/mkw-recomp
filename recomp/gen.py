@@ -51,7 +51,7 @@ import regs  # noqa: E402
 from layout import layout, write as write_layout  # noqa: E402
 from lifter import hx  # noqa: E402
 from module import Module  # noqa: E402
-from versions import default_gen, detect  # noqa: E402  (the dump's version: --out and --patches defaults)
+from versions import detect, gen_dir_for  # noqa: E402  (the dump's version: --out and --patches defaults)
 
 # Written into every generated file: a commit check can refuse anything carrying it (game-derived code).
 GENERATED_MARKER = 'MKW_RECOMP_' + 'GENERATED_FROM_GAME_CODE'
@@ -754,12 +754,14 @@ def main():
     opts = {'reg_locals': args.reg_locals, 'callee_saved': not args.no_callee_saved_trust}
 
     t0 = time.perf_counter()
-    try:
-        version = detect(args.exefs)
-    except (FileNotFoundError, ValueError) as e:
-        raise SystemExit(f'cannot detect the game version of {args.exefs}: {e}') from None
+    version = None
+    if args.out is None or args.patches is None:
+        try:
+            version = detect(args.exefs)
+        except (FileNotFoundError, ValueError) as e:
+            raise SystemExit(f'cannot detect the game version of {args.exefs}: {e}') from None
     if args.out is None:
-        args.out = default_gen(args.exefs)
+        args.out = gen_dir_for(version)
         print(f'{version.name}: writing {args.out} with {version.patches.name}', file=sys.stderr)
     if args.patches is None:
         args.patches = version.patches

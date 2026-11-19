@@ -7,6 +7,7 @@ submits and fences, present.
 |---|---|
 | `vk.h`, `vk_backend.c` | Internal header and back end: ties memory, textures, submits and present together |
 | `vk_device.c`, `vk_caps.c`, `vk_vma.cpp` | Instance, device, VMA (the only C++), and what the runtime decides from the GPU |
+| `vk_gpu_check.h` | Whether a GPU here can run the game, by `pick_device`'s rules (`vk_gpu_report` in `vk_device.c`), asked by the start screen before the setup and Play: each GPU's Vulkan version, driver and what it lacks (C and C++) |
 | `vk_pstate.c` | An AMD GPU's clocks on Linux (`MKW_GPU_CLOCKS`, default peak on a discrete GPU): amdgpu's automatic choice left the race frame's half-busy GPU at its lowest clock (500 of 2855 MHz on an RX 6700 XT, races at 42.6 ms a frame); a stable pstate set on a context of our own through `libdrm_amdgpu` (loaded at run time, no root) holds them for the run (16.9 ms), only from amdgpu's automatic level (a manual one from LACT, CoreCtrl or SteamOS is left alone). `ab` switches it with the A/B blocks |
 | `vk_defaults.h`, `vk_defaults.c` | Memory caps with nothing set, from the player's GPU and RAM (`MKW_SPARSE_MIB`, `MKW_GPU_MEM_LIMIT` on an integrated GPU, `MKW_VK_TEX_POOL_MIN`); pure, checked by `tests/runtime/test_defaults.py` |
 | `vk_destroy_count.h` | Routes every buffer, view or sampler destruction through `vk_destroy_note`: the draw cache is flushed when a stored set named that handle |

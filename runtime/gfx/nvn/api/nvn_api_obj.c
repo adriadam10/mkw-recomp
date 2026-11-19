@@ -653,11 +653,11 @@ NVN_API(nvnWindowSetCrop) {
 }
 
 // ---------- Present pacing
-// The vsync thread ticks at a fixed 60 Hz whatever the monitor does, so one game frame lasts `interval` ticks; the turbo
-// (core/hacks/turbo.c) makes them `turbo_speed` times shorter.
-#define VSYNC_HZ 60ull
+// The vsync thread ticks at a fixed rate whatever the monitor does (60 Hz, MKW_LOGIC_HZ), so one game frame lasts
+// `interval` ticks; the turbo (core/hacks/turbo.c) makes them `turbo_speed` times shorter.
 static uint64_t present_period(const win_t *o) {
-    return (o->interval > 0 ? (uint64_t)o->interval : 1ull) * 1000000000ull / VSYNC_HZ / (uint64_t)turbo_speed();
+    return (o->interval > 0 ? (uint64_t)o->interval : 1ull) * 1000000000ull / (uint64_t)frame_logic_hz() /
+           (uint64_t)turbo_speed();
 }
 
 // MacNativeGames nvn_pace.h: the present slot is the previous slot plus one period. Early: wait for the slot. Late by

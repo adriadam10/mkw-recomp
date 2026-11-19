@@ -384,6 +384,7 @@ static void layout_choice(uint32_t w, uint32_t h, float scale) {
 // B on the gamepad and Esc close it. Opening focuses "Continue" (g_focus_continue, spent on the first layout), so a
 // stray gamepad deflection cannot retune a setting.
 static int g_focus_continue;   // the just-opened menu focuses "Continue"
+static int g_bottom_active;   // "Continue" / "Quit game" had the cursor last frame: the description pane stays empty
 static void layout_menu(uint32_t w, uint32_t h, float scale) {
     ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), ImVec2((float)w, (float)h), IM_COL32(0, 0, 0, 120));
     float ww = fminf(w * 0.88f, 1400 * scale), wh = fminf(h * 0.86f, 820 * scale);
@@ -402,6 +403,7 @@ static void layout_menu(uint32_t w, uint32_t h, float scale) {
 
     const ImGuiStyle &st = ImGui::GetStyle();
     float bottom = ImGui::GetFrameHeight() + st.ItemSpacing.y * 2;
+    opt_hide_desc(g_bottom_active);   // a bottom button had the cursor: no row is described
     settings_tabs(scale, bottom);
 
     // bottom row: the save status on the left, the two buttons on the right
@@ -420,8 +422,10 @@ static void layout_menu(uint32_t w, uint32_t h, float scale) {
         g_focus_continue = 0;
     }
     if (ImGui::Button(cont, ImVec2(bw, 0))) set_open(0);
+    bool cont_active = ImGui::IsItemFocused() || ImGui::IsItemHovered();
     ImGui::SameLine();
     if (ImGui::Button(quit, ImVec2(bw, 0))) gfx_window_request_close();
+    g_bottom_active = (cont_active || ImGui::IsItemFocused() || ImGui::IsItemHovered());
     bool was_modal = settings_modal();
     settings_tabs_done();
     if (!was_modal && (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false)))
@@ -746,6 +750,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
         // the test hook's pages keep the first row focused for stable screenshots (settings_select survives
         // settings_opened_menu, so only a plain open takes "Continue")
         g_focus_continue = (g_test.page < 0);
+        g_bottom_active = g_focus_continue;   // "Continue" takes the cursor: no row is described either
         if (GImGui->OpenPopupStack.Size) ImGui::ClosePopupToLevel(0, false);   // a confirmation left open on closing
     }
     io.DisplaySize = ImVec2((float)t->width, (float)t->height);

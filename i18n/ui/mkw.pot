@@ -137,6 +137,24 @@ msgctxt "UI_MENU_ASPECT_WINDOW"
 msgid "Window"
 msgstr ""
 
+msgctxt "UI_MENU_HUD_POSITION"
+msgid "HUD position"
+msgstr ""
+
+msgctxt "UI_MENU_HUD_POSITION_DESC"
+msgid ""
+"On a picture wider or taller than 16:9, keep the race HUD in the middle 16:9 area (the console's "
+"place) or put it at the screen's edges and corners. Takes effect at the next start."
+msgstr ""
+
+msgctxt "UI_MENU_HUD_POSITION_16X9"
+msgid "16:9 area"
+msgstr ""
+
+msgctxt "UI_MENU_HUD_POSITION_EDGES"
+msgid "Screen edges"
+msgstr ""
+
 msgctxt "UI_MENU_QUALITY"
 msgid "Quality"
 msgstr ""
@@ -788,8 +806,9 @@ msgstr ""
 
 msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
 msgid ""
-"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
-"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+"Note: If using the Guide button, turn off 'Guide button focuses Steam' in Steam (Settings -> "
+"Controller -> Advanced Settings).\n\nOn Windows, also turn off 'Allow your controller to open "
+"Game Bar' (Settings -> Gaming -> Game Bar)."
 msgstr ""
 
 msgctxt "UI_BINDS_HELP"
@@ -2708,6 +2727,53 @@ msgstr ""
 
 msgctxt "UI_LAUNCH_FOUND_FOLDER"
 msgid "folder"
+msgstr ""
+
+msgctxt "UI_LAUNCH_GPU_NONE"
+msgid "No graphics card here can run the game"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_OLD"
+msgid "%s: its driver offers %s, and the game needs Vulkan 1.3"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_EXT"
+msgid "%s (%s): its driver lacks %s, which the game needs"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_QUEUE"
+msgid "%s: it has no queue that does both graphics and compute"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SKIPPED"
+msgid "%s: not the one chosen in Settings, Screen, Graphics card"
+msgstr ""
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SOFTWARE"
+msgid "%s draws on the processor, not on a graphics card: far too slow to play"
+msgstr ""
+
+msgctxt "UI_LAUNCH_GPU_NO_DRIVER"
+msgid "No Vulkan driver was found."
+msgstr ""
+
+msgctxt "UI_LAUNCH_GPU_HELP"
+msgid ""
+"The game needs Vulkan 1.3. On AMD and Intel that is Mesa 22.0 or newer, newer than Debian 11 and "
+"Ubuntu 20.04 ship; on NVIDIA, its driver 510 or newer. Some older graphics cards cannot have it "
+"at all. The setup can run now: the game starts once the driver is updated."
+msgstr ""
+
+msgctxt "UI_LAUNCH_GPU_HELP_WIN"
+msgid ""
+"The game needs Vulkan 1.3: install the latest driver from your graphics card's maker (AMD, Intel "
+"or NVIDIA; on NVIDIA, 510 or newer). Some older graphics cards cannot have it at all. The setup "
+"can run now: the game starts once the driver is updated."
 msgstr ""
 
 #. A product name: keep it as Steam shows it in your language.

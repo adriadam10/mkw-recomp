@@ -17,6 +17,306 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   library](docs/guides/remote-play.md#get-steams-library) says where to download it and where to put it. Set-up and the App
   IDs tried: [docs/guides/remote-play.md](docs/guides/remote-play.md).
 
+## 0.1.15
+
+A fix for the Linux AppImage: 0.1.14's setup stopped at `check` for every player, new setups and updates alike.
+
+### Changes
+
+- **The setup from the Linux AppImage stopped at `check` (#632).** 0.1.14 compares the files of the setup's keys
+  with the package's list, and the AppImage reaches its tools through `setup/`, a link to its mount, while the list's
+  folder was the mount's real path: `ValueError: ... is not in the subpath of ...` on every setup. Both are compared
+  resolved now, with a test that runs through the link. Our release check ran the setup through the mount's path and
+  missed it; it now runs it through the link, as the start screen does. Windows was not affected.
+- **`logs/setup.log` no longer fills with thread stacks** in a healthy setup: the watchdog for a stopped setup
+  (#251, #506) now writes them only after two minutes without an event, not every two minutes from the start (a
+  12-minute setup carried ~1 000 lines of them, which read like an error).
+
+### Tested
+
+From the packages Actions built for this tag, before publishing:
+
+- The whole setup from the Linux AppImage through its `setup/` link, as the start screen runs it (12 threads, game
+  1.0.0), in about 10 minutes; its warm-up built all 13 630 shader libraries and compute pipelines with none failed.
+- The whole setup from the Windows zip (the 6-thread Windows PC, game 1.0.0); its warm-up built the same 13 630 with
+  none failed.
+
+## 0.1.14
+
+Races at 60 fps on AMD cards under Linux (42.6 to 16.9 ms a frame on an RX 6700 XT), trees and bushes that no longer
+drop out at random, black textures on Intel Iris Xe and a crash on Vega, the setup that now says when the game files
+are gone, finds your copies by itself and checks the free space first (also from Steam's Gaming Mode), the game in
+Turkish, every controller's battery, an update that sets itself up while you play, and a first start that builds every
+shader library in the setup. New: Steam Big Picture and Gaming Mode start by @AngeloAscheri, Cemuhook motion by
+@jony25, the HUD at the screen edges by @simonwjackson, a menu shortcut setting by @SavageCore, a 120 fps frame
+generation target by @Hampter588, and the README in German by @andreknieriem. Thanks to @AngeloAscheri,
+@simonwjackson, @SavageCore, @louisdibiasi, @andreknieriem, @jony25, @Gael50, @Gag21, @Hampter588, @VictorMerk and
+@MarcTheFennec.
+
+### Changes
+
+- **The start screen says when the game files are gone, also in Gaming Mode** (#493 by @AngeloAscheri, #486): a Steam
+  Deck player linked the game's `.nup` in desktop mode, the package was no longer there, and Play just closed the game
+  with nothing said. The start screen now checks once a second that the RomFS and `exefs/` are there; when they are
+  not, Play stays off, the state line reads "Game files not found" and the Game files page opens, saying where the
+  setup left them and what brings them back (connect the card or drive, or set up again). A card connected while it
+  is open is seen within a second. A missing RomFS is also named in the log. In Gaming Mode, where the start screen is
+  skipped, it now opens when the files are gone (by us).
+- **Each controller's battery** (discussion #516): the Controls tab lists each player's controller and its battery,
+  the start screen adds the first one's to its controller line (every one's when hovered), and a notice says once
+  when a battery drops to 15 %. A Switch 2 controller over Bluetooth gives its voltage in three bands, as no curve to
+  a percentage is known.
+- **The game in Turkish** (discussion #593): 1 162 of 1.0.0's 1 328 game texts and 1 309 of 1.8.0's 1 796 are
+  translated (song titles and names stay in English), chosen in Settings > Game > Language. The game's fonts lack
+  ğ Ğ ş Ş İ, so the setup composes them into each font's own overlay from its breve, dot and cedilla; the composed
+  fonts are kept between setups (24 s to 1 s).
+- **Trees and bushes stopped dropping out** (#524): four compute programs reset an append counter from the dispatch's
+  first invocation while every workgroup adds to it, and nothing ordered workgroup 0 first, so the scenery lists
+  lost entries at random from frame to frame. The first invocation's reset now runs on its own before the rest
+  (`MKW_FIRST_STORE`, on by default, `0` turns it off); 11 561 of 11 561 programs stay valid and only those four
+  change. Found by nxnative, which measured 50 % of a rebuild lost on Apple GPUs.
+- **The replay thread no longer takes a core from a hybrid CPU with few P cores** (#497): on 4 P and 4 E cores
+  (12 processors, RTX 3050 laptop) 0.1.13's fast-core pin left the game and its three recording chunks on 3 P cores:
+  30 fps in 0.1.12 became 18. A fast core is now taken only when 8 fast processors are left besides it; otherwise
+  the last physical core, as in 0.1.12. Not measured on a hybrid CPU here; on the i7-14700F nothing changes.
+- **The GPU check's texts in every language, and Windows' own advice** (#621): the start screen says when no GPU here
+  can run the game (see #621 by @AngeloAscheri below); its eight texts are now in all 20 languages, and Windows
+  players are told to install the latest driver from the card's maker (NVIDIA 510 or newer) instead of being sent to
+  Mesa, Debian and Ubuntu.
+- **Intel Iris Xe: black textures on 0.1.13** (#540): Intel's Windows driver gives ASTC 8x8 sparse granularity as
+  64x64 blocks, as it does for BC, and only BC was converted: an Iris Xe left 524 288 tiles without memory. Any ASTC
+  block size is converted now.
+- **Setup: a copy made in `copy` mode whose source was deleted sets up again** (#501): the setup repeats the last one
+  from its recorded source, and a deleted source stopped it with "moved". The game folder, which already holds
+  `exefs/main` and `romfs/`, now stands in.
+- **Setup on Windows with a non-ASCII path** (#527): zig prints the player's path in UTF-8 ("Área de Trabalho") and
+  it was read as cp1252, which failed the `compile` step. zig's and `mkw --unpack`'s output is read as UTF-8 and
+  every tool's output replaces a byte it cannot decode instead of failing.
+- **Setup: a dead worker fails instead of hanging** (#506): `gen.py` waited forever for a chunk lost with a worker
+  (0 % CPU, nothing but stack dumps in `setup.log`). It now exits with an error, and a compiler crash (ICE) is
+  retried once for that chunk, with the head of its error in `setup.log`.
+- **The pipeline cache autosave waits for the race to end** (#533, #596): each save copied the whole driver cache
+  under the driver's lock, which the replay's fast links wait on: 0.3-1.1 s hitches in a race on a Steam Deck. New
+  pipeline keys still go every 2 s and the cache follows at the next menu or load; each save logs its size and times.
+  On a GTX 1050 Ti (45 s of race, a 498 MB cache) the 4 saves all came in menus and the load, none in the race.
+- **HUD position, translated** (#604, #605): the setting's texts are in every language (by us; see the entries by
+  @simonwjackson below).
+- **The build is attested** (#541): the release now attests the three packages and `mkw.exe` inside the zip, so a
+  player can check with `gh attestation verify` that a file came from this repository's workflow (one antivirus
+  engine of 70 flags `mkw.exe` by its behaviour during the setup).
+- **60 fps races on AMD GPUs under Linux** (#521 by @AngeloAscheri, #496): amdgpu chose a clock by how busy the GPU
+  was, and the race frame keeps it half idle: 500 MHz of 2855 on an RX 6700 XT. The kernel's stable pstate is now set
+  on a context of our own, with no root: the race median went from 42.6 to 16.9 ms, the GPU's busy time per frame
+  from 19 to 5.3 ms. `MKW_GPU_CLOCKS`: `auto` (default: the peak on a discrete AMD GPU; off on an integrated one,
+  such as the Steam Deck or the 660M, until measured there), `peak`, `standard`, `off`. Nothing changes on Windows
+  or with other vendors. We set it only while the card is at amdgpu's automatic level, so LACT's or CoreCtrl's own
+  setting is never lost (by us); `--probe-gpu-clocks` shows on any GPU whether the driver lowers the clock in idle
+  gaps.
+- **The frame's threads on a hybrid CPU's fast cores** (#490 by @AngeloAscheri, #480): the frame's threads stay on
+  the fastest cores while background work keeps the efficiency cores. On an i7-14700F, in-run A/B: -6.3 ms a frame
+  (means), B faster in all four runs; the race's heavy first seconds go from 27-30 to about 20 ms. `MKW_FAST_CORES`
+  is on by default on Linux with a hybrid CPU that has 8 fast processors to spare, off elsewhere (Windows stays off
+  until measured there); `0` turns it off (follow-up #497 by us above).
+- **`vk submit` and `vk present` run with the frame's threads** (#584 by @AngeloAscheri): they started on the replay
+  thread's own processor. A part's wait for its `vkQueueSubmit2` falls from 34-39 to 11-13 us. `MKW_SUBMIT_APART`
+  is on by default (`0` keeps the old placement). The frame did not move on the RX 6700 XT at its 60 fps cap; the
+  gain is expected on a CPU-bound machine, not measured.
+- **Course loads: the ASTC alpha scan and the texture deswizzle on worker threads** (#581 by @AngeloAscheri): in a
+  Grand Prix load the alpha scan on the replay thread goes from 215 to 138 ms and the deswizzle of 1.1 GiB of larger
+  textures from 139 to 77 ms, with the same images; the race itself is unchanged. `MKW_TEX_PAR=0` starts no workers.
+- **The shadow write-back compares 64 bytes at a time** (#612 by @AngeloAscheri): the byte merge of what the GPU
+  changed took 2.6 ms of every frame in a 2-player race on an i7-14700F. With AVX2 masks and whole-run copies it is
+  1.5-1.7 ms and the frame gains 0.52 ms (the 60 fps cap hides the rest). `MKW_MERGE_SIMD=0` keeps the old loop.
+- **Setup finds your copies in the usual places** (#514 by @AngeloAscheri): Steam's Gaming Mode has no file dialogs,
+  so a player with only a controller could not choose the copy. The start screen now lists the `.nup`, `.nx` and
+  loose copies it finds in Downloads, Desktop, Documents, Games, EmuDeck's Emulation, Steam's Proton prefixes and
+  `/run/media`, `/media` and `/mnt` (on Windows, the profile's folders and each drive's root), with version and path,
+  one button each; the first is chosen, so Set up is one press away (the first of a known version, by us).
+- **Add to Steam for Big Picture and Gaming Mode** (#518 by @AngeloAscheri): the shortcut gets library art drawn in
+  the start screen's look (600x900 capsule, 920x430 wide capsule, 1920x620 hero, logo, icon) instead of a grey tile,
+  the button is also on the card offered after the setup, and adding again from another program path replaces the
+  shortcut instead of doubling it.
+- **Big Picture and Gaming Mode: the game starts straight in** (#525 by @AngeloAscheri), fullscreen and with the
+  controller working: the start screen was asking for one more Play, the game opened in a window and the controller
+  did nothing. `MKW_START_SCREEN` (Settings > General: Automatic, Always, Skip; default Automatic) skips the start
+  screen when Steam started the game, unless it has something to do or say (files not set up, a setup to repeat, a
+  code mod to build, a fatal error, or View/Select held in the first 400 ms). On a Wayland desktop the game uses
+  X11 so Steam can hand it the controller; we keep native Wayland when a display is in HDR (`MKW_STEAM_X11`, by us).
+- **Free space is checked before the RomFS copy** (#519 by @AngeloAscheri): 21.9 GiB in 206 202 files for 1.8.0 plus
+  about 3 GiB for the first build. A drive that filled half-way (a 64 GB Deck, a full SD card) failed in English
+  after up to 20 GiB. The setup now says in the player's language what is needed and what is free, and suggests
+  "Use it where it is".
+- **An Xbox controller's sticks get Microsoft's own dead zones** (#523 by @AngeloAscheri): an Xbox Elite 2 through
+  `xone` came to rest at 11-21 % and the course select's cursor kept moving. Xbox 360 and One/Series pads now get
+  24 % and 26.5 % by default (`MKW_STICK_DEADZONE` still wins; every other pad and Steam's virtual gamepad keep
+  8 %). The slider shows the open pad's own default while unset (by us).
+- **Audio resamples to the rate the device really drains** (#553 by @AngeloAscheri, #544): a device pulling 44.1 kHz
+  while the game wrote 48 000 a second dropped about 8 % of the blocks (102 overruns in 10 s). The rate is measured
+  every second and the ratio corrected up to 1 %: with a skewed device, 19-20 overruns, all before the first
+  estimate at 5 s, then none. The prefill now covers the device period and SDL's whole request, and underruns are
+  logged (by us).
+- **The first recording chunk no longer gets a depth target in the wrong layout** (#556 by @AngeloAscheri): one
+  validation error in a Grand Prix run, three times, on the race's depth target.
+- **Setup shaders and prewarm** (by us): the setup now builds the shader libraries of every vertex and fragment pair
+  in the copy and every compute pipeline (753 prewarmed on a Windows PC, 0 left to a dispatch, 18 before; #500), so
+  a new place no longer skips draws while its libraries compile. The alpha test reads its reference from the support
+  buffer, so its fade steps are no longer pipelines of their own. The prewarm reads one `shaders.pack`: 24.0 to
+  2.0 s on the Windows PC with a cold file cache, and the guest starts 27.2 to 11.4 s after the process. Programs
+  only the prewarm read are released after it (745 to 417 MiB resident on a 660M). A compute program loaded by key
+  keeps its resource table (on a GTX 1050 Ti one dispatch looped 65 536 times: 403-466 ms a frame in the character
+  select, 15-17 ms now).
+- **An update is set up in the background** (by us, discussion #429): the download no longer replaces the game
+  folder at once. `prepare.py --next` sets it up in `setup-next/`, at low priority and with half the memory, Play
+  stays the first button and works all along, and the card offers Restart with it. Its warm step runs there too
+  (it was 106 s at the first start on the Windows PC). The update's shaders step runs beside generate and compile,
+  and the swap waits 10 s instead of 18; 0.1.13 to this version on the 6-thread Windows PC: 390 to 329 s, Linux
+  284 to 255 s. The compiler's key leaves out its folder and the host, so an update on Linux or a kernel update no
+  longer compiles all ~360 chunks again (a 0.1.13 object is reused). `MKW_UPDATE_API` asks another server for the
+  latest release, to try an update before it is released.
+- **A faster first setup** (by us): the game's chunks compile on LLVM's own clang with zig's `-cc1` line (a 3.5 MB
+  chunk 6.9 to 4.75 s on the 6-thread Windows PC), the translation of the 11 561 shader programs goes from 366 to
+  140 s on 12 threads (`glslc -O0`; the frame's GPU time stayed 19.5 to 19.2 ms on a GTX 1050 Ti), `pack.py` reads
+  on 16 threads (29.3 to 17.1 s), and `setup.log` gives each tool's time and each step's CPU, also on Windows.
+  `MKW_SETUP_CPU=v2` builds the game code for x86-64-v2 for CPUs without AVX2 (#262): FMA3-less CPUs get a correctly
+  rounded fma; not yet measured against v3.
+- **Racing wheels without a gamepad mapping work as a controller** (#488, by us): SDL knows the MOZA R3/R5 as wheels
+  but guesses no mapping, so the game never saw them. The wheel axis goes to the left stick, the first buttons to
+  A/B/X/Y, shoulders, Minus, Plus and the first hat to the D-pad; pedals are unmapped, and a `gamecontrollerdb.txt`
+  in the game folder is read for them.
+- **Knockout Tour's checkpoint rainbow covers the whole width at 21:9** (#425, by us), on 1.0.0 and 1.8.0.
+- **Mods can ship native plugins** (by us): a mod's `plugin/*.so|dll` is loaded before the game code with a
+  versioned API (overrides by symbol or address, `on_game_loaded`, notices and an overlay); the Mods page warns that
+  the mod runs native code. A code request for a number gets an on-screen number pad (D-pad or stick and A, B deletes,
+  Plus confirms; also the mouse and keys).
+- **The start screen's GitHub and Discord marks** (by us): two icons, lit on hover, replace the GitHub text link.
+- **`GetThreadCoreMask` never reports a core outside the thread's mask** (#343 by @Gael50): the game's network
+  thread copies its `(core, mask)` pair and `SetThreadCoreMask` refuses a core outside the mask; a thread given
+  `SetThreadCoreMask(-1, 0x4)` read back `(0, 0x4)`. It now reads back the ideal core the game set, `-1` there, as
+  the console does (the guest's own ideal core rather than our scheduler's hint, by us).
+- **LAN play over a VPN** (#345 by @Gael50): `MKW_LAN_PEERS` in `mkw.ini` lists the other PCs for a network with no
+  broadcast, such as Tailscale; tested by NoxiousGit with 3 races over Tailscale on two PCs. The 0.1.13 notes already
+  listed it, but its code merged after that tag.
+- **Character select on a Radeon RX 570 on Windows** (#560 by @VictorMerk): stippled transparent panels
+  and broken rounded edges around the character-selection cards, caused by dynamic alpha-to-coverage on Ellesmere
+  (`0x67df`) with AMD's Windows driver. Alpha-to-coverage alone is now baked into the pipeline on that GPU;
+  `MKW_VK_DYN_A2C=0` picks static and `=1` restores dynamic for comparing.
+- **Radeon Vega 7 and older GFX9 on RADV: crash at frame 150** (#385 by @MarcTheFennec): a texture resolving as slot
+  337 killed the process inside `vkCreateImage` (an assert in Mesa's addrlib for a block-compressed 3D texture with
+  mips). Those images are now made without COLOR_ATTACHMENT, and the usage query's extent, mip, layer and sample
+  limits are checked. Confirmed by the reporter on a Vega 7.
+- **Window size in pixels on Windows with display scaling** (#575 by @Gag21): at
+  125 % scaling a `window_size = 2560x1440` opened at 2048x1152; it now divides by the pixel density, not the display
+  scale.
+- **Straight to works on a player's install** (#572 by @Gag21): Settings > Hacks > Straight to (`MKW_QUICK_RACE`)
+  waits for the game's phases, named by a table only a source checkout made. The setup now writes it from
+  `exefs/main` (285 phases on 1.8.0, about 1 s) (an optional table, by us).
+- **Setup on Windows defaults to llvm-mingw's clang when there is no `cc`** (#529 by @Gag21): the shader spec step
+  failed with a source checkout and no compiler on `PATH`.
+- **Source builds detect the game's version** (#585 by @SavageCore, #619 by @SavageCore):
+  `make build` and `make generated` pick `build/generated` and the patch list from the exefs version (1.0.0 or
+  1.8.0), and `build.py` fails early when the layout does not match; `--out` and `--patches` given by hand no longer
+  trigger the detection (duplicate imports fixed by us).
+- **Menu shortcut setting with a Guide button option** (#579 by @SavageCore, #563, #613 by @SavageCore): a setting
+  for the button that opens the menu, with a dim note under the description pane; the Xbox Game Bar note is in its
+  help text.
+- **The overlay opens on Continue** (#587 by @SavageCore, #577, #611 by @SavageCore): opening the menu focused the
+  first setting, so an accidental D-pad press retuned it. Continue is focused instead, and its description pane is
+  cleared while Continue or Quit has the cursor.
+- **Xbox battery on Linux with the `xone` driver** (#583 by @SavageCore, #623 by @SavageCore): SDL reports it as
+  unknown, so the Controls tab and the start screen showed nothing. The sysfs level band is read instead, shown as
+  High, Medium or Low (never a percent), matched by Xbox order (with a non-Xbox pad as player 1 it looked up another
+  pad's); the help text names both sources in all 20 languages.
+- **Cemuhook / DSU motion for gamepads without a gyro** (#535 by @jony25, discussion #435): a pad in XInput mode can
+  have its gyro and accelerometer read from a local DSU server (DS4Windows, BetterJoy, PadForge) so motion steering
+  and tricks work. Settings > Controls (`MKW_DSU`, off by default); `MKW_DSU_SERVER` (`127.0.0.1:26760`) and
+  `MKW_DSU_SLOT` are in `mkw.ini`. Its own thread, with CRC32-checked packets, never the game's.
+- **A 120 fps output target for frame generation** (#491 by @Hampter588): validated without game files or a GPU run;
+  not measured in a race.
+- **Audio voice updates stay tied to their input slots** (#495 by @Hampter588): an unused voice record can be all
+  zero, including its ID, so every one of them reset playing voice 0 instead of its own slot; filter updates also
+  hit the ID, not the slot. May contribute to audio dropouts; not claimed to fix the reported movie-audio cuts.
+- **1.8.0's picture takes the window's shape** (#601 by @simonwjackson): 1.8.0 sized its
+  render targets from the display object, so a window that is not 16:9 got a 2560x1440 picture stretched on one axis:
+  2x horizontally at 32:9, 1.28x vertically at 2448x1848. The game now renders the rows or columns the window shows
+  (2560x1934 at 2448x1848, 3414x1440 at 21:9, 5120x1440 at 32:9), which costs +34 %, +33 % and +100 % pixels at
+  original resolution; `MKW_DISPLAY_PATCH=0` keeps the stretched picture.
+- **Character and kart lists on wider outputs** (#602 by @simonwjackson): on a window wider than 16:9 1.8.0's
+  character and kart select showed a hard vertical seam at the list's left edge. The two capture masks now sample the
+  backdrop under themselves.
+- **Race and pause prompts keep their shape** (#603 by @simonwjackson): on 1.8.0 with a window that is not 16:9, the
+  "Photo Mode" prompt box was 15.59 wide against its height at 5120x1440 and 5.80 (squashed) at 2448x1848; they now
+  sit in the same corners with the 16:9 shape.
+- **HUD position** (#604 by @simonwjackson): Settings > Screen > HUD position (`MKW_HUD_POSITION`), **off by default**
+  (16:9 area): with Screen edges, the 1-player race HUD of game 1.8.0 goes to the screen's edges and corners (item
+  slot top-left, coins and lap bottom-left, place bottom-right, the Time Trial timer top-right, the minimap at the
+  right edge).
+- **HUD position on every 1.8.0 screen** (#605 by @simonwjackson): with the setting still off by default, a reviewed
+  table of 1.8.0's layouts puts the HUD pieces and the menus' chrome of every 1-player screen at their edge (the
+  loading bands, the cup and cc band, the face, character and kart select footers, the Knockout Tour, battle, free
+  roam, mission, spectate, replay and photo mode pieces) while lists, grids, 3D previews and dialogs stay in the
+  middle.
+- **The start screen's GPU check** (#621 by @AngeloAscheri): with no GPU able to run the game (Vulkan 1.3, three
+  extensions, graphics and compute queues), the window closed at its first frame after a setup of many minutes: the
+  case of Debian 11 and Ubuntu 20.04 with their own Mesa (Vulkan 1.2). The start screen now reports each GPU's
+  Vulkan version, driver and what it lacks, with a card on the Game files page, and warns about a processor-only
+  renderer (llvmpipe) before the setup and Play.
+- **Linux x86_64 AppImage draws through Wayland again** (#620 by @AngeloAscheri): the AppImage's SDL had no Wayland
+  backend (the Wayland scanner aborted in the build), so every Linux release up to 0.1.13 drew through Xwayland, and
+  a session without it could not open the start screen at all ("the game files are not set up").
+- **Update on AArch64 Linux** (#492 by @louisdibiasi): `update.py fetch` tried to open the AArch64 AppImage as a
+  Windows zip and exited with "File is not a zip file"; both Linux targets now take the AppImage path.
+- **Linked RomFS refreshed after setup** (#499 by @louisdibiasi): after setting up with a `.nup` kept outside the
+  installation, installing a mod in the same session failed with "is not the game's RomFS".
+- **Backups made in the same second** (#565 by @louisdibiasi): two backups of one player within a second overwrote
+  each other.
+- **Spaces in imported mod names** (#566 by @louisdibiasi): the Mods page stopped the name at the first space.
+- **Mod import in UTF-8** (#567 by @louisdibiasi): on Windows with cp1252 output the importer could emit bytes the
+  launcher cannot decode.
+- **Truncated `shortcuts.vdf`** (#568 by @louisdibiasi) and **missing Steam profiles** (#616 by @louisdibiasi): Add to
+  Steam reports an error instead of exiting silently or finding no `userdata`.
+- **Switching versions from a loose RomFS** (#569 by @louisdibiasi): a shared file of equal size but other contents
+  was kept from the old version; equal-sized files are now compared.
+- **A failed staged promotion is rolled back** (#570 by @louisdibiasi): the live installation is restored (our
+  first-version backup recovery was dropped, by us).
+- **Bounded copy discovery** (#571 by @louisdibiasi): one directory could give more than the 16-result cap or keep
+  scanning past the deadline.
+- **Lazy pool backing failures are counted** (#574 by @louisdibiasi, #438, #562): the memory census now counts them
+  (923 on the AMD log of #438); the rendering cause of #562 is still open.
+- **A failed source scan no longer deletes files** (#614 by @louisdibiasi): files missing from a skipped directory
+  were treated as stale and removed from the installation.
+- **Interrupted package downloads** (#615 by @louisdibiasi): a connection reset reports the failed fetch and removes
+  the partial file.
+- **Discovered dump paths in UTF-8** (#617 by @louisdibiasi): an accented path reached the launcher with invalid
+  bytes and a Chinese name stopped discovery on Windows.
+- **Damaged GameBanana cache entries** (#618 by @louisdibiasi): a truncated entry made the Mods page fail every time
+  until the cache expired.
+- **README in German** (#484 by @andreknieriem, "Deutsch" in every language bar): the button and menu names are the
+  German start screen's own.
+- **Pipeline cache autosave interval** (#596 by @andreknieriem): `MKW_PIPE_AUTOSAVE_S` (default 20; `0` never while
+  running). On a Steam Deck LCD, 9 of 17 default runs had a hitch over 300 ms after frame 1500 (15 hitches) against 0
+  in 3 runs with `0`; three runs are not a proof (our fix #533 above makes the wait automatic, by us).
+- **1.8.0's run checks** (#487 by @AngeloAscheri): the NVN2 procs new in 1.8.0's SDK are never called, its 11 604
+  shader stages translate, and the c24 push constants are passed. Documentation only.
+- **Race measurements on a hybrid CPU** (#489 by @AngeloAscheri): the i7-14700F and RX 6700 XT numbers, and two test
+  defaults that mislead on a discrete card. Documentation only.
+- **Dependabot grouped updates** (#629 by @app/dependabot): numpy 2.5.5 and cogapp.
+- **Smaller**: `MKW_STEAM_X11` is a known key of `mkw.ini`, and the X11 switch from Steam is skipped with HDR on;
+  the audio underruns of #544 are logged without `MKW_TRACE`; the Xbox pad's own stick default shows on the slider
+  (#523); `MKW_REPLAY_PREWARM` makes `MKW_PIPE_SYNC` default to 0, so the replay's prewarm switch is
+  no longer silently skipped; the 1.8.0 setup follow-ups of the merged PRs (#572 optional table, #579 note length,
+  #596 strict value, #566 names of 64, #560 `MKW_VK_DYN_A2C` known in `mkw.ini`).
+
+### Tested
+
+From the packages Actions built for this tag, before publishing:
+
+- The whole setup from the Linux AppImage (12 threads, game 1.0.0) in about 12 minutes; its warm-up built all 13 630
+  shader libraries and compute pipelines (761 compute) with none failed.
+- The whole setup from the Windows zip (the 6-thread Windows PC, game 1.0.0) in about 15 minutes; its warm-up built
+  the same 13 630 with none failed.
+- #596's autosave on a GTX 1050 Ti (45 s of race): its 4 saves came in the menus and the load, none in the race.
+
+
 ## 0.1.13
 
 Terrain, roads and trees that drew black on Intel Arc cards, the game's own sharpening and anti-aliasing passes now

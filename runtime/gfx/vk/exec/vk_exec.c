@@ -95,7 +95,8 @@ void vk_exec_frame_log(const tex_t *p, uint64_t frame) {
     }
     rt_log("frame %llu: submits %llu passes %llu draws %llu/%llu clears %llu copies %llu dispatches %llu; present %p "
            "%ux%u/%#x written %d; feedback draws %llu barriers %llu restarts %llu layouts %llu; skips off %llu scissor %llu "
-           "program %llu no-vs %llu shader-missing %llu pipe-wait %llu pipe-failed %llu mesh %llu; targets%s",
+           "program %llu no-vs %llu shader-missing %llu pipe-wait %llu pipe-failed %llu mesh %llu; CPU-built indices: "
+           "byte %llu quads %llu line loops %llu, %llu bytes; block-linear texel boxes %llu bytes; targets%s",
            (unsigned long long)frame, (unsigned long long)f->submits,
            (unsigned long long)f->passes, (unsigned long long)f->draws, (unsigned long long)f->draws_seen,
            (unsigned long long)f->clears, (unsigned long long)f->copies, (unsigned long long)f->dispatches,
@@ -103,7 +104,10 @@ void vk_exec_frame_log(const tex_t *p, uint64_t frame) {
            hit, (unsigned long long)f->fb_draws, (unsigned long long)f->fb_barriers, (unsigned long long)f->fb_restarts,
            (unsigned long long)f->fb_layouts, (unsigned long long)f->skip[0], (unsigned long long)f->skip[1],
            (unsigned long long)f->skip[2], (unsigned long long)f->skip[3], (unsigned long long)f->skip[4],
-           (unsigned long long)f->skip[5], (unsigned long long)f->skip[6], (unsigned long long)f->skip[7], list);
+           (unsigned long long)f->skip[5], (unsigned long long)f->skip[6], (unsigned long long)f->skip[7],
+           (unsigned long long)f->cpu_idx[0], (unsigned long long)f->cpu_idx[1], (unsigned long long)f->cpu_idx[2],
+           (unsigned long long)f->cpu_idx_bytes,
+           (unsigned long long)__atomic_exchange_n(&nvn_texels_box_bl, 0, __ATOMIC_RELAXED), list);
     memset(f, 0, sizeof *f);
     nfw = 0;
 }

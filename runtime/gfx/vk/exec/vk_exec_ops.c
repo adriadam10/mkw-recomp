@@ -42,6 +42,7 @@ static void op_draw(VkExec *ex, const p_draw *d) {
             uint32_t v = first + 4 * i, k[6] = {0, 1, 2, 0, 2, 3};
             for (int j = 0; j < 6; j++) ix[6 * i + j] = v + k[j];
         }
+        vk_exec_frame.cpu_idx[1]++, vk_exec_frame.cpu_idx_bytes += sizeof *ix * 6 * q;
         bind_index(ex, ix, sizeof *ix * 6 * q, VK_INDEX_TYPE_UINT32);
         free(ix);
         vkCmdDrawIndexed(ex->cb, 6 * q, inst, 0, 0, (uint32_t)d->base_instance);
@@ -50,6 +51,7 @@ static void op_draw(VkExec *ex, const p_draw *d) {
         if (!ix) rt_fatal("vk: out of memory");
         for (uint32_t i = 0; i < n; i++) ix[i] = first + i;
         ix[n] = first;
+        vk_exec_frame.cpu_idx[2]++, vk_exec_frame.cpu_idx_bytes += sizeof *ix * (n + 1);
         bind_index(ex, ix, sizeof *ix * (n + 1), VK_INDEX_TYPE_UINT32);
         free(ix);
         vkCmdDrawIndexed(ex->cb, n + 1, inst, 0, 0, (uint32_t)d->base_instance);
@@ -114,6 +116,7 @@ static void op_draw_idx(VkExec *ex, const p_draw_idx *d) {
             uint8_t v = ((const uint8_t *)(uintptr_t)d->ibuf)[i];
             ix[i] = restart && v == 0xff ? 0xffff : v;
         }
+        vk_exec_frame.cpu_idx[0]++, vk_exec_frame.cpu_idx_bytes += sizeof *ix * (size_t)d->count;
         bind_index(ex, ix, sizeof *ix * (size_t)d->count, VK_INDEX_TYPE_UINT16);
         free(ix);
     } else if (sp.offset % isize[d->itype]) {

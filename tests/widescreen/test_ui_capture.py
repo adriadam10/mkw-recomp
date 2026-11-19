@@ -117,6 +117,8 @@ static int plat_mem_readable(uint64_t p, size_t n) {
             "ui_full_screen",
             "aspect_ui_fit",
             "ui_tall_backdrop",
+            "pane_name",
+            "ui_mask_mark",
             "host_ui_proj",
         )
     )

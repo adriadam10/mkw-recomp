@@ -142,13 +142,25 @@ def build_sdl3() -> None:
     subprocess.run(["tar", "-xzf", str(fetch(*PINS["sdl3"])), "-C", str(DL)], check=True)
     local = SYSROOT / "usr/local"
     # The SDK's wayland-scanner: a newer one writes calls its libwayland 1.18 lacks (wl_proxy_marshal_flags), which
-    # Debian 11's lacks too. It runs here with the SDK's libraries (libxml2), never its glibc (lib/, not usr/lib/).
+    # Debian 11's lacks too. x86_64: the SDK's scanner, run by the SDK's own loader with its libraries, its glibc 2.31
+    # included. From 0.1.9 (the AArch64 sysroot added lib/ to its LD_LIBRARY_PATH) to 0.1.13 it ran under this
+    # machine's loader with the SDK's libc.so.6, which aborts at start ("Inconsistency detected by ld.so:
+    # dl-call-libc-early-init.c"); SDL's configure then dropped its Wayland backend without an error and those
+    # releases drew through Xwayland even on Wayland sessions (#620). aarch64: bullseye's amd64 scanner, its packages
+    # installed without libc6 (host/), on this machine's glibc.
     scanner = local / "bin/wayland-scanner"
     scanner.parent.mkdir(parents=True, exist_ok=True)
-    host = SYSROOT / "host" if TRIPLE != "x86_64-linux-gnu" else SYSROOT  # aarch64: bullseye's amd64 scanner
-    scanner.write_text(f'#!/bin/sh\nLD_LIBRARY_PATH="{host}/usr/lib/x86_64-linux-gnu:{host}/lib/x86_64-linux-gnu" '
-                       f'exec "{host}/usr/bin/wayland-scanner" "$@"\n')  # fmt: skip
+    if TRIPLE == "x86_64-linux-gnu":
+        libs = f"{SYSROOT}/lib/x86_64-linux-gnu:{SYSROOT}/usr/lib/x86_64-linux-gnu"
+        scanner.write_text(f'#!/bin/sh\nexec "{SYSROOT}/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" --library-path '
+                           f'"{libs}" "{SYSROOT}/usr/bin/wayland-scanner" "$@"\n')  # fmt: skip
+    else:
+        host = SYSROOT / "host"
+        scanner.write_text(f'#!/bin/sh\nLD_LIBRARY_PATH="{host}/usr/lib/x86_64-linux-gnu:{host}/lib/x86_64-linux-gnu" '
+                           f'exec "{host}/usr/bin/wayland-scanner" "$@"\n')  # fmt: skip
     scanner.chmod(0o755)
+    # A scanner that does not run is not an error to SDL's configure: it only leaves Wayland out.
+    subprocess.run([str(scanner), "--version"], check=True, capture_output=True)
     pc = [SYSROOT / f"usr/lib/{TRIPLE}/pkgconfig", SYSROOT / "usr/share/pkgconfig"]
     env = dict(os.environ, PKG_CONFIG_SYSROOT_DIR=str(SYSROOT), PKG_CONFIG_PATH="",
                PKG_CONFIG_LIBDIR=os.pathsep.join(map(str, pc)))  # fmt: skip
@@ -177,6 +189,11 @@ def build_sdl3() -> None:
     extra = {line.split("[", 1)[1].rstrip("]") for line in dyn.splitlines() if "(NEEDED)" in line} - SDL_NEEDED
     if extra:
         sys.exit(f"{lib} links {' '.join(sorted(extra))}: their SDL_*_SHARED options are off")
+    # The video backends it loads at run time: SDL_WAYLAND and SDL_X11 stay ON in the cache when configure drops one.
+    body = lib.read_bytes()
+    lost = [so for so in ("libwayland-client.so.0", "libX11.so.6") if so.encode() not in body]
+    if lost:
+        sys.exit(f"{lib} does not load {' '.join(lost)}: SDL's configure left that video backend out")
 
 
 # ---- AArch64: Debian 11 packages

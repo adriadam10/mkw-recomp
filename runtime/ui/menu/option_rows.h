@@ -45,6 +45,10 @@ void opt_end(void);
 void opt_reserve_bottom(float h);
 // The next page's first row takes the controller's cursor (opening the menu, switching tabs).
 void opt_focus_first(void);
+// "Continue" / "Quit game" (the menu's bottom row, outside any page) have the cursor: the description pane shows
+// nothing instead of falling back to a setting row's text. Set every frame before the page's opt_begin, from last
+// frame's buttons; a hovered or selected row still wins.
+void opt_hide_desc(bool hide);
 // The row of key (or button id) takes the cursor, scrolled into view, when it is next drawn.
 void opt_focus_key(const char *key);
 // The next row is greyed out like one the environment fixes, with note under its label and in its description.

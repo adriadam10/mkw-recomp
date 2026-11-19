@@ -52,6 +52,7 @@ static bool g_indent;                    // opt_indent
 // The mouse moved after the last navigation key: the row under it is the one highlighted and described, else the
 // cursor's. One source, so the pane never describes a row other than the one drawn selected.
 static bool g_mouse;
+static bool g_hide_desc;   // opt_hide_desc: a bottom button has the cursor, the pane shows nothing
 
 // The description pane: this frame's hovered and selected rows, the page's first row, and the last one shown.
 struct Desc { char text[512]; char note[512]; };   // the Steam note is 346 bytes in Thai (#579)
@@ -84,6 +85,8 @@ void opt_disable_next(UiTextId note) {
 }
 
 void opt_indent(bool on) { g_indent = on; }
+
+void opt_hide_desc(bool hide) { g_hide_desc = hide; }
 
 void opt_begin(const char *id, float scale) {
     g_scale = scale;
@@ -122,9 +125,11 @@ void opt_end(void) {
     ImGui::PopStyleVar();
     if (g_test_scroll >= 0) ImGui::SetScrollY(ImGui::GetScrollMaxY() * g_test_scroll);
     ImGui::EndChild();
-    // the row the player used last (g_mouse), else the last shown, else the first row
+    // the row the player used last (g_mouse), else the last shown, else the first row; nothing while a bottom
+    // button ("Continue", "Quit game") has the cursor and no row is hovered or selected
     const Desc &used = g_mouse ? g_hover : g_focus;
     if (used.text[0]) g_shown = used;
+    else if (g_hide_desc) g_shown.text[0] = g_shown.note[0] = 0;
     else if (!g_shown.text[0]) g_shown = g_first;
     ImGui::SameLine(0, 0);
     ImVec2 p = ImGui::GetCursorScreenPos(), avail = ImGui::GetContentRegionAvail();

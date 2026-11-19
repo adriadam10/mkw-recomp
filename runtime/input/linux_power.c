@@ -4,7 +4,8 @@
 // leaves UNKNOWN. UPower synthesizes a percentage from the band and marks it "should be ignored", so this does
 // ignore it: the level band maps to a coarse Low/Medium/High like the Switch 2 voltage bands in input_power.c,
 // never to a percent. SDL covers DualShock/DualSense, Switch and XInput pads itself, so this only runs when SDL
-// reports UNKNOWN. Matching is by order: the Nth Xbox supply for the Nth Xbox pad; mixed sets of pads can mismatch,
+// reports UNKNOWN. Matching is by order among Xbox-named pads: the caller passes the pad's Xbox order and reads
+// the Nth Xbox supply, so a non-Xbox pad in an earlier slot never shifts the match; mixed sets can still mismatch,
 // and then the row keeps SDL's answer.
 #include <ctype.h>
 #include <dirent.h>
@@ -40,7 +41,7 @@ static int contains_ci(const char *hay, const char *needle) {
 }
 
 // 1 when the SDL pad name may be an Xbox pad (an empty name tells nothing, so it passes).
-static int name_ok(const char *sdl_name) {
+int linux_power_is_xbox(const char *sdl_name) {
     return !sdl_name || !*sdl_name || contains_ci(sdl_name, "xbox");
 }
 
@@ -86,7 +87,7 @@ static int level_pct(const char *level) {
 }
 
 int linux_power_lookup_at(const char *root, int index, const char *sdl_name, InputPower *out) {
-    if (!root || !out || index < 0 || !name_ok(sdl_name)) return 0;
+    if (!root || !out || index < 0 || !linux_power_is_xbox(sdl_name)) return 0;
     char names[INPUT_MAX_PLAYERS][64];
     if (index >= collect(root, names, INPUT_MAX_PLAYERS)) return 0;
     const char *dev = names[index];

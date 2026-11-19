@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
+#ifdef __AVX2__
+#include <immintrin.h>
+#endif
 
 #include "vk_mem_internal.h"
 
@@ -112,18 +115,22 @@ void merge_census_log(void) {
     plat_mutex_unlock(&wbc_lock);
 }
 
-// Write-back of [addr, addr+size) from shadow s: the runs the GPU changed against base. Returns the bytes copied.
-// With MKW_SHADOW_CPU_WINS a byte the CPU changed since the base (guest memory away from it) stays.
+// What a write-back did, for the census (MKW_WB_CENSUS): the first and last+1 offsets the GPU changed, the bytes it
+// changed and the bytes copied (the difference is the CPU's, with cpu_wins).
+typedef struct { uint64_t lo, hi, gpu, copied; } MergeStat;
+
+// Write-back of [addr, addr+size) from shadow s: the runs the GPU changed against base, a byte at a time (MKW_MERGE_SIMD=0,
+// and the reference --probe-merge checks merge_back_runs against).
+// With cw (MKW_SHADOW_CPU_WINS) a byte the CPU changed since the base (guest memory away from it) stays.
 // Guest memory is read only over the runs the GPU changed (watched pages through their protection), a chunk at a time:
 // a copy of the whole range for each of ~200 ranges a frame (~44 KiB each, ~100 KiB of them changed) held the fence's
 // waiters on the race frame's critical path (tl-cb1: ~1 ms a value in cb_done).
 // With a lazy base (vk_mem_lazy.c) each guest page takes its base from lazy_page_base: a page still trapped has none
 // copied, and when the shadow equals guest memory there the GPU changed nothing in it.
-uint64_t merge_back(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base, LazyBase *lazy) {
-    if (wbc_on < 0) wbc_on = rt_knob("WB_CENSUS", "0");
-    uint64_t copied = 0, t0 = wbc_on > 0 ? qpc() : 0, lo = ~0ull, hi = 0, gpu = 0;
+static void merge_back_bytes(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base, LazyBase *lazy, int cw,
+                             MergeStat *st) {
+    uint64_t copied = 0, lo = ~0ull, hi = 0, gpu = 0;
     uint64_t thawed = addr;   // guest memory below it is thawed already
-    int cw = cpu_wins();
     uint8_t g[512];   // guest memory over [k, k + m) of a run, with cpu_wins
     uint8_t tmp[4096];
     const uint8_t *base0 = base;
@@ -172,6 +179,118 @@ uint64_t merge_back(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_
         }
         i = j;
     }
-    if (wbc_on > 0) wbc_note(addr, size, lo, hi, gpu, gpu - copied, qpc() - t0);
-    return copied;
+    *st = (MergeStat){lo, hi, gpu, copied};
+}
+
+// Bit i set: a[i] != b[i], for n <= 64 bytes. With AVX2 (the x86-64 build is x86-64-v3, tools/build/build.py) two
+// compares a 64-byte block; elsewhere the compiler's own loop.
+static inline uint64_t ne_mask(const uint8_t *a, const uint8_t *b, uint64_t n) {
+#ifdef __AVX2__
+    if (n == 64) {
+        __m256i e0 = _mm256_cmpeq_epi8(_mm256_loadu_si256((const __m256i *)a), _mm256_loadu_si256((const __m256i *)b));
+        __m256i e1 = _mm256_cmpeq_epi8(_mm256_loadu_si256((const __m256i *)(a + 32)),
+                                       _mm256_loadu_si256((const __m256i *)(b + 32)));
+        return ~((uint64_t)(uint32_t)_mm256_movemask_epi8(e0) | (uint64_t)(uint32_t)_mm256_movemask_epi8(e1) << 32);
+    }
+#endif
+    uint64_t m = 0;
+    for (uint64_t i = 0; i < n; i++) m |= (uint64_t)(a[i] != b[i]) << i;
+    return m;
+}
+
+// The run being gathered: [rs, re) as offsets, copied to guest memory when the next one does not follow it.
+typedef struct { uint64_t addr, thawed, rs, re, copied; const uint8_t *s; } RunOut;
+
+static void run_flush(RunOut *o) {
+    if (o->rs == o->re) return;
+    uint64_t x = o->addr + o->rs, y = o->addr + o->re;
+    if (y > o->thawed) {   // once a page, as merge_back_bytes: mem_thaw takes frz_lock
+        uint64_t from = x > o->thawed ? x & ~0xfffull : o->thawed;
+        o->thawed = (y + 0xfff) & ~0xfffull;
+        mem_thaw(from, o->thawed - from);
+    }
+    memcpy((void *)(uintptr_t)x, o->s + o->rs, o->re - o->rs);
+    o->copied += o->re - o->rs;
+    o->rs = o->re;
+}
+
+static inline void run_add(RunOut *o, uint64_t a, uint64_t b) {
+    if (o->re != a) run_flush(o), o->rs = a;
+    o->re = b;
+}
+
+// The same write-back as merge_back_bytes, guest page by guest page: a page equal to its base is one memcmp; in one
+// that is not, a mask of the bytes the GPU changed per 64-byte block (and, with cw, of those where guest memory is still
+// at the base, read once for the rest of the page) gives the runs to copy, gathered across blocks and pages into one
+// memcpy each. merge_back_bytes walked such pages a byte at a time, twice with cw, and called memcpy for every run
+// between bytes that stayed equal: in a 2-player race, ranges of 4-64 KiB were 92 of the 159 ms per 60 frames of
+// merges, at ~2 GB/s, on the completion thread before the fence's waiters are released (rpwb-0, MKW_WB_CENSUS,
+// i7-14700F, 18/11/2026). The bytes written are the same set: those the GPU changed, less the CPU's with cw
+// (--probe-merge). In-run A/B with its inverted twin, the same race, serial replay (ms2p): merges 2.55-2.62 -> 1.53-1.68
+// ms a frame, the 4-64 KiB ones 88-90 -> 38-45 ms per 60 frames; the fence's waiters released 1.02 ms sooner after the
+// GPU, the frame -0.52 ms (there at the 60 fps cap: B's median 16.8-16.9 ms). Left: 1-4 MiB ranges the GPU did not
+// change, ~30 ms per 60 frames of memcmp at memory speed.
+static void merge_back_runs(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base, LazyBase *lazy, int cw,
+                            MergeStat *st) {
+    RunOut o = {.addr = addr, .thawed = addr, .s = s};
+    uint64_t lo = ~0ull, hi = 0, gpu = 0;
+    uint8_t g[4096];   // guest memory over [gx, pend), with cw
+    uint8_t tmp[4096];
+    for (uint64_t i = 0; i < size;) {
+        uint64_t pend = ((addr + i) & ~0xfffull) + 0x1000 - addr;
+        if (pend > size) pend = size;
+        const uint8_t *b = base;   // b[i..pend) is the page's base
+        if (lazy) {
+            int r = lazy_page_base(lazy, addr + i, s + i, pend - i, tmp);
+            if (!r) { i = pend; continue; }
+            if (r == 2) b = (const uint8_t *)((uintptr_t)tmp - i);
+        }
+        if (!memcmp(s + i, b + i, pend - i)) { i = pend; continue; }
+        uint64_t gx = pend;   // guest memory read from gx (none yet)
+        for (uint64_t x = i; x < pend; x += 64) {
+            uint64_t n = pend - x < 64 ? pend - x : 64;
+            uint64_t m = ne_mask(s + x, b + x, n);
+            if (!m) continue;
+            if (x + (uint64_t)__builtin_ctzll(m) < lo) lo = x + (uint64_t)__builtin_ctzll(m);
+            hi = x + 64 - (uint64_t)__builtin_clzll(m), gpu += (uint64_t)__builtin_popcountll(m);
+            if (cw) {
+                if (gx == pend) gx = x, mem_copy_out(g, addr + x, pend - x);
+                m &= ~ne_mask(g + (x - gx), b + x, n);   // the CPU's bytes stay
+            }
+            while (m) {
+                unsigned a = (unsigned)__builtin_ctzll(m);
+                uint64_t rest = ~(m >> a);   // a < 64; zero only when every bit from 0 on is set
+                unsigned len = rest ? (unsigned)__builtin_ctzll(rest) : 64;
+                run_add(&o, x + a, x + a + len);
+                m = a + len >= 64 ? 0 : m & ~0ull << (a + len);
+            }
+        }
+        i = pend;
+    }
+    run_flush(&o);
+    *st = (MergeStat){lo, hi, gpu, o.copied};
+}
+
+// MKW_MERGE_SIMD (default 1; "ab"): merge_back_runs; 0: merge_back_bytes. Returns the bytes copied.
+uint64_t merge_back(uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base, LazyBase *lazy) {
+    static int simd = -1;
+    if (simd < 0) simd = rt_knob("MERGE_SIMD", "1");
+    if (wbc_on < 0) wbc_on = rt_knob("WB_CENSUS", "0");
+    uint64_t t0 = wbc_on > 0 ? qpc() : 0;
+    MergeStat st;
+    if (RT_KNOB_ON(simd)) merge_back_runs(addr, size, s, base, lazy, cpu_wins(), &st);
+    else merge_back_bytes(addr, size, s, base, lazy, cpu_wins(), &st);
+    if (wbc_on > 0) wbc_note(addr, size, st.lo, st.hi, st.gpu, st.gpu - st.copied, qpc() - t0);
+    return st.copied;
+}
+
+// --probe-merge (merge_probe.c): one write-back of host memory at addr (above RT_ADDRESS_LIMIT, where mem_thaw does
+// nothing) by either implementation, without a lazy base; gpu: the bytes the GPU changed.
+uint64_t vk_merge_back_probe(int runs, int cw, uint64_t addr, uint64_t size, const uint8_t *s, const uint8_t *base,
+                             uint64_t *gpu) {
+    MergeStat st;
+    if (runs) merge_back_runs(addr, size, s, base, NULL, cw, &st);
+    else merge_back_bytes(addr, size, s, base, NULL, cw, &st);
+    *gpu = st.gpu;
+    return st.copied;
 }

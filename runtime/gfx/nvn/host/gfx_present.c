@@ -33,7 +33,6 @@
                                  // its fence (the present thread holding the replay's drain)
 #define MAX_IMAGES 16
 #define VSYNC_NS 1000000000ull
-#define VSYNC_HZ 60
 
 // ---- queue lock
 // Taking it sends the parts waiting for the submit thread first (vk_sync.c, MKW_SUBMIT_THREAD): what the taker submits
@@ -162,7 +161,7 @@ static void vsync_main(void *arg) {
     plat_thread_priority(PLAT_PRIO_HIGHEST);
     uint64_t n = 0, due = kern_now_ns();
     for (;;) {
-        due += VSYNC_NS / VSYNC_HZ / (uint64_t)turbo_speed();
+        due += VSYNC_NS / (uint64_t)frame_logic_hz() / (uint64_t)turbo_speed();
         uint64_t now = kern_now_ns();
         if (now > due + 100000000ull) {                  // the process stalled: restart the schedule, no catch-up burst
             due = now;

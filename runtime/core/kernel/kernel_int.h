@@ -58,7 +58,8 @@ struct RtThread {
     Cpu *cpu;                  // the thread's own context
     Cpu *cur;                  // the context running now: cpu, or the current fiber's
     uint64_t entry, arg, stack_top;
-    int prio, core;
+    int prio, core;            // core: the scheduler's hint (core_take), always a real core
+    int ideal;                 // the ideal core the guest set and GetThreadCoreMask reports: -1 after "don't care"
     uint64_t mask;
     int started, exited, closed, cancel, is_main;
     PlatCond cv;

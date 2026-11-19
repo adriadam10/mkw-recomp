@@ -63,9 +63,13 @@ extern "C" {
 #include "cfg.h"
 #include "gamelib.h"
 #include "input.h"
+#ifdef __linux__
+#include "linux_power.h"
+#endif
 #include "platform/platform.h"
 #include "sysinfo.h"
 #include "ui_text.h"
+#include "vk_gpu_check.h"
 void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 extern const char rt_port_version[];
 void app_icon_set(SDL_Window *w);   // build/obj/rt/app_icon.c, drawn by tools/build/icon.py
@@ -202,7 +206,16 @@ static bool pad_power(int i, InputPower *w, char *text, int size) {
     snprintf(w->name, sizeof w->name, "%s", n ? n : "");
     int pct = -1;
     SDL_PowerState st = SDL_GetGamepadPowerInfo(g, &pct);
-    input_power_from_sdl(st, pct, SDL_GetGamepadID(g), i, w);
+#ifdef __linux__
+    int xi = 0;   // this pad's order among Xbox-named pads: other makes in earlier slots shift no index
+    for (int j = 0; j < i; j++) {
+        const char *m = L.pad_open[j] ? SDL_GetGamepadName(L.pad_open[j]) : nullptr;
+        if (linux_power_is_xbox(m)) xi++;
+    }
+#else
+    int xi = i;
+#endif
+    input_power_from_sdl(st, pct, SDL_GetGamepadID(g), xi, w);
     input_power_text(w, text, size);
     return true;
 }
@@ -213,17 +226,57 @@ static const char *repo(void) {
     return r && *r ? r : "adriadam10/mkw-recomp";
 }
 
-// The Vulkan devices for the Screen tab's GPU row: an instance only to list them.
+// Whether a GPU here can run the game (vk_gpu_check.h): the setup takes many minutes and the game's window used to
+// close at its first frame with "no usable Vulkan device" in the log only. Debian 11's and Ubuntu 20.04's own Mesa
+// (20.3, 21.2) offer Vulkan 1.2 on AMD and Intel (containers of both, 18/11/2026); Mesa's RADV and ANV have 1.3 since
+// 22.0, NVIDIA's driver since 510. Checked again when the Screen tab's GPU (MKW_GPU_INDEX, MKW_GPU_NAME) changes.
+static VkGpuReport g_gpu;
+static char g_gpu_key[96] = "\x01";   // the GPU settings the report was made with ("\x01": not made yet)
 
+// The GPU settings as pick_device reads them (cfg_get: MKW_GPU_NAME has no settings row).
+static void gpu_key(char *out, size_t cap) {
+    const char *i = cfg_get("MKW_GPU_INDEX"), *n = cfg_get("MKW_GPU_NAME");
+    snprintf(out, cap, "%s|%s", i ? i : "", n ? n : "");
+}
+
+// The Vulkan devices for the Screen tab's GPU row and the check above: an instance only to list them. No instance at
+// all (no Vulkan driver): a report of no devices.
 static void list_gpus(void) {
+    gpu_key(g_gpu_key, sizeof g_gpu_key);
     VkApplicationInfo ai = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     ai.apiVersion = VK_API_VERSION_1_3;
     VkInstanceCreateInfo ci = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     ci.pApplicationInfo = &ai;
     VkInstance inst;
-    if (vkCreateInstance(&ci, nullptr, &inst) != VK_SUCCESS) return;
-    settings_list_gpus(inst);
-    vkDestroyInstance(inst, nullptr);
+    memset(&g_gpu, 0, sizeof g_gpu);
+    g_gpu.best = -1;
+    if (vkCreateInstance(&ci, nullptr, &inst) == VK_SUCCESS) {
+        settings_list_gpus(inst);
+        vk_gpu_report(inst, &g_gpu);
+        vkDestroyInstance(inst, nullptr);
+    }
+    if (g_gpu.best >= 0 && g_gpu.gpu[g_gpu.best].type != VK_PHYSICAL_DEVICE_TYPE_CPU)
+        rt_log("launcher: the game would run on %s", g_gpu.gpu[g_gpu.best].name);
+    else if (g_gpu.best >= 0) rt_log("launcher: only a software renderer can run the game: %s", g_gpu.gpu[g_gpu.best].name);
+    else rt_log("launcher: no GPU here can run the game (%d listed)", g_gpu.n);
+    for (int i = 0; i < g_gpu.n; i++)
+        if (g_gpu.gpu[i].why != VK_GPU_OK)
+            rt_log("launcher:   %s (Vulkan %u.%u, %s): %s%s", g_gpu.gpu[i].name, VK_API_VERSION_MAJOR(g_gpu.gpu[i].api),
+                   VK_API_VERSION_MINOR(g_gpu.gpu[i].api), g_gpu.gpu[i].driver[0] ? g_gpu.gpu[i].driver : "driver unknown",
+                   g_gpu.gpu[i].why == VK_GPU_OLD   ? "Vulkan below 1.3"
+                   : g_gpu.gpu[i].why == VK_GPU_EXT ? "missing extension "
+                   : g_gpu.gpu[i].why == VK_GPU_QUEUE ? "no graphics and compute queue"
+                                                      : "not the one MKW_GPU_INDEX or MKW_GPU_NAME names",
+                   g_gpu.gpu[i].why == VK_GPU_EXT ? g_gpu.gpu[i].ext : "");
+}
+
+// The GPU the game would use cannot run it (none, or only a CPU renderer): the main page's warning and the files
+// page's card. The report is made again when the GPU settings change.
+static bool gpu_bad(void) {
+    char key[sizeof g_gpu_key];
+    gpu_key(key, sizeof key);
+    if (strcmp(key, g_gpu_key)) list_gpus();
+    return g_gpu.best < 0 || g_gpu.gpu[g_gpu.best].type == VK_PHYSICAL_DEVICE_TYPE_CPU;
 }
 
 static void parse_test(void) {
@@ -751,6 +804,38 @@ static void state_line(bool ok, const char *text) {
     ImGui::TextColored(col4(ok ? LOOK_OK : LOOK_WARN), "%s", text);
 }
 
+// gpu_bad's card on the files page: why each GPU cannot run the game, what to install, and that the setup can go on
+// (what it prepares does not depend on the driver).
+static void gpu_card(float w) {
+    card_begin(w);
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + w - 32 * L.scale);
+    ImGui::TextColored(col4(LOOK_WARN), "%s", menu_text(UI_LAUNCH_GPU_NONE));
+    if (!g_gpu.n) ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_GPU_NO_DRIVER));
+    bool driver = !g_gpu.n || g_gpu.best >= 0;   // what to install: a driver's fault, not only the GPU setting's
+    for (int i = 0; i < g_gpu.n; i++) {
+        const VkGpuInfo &g = g_gpu.gpu[i];
+        char line[600], have[200];
+        snprintf(have, sizeof have, "Vulkan %u.%u%s%s", VK_API_VERSION_MAJOR(g.api), VK_API_VERSION_MINOR(g.api),
+                 g.driver[0] ? ", " : "", g.driver);
+        if (i == g_gpu.best) snprintf(line, sizeof line, menu_text(UI_LAUNCH_GPU_SOFTWARE), g.name);
+        else if (g.why == VK_GPU_OLD) snprintf(line, sizeof line, menu_text(UI_LAUNCH_GPU_OLD), g.name, have);
+        else if (g.why == VK_GPU_EXT) snprintf(line, sizeof line, menu_text(UI_LAUNCH_GPU_EXT), g.name, have, g.ext);
+        else if (g.why == VK_GPU_QUEUE) snprintf(line, sizeof line, menu_text(UI_LAUNCH_GPU_QUEUE), g.name);
+        else if (g.why == VK_GPU_SKIPPED) snprintf(line, sizeof line, menu_text(UI_LAUNCH_GPU_SKIPPED), g.name);
+        else continue;   // a usable one other than best: not the case gpu_bad shows
+        driver |= g.why == VK_GPU_OLD || g.why == VK_GPU_EXT;
+        ImGui::Bullet();
+        ImGui::TextWrapped("%s", line);
+    }
+#ifdef _WIN32
+    if (driver) ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_GPU_HELP_WIN));
+#else
+    if (driver) ImGui::TextWrapped("%s", menu_text(UI_LAUNCH_GPU_HELP));
+#endif
+    ImGui::PopTextWrapPos();
+    card_end(LOOK_WARN, with_alpha(LOOK_WARN, 22));
+}
+
 // Where the game will read its files (main.c portable_paths, handed over by launcher_set_romfs and _exefs).
 static char g_romfs[PLAT_PATH_MAX * 2], g_exefs[PLAT_PATH_MAX * 2];
 
@@ -787,14 +872,12 @@ static void files_state_text(bool ready, char *out, size_t cap) {
     else snprintf(out, cap, "%s", menu_text(ready ? UI_LAUNCH_FILES_READY : UI_LAUNCH_FILES_MISSING));
 }
 
-// The game files' state at the lower left, a dot in its colour; it opens the Game files page.
-static bool status_link(bool ready) {
+// A state at the lower left, a dot in its colour (ready: the good one, else the warning's); a link to the Game files page.
+static bool state_link(const char *id, const char *text, bool ready) {
     float s = L.scale, lh = ImGui::GetTextLineHeight(), r = lh * 0.24f, chev = 4 * s;
-    char text[160];
-    files_state_text(ready, text, sizeof text);
     float tw = ImGui::CalcTextSize(text).x;
     ImVec2 a = ImGui::GetCursorScreenPos(), size(r * 2 + 10 * s + tw + 12 * s + chev, lh);
-    Hot h = hot_button("##status", size);
+    Hot h = hot_button(id, size);
     if (h.cursor) focus_ring(a, ImVec2(a.x + size.x, a.y + size.y));
     ImDrawList *dl = ImGui::GetWindowDrawList();
     ImU32 c = ready ? mix(LOOK_HEADING, LOOK_TEXT, h.t) : LOOK_WARN;
@@ -912,7 +995,13 @@ static void page_main(float w, float h) {
         update_card(uw);
     }
     ImGui::SetCursorScreenPos(ImVec2(left, h - 48 * s - lh));
-    if (status_link(files)) L.page = PAGE_FILES;
+    char state[160];
+    files_state_text(files, state, sizeof state);
+    if (state_link("##status", state, files)) L.page = PAGE_FILES;
+    if (gpu_bad()) {   // above it: the files page says why and what to install
+        ImGui::SetCursorScreenPos(ImVec2(left, h - 48 * s - lh * 2 - 10 * s));
+        if (state_link("##gpu", menu_text(UI_LAUNCH_GPU_NONE), false)) L.page = PAGE_FILES;
+    }
     // the project's GitHub page and Discord server above the version, as their marks (brand names: nothing to
     // translate), GitHub on the right as the text link was
     {
@@ -1327,6 +1416,7 @@ static void page_files(float w, float h) {
         ImGui::TextWrapped("%s", help);
         ImGui::PopTextWrapPos();
     }
+    if (gpu_bad()) gpu_card(fminf(ImGui::GetContentRegionAvail().x, 760 * L.scale));
     update_card(fminf(ImGui::GetContentRegionAvail().x, 620 * L.scale));   // a folder not set up starts on this page
     if (L.updated[0]) {
         char note[300];
@@ -1866,7 +1956,15 @@ static bool open_window(void) {
     // Hidden until its first frame is drawn (launcher_run): shown at once, it is black while the first frame is made.
     SDL_WindowFlags f = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN |
                         (background ? SDL_WINDOW_NOT_FOCUSABLE : 0) | (cfg_steam_console() && !L.shot_at ? SDL_WINDOW_FULLSCREEN : 0);
-    L.win = SDL_CreateWindow("Mario Kart World", (int)(1280 * ds), (int)(720 * ds), f);
+    // 1280 x 720 at the display's scale, but never past its usable area (#633: a 4K TV at Windows' 300 % made it
+    // 3840 x 2160 plus the title bar, cut at the screen's edges): at most 90 % of it, still 16:9.
+    int w = (int)(1280 * ds), h = (int)(720 * ds);
+    SDL_Rect usable;
+    if (SDL_GetDisplayUsableBounds(SDL_GetPrimaryDisplay(), &usable) && usable.w > 0 && usable.h > 0) {
+        float fit = SDL_min(0.9f * usable.w / w, 0.9f * usable.h / h);
+        if (fit < 1) w = (int)(w * fit), h = (int)(h * fit);
+    }
+    L.win = SDL_CreateWindow("Mario Kart World", w, h, f);
     if (L.win) app_icon_set(L.win);
     L.ren = L.win ? SDL_CreateRenderer(L.win, nullptr) : nullptr;
     if (!L.ren) {
@@ -1875,7 +1973,8 @@ static bool open_window(void) {
     }
     SDL_SetRenderVSync(L.ren, 1);
     // under 960 x 540 the column and the pages' two panes no longer fit side by side
-    SDL_SetWindowMinimumSize(L.win, (int)(960 * ds), (int)(540 * ds));
+    // (never above the window it opened with: a minimum past the screen would push it out again)
+    SDL_SetWindowMinimumSize(L.win, SDL_min((int)(960 * ds), w), SDL_min((int)(540 * ds), h));
     return true;
 }
 

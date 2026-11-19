@@ -9,6 +9,7 @@ A version's section is "## X.Y.Z": a summary paragraph, "### Changes", "### Test
 (lines added under the template's). Each change names its issue (#N) when it has one.
 
 Usage: uv run tools/build/notes.py --version 0.1.3 [--out FILE]   (default: stdout; gh release create --notes-file FILE)
+       --changelog FILE reads another CHANGELOG.md (tools/git/pre-push: the tagged commit's, before the tag leaves)
 """
 
 import argparse
@@ -53,8 +54,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--version", required=True, help="e.g. 0.1.3 (the tag without its v)")
     ap.add_argument("--out", type=Path, help="write here instead of stdout")
+    ap.add_argument("--changelog", type=Path, default=ROOT / "CHANGELOG.md", help="default: the repository's")
     args = ap.parse_args()
-    got = parse(version_section((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), args.version), args.version)
+    got = parse(version_section(args.changelog.read_text(encoding="utf-8"), args.version), args.version)
     template = (ROOT / "docs/project/release-template.md").read_text(encoding="utf-8")
     notes = template.format(
         summary=got["summary"], changes=got["changes"], tested=got["tested"], known=got.get("known", "")

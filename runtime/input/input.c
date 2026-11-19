@@ -27,6 +27,9 @@
 #include "ui_text.h"
 #include "vk.h"
 #include "platform/platform.h"
+#ifdef __linux__
+#include "linux_power.h"
+#endif
 
 enum { STICK_MAX = 32767, STICK_DIR = 16384, TRIGGER_ON = 16384, RESCAN_MS = 1000 };
 
@@ -730,6 +733,22 @@ int input_pad_power_sdl(int player, char *name, size_t name_size, uint32_t *id, 
     plat_mutex_unlock(&lock);
     return st;
 }
+
+#ifdef __linux__
+// The player's order among Xbox-named gamepads (linux_power.c reads the Nth Xbox sysfs supply for it, so pads of
+// other makes in earlier slots must not shift the index). Under `lock`, like every SDL gamepad call.
+int input_pad_xbox_index(int player) {
+    int n = 0;
+    plat_mutex_lock(&lock);
+    if (state == 1)
+        for (int q = 0; q < player && q < INPUT_MAX_PLAYERS; q++) {
+            SDL_Gamepad *g = q ? extra[q] : pad;
+            if (g && SDL_GamepadConnected(g) && linux_power_is_xbox(SDL_GetGamepadName(g))) n++;
+        }
+    plat_mutex_unlock(&lock);
+    return n;
+}
+#endif
 
 int input_rumble_triggers_enabled(void) {
     return cfg_bool("MKW_RUMBLE_TRIGGERS");

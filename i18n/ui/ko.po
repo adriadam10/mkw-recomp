@@ -141,6 +141,24 @@ msgctxt "UI_MENU_ASPECT_WINDOW"
 msgid "Window"
 msgstr "창"
 
+msgctxt "UI_MENU_HUD_POSITION"
+msgid "HUD position"
+msgstr "HUD 위치"
+
+msgctxt "UI_MENU_HUD_POSITION_DESC"
+msgid ""
+"On a picture wider or taller than 16:9, keep the race HUD in the middle 16:9 area (the console's "
+"place) or put it at the screen's edges and corners. Takes effect at the next start."
+msgstr "16:9보다 넓거나 높은 화면에서 레이스 HUD를 가운데 16:9 영역(본체와 같은 위치)에 두거나 화면의 가장자리와 모서리로 옮깁니다. 다음 실행부터 적용됩니다."
+
+msgctxt "UI_MENU_HUD_POSITION_16X9"
+msgid "16:9 area"
+msgstr "16:9 영역"
+
+msgctxt "UI_MENU_HUD_POSITION_EDGES"
+msgid "Screen edges"
+msgstr "화면 가장자리"
+
 msgctxt "UI_MENU_QUALITY"
 msgid "Quality"
 msgstr "품질"
@@ -821,11 +839,12 @@ msgstr "Guide 버튼"
 
 msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
 msgid ""
-"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
-"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+"Note: If using the Guide button, turn off 'Guide button focuses Steam' in Steam (Settings -> "
+"Controller -> Advanced Settings).\n\nOn Windows, also turn off 'Allow your controller to open "
+"Game Bar' (Settings -> Gaming -> Game Bar)."
 msgstr ""
-"참고: Guide 버튼을 사용하는 경우 Steam이 게임 위에 열리지 않도록 Steam에서 'Guide button focuses Steam'을 비활성화하는 것이 "
-"좋습니다(설정 -> 컨트롤러 -> 고급 설정)."
+"참고: Guide 버튼을 사용하는 경우 Steam의 'Guide button focuses Steam'(설정 -> 컨트롤러 -> 고급 설정)을 "
+"끄세요.\n\nWindows에서는 'Allow your controller to open Game Bar'(설정 -> 게임 -> Game Bar)도 끄세요."
 
 msgctxt "UI_BINDS_HELP"
 msgid ""
@@ -2755,6 +2774,57 @@ msgstr ""
 msgctxt "UI_LAUNCH_FOUND_FOLDER"
 msgid "folder"
 msgstr ""
+
+msgctxt "UI_LAUNCH_GPU_NONE"
+msgid "No graphics card here can run the game"
+msgstr "이 PC의 그래픽 카드로는 게임을 실행할 수 없습니다"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_OLD"
+msgid "%s: its driver offers %s, and the game needs Vulkan 1.3"
+msgstr "%s: 드라이버가 %s을(를) 제공하지만 게임에는 Vulkan 1.3이 필요합니다"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_EXT"
+msgid "%s (%s): its driver lacks %s, which the game needs"
+msgstr "%s (%s): 드라이버에 게임에 필요한 %s이(가) 없습니다"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_QUEUE"
+msgid "%s: it has no queue that does both graphics and compute"
+msgstr "%s: 그래픽과 연산을 동시에 처리하는 큐가 없습니다"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SKIPPED"
+msgid "%s: not the one chosen in Settings, Screen, Graphics card"
+msgstr "%s: 설정 > 화면 > 그래픽 카드에서 선택한 카드가 아닙니다"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SOFTWARE"
+msgid "%s draws on the processor, not on a graphics card: far too slow to play"
+msgstr "%s은(는) 그래픽 카드가 아니라 프로세서로 그립니다: 플레이하기에는 너무 느립니다"
+
+msgctxt "UI_LAUNCH_GPU_NO_DRIVER"
+msgid "No Vulkan driver was found."
+msgstr "Vulkan 드라이버를 찾지 못했습니다."
+
+msgctxt "UI_LAUNCH_GPU_HELP"
+msgid ""
+"The game needs Vulkan 1.3. On AMD and Intel that is Mesa 22.0 or newer, newer than Debian 11 and "
+"Ubuntu 20.04 ship; on NVIDIA, its driver 510 or newer. Some older graphics cards cannot have it "
+"at all. The setup can run now: the game starts once the driver is updated."
+msgstr ""
+"게임에는 Vulkan 1.3이 필요합니다. AMD와 Intel에서는 Mesa 22.0 이상으로, Debian 11과 Ubuntu 20.04에 포함된 것보다 새 버전입니다. "
+"NVIDIA에서는 드라이버 510 이상입니다. 일부 오래된 그래픽 카드는 아예 지원하지 않습니다. 설정은 지금 진행할 수 있으며, 드라이버를 업데이트하면 게임이 시작됩니다."
+
+msgctxt "UI_LAUNCH_GPU_HELP_WIN"
+msgid ""
+"The game needs Vulkan 1.3: install the latest driver from your graphics card's maker (AMD, Intel "
+"or NVIDIA; on NVIDIA, 510 or newer). Some older graphics cards cannot have it at all. The setup "
+"can run now: the game starts once the driver is updated."
+msgstr ""
+"게임에는 Vulkan 1.3이 필요합니다. 그래픽 카드 제조사(AMD, Intel 또는 NVIDIA)의 최신 드라이버를 설치하세요(NVIDIA는 510 이상). 일부 오래된 "
+"그래픽 카드는 아예 지원하지 않습니다. 설정은 지금 진행할 수 있으며, 드라이버를 업데이트하면 게임이 시작됩니다."
 
 #. A product name: keep it as Steam shows it in your language.
 msgctxt "UI_MENU_GROUP_RPT"

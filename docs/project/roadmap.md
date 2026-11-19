@@ -35,6 +35,11 @@ totk-pc-recomp, MIT; −10.6 % recorder instructions on Steam Deck; no measurabl
   it on and off, and its binds made ~20 % more descriptor work (sets are allocated) (16/11/2026); left for slower CPUs.
 - **Recording in parallel**: chunks of a submit on several threads; today they fight over the texture lock, which has
   to be split first.
+- **The fence's completion work**: before the game is released for the next frame, the completion thread writes back
+  what the GPU wrote into guest memory (`merge_back`, `MKW_WB_CENSUS`): 2.6 ms of a 2-player race frame on an
+  i7-14700F. Compared 64 bytes at a time with AVX2 (`MKW_MERGE_SIMD`), 1.5-1.7 ms, and the waiters released 1.0 ms
+  sooner (in-run A/B and its inverted twin, 18/11/2026; the frame −0.5 ms, at the 60 fps cap). Left: the 1-4 MiB
+  ranges the GPU leaves alone (~0.5 ms a frame of `memcmp`), and the rest could run on other threads.
 - **The kernel's global lock**: waits by address are done (−1.3 ms\*); the rest of the lock remains.
 - **Hybrid CPUs** (`MKW_FAST_CORES`, #490 by @AngeloAscheri): on Linux the frame's threads stay on the fast cores
   and background work (pipeline builds, prewarming, video) on all of them; on an i7-14700F at a fixed 60 fps, races

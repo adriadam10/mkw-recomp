@@ -79,11 +79,16 @@ def copy_tree(src: Path, dst: Path, total: int, version: str = "", *, verify_exi
     """src into dst with progress, COPY_JOBS files at a time: the RomFS's 205 660 files one by one were most of a
     copy's time on Windows, where creating a file costs more than its bytes. With version, then the files src does
     not have are removed (remove_stale), so the folder is src's."""
+
+    def scan_failed(error: OSError) -> None:
+        # An incomplete source listing would make remove_stale delete files the scan could not see.
+        raise error
+
     done = 0
     kept: set[str] = set()
     with ThreadPoolExecutor(COPY_JOBS) as pool:
         pending = []
-        for d, _, files in os.walk(src):
+        for d, _, files in os.walk(src, onerror=scan_failed):
             out = dst / Path(d).relative_to(src)
             out.mkdir(parents=True, exist_ok=True)
             pending += [pool.submit(copy_one, Path(d, f), out / f, verify_existing=verify_existing) for f in files]

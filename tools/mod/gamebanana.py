@@ -33,6 +33,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -73,13 +74,20 @@ def throttle(cache: Path) -> None:
 def get_json(cache: Path, path: str, query: dict | None = None) -> dict:
     url = f"{API}/{path}" + ("?" + urllib.parse.urlencode(query) if query else "")
     key = cache / (hashlib.sha256(url.encode()).hexdigest()[:24] + ".json")
-    if key.is_file() and time.time() - key.stat().st_mtime < TTL:
-        return json.loads(key.read_text(encoding="utf-8"))
+    try:
+        if time.time() - key.stat().st_mtime < TTL:
+            return json.loads(key.read_text(encoding="utf-8"))
+    except OSError, ValueError:
+        pass  # A missing or damaged entry is a cache miss.
     throttle(cache)
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=20) as r:
         data = json.loads(r.read().decode("utf-8"))
-    key.write_text(json.dumps(data), encoding="utf-8")
+    # Keep the last entry until its replacement is complete, even if the launcher stops this process.
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=cache, delete_on_close=False) as tmp:
+        json.dump(data, tmp)
+        tmp.close()  # Windows requires the temporary file closed before renaming it.
+        Path(tmp.name).replace(key)
     return data
 
 

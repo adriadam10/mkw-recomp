@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Rejects pushing a release tag vX.Y.Z whose commit's CHANGELOG.md section would stop release.yml's publish job
+# (tools/build/notes.py: summary, ### Changes, ### Tested; before the setup check, "### Tested" says TODO).
+# Why: twice a tag went out without "### Tested" (0.1.15, 19/11/2026, and an earlier version) and the workflow failed
+# after building every package; this catches it before the tag leaves, in a second.
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+status=0
+while read -r local_ref local_sha _remote_ref _remote_sha; do
+    [[ $local_ref =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]] || continue
+    version=${BASH_REMATCH[1]}
+    [[ $local_sha =~ ^0+$ ]] && continue  # deleting the tag
+    git show "$local_sha^{commit}:CHANGELOG.md" > "$tmp/CHANGELOG.md"
+    if ! python3 "$root/tools/build/notes.py" --version "$version" --changelog "$tmp/CHANGELOG.md" --out "$tmp/notes.md"; then
+        echo "pre-push: v$version's CHANGELOG.md section would fail release.yml (### Tested says TODO until the setup check)" >&2
+        status=1
+    fi
+done
+exit $status

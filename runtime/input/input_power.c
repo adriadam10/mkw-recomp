@@ -43,7 +43,7 @@ int input_power_from_sdl(int st, int pct, uint32_t id, int index, InputPower *ou
     out->percent = out->state == INPUT_POWER_WIRED || out->state == INPUT_POWER_UNKNOWN ? -1 : pct;
 #ifdef __linux__
     // xone (the Xbox wireless dongle driver) reports the battery to sysfs/UPower only, so SDL says UNKNOWN: read its
-    // level band there (index: the player on the game side, the SDL gamepad order on the start screen).
+    // level band there (index: the pad's order among Xbox-named pads).
     if (out->state == INPUT_POWER_UNKNOWN && linux_power_lookup(index, out->name, out)) return out->state;
 #endif
     return out->state;
@@ -53,7 +53,12 @@ int input_pad_power(int player, InputPower *out) {
     *out = (InputPower){INPUT_POWER_NONE, -1, 0, ""};
     uint32_t id = 0;
     int pct = -1, st = input_pad_power_sdl(player, out->name, sizeof out->name, &id, &pct);
-    return st == -2 ? out->state : input_power_from_sdl(st, pct, id, player, out);
+#ifdef __linux__
+    int xi = input_pad_xbox_index(player);   // the Nth Xbox-named pad reads the Nth Xbox sysfs supply
+#else
+    int xi = player;
+#endif
+    return st == -2 ? out->state : input_power_from_sdl(st, pct, id, xi, out);
 }
 
 const char *input_power_text(const InputPower *p, char *out, int out_size) {

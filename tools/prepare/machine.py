@@ -4,6 +4,7 @@ the tool processes tied to this one, and the memory that sizes the parallel jobs
 Why apart: prepare.py holds the steps; this is what they run with. Not run on its own.
 """
 
+import faulthandler
 import json
 import os
 import subprocess
@@ -16,6 +17,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/build"))
 import build  # (mem_total_gb, windows_memory_gb)
 
 
+# Seconds without an event before logs/setup.log gets every thread's Python stack (prepare.py sets it once the log is
+# open): restarted at each event, so only a setup that stopped moving dumps. A fixed two-minute repeat wrote ~1 000
+# lines of stacks into a healthy 12-minute setup (0.1.14's release check), which read like an error.
+STALL_S = 0
+
+
 def emit(*words: object) -> None:
     """One event for the start screen (stdout) and the same line for logs/setup.log (stderr). A start screen that is
     gone (the player closed the game while an update was set up beside it, prepare.py --next) does not stop the setup:
@@ -25,6 +32,8 @@ def emit(*words: object) -> None:
     except OSError:  # BrokenPipeError on Linux, EINVAL on Windows
         sys.stdout = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
     print(*words, file=sys.stderr)
+    if STALL_S:
+        faulthandler.dump_traceback_later(STALL_S, repeat=True, file=sys.stderr)
 
 
 class Failed(Exception):

@@ -43,21 +43,26 @@ import sys
 from pathlib import Path
 
 
-def _early_log() -> None:
-    """logs/setup.log opened before anything else runs, and every two minutes the Python stack of each thread written
-    to it: a setup that sat at 0 % CPU before writing a line left no log at all, so nothing said where it waited
-    (#251, Windows, 0.1.10). Rewritten at every setup; main() keeps writing to the same file."""
+STALL_S = 120
+
+
+def _early_log() -> bool:
+    """logs/setup.log opened before anything else runs, and after two minutes without an event the Python stack of
+    each thread written to it: a setup that sat at 0 % CPU before writing a line left no log at all, so nothing said
+    where it waited (#251, Windows, 0.1.10). Each event restarts the wait (machine.emit). Rewritten at every setup;
+    main() keeps writing to the same file. True when the log is open."""
     try:
         game = Path(sys.argv[sys.argv.index("--game") + 1]).absolute()  # as main()'s, so it keeps this file
         (game / "logs").mkdir(parents=True, exist_ok=True)
         sys.stderr = open(game / "logs/setup.log", "w", encoding="utf-8", buffering=1)  # noqa: SIM115
     except ValueError, IndexError, OSError:
-        return
+        return False
     print(f"setup: started, Python {sys.version.split()[0]}, {sys.executable}", file=sys.stderr)
-    faulthandler.dump_traceback_later(120, repeat=True, file=sys.stderr)
+    faulthandler.dump_traceback_later(STALL_S, repeat=True, file=sys.stderr)
+    return True
 
 
-_early_log()
+_LOGGED = _early_log()
 
 import argparse  # noqa: E402
 import hashlib  # noqa: E402
@@ -94,6 +99,7 @@ from machine import (
     run,
     shader_jobs,
 )
+import machine
 import nextsetup
 from beside import Beside
 from shaderstep import (  # noqa: F401  (spec_command: tests/launcher/test_setup.py)
@@ -111,6 +117,9 @@ import update  # (ca_file)
 PREP_VERSION = 1  # bump when a step's output changes meaning: every step runs again
 # (build.py put recomp/ on the path)
 from versions import Version
+
+if _LOGGED:
+    machine.STALL_S = STALL_S  # every event restarts the stack dump's wait (machine.emit)
 
 SHADER_DIRS = ("Effect", "Layout", "Lib")  # extract.py's SHADER_DIRS: with Shader/, the RomFS folders it reads
 STEPS = ("check", "exefs", "romfs", "generate", "compile", "shaders", "warm", "cleanup")
@@ -203,7 +212,7 @@ GENERATOR = [
     *sorted((ROOT / "recomp").glob("*.py")),
     *sorted((ROOT / "recomp").glob("patches-mkw*.txt")),
 ]  # each version's table
-COMPILER = [*GENERATOR, ROOT / "tools/build/build.py", Path(__file__).with_name("gamecode.py")]
+COMPILER = [*GENERATOR, ROOT / "tools/build/build.py", ROOT / "tools/prepare/gamecode.py"]
 
 
 def warm(game: Path, work: Path, runtime: Path | None = None, out: Path | None = None) -> None:
@@ -297,10 +306,15 @@ def main() -> None:
     game = args.game.absolute()
     runtime = args.runtime.resolve() if args.runtime else game
     lock = hold_lock(game)  # noqa: F841 (held until exit)
-    if args.next:  # the player may be racing meanwhile: the game's threads go first; the tools inherit it
-        nextsetup.lower_priority()
-    else:  # the update an earlier --next run set up beside the played version, now that this one runs
-        nextsetup.promote(game, args.port)
+    try:
+        if args.next:  # the player may be racing meanwhile: the game's threads go first; the tools inherit it
+            nextsetup.lower_priority()
+            nextsetup.recover(game)
+        else:  # the update an earlier --next run set up beside the played version, now that this one runs
+            nextsetup.promote(game, args.port)
+    except OSError as e:
+        emit("error", "io", e)
+        sys.exit(1)
     # the played version's outputs promote set aside, deleted beside this run's steps (joined at its end)
     removing = Beside("remove-old", lambda _: nextsetup.remove_old(game)) if not args.next else None
     state = load_state(game)

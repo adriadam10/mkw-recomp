@@ -26,11 +26,13 @@ PACK_VERSION = pack.VERSION
 def shipped(files: list[Path]) -> list[Path]:
     """The files of a key that this package ships: a package unzipped by hand over an older one (#50's update) kept
     the files the new one moved or dropped, and they changed the keys (18/11/2026: 0.1.13's sm86/translate/flow.py,
-    moved to frontend/, made the update redo the shaders). A source checkout has no list: every file counts."""
+    moved to frontend/, made the update redo the shaders). A source checkout has no list: every file counts. Paths are
+    compared resolved: the AppImage's setup/ is a symlink into its mount and ROOT is resolved, so a file named through
+    the symlink was not under it (#632: a setup run through the game folder's setup/ stopped at check)."""
     if not SHIPPED.is_file():
         return files
     names = set(SHIPPED.read_text(encoding="utf-8").splitlines())
-    return [f for f in files if f.relative_to(ROOT).as_posix() in names]
+    return [f for f in files if f.resolve().relative_to(ROOT).as_posix() in names]
 
 
 def translator_key() -> str:

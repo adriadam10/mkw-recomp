@@ -56,6 +56,7 @@ RT_FLAGS = ["-O2", "-g", "-Wall", "-fno-strict-aliasing", *ARCH_FLAGS[ARCH]]
 sys.path.insert(0, str(ROOT / "recomp"))
 import versions  # noqa: E402  (the game version of a dump: generated dir, patches, RtGame.version)
 from versions import detect as detect_version  # noqa: E402
+import hud_layouts  # noqa: E402  (the screen-edge HUD's layout table, written to build/obj/rt/hud_layouts.h)
 
 
 def gen_modules(gen: Path) -> list[str]:
@@ -446,7 +447,10 @@ def main() -> None:
         check_gen(args.gen, args.exefs)
     jobs = args.jobs or max(1, min(os.cpu_count() or 1, int(mem_total_gb() * 0.6 / args.job_mem_gb)))
     (args.out / "rt").mkdir(parents=True, exist_ok=True)
-    glue = [(args.out / "rt/defaults.c", defaults_glue(args.exefs, args.romfs, dist is not None))]
+    glue = [
+        (args.out / "rt/defaults.c", defaults_glue(args.exefs, args.romfs, dist is not None)),
+        (args.out / "rt/hud_layouts.h", hud_layouts.header_text()),  # runtime/core/boot/patches.c includes it
+    ]
     if not args.runtime_only:
         glue.append((args.out / "rt/modules.c", module_glue(args.gen, args.exefs, dist is not None)))
     for path, text in glue:

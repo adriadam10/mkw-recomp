@@ -513,7 +513,7 @@ static int usage(const char *argv0) {
     fprintf(stderr, "usage: %s [--exefs DIR] [--romfs DIR|FILE.nup|FILE.nx] [--nup FILE] [--profile DIR] [--mod NAME]... [--launcher | --play | --selftest | --probe-loader | --probe-plugin | "
                     "--probe-cfg | --probe-kernel | --probe-audio | --probe-services | --probe-fs | --probe-gfx-abi | "
                     "--probe-nvn | --probe-nvn-tex | --probe-window | --probe-vkmem | "
-                    "--probe-vkexec | --probe-astc | --probe-framegen | --probe-gpu-clocks | --probe-fps | --probe-discord | --probe-dsu | --probe-texpre | --texpre | --prewarm | --boot |--seconds S [--shot PNG]]\n", argv0);
+                    "--probe-vkexec | --probe-astc | --probe-framegen | --probe-gpu-clocks | --probe-fps | --probe-merge | --probe-discord | --probe-dsu | --probe-texpre | --texpre | --prewarm | --boot |--seconds S [--shot PNG]]\n", argv0);
     return 2;
 }
 
@@ -734,6 +734,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "--probe-framegen")) return probe_framegen();
     if (!strcmp(mode, "--probe-gpu-clocks")) return probe_gpu_clocks();
     if (!strcmp(mode, "--probe-fps")) return probe_fps();
+    if (!strcmp(mode, "--probe-merge")) return probe_merge();
     if (!strcmp(mode, "--probe-discord")) return probe_discord();
     if (!strcmp(mode, "--probe-dsu")) return probe_dsu();
     if (!strcmp(mode, "--probe-vkdevice")) return probe_vkdevice();

@@ -142,6 +142,27 @@ msgctxt "UI_MENU_ASPECT_WINDOW"
 msgid "Window"
 msgstr "Ventana"
 
+msgctxt "UI_MENU_HUD_POSITION"
+msgid "HUD position"
+msgstr "Posición del HUD"
+
+msgctxt "UI_MENU_HUD_POSITION_DESC"
+msgid ""
+"On a picture wider or taller than 16:9, keep the race HUD in the middle 16:9 area (the console's "
+"place) or put it at the screen's edges and corners. Takes effect at the next start."
+msgstr ""
+"En una imagen más ancha o más alta que 16:9, deja el HUD de la carrera en la zona 16:9 del centro "
+"(donde está en la consola) o lo lleva a los bordes y esquinas de la pantalla. Se aplica en el "
+"próximo inicio."
+
+msgctxt "UI_MENU_HUD_POSITION_16X9"
+msgid "16:9 area"
+msgstr "Zona 16:9"
+
+msgctxt "UI_MENU_HUD_POSITION_EDGES"
+msgid "Screen edges"
+msgstr "Bordes de la pantalla"
+
 msgctxt "UI_MENU_QUALITY"
 msgid "Quality"
 msgstr "Calidad"
@@ -867,11 +888,13 @@ msgstr "Botón Guía"
 
 msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
 msgid ""
-"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
-"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+"Note: If using the Guide button, turn off 'Guide button focuses Steam' in Steam (Settings -> "
+"Controller -> Advanced Settings).\n\nOn Windows, also turn off 'Allow your controller to open "
+"Game Bar' (Settings -> Gaming -> Game Bar)."
 msgstr ""
-"Nota: si usas el botón Guía, recomendamos desactivar 'Guide button focuses Steam' en Steam "
-"(Ajustes -> Mando -> Ajustes avanzados) para que Steam no se abra sobre el juego."
+"Nota: si usas el botón Guía, desactiva 'Guide button focuses Steam' en Steam (Ajustes -> Mando -> "
+"Ajustes avanzados).\n\nEn Windows, desactiva también 'Allow your controller to open Game Bar' "
+"(Ajustes -> Juegos -> Game Bar)."
 
 msgctxt "UI_BINDS_HELP"
 msgid ""
@@ -2862,6 +2885,61 @@ msgstr "Buscando tu copia en los sitios habituales..."
 msgctxt "UI_LAUNCH_FOUND_FOLDER"
 msgid "folder"
 msgstr "carpeta"
+
+msgctxt "UI_LAUNCH_GPU_NONE"
+msgid "No graphics card here can run the game"
+msgstr "Ninguna tarjeta gráfica de este equipo puede ejecutar el juego"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_OLD"
+msgid "%s: its driver offers %s, and the game needs Vulkan 1.3"
+msgstr "%s: su controlador ofrece %s, y el juego necesita Vulkan 1.3"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_EXT"
+msgid "%s (%s): its driver lacks %s, which the game needs"
+msgstr "%s (%s): a su controlador le falta %s, que el juego necesita"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_QUEUE"
+msgid "%s: it has no queue that does both graphics and compute"
+msgstr "%s: no tiene una cola que haga a la vez gráficos y cómputo"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SKIPPED"
+msgid "%s: not the one chosen in Settings, Screen, Graphics card"
+msgstr "%s: no es la elegida en Configuración, Pantalla, Tarjeta gráfica"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SOFTWARE"
+msgid "%s draws on the processor, not on a graphics card: far too slow to play"
+msgstr "%s dibuja con el procesador, no con una tarjeta gráfica: es demasiado lento para jugar"
+
+msgctxt "UI_LAUNCH_GPU_NO_DRIVER"
+msgid "No Vulkan driver was found."
+msgstr "No se ha encontrado ningún controlador de Vulkan."
+
+msgctxt "UI_LAUNCH_GPU_HELP"
+msgid ""
+"The game needs Vulkan 1.3. On AMD and Intel that is Mesa 22.0 or newer, newer than Debian 11 and "
+"Ubuntu 20.04 ship; on NVIDIA, its driver 510 or newer. Some older graphics cards cannot have it "
+"at all. The setup can run now: the game starts once the driver is updated."
+msgstr ""
+"El juego necesita Vulkan 1.3. En AMD e Intel eso es Mesa 22.0 o posterior, más reciente que el "
+"que traen Debian 11 y Ubuntu 20.04; en NVIDIA, su controlador 510 o posterior. Algunas tarjetas "
+"gráficas antiguas no pueden tenerlo. La preparación puede hacerse ya: el juego arrancará cuando "
+"el controlador esté actualizado."
+
+msgctxt "UI_LAUNCH_GPU_HELP_WIN"
+msgid ""
+"The game needs Vulkan 1.3: install the latest driver from your graphics card's maker (AMD, Intel "
+"or NVIDIA; on NVIDIA, 510 or newer). Some older graphics cards cannot have it at all. The setup "
+"can run now: the game starts once the driver is updated."
+msgstr ""
+"El juego necesita Vulkan 1.3: instala el controlador más reciente del fabricante de tu tarjeta "
+"gráfica (AMD, Intel o NVIDIA; en NVIDIA, el 510 o posterior). Algunas tarjetas gráficas antiguas "
+"no pueden tenerlo. La preparación puede hacerse ya: el juego arrancará cuando el controlador esté "
+"actualizado."
 
 #. A product name: keep it as Steam shows it in your language.
 msgctxt "UI_MENU_GROUP_RPT"

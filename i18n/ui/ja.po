@@ -139,6 +139,24 @@ msgctxt "UI_MENU_ASPECT_WINDOW"
 msgid "Window"
 msgstr "ウィンドウ"
 
+msgctxt "UI_MENU_HUD_POSITION"
+msgid "HUD position"
+msgstr "HUDの位置"
+
+msgctxt "UI_MENU_HUD_POSITION_DESC"
+msgid ""
+"On a picture wider or taller than 16:9, keep the race HUD in the middle 16:9 area (the console's "
+"place) or put it at the screen's edges and corners. Takes effect at the next start."
+msgstr "16:9より横長または縦長の画面で、レースのHUDを中央の16:9の範囲(本体と同じ位置)に置くか、画面の端と隅に置きます。次回の起動から反映されます。"
+
+msgctxt "UI_MENU_HUD_POSITION_16X9"
+msgid "16:9 area"
+msgstr "16:9の範囲"
+
+msgctxt "UI_MENU_HUD_POSITION_EDGES"
+msgid "Screen edges"
+msgstr "画面の端"
+
 msgctxt "UI_MENU_QUALITY"
 msgid "Quality"
 msgstr "品質"
@@ -805,11 +823,13 @@ msgstr "Guide ボタン"
 
 msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
 msgid ""
-"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
-"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+"Note: If using the Guide button, turn off 'Guide button focuses Steam' in Steam (Settings -> "
+"Controller -> Advanced Settings).\n\nOn Windows, also turn off 'Allow your controller to open "
+"Game Bar' (Settings -> Gaming -> Game Bar)."
 msgstr ""
-"注: Guide ボタンを使う場合は、Steam のオーバーレイが開かないように、Steam の 'Guide button focuses Steam'(設定 -> コントローラ -> "
-"詳細設定)をオフにすることをおすすめします。"
+"注: Guide ボタンを使う場合は、Steam の 'Guide button focuses Steam'(設定 -> コントローラ -> "
+"詳細設定)をオフにしてください。\n\nWindows では 'Allow your controller to open Game Bar'(設定 -> ゲーム -> Game "
+"Bar)もオフにしてください。"
 
 msgctxt "UI_BINDS_HELP"
 msgid ""
@@ -2736,6 +2756,58 @@ msgstr ""
 msgctxt "UI_LAUNCH_FOUND_FOLDER"
 msgid "folder"
 msgstr ""
+
+msgctxt "UI_LAUNCH_GPU_NONE"
+msgid "No graphics card here can run the game"
+msgstr "このPCのグラフィックカードではゲームを実行できません"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_OLD"
+msgid "%s: its driver offers %s, and the game needs Vulkan 1.3"
+msgstr "%s: ドライバーが提供するのは %s で、ゲームには Vulkan 1.3 が必要です"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_EXT"
+msgid "%s (%s): its driver lacks %s, which the game needs"
+msgstr "%s (%s): ドライバーに、ゲームに必要な %s がありません"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_QUEUE"
+msgid "%s: it has no queue that does both graphics and compute"
+msgstr "%s: グラフィックスと計算を同時に行えるキューがありません"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SKIPPED"
+msgid "%s: not the one chosen in Settings, Screen, Graphics card"
+msgstr "%s: 設定 > 画面 > グラフィックカード で選ばれたものではありません"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SOFTWARE"
+msgid "%s draws on the processor, not on a graphics card: far too slow to play"
+msgstr "%s はグラフィックカードではなくプロセッサで描画します。遅すぎてプレイできません"
+
+msgctxt "UI_LAUNCH_GPU_NO_DRIVER"
+msgid "No Vulkan driver was found."
+msgstr "Vulkan ドライバーが見つかりませんでした。"
+
+msgctxt "UI_LAUNCH_GPU_HELP"
+msgid ""
+"The game needs Vulkan 1.3. On AMD and Intel that is Mesa 22.0 or newer, newer than Debian 11 and "
+"Ubuntu 20.04 ship; on NVIDIA, its driver 510 or newer. Some older graphics cards cannot have it "
+"at all. The setup can run now: the game starts once the driver is updated."
+msgstr ""
+"ゲームには Vulkan 1.3 が必要です。AMD と Intel では Mesa 22.0 以降で、Debian 11 や Ubuntu 20.04 "
+"に含まれるものより新しいものです。NVIDIA ではドライバー 510 "
+"以降です。古いグラフィックカードの中には対応できないものもあります。準備は今すぐ進められます。ドライバーを更新すればゲームが起動します。"
+
+msgctxt "UI_LAUNCH_GPU_HELP_WIN"
+msgid ""
+"The game needs Vulkan 1.3: install the latest driver from your graphics card's maker (AMD, Intel "
+"or NVIDIA; on NVIDIA, 510 or newer). Some older graphics cards cannot have it at all. The setup "
+"can run now: the game starts once the driver is updated."
+msgstr ""
+"ゲームには Vulkan 1.3 が必要です。グラフィックカードのメーカー (AMD、Intel、NVIDIA) の最新ドライバーをインストールしてください (NVIDIA は 510 "
+"以降)。古いグラフィックカードの中には対応できないものもあります。準備は今すぐ進められます。ドライバーを更新すればゲームが起動します。"
 
 #. A product name: keep it as Steam shows it in your language.
 msgctxt "UI_MENU_GROUP_RPT"

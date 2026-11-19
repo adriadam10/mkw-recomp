@@ -100,3 +100,15 @@ def test_model_match_without_gip_name(power: Path, tmp_path: Path) -> None:
     supply(tmp_path, "hid-11-22-33", {"type": "Battery", "status": "Discharging", "capacity_level": "Normal",
                                       "scope": "Device", "model_name": "Xbox Wireless Controller"})
     assert run(power, tmp_path, 0, "Xbox Wireless Controller") == (1, BATTERY, 50, 1)
+
+
+def test_xbox_gate(power: Path) -> None:
+    def isxbox(name: str) -> int:
+        out = subprocess.run([str(power), "isxbox", name], capture_output=True, text=True, check=True)
+        return int(out.stdout)
+
+    assert isxbox("Xbox Series X Controller") == 1
+    assert isxbox("Microsoft Xbox Controller") == 1
+    assert isxbox("") == 1  # a name that tells nothing passes, as in the lookup
+    assert isxbox("DualSense Wireless Controller") == 0
+    assert isxbox("Switch Pro Controller") == 0

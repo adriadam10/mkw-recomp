@@ -223,11 +223,17 @@ def main() -> None:
     a.add_argument("--art", type=Path, help="the library images the start screen drew (launcher.cpp steam_art_draw)")
     args = ap.parse_args()
     steam = steam_dir()
-    users = [u for u in (steam / "userdata").iterdir() if u.name.isdigit() and u.name != "0"] if steam else []
-    if not users:
-        print("error nosteam", flush=True)
-        sys.exit(1)
     try:
+        users = []
+        if steam is not None:
+            try:
+                profiles = (steam / "userdata").iterdir()
+                users = [u for u in profiles if u.name.isdigit() and u.name != "0" and u.is_dir()]
+            except FileNotFoundError, NotADirectoryError:
+                pass
+        if not users:
+            print("error nosteam", flush=True)
+            sys.exit(1)
         for u in users:
             (u / "config").mkdir(exist_ok=True)
             appid = zlib.crc32((f'"{args.exe}"' + args.name).encode()) | 0x80000000

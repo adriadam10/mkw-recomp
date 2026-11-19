@@ -6,6 +6,9 @@
 // not know is never shown an Xbox pad's level. 1 when out was filled, 0 when there is no such supply (out kept).
 #pragma once
 #include "input.h"
+// 1 when sdl_name may be an Xbox pad (an empty name tells nothing, so it passes); the sysfs match below is
+// Xbox-only, so a named non-Xbox pad never takes an Xbox level, and callers count only these pads for index.
+int linux_power_is_xbox(const char *sdl_name);
 int linux_power_lookup(int index, const char *sdl_name, InputPower *out);
 // The same against another power_supply tree (tests: a fake sysfs), e.g. "/sys/class/power_supply".
 int linux_power_lookup_at(const char *root, int index, const char *sdl_name, InputPower *out);

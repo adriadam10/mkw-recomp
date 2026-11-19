@@ -28,13 +28,33 @@
 #define FRAME_HOST 0xfa0                          // patch page offset of host_frame_update (patches.c)
 #define SPEED_WINDOW_NS 5000000000ull
 
-static _Atomic uint64_t ticks;   // 60 Hz ticks since the first present
+static _Atomic uint64_t ticks;   // game steps since the first present (60 Hz ticks at MKW_LOGIC_HZ 60)
 
 // MKW has no save-load point: the A/B blocks (MKW_AB, perf.c rt_ab) count from the phase MKW_SEQ_UNTIL waits for
 // (the race's start in tools/run/race.sh), so both halves measure the same scene.
 int64_t frame_step_world_us(void) { return seqwatch_since_us(); }
 
-uint64_t frame_step_ticks(void) { return atomic_load_explicit(&ticks, memory_order_relaxed); }
+// Game time in 60 Hz ticks whatever MKW_LOGIC_HZ is: the input script, the movie skip and the codec count in them
+// (lhz120, 19/11/2026: the script counted steps of 1/120 s and pressed A at half the game time, skipping the intro).
+uint64_t frame_step_ticks(void) {
+    return atomic_load_explicit(&ticks, memory_order_relaxed) * 60 / (uint64_t)frame_logic_hz();
+}
+
+// MKW_LOGIC_HZ (fps-libres, experimental): the vsync thread ticks N times a second and each game step is 1/N s
+// (patches.c set logichz), so the game logic runs N steps a second instead of 60. 60 when unset or out of 30..480, and
+// when the game version has no logichz set (frame_logic_hz_60): ticks at N with steps of 1/60 would run it N/60 fast.
+static int hz;
+
+void frame_logic_hz_60(void) { hz = 60; }
+
+int frame_logic_hz(void) {
+    if (!hz) {
+        const char *v = cfg_get("MKW_LOGIC_HZ");
+        int n = v ? atoi(v) : 60;
+        hz = n >= 30 && n <= 480 ? n : 60;
+    }
+    return hz;
+}
 
 // Game speed, for tools/run/summary.py: game seconds per real second over each window, and how often the interval
 // changed. Below 1 the game runs in slow motion.
@@ -53,7 +73,7 @@ static void speed_note(int interval) {
     if (now - sp.t0 < SPEED_WINDOW_NS) return;
     double real = (double)(now - sp.t0) / 1e9;
     rt_log("game: speed %.2fx over %.1f s (%u frames, %u interval changes, MKW_FPS %s)",
-           (double)(clock - sp.clock0) / 60.0 / real, real, sp.frames, sp.changes, cfg_value("MKW_FPS"));
+           (double)(clock - sp.clock0) / frame_logic_hz() / real, real, sp.frames, sp.changes, cfg_value("MKW_FPS"));
     sp.t0 = now, sp.clock0 = clock, sp.frames = sp.changes = 0;
 }
 

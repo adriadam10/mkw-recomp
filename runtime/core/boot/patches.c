@@ -20,6 +20,7 @@
 #include "gamelib.h"
 #include "gfx.h"
 #include "hacks.h"
+#include "hud_layouts.h"
 #include "host.h"
 #include "version.h"
 
@@ -35,6 +36,10 @@
 #define CAMERA_EVENT_HOST 0xf50  // patch page offset of host_camera_event (set camera, 1.8.0)
 #define UI_ROWS2_HOST 0xf40      // patch page offset of host_ui_rows2 (set aspect, 1.8.0)
 #define FX_VIEW_HOST 0xf20       // patch page offset of host_fx_view (set aspect)
+#define DISPLAY_SIZE_HOST 0xf10  // patch page offset of host_display_size (set display, 1.8.0)
+#define DISPLAY_SET_HOST 0xf00   // patch page offset of host_display_set (set display, 1.8.0)
+#define LOGIC_HZ_HOST 0xde0      // patch page offset of host_logic_step (set logichz)
+#define PANE_MATRIX_HOST 0xdf0   // patch page offset of host_pane_matrix (set aspect, 1.8.0), below race_scene.c's
                                  // 0xe00-0xef0: race_scene.c, one per node (RT_RACE_HOST)
 // The guest functions the sets call or recognise, per game version (version.h; 1.0.0: main+0x233358 RenderBuffer
 // creation, main+0x8eb6b0 the render-buffer allocator setup that main+0x37b520 allocates from, main+0x67aa40 operator
@@ -165,6 +170,28 @@ static void host_seed_tick(Cpu *c) {
     c->x[0] = seed_tick(lr);
 }
 
+// The logichz set: at each writer of the ModuleSystem's step record (1.0.0 main+0x45e7ec and the event virtual
+// main+0x159fe4; x8 the record, [system+0x500]) one step of MKW_LOGIC_HZ instead of 1/60 s: {seconds, 60 Hz frames
+// per step}.
+static void host_logic_step(Cpu *c) {
+    float *rec = (float *)(uintptr_t)c->x[8];
+    int hz = frame_logic_hz();
+    rec[0] = 1.0f / (float)hz;
+    rec[1] = 60.0f / (float)hz;
+}
+
+static void logic_hz_set(const RtGame *g) {
+    for (int i = 0; i < g->npatch_sets; i++)
+        if (!strcmp(g->patch_sets[i].name, "logichz")) {
+            g->patch_on[i] = frame_logic_hz() != 60;
+            if (frame_logic_hz() != 60) rt_log("game: logic at %d Hz (MKW_LOGIC_HZ, set logichz on)", frame_logic_hz());
+            return;
+        }
+    if (frame_logic_hz() != 60) rt_log("game: MKW_LOGIC_HZ=%d needs the logichz set, not in this game code: 60 Hz",
+                                       frame_logic_hz());
+    frame_logic_hz_60();
+}
+
 static void seed_set(const RtGame *g) {
     for (int i = 0; i < g->npatch_sets; i++)
         if (!strcmp(g->patch_sets[i].name, "seed")) g->patch_on[i] = *cfg_value("MKW_SEED") != 0;
@@ -243,6 +270,54 @@ static void host_camera_fov(Cpu *c) {
     memcpy(&c->v[8], &half, sizeof half);
 }
 
+// The output the game made (output_size): 1.8.0's window textures, which the display size must fit (display_fit)
+static uint32_t output_wh[2];
+
+// A 16:9 display size fitted to the output's aspect (set display, 1.8.0): on a taller output the same width and the
+// rows of its aspect, on a wider one the same rows and the columns of its aspect (both even), as aspect_tall_target
+// adds rows instead of removing columns. Other sizes, and a 16:9 output, keep theirs. 1.8.0 crops its picture from
+// the window textures, the output's size: a size that does not fit them is shrunk to fit, with its shape (at 32:9 a
+// 5120x1440 size in 3840x2160 textures came out with its outer 640 columns black on each side).
+static uint64_t display_fit(uint64_t wh) {
+    uint32_t w = (uint32_t)wh, h = (uint32_t)(wh >> 32);
+    if (!(aspect_scale > 0) || aspect_scale == 1 || !w || !h || fabsf((float)w / (float)h - 16.0f / 9) > 0.01f)
+        return wh;
+    float fw = (float)w, fh = (float)h;
+    if (aspect_scale > 1) fw = fh * aspect_out;
+    else fh = fw / aspect_out;
+    float fit = 1;
+    if (output_wh[0] && output_wh[1]) fit = fminf(1.0f, fminf((float)output_wh[0] / fw, (float)output_wh[1] / fh));
+    uint32_t nw = ((uint32_t)(fw * fit + 0.5f) + 1) & ~1u, nh = ((uint32_t)(fh * fit + 0.5f) + 1) & ~1u;
+    return nw | (uint64_t)nh << 32;
+}
+
+static void display_note(uint64_t wh, uint64_t fitted) {
+    static int logged;
+    if (fitted != wh && !logged++)
+        rt_log("patches: display %ux%u made %ux%u (MKW_ASPECT, output %ux%u)", (unsigned)wh, (unsigned)(wh >> 32),
+               (unsigned)fitted, (unsigned)(fitted >> 32), output_wh[0], output_wh[1]);
+}
+
+// In place of 1.8.0's store of the display's requested size in its per-mode update (version.c display_store): the
+// same store, of the fitted size. The registers keep the original size, so the mode index the game derives from it
+// right after is unchanged.
+static void host_display_size(Cpu *c) {
+    const RtVersion *v = rt_version();
+    uint64_t wh = c->x[v->display_value_reg], fitted = display_fit(wh);
+    *(uint64_t *)(uintptr_t)(c->x[v->display_base_reg] + 0x10) = fitted;
+    display_note(wh, fitted);
+}
+
+// In place of the calls to 1.8.0's display size setter (display, const size *, slot): the setter itself, which also
+// keeps the mode index of the original size, then its slot rewritten with the fitted size.
+static void host_display_set(Cpu *c) {
+    uint64_t display = c->x[0], size = c->x[1], slot = (uint64_t)(int64_t)(int32_t)c->x[2];
+    rt_call(c, rt_main_addr(rt_version()->display_set_fn), 3, display, size, slot);
+    uint64_t *at = (uint64_t *)(uintptr_t)(display + 0x10 + 8 * slot), wh = *at, fitted = display_fit(wh);
+    *at = fitted;
+    display_note(wh, fitted);
+}
+
 // In place of fdiv s0, s0, s1 (recomp/patches-mkw.txt): the camera's aspect, fitted.
 static void host_aspect(Cpu *c) {
     float w, h;
@@ -309,6 +384,573 @@ static int ui_tall_backdrop(const Cpu *c) {
         (!memcmp(name, "P_Cap_00", 9) || !memcmp(name, "P_Cap_01", 9));
 }
 
+// The character and kart lists' capture masks on a wider output. CharaSelect_00 and MachineSelect_00 hold P_Cap_00 and
+// P_Cap_01 (100 units wide) under N_Root_02, at the list's outer and inner edge (1.8.0's layouts: the only P_Cap_* with
+// that parent). They cover the list's edges with the screen's own backdrop, so the cards fade under the glass. A mask
+// takes that backdrop at texture coordinates from its own canvas place, u = (x + 960) / 1920, while the backdrop is
+// drawn wide and the mask narrowed: at 21:9 the outer mask, drawn at x / 1.33, showed the backdrop of x, a column 300
+// pixels to its left, with a hard seam through the cards and the footer (hiding P_Cap_00 removed the seam; stretching
+// it to the edge smeared the footer, as its u stayed on the canvas). So the mask's canvas place is divided by s and
+// host_ui_proj draws it with the widened projection: it shows on screen exactly where it was, and it samples the
+// backdrop under itself. The outer mask, while it rests at the list's outer edge (-908.6 character, -928.1 kart; the
+// list's State animation carries it to -450), first reaches out to the screen edge, so the glass and the footer run
+// to x = 0 as the screen edge closes them at 16:9. Its inner side, at the list, does not move.
+#define UI_MASK_REST 900.0f
+
+static const char *pane_name(uint64_t pane) { return (const char *)(uintptr_t)(pane + 0xb0); }
+static uint64_t pane_parent(uint64_t pane) { return *(const uint64_t *)(uintptr_t)(pane + 0x18); }
+
+// -1: the outer mask, 1: the inner one, 0: another pane (P_Cap_0x < N_Root_02 < the RootPane)
+static int ui_list_mask(uint64_t pane) {
+    const char *name = pane_name(pane);
+    if (strncmp(name, "P_Cap_0", 7) || (name[7] != '0' && name[7] != '1') || name[8]) return 0;
+    uint64_t parent = pane_parent(pane);
+    if (!parent || strncmp(pane_name(parent), "N_Root_02", 24) || !pane_parent(parent) ||
+        pane_parent(pane_parent(parent)))
+        return 0;
+    return name[7] == '0' ? -1 : 1;
+}
+
+// The masks placed by host_pane_matrix (add) and whether a drawn pane is one (query): by address and name, so a
+// freed pane's address taken by another pane is not drawn wide
+static int ui_mask_mark(uint64_t pane, int add) {
+    static struct { uint64_t pane; char name[24]; } set[8];
+    static unsigned next;
+    const char *name = pane_name(pane);
+    for (unsigned i = 0; i < 8; i++)
+        if (set[i].pane == pane && !strncmp(set[i].name, name, 24)) return 1;
+    if (!add) return 0;
+    unsigned at = next++ % 8;
+    set[at].pane = pane;
+    strncpy(set[at].name, name, 24);
+    return 1;
+}
+
+// A mask's global x row and translation (3x4 row-major g, width w) for a wider output s: the outer side to the screen
+// edge while it rests there, then divided by s
+static void ui_mask_place(int side, float *g, float w, float scale) {
+    float hw = g[0] * w / 2, l = g[3] - hw, r = g[3] + hw;
+    if (side < 0 && l <= -UI_MASK_REST) l = -960.0f * scale;
+    if (w > 0) g[0] = (r - l) / w;
+    g[3] = (l + r) / 2;
+    g[0] /= scale, g[1] /= scale, g[2] /= scale, g[3] /= scale;
+}
+
+// The race and pause prompts (KeyAssign_00: "Photo Mode", "Settings", the controller guide) on an output that is not
+// 16:9. The game draws them with the 16:9 projection over the whole picture, not the fitted one, so they sit at the
+// display's corners as on the console, but their shape is stretched by the output's aspect over 16:9 (s): the "Photo
+// Mode" box's width over its height is 7.9 at 16:9, 10.5 at 21:9 and 16.3 at 32:9, and squashed on a taller output.
+// Their two groups, L_Key_02 under N_LeftKey_00 (bottom left) and A_Align_00 under N_Key_00 (bottom right; the only
+// panes of 1.8.0's layouts with those names and parents), are placed at (x + dx) / s with their x row divided by s,
+// which is where and as wide as the fitted projection shows them moved by dx = 960 (s - 1) to their side: the same
+// corner, the 16:9 shape. On a taller output the same on y. Their children follow through the matrix.
+static int ui_prompt(uint64_t pane, int *ax) {
+    uint64_t parent = pane_parent(pane);
+    if (!parent) return 0;
+    const char *name = pane_name(pane), *up = pane_name(parent);
+    if (!strncmp(name, "L_Key_02", 24) && !strncmp(up, "N_LeftKey_00", 24)) return *ax = -1, 1;
+    if (!strncmp(name, "A_Align_00", 24) && !strncmp(up, "N_Key_00", 24)) return *ax = 1, 1;
+    return 0;
+}
+
+static void ui_prompt_place(float *g, int ax, float scale) {
+    if (scale > 1) {
+        g[0] /= scale, g[1] /= scale, g[2] /= scale;
+        g[3] = (g[3] + (float)ax * 960.0f * (scale - 1)) / scale;
+    } else {   // both groups are at the bottom: dy = -540 (1 / s - 1)
+        g[4] *= scale, g[5] *= scale, g[6] *= scale;
+        g[7] = (g[7] - 540.0f * (1 / scale - 1)) * scale;
+    }
+}
+
+// ---- The HUD and the menus' chrome at the screen edges (MKW_HUD_POSITION=edges, opt-in; 1.8.0)
+// The 2D is fitted to the middle 16:9 of a wider or taller picture (host_ui_proj). Like CSS position: fixed, the HUD
+// and the menus' chrome (header and footer bands, title telops, button prompts) go to their own screen edge or corner,
+// and content (lists, grids, 3D previews, dialogs) stays in the middle. MKW places every pane by a translation from the
+// canvas centre (all origins C/C), so the layout carries no anchor to follow; these panes get their edge from tables.
+// 1. The layout. Each pane is classified by the layout it belongs to first: hud_layouts.h (build/obj/rt/, written by
+//    tools/build/build.py with recomp/hud_layouts.py from recomp/hud-layouts-180.tsv, the 1.8.0 layouts' signatures, and the reviewed
+//    recomp/hud-classes-180.tsv) gives every layout a class. A pane's layout is found from the root of its run-time
+//    tree: the RootPane, the pane without a parent (+0x18). Its signature is the sum of a hash of its size and of each
+//    distinct (depth, name) of the panes at depths 1 to 3 below it (a part pane's run-time children are its part layout's top panes),
+//    from each pane's intrusive child list (head at +0x20, linked through each child's +0x08). It is computed when
+//    nn::ui2d builds the root's own matrix (a new layout always builds it before its children) and cached by root.
+// 2. The pane. Only hud and menu layouts move panes, and only those named in hud_anchors for that layout: a hud
+//    layout's HUD pieces, a menu layout's chrome. Everything else keeps its place: content, world-placed UI, panes
+//    that game code reads for geometry (N_CameraArea_*, Vote_00's overlap panes) and all capture masks (P_Cap_*).
+// The offset is added to the pane's global translation right after nn::ui2d builds it (main+0x17f89f0 on 1.8.0):
+// the children, the text setup and the capture path all read that matrix, so digits stay with their frames.
+// Offsets come only from the room beyond the 16:9 fit, so a 16:9 output is never offset, and
+// a split screen (a split camera view in the last 30 frames) moves nothing.
+// An anchor names the layout, the pane, its parent and its depth below the RootPane (1: the RootPane's child): part
+// layouts repeat names (CupBtn_00 has its own N_Btn_00 under N_All_00, inside MenuCupSelect_00's cup buttons; the
+// first tall run moved those twice, v180p3b-probe-tall-a), and the depth tells them apart.
+//   ax: -1 left, +1 right; ay: +1 top, -1 bottom; 0 keeps that axis.
+//   HUD_EDGE: to the edge. An axis moves only while the pane rests in that edge's zone (|x| or |y| >= HUD_ZONE), so a
+//     pane an animation carries to the middle (the character select's key guide in its other state) is not pushed.
+//   HUD_BAND: a 1920-wide header or footer band: to its edge (same zone rule), and as wide as the picture on a wider
+//     one; its own children (a header's title) keep their width and place on the band.
+//   HUD_GROUP: a container at the canvas centre that holds only one edge's chrome (the cup select's button band):
+//     moved as one group whatever its own position, so it keeps its children's In/Out animations.
+//   HUD_WIDEN: as wide as the picture on a wider one, no move, children included (a band inside a moved group, or a
+//     container of bands).
+//   HUD_MINIMAP: the race minimap, which game code places: to the right edge, at the same share of the height; the
+//     racers' map icons (MapIcon_00, its own layouts, also placed by code) inside its rect move with it.
+//   HUD_SUBMAP: free roam's round minimap (SubMonitor): to its edge as HUD_EDGE, and the map icons inside its rect
+//     move with it (outside a race too; hud_map_icon).
+// Names, parents, positions and animations: the 1.8.0 layouts (names, numbers and flags only) and MKW_HUD_PROBE logs.
+enum { HUD_EDGE, HUD_BAND, HUD_GROUP, HUD_WIDEN, HUD_MINIMAP, HUD_SUBMAP };
+#define HUD_ZONE 300.0f
+typedef struct { const char *layout, *pane, *parent; int depth, ax, ay, kind; } HudAnchor;
+static const HudAnchor hud_anchors[] = {
+    // hud: RaceInfo_1 (1 player)
+    {"RaceInfo_1", "L_ItemSlot_00", "N_Root", 2, -1, 1, HUD_EDGE},        // item slot: top-left
+    {"RaceInfo_1", "N_Pers_00", "N_Root", 2, -1, -1, HUD_EDGE},           // coins, lap (and balloons): bottom-left
+    {"RaceInfo_1", "L_Rank_00", "N_Root", 2, 1, -1, HUD_EDGE},            // place: bottom-right
+    {"RaceInfo_1", "L_PassingRange_00", "N_Root", 2, 1, -1, HUD_EDGE},    // passing range, by the place
+    {"RaceInfo_1", "L_Timer_00", "N_TimeAttack_00", 3, 1, 1, HUD_EDGE},   // time trial timer: top-right
+    {"RaceInfo_1", "L_ItemWarning_00", "N_Root", 2, 0, -1, HUD_EDGE},     // incoming item warning: bottom centre
+    {"RaceInfo_1", "L_Hit_00", "N_Root", 2, -1, 0, HUD_EDGE},             // hit notice: left
+    {"MiniMap_01", "P_Map_00", "N_SunLight_00", 4, 1, 0, HUD_MINIMAP},
+    {"MiniMap_01", "P_Map_01", "N_SunLight_00", 4, 1, 0, HUD_MINIMAP},
+    // hud: free roam and missions
+    {"Mission_00", "L_Timer_00", "N_All_00", 2, 1, 1, HUD_EDGE},          // mission timer: top-right
+    {"Mission_00", "L_PlusTime_00", "N_PlusTime_00", 3, 1, 1, HUD_EDGE},  // its added time, under it
+    {"Mission_00", "L_CoinCountSet_00", "N_CoinCountSet_00", 3, 1, 1, HUD_EDGE},
+    {"Mission_00", "L_Sticker_00", "N_All_00", 2, 0, -1, HUD_EDGE},       // sticker: bottom centre
+    {"Mission_00", "L_Lap_00", "N_All_00", 2, -1, -1, HUD_EDGE},          // lap: bottom-left
+    {"MissionTitle_00", "P_NameBase_00", "N_All_00", 2, -1, -1, HUD_EDGE},   // mission name band from the left edge
+    {"MissionTitle_00", "P_NameBasePattern_00", "N_All_00", 2, -1, -1, HUD_EDGE},
+    {"MissionTitle_00", "T_MissionName_00", "N_All_00", 2, -1, -1, HUD_GROUP},   // its text, with the band on both axes
+    {"MapInfo_00", "L_PeachMedal_00", "N_InOut_00", 2, -1, -1, HUD_EDGE},    // counters: bottom-left
+    {"MapInfo_00", "L_Panel_00", "N_InOut_00", 2, -1, -1, HUD_EDGE},
+    {"MapInfo_00", "L_PSwitch_00", "N_InOut_00", 2, -1, -1, HUD_EDGE},
+    {"MapInfo_01", "N_Pos_00", "N_InOut_00", 2, -1, -1, HUD_EDGE},
+    // hud: Knockout Tour, battle, time limit
+    {"PassedNum_00", "N_InOut_00", "N_Pos_00", 3, 1, 1, HUD_EDGE},        // pass count: top-right
+    {"PassedNum_00", "N_InOut_01", "N_Pos_01", 3, 0, 1, HUD_EDGE},        // its centred variant: top
+    {"TimerBattleMode_00", "N_Pos_00", "N_All_00", 2, 1, 1, HUD_EDGE},    // battle timer and team score: top-right
+    {"TimeLimit_00", "N_Layout_00", "N_All_00", 2, 1, 1, HUD_EDGE},
+    // hud: spectate and replay
+    {"Watching_00", "N_Base_00", "N_FadeInOut_00", 3, 1, -1, HUD_EDGE},
+    {"Watching_00", "L_Rank_00", "N_FadeInOut_00", 3, 1, -1, HUD_EDGE},
+    {"Watching_00", "L_Lap_00", "N_FadeInOut_00", 3, -1, -1, HUD_EDGE},
+    {"Watching_00", "L_Balloon_00", "N_FadeInOut_00", 3, -1, -1, HUD_EDGE},
+    {"Watching_00", "L_Coin_00", "N_FadeInOut_00", 3, -1, -1, HUD_EDGE},
+    {"Watching_00", "A_UserName_00", "N_FadeInOut_00", 3, 0, -1, HUD_EDGE},
+    {"Watching_00", "N_Live_00", "N_InOut_00", 2, -1, 1, HUD_EDGE},
+    {"Replay_00", "N_Bar_00", "N_OutUI_00", 3, -1, -1, HUD_EDGE},
+    {"Replay_00", "N_LR_00", "N_OutUI_00", 3, -1, -1, HUD_EDGE},
+    {"Replay_00", "N_Key_03", "N_OutUI_00", 3, 1, -1, HUD_EDGE},
+    {"Replay_00", "N_KeyIcon_00", "N_OutUI_00", 3, 1, -1, HUD_EDGE},
+    // hud: photo mode (the frame, the stickers and the cursor stay with the picture), pause, misc
+    {"PhotoMode_00", "P_KeyAssignBase_01", "N_GuideOnOff_00", 3, -1, 0, HUD_EDGE},
+    {"PhotoMode_00", "N_KeyAssign_00", "N_GuideOnOff_00", 3, -1, 0, HUD_GROUP},
+    {"PhotoMode_01", "P_KeyAssignBase_01", "N_GuideOnOff_00", 4, -1, 0, HUD_EDGE},
+    {"PhotoMode_01", "N_KeyAssign_00", "N_GuideOnOff_00", 4, -1, 0, HUD_GROUP},
+    {"PhotoMode_01", "L_Word_13", "N_ModeSticker_00", 3, 1, -1, HUD_EDGE},
+    {"PauseMenu_00", "L_SongForward_00", "N_All_00", 2, 1, 1, HUD_EDGE},
+    {"OnlinePauseMenu_00", "L_SongForward_00", "N_Alll_00", 2, 1, 1, HUD_EDGE},
+    // free roam's round minimap: bottom-right. Its player icon (MapIcon_00, placed by code) is not its child and did
+    // not follow a plain HUD_EDGE move at 21:9 (v180p3b-rc-w21-free): HUD_SUBMAP moves it with the map
+    {"SubMonitor", "P_SubMonitorSdw_00", "N_InOut_00", 2, 1, -1, HUD_EDGE},
+    {"SubMonitor", "P_SubMonitor_00", "N_InOut_00", 2, 1, -1, HUD_SUBMAP},
+    {"Notifications_00", "L_Notification_00", "N_Root", 2, 1, 1, HUD_EDGE},
+    {"CostumeChange_1", "N_All_00", "RootPane", 1, 0, -1, HUD_EDGE},
+    {"AutomaticDemo_00", "P_Logo_01", "N_All_00", 2, 1, 1, HUD_EDGE},
+    {"OnlineLoad_00", "P_Load_00", "N_All_00", 2, 1, -1, HUD_EDGE},
+    // menu: mode select. Its dark diagonal stripe peeks in at the bottom-right corner, and the mode's caption sits
+    // on it: both to that corner (on a taller output the added rows showed most of the stripe)
+    {"MenuGameSelect_01", "P_pict_00", "N_InOut_00", 3, 1, -1, HUD_EDGE},
+    {"MenuGameSelect_01", "N_ThumbnailIn_01", "N_InOut_00", 3, 1, -1, HUD_GROUP},
+    // menu: cup select. The button band (cups, or 50/100/150cc) to the bottom as one group, its base as wide as the
+    // picture; the ticket and the 3D cup's camera areas stay (MenuCupSelect_00_In ends with the band at -455)
+    {"MenuCupSelect_00", "N_Btn_00", "N_All_00", 2, 0, -1, HUD_GROUP},
+    {"MenuCupSelect_00", "P_Base_00", "N_Btn_00", 3, 0, 0, HUD_WIDEN},
+    // menu: Knockout rally select. Its carousel holds capture masks, so it stays; the band is widened in place
+    {"MenuSurvivalSelect_00", "N_Title_00", "N_All_00", 2, -1, 1, HUD_EDGE},
+    {"MenuSurvivalSelect_00", "A_KeyAssign_00", "N_All_00", 2, 1, 1, HUD_EDGE},
+    {"MenuSurvivalSelect_00", "N_Base_01", "N_Btn_00", 3, 0, 0, HUD_WIDEN},
+    {"MenuManual_00", "P_Base_00", "N_All_00", 2, 0, -1, HUD_BAND},
+    // menu: header and footer bands
+    {"NowLoading_04", "P_HeaderSh_00", "N_Frame_00", 4, 0, 1, HUD_BAND},
+    {"NowLoading_04", "P_Header_00", "N_Frame_00", 4, 0, 1, HUD_BAND},
+    {"NowLoading_04", "P_FooterSh_00", "N_Frame_00", 4, 0, -1, HUD_BAND},
+    {"NowLoading_04", "P_Footer_00", "N_Frame_00", 4, 0, -1, HUD_BAND},
+    {"NowLoading_04", "P_Logo_00", "N_InOut_00", 3, 1, 1, HUD_EDGE},
+    {"NowLoading_01", "P_Logo_00", "N_InOut_00", 3, 1, 1, HUD_EDGE},
+    {"NowLoading_00", "L_parts_00", "N_InOUt_00", 3, 1, -1, HUD_GROUP},   // the loading item icon: bottom-right
+    {"TireWipe_01", "L_LoadingItemSlot_00", "N_ItemSlotOnOff_00", 2, 1, -1, HUD_GROUP},
+    {"CharacterSelectBG_00", "P_Base_00", "N_Screen_00", 2, 0, -1, HUD_BAND},
+    {"CharacterSelectBG_00", "P_Base_01", "N_Screen_03", 2, 0, -1, HUD_BAND},
+    {"CharaSelect_00", "P_Base_02", "N_Base_00", 3, 0, -1, HUD_BAND},
+    {"MachineSelect_00", "P_Base_02", "N_Base_00", 3, 0, -1, HUD_BAND},
+    {"FaceSelect_00", "P_Header_00", "N_All_00", 2, 0, 1, HUD_BAND},
+    {"FaceSelect_00", "P_Footer_00", "N_All_00", 2, 0, -1, HUD_BAND},
+    {"FaceSelect_00", "N_FaceList_00", "N_All_00", 2, -1, -1, HUD_EDGE},
+    {"CharaChangeOk_00", "P_Base_00", "N_All_00", 2, 0, -1, HUD_BAND},
+    {"CharaChangeOk_00", "L_parts_00", "N_All_00", 2, 1, -1, HUD_EDGE},
+    {"CharaChangeOk_00", "T_Change_00", "N_All_00", 2, 0, -1, HUD_EDGE},
+    {"TelopFooter_00", "N_VRS_00", "N_All_00", 2, 0, -1, HUD_EDGE},
+    {"TelopFooter_00", "P_Base_00", "N_All_00", 2, 0, -1, HUD_EDGE},
+    {"TelopFooter_00", "P_Base_01", "N_All_00", 2, 0, -1, HUD_EDGE},
+    {"TelopFooter_00", "T_Message_01", "N_All_00", 2, 0, -1, HUD_EDGE},
+    {"TelopFooter_01", "P_Base_00", "N_State_00", 4, 0, -1, HUD_EDGE},
+    {"TelopFooter_01", "P_Base_01", "N_State_00", 4, 0, -1, HUD_EDGE},
+    {"TelopFooter_01", "N_Message_00", "N_State_00", 4, 0, -1, HUD_EDGE},
+    {"TelopFooter_01", "P_Base_02", "N_State_01", 4, 0, -1, HUD_BAND},
+    {"TelopFooter_01", "P_Base_03", "N_State_01", 4, 0, -1, HUD_BAND},
+    {"TelopFooter_01", "N_Message_01", "N_State_01", 4, 0, -1, HUD_EDGE},
+    {"TelopFooter_01", "N_ProgressBar_00", "N_All_00", 2, 0, -1, HUD_EDGE},
+    // menu: title screen and logos
+    {"TitleLauncher_00", "N_Logo_00", "N_All_00", 2, -1, -1, HUD_EDGE},
+    {"TitleLauncher_00", "N_Load_00", "N_All_00", 2, 1, -1, HUD_EDGE},
+    {"TitleLogo_00", "T_VerNum_00", "N_Logo_00", 2, 1, -1, HUD_EDGE},
+    {"TitleLogo_00", "T_Copyright_00", "N_Logo_00", 2, 1, -1, HUD_EDGE},
+    // menu: button prompts (BtnIconFooter_00 in alignment panes; anchor the alignment pane)
+    {"CharaSelect_00", "A_alignment_00", "N_Ready_01", 4, 1, -1, HUD_EDGE},
+    {"MachineSelect_00", "A_alignment_00", "N_Ready_00", 4, 1, -1, HUD_EDGE},
+    {"FaceSelect_00", "A_alignment_00", "N_All_00", 2, 1, -1, HUD_EDGE},
+    {"Skip", "A_alignment_00", "N_Alll_00", 3, 1, -1, HUD_EDGE},
+    // KeyAssign_00, the race and pause prompts: the game itself places them at the display's corners; ui_prompt keeps
+    // their shape there, with or without these anchors (a HUD_EDGE anchor would move them a second time)
+    {"MapKey_00", "A_alignment_00", "N_All_00", 2, 1, 1, HUD_EDGE},
+    {"BattleCourseSelect_01", "A_alignment_00", "N_Key_00", 3, 1, 1, HUD_EDGE},
+    {"StickerSelect_00", "A_alignment_01", "N_State_02", 3, 1, -1, HUD_EDGE},
+    {"Observatory_00", "A_alignment_00", "N_keyAssign_00", 3, 0, -1, HUD_EDGE},
+    {"Retry_00", "N_Retry_00", "N_All_00", 2, 0, -1, HUD_EDGE},
+    {"RuleSelect_00", "N_OK_00", "N_All_00", 2, 0, -1, HUD_EDGE},
+    {"ChatSelect_00", "N_KeyAsign_00", "N_All_00", 2, -1, -1, HUD_EDGE},
+    {"Vote_00", "A_KeyAssign_00", "N_Key_00", 3, 1, 1, HUD_EDGE},
+};
+
+// The canvas offset of an anchor for the output's aspect s (over 16:9) and the pane's own global position (x, y):
+// x by 960 (s - 1) on a wider output, y by 540 (1/s - 1) on a taller one, each only inside its edge's zone (a group
+// always); the minimap's y by its share of the added height.
+static void hud_offset(const HudAnchor *a, float scale, float x, float y, float *dx, float *dy) {
+    *dx = *dy = 0;
+    if (!(scale > 0)) return;
+    int any = a->kind == HUD_GROUP || a->kind == HUD_MINIMAP;
+    if (scale > 1 && a->ax && (any || a->ax * x >= HUD_ZONE)) *dx = (float)a->ax * 960.0f * (scale - 1);
+    if (scale < 1) {
+        if (a->kind == HUD_MINIMAP) *dy = y * (1 / scale - 1);
+        else if (a->ay && (any || a->ay * y >= HUD_ZONE)) *dy = (float)a->ay * 540.0f * (1 / scale - 1);
+    }
+}
+
+
+// FNV-1a 64 of a depth byte and a pane name (at most 24 bytes), as recomp/hud_layouts.py computes it
+static uint64_t hud_fnv(int depth, const char *name) {
+    uint64_t h = (1469598103934665603ull ^ (uint8_t)depth) * 1099511628211ull;
+    for (int i = 0; i < 24 && name[i]; i++) h = (h ^ (uint8_t)name[i]) * 1099511628211ull;
+    return h;
+}
+
+// The hashes of the run-time children at depths 1..3 (the intrusive list: head at +0x20, nodes at each child's +0x08,
+// ending back at the head), at most HUD_SIG_MAX of them (a longer or broken list gives no signature)
+#define HUD_SIG_MAX 1024
+static void hud_sig_walk(uint64_t pane, int depth, uint64_t *h, int *n) {
+    uint64_t head = pane + 0x20, node = *(const uint64_t *)(uintptr_t)head;
+    while (node && node != head && *n <= HUD_SIG_MAX) {
+        uint64_t child = node - 8;
+        if (*n < HUD_SIG_MAX) h[*n] = hud_fnv(depth, pane_name(child));
+        ++*n;
+        if (depth < 3) hud_sig_walk(child, depth + 1, h, n);
+        node = *(const uint64_t *)(uintptr_t)node;
+    }
+}
+
+static int hud_u64_cmp(const void *a, const void *b) {
+    uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b;
+    return (x > y) - (x < y);
+}
+
+// The size's hash plus each distinct (depth, name) hash once: panes the game clones at run time (a second
+// L_ItemWarning_00 in RaceInfo_1, v180p3b-probe5-tall) leave the signature as recomp/hud_layouts.py computes it
+static uint64_t hud_layout_sig(uint64_t root) {
+    const float *size = (const float *)(uintptr_t)(root + 0x50);
+    char wh[32];
+    snprintf(wh, sizeof wh, "%dx%d", (int)size[0], (int)size[1]);
+    uint64_t h[HUD_SIG_MAX], sum = hud_fnv(0, wh);
+    int n = 0;
+    hud_sig_walk(root, 1, h, &n);
+    if (n > HUD_SIG_MAX) return 0;
+    qsort(h, (size_t)n, sizeof *h, hud_u64_cmp);
+    for (int i = 0; i < n; i++)
+        if (!i || h[i] != h[i - 1]) sum += h[i];
+    return sum;
+}
+
+static int hud_layout_find(uint64_t sig) {
+    for (int i = 0; i < (int)(sizeof hud_layouts / sizeof *hud_layouts); i++)
+        if (hud_layouts[i].sig == sig) return i;
+    return -1;
+}
+
+// Roots seen, with their layout (-1: unknown, nothing moves)
+#define HUD_ROOTS 64
+static struct { uint64_t root; int layout; } hud_roots[HUD_ROOTS];
+static unsigned hud_roots_next;
+static int hud_probe_mode(void) {
+    static int mode = -1;
+    if (mode < 0) mode = cfg_get("MKW_HUD_PROBE") ? atoi(cfg_get("MKW_HUD_PROBE")) : 0;
+    return mode;
+}
+
+// MKW_HUD_PROBE=5: an unknown layout's whole signature input (depth and name of each pane at depths 1 to 3)
+static void hud_probe_names(uint64_t pane, int depth, int *budget) {
+    uint64_t head = pane + 0x20, node = *(const uint64_t *)(uintptr_t)head;
+    while (node && node != head && --*budget > 0) {
+        uint64_t child = node - 8;
+        rt_log("hud:   name %d %.24s < %.24s", depth, pane_name(child), pane_name(pane));
+        if (depth < 3) hud_probe_names(child, depth + 1, budget);
+        node = *(const uint64_t *)(uintptr_t)node;
+    }
+}
+
+static void hud_probe_layout(uint64_t root, uint64_t sig, int layout) {
+    static uint64_t seen[256];
+    static int n;
+    if (hud_probe_mode() < 4) return;
+    for (int i = 0; i < n; i++)
+        if (seen[i] == sig) return;
+    if (n < 256) seen[n++] = sig;
+    rt_log("hud: layout %s (%s) sig %016llx root %#llx frame %llu", layout >= 0 ? hud_layouts[layout].name : "?",
+           layout >= 0 ? hud_class_names[hud_layouts[layout].cls] : "unknown", (unsigned long long)sig,
+           (unsigned long long)root, (unsigned long long)frame_step_ticks());
+    if (layout < 0) {   // its top panes, to name it from the inventory
+        uint64_t head = root + 0x20, node = *(const uint64_t *)(uintptr_t)head;
+        for (int k = 0; node && node != head && k < 12; k++, node = *(const uint64_t *)(uintptr_t)node) {
+            uint64_t child = node - 8, h2 = child + 0x20, n2 = *(const uint64_t *)(uintptr_t)h2;
+            char kids[160] = "";
+            for (int j = 0; n2 && n2 != h2 && j < 6; j++, n2 = *(const uint64_t *)(uintptr_t)n2)
+                snprintf(kids + strlen(kids), sizeof kids - strlen(kids), " %.24s", pane_name(n2 - 8));
+            rt_log("hud:   top %.24s:%s", pane_name(child), kids);
+        }
+        int budget = 600;
+        if (hud_probe_mode() == 5) hud_probe_names(root, 1, &budget);
+    }
+}
+
+// The layout of a root: computed when the root's own matrix is built (fresh), else from the cache
+static int hud_layout_of_root(uint64_t root, int fresh) {
+    unsigned at = HUD_ROOTS;
+    for (unsigned i = 0; i < HUD_ROOTS; i++)
+        if (hud_roots[i].root == root) {
+            if (!fresh) return hud_roots[i].layout;
+            at = i;
+            break;
+        }
+    uint64_t sig = hud_layout_sig(root);
+    int layout = sig ? hud_layout_find(sig) : -1;
+    hud_probe_layout(root, sig, layout);
+    if (at == HUD_ROOTS) at = hud_roots_next++ % HUD_ROOTS;
+    hud_roots[at].layout = layout, hud_roots[at].root = root;
+    return layout;
+}
+
+// The layout of a pane's run-time tree, and the pane's depth below its RootPane
+static int hud_layout_of(uint64_t pane, int *depth) {
+    uint64_t root = pane, parent;
+    int d = 0;
+    while (d < 32 && (parent = pane_parent(root))) root = parent, d++;
+    *depth = d;
+    return pane_parent(root) ? -1 : hud_layout_of_root(root, root == pane);
+}
+
+// The anchors' layouts as indices into hud_layouts (resolved once)
+static int hud_anchor_layout[sizeof hud_anchors / sizeof *hud_anchors];
+
+static void hud_resolve(void) {
+    for (size_t i = 0; i < sizeof hud_anchors / sizeof *hud_anchors; i++) {
+        hud_anchor_layout[i] = -1;
+        for (int k = 0; k < (int)(sizeof hud_layouts / sizeof *hud_layouts); k++)
+            if (!strcmp(hud_layouts[k].name, hud_anchors[i].layout)) hud_anchor_layout[i] = k;
+    }
+}
+
+static const HudAnchor *hud_anchor_of(uint64_t pane, int layout, int depth) {
+    if (layout < 0 || (hud_layouts[layout].cls != HUD_CLASS_HUD && hud_layouts[layout].cls != HUD_CLASS_MENU))
+        return NULL;
+    const char *name = pane_name(pane);
+    uint64_t parent = pane_parent(pane);
+    if (!parent) return NULL;
+    for (size_t i = 0; i < sizeof hud_anchors / sizeof *hud_anchors; i++)
+        if (hud_anchor_layout[i] == layout && hud_anchors[i].depth == depth && !strncmp(name, hud_anchors[i].pane, 24) &&
+            !strncmp(pane_name(parent), hud_anchors[i].parent, 24))
+            return &hud_anchors[i];
+    return NULL;
+}
+
+// Bands widened (HUD_BAND), by pane and name: their children are drawn at their own width and place on the band
+#define HUD_BANDS 16
+static struct { uint64_t pane, name; } hud_bands[HUD_BANDS];
+static unsigned hud_bands_next;
+
+static void hud_band_add(uint64_t pane) {
+    uint64_t name = hud_fnv(0, pane_name(pane));
+    for (unsigned i = 0; i < HUD_BANDS; i++)
+        if (hud_bands[i].pane == pane && hud_bands[i].name == name) return;
+    unsigned at = hud_bands_next++ % HUD_BANDS;
+    hud_bands[at].pane = pane, hud_bands[at].name = name;
+}
+
+static int hud_band_child(uint64_t pane) {
+    uint64_t parent = pane_parent(pane);
+    if (!parent) return 0;
+    for (unsigned i = 0; i < HUD_BANDS; i++)
+        if (hud_bands[i].pane == parent && hud_bands[i].name == hud_fnv(0, pane_name(parent))) return 1;
+    return 0;
+}
+
+// The minimap as last built: its rect before the move and the move, for the map icons drawn over it.
+// sub: the rect is SubMonitor's (HUD_SUBMAP).
+static struct { float x0, y0, x1, y1, dx, dy; int valid, sub; } hud_map;
+
+// A racer's map icon: the root content pane (N_All_00, under its layout's RootPane) of a MapIcon_* instance, in a race,
+// inside the minimap's rect (with a margin for the icon) before the move. Its children (N_All_01 ...) follow it.
+// (A first version took N_All_01 and required a RootPane with no parent; the icons are parts of another layout, so it
+// never matched, and at 21:9 and 32:9 they stayed behind the moved map: v180p3-candidate-w21/w32.)
+static int hud_in_map(const float *g) {
+    return g[3] >= hud_map.x0 - 48 && g[3] <= hud_map.x1 + 48 && g[7] >= hud_map.y0 - 48 && g[7] <= hud_map.y1 + 48;
+}
+
+// Free roam's player icon on SubMonitor is a MapIcon layout of its own (its RootPane has no parent) whose N_All_00
+// stays at 0,0; a pane below it carries the icon to the map (N_BigSmall_00 < N_All_01 < N_All_00 at 750,-450 while
+// the map rests at 750,-330: v180p3c-probe1-w32-free, v180p3c-probe2-w21-free). With the round map, a pane of a
+// MapIcon layout (or of an unidentified one) that is in the rect moves, unless its parent moved.
+static int hud_map_icon(uint64_t pane, const float *g, int layout) {
+    if (!hud_map.valid) return 0;
+    uint64_t parent = pane_parent(pane);
+    // (nn::ui2d rebuilds a matrix only when its pane changed, so the map's last build is not a sign of a live map; the
+    // round map's rect stays in force until the race minimap replaces it, and only MapIcon panes use it)
+    if (hud_map.sub) {
+        // The icon's N_All_01 is not built through the hooked call sites (it was never seen here; its child
+        // N_BigSmall_00 was, at the map: v180p3c-probe2c-w21-free), so the panes moved here are remembered: a pane
+        // in the rect moves unless its parent did (its global already holds the move).
+        static uint64_t moved[64];
+        static unsigned next;
+        if (!parent || !hud_in_map(g) || (layout >= 0 && strncmp(hud_layouts[layout].name, "MapIcon", 7))) return 0;
+        int move = 1;
+        for (int i = 0; i < 64; i++)
+            if (moved[i] == parent) move = 0;
+        if (move) {
+            int known = 0;
+            for (int i = 0; i < 64; i++)
+                if (moved[i] == pane) known = 1;
+            if (!known) moved[next++ % 64] = pane;
+        }
+        static int n;
+        if (hud_probe_mode() == 2 && n++ < 60)
+            rt_log("hud: round-map icon? %.24s < %.24s at %.1f,%.1f (layout %s): %d", pane_name(pane),
+                   pane_name(parent), g[3], g[7], layout >= 0 ? hud_layouts[layout].name : "?", move);
+        return move;
+    }
+    if (strncmp(pane_name(pane), "N_All_00", 24)) return 0;
+    if (!parent || strncmp(pane_name(parent), "RootPane", 24)) return 0;
+    int in = hud_in_map(g);
+    static int n;
+    if (hud_probe_mode() == 2 && n < 60) {
+        n++;
+        uint64_t grand = pane_parent(parent);
+        rt_log("hud: icon? at %.1f,%.1f in map %.1f..%.1f,%.1f..%.1f: %d, race %d, root's parent %.24s", g[3], g[7],
+               hud_map.x0, hud_map.x1, hud_map.y0, hud_map.y1, in, race_scene_on(), grand ? pane_name(grand) : "-");
+    }
+    return in && race_scene_on();
+}
+
+// MKW_HUD_PROBE=1: each distinct pane/parent/grandparent with its global position, once (finding anchors in a run)
+static void hud_probe(uint64_t pane, const float *g) {
+    static int n;
+    if (hud_probe_mode() != 1 || n >= 2000) return;
+    static uint64_t seen[2048];
+    uint64_t parent = pane_parent(pane);
+    uint64_t grand = parent ? pane_parent(parent) : 0;
+    uint64_t h = hud_fnv(0, pane_name(pane)) + (parent ? hud_fnv(1, pane_name(parent)) : 0);
+    for (int i = 0; i < n; i++)
+        if (seen[i] == h) return;
+    seen[n++] = h;
+    const float *size = (const float *)(uintptr_t)(pane + 0x50);
+    rt_log("hud: probe %.24s < %.24s < %.24s at %.1f,%.1f size %.1fx%.1f scale %.3f,%.3f frame %llu", pane_name(pane),
+           parent ? pane_name(parent) : "-", grand ? pane_name(grand) : "-", g[3], g[7], size[0], size[1], g[0], g[5],
+           (unsigned long long)frame_step_ticks());
+}
+
+// MKW_HUD_PROBE=4: each anchor's first move (layout, pane, its rest position and offset)
+static void hud_probe_dock(const HudAnchor *a, const float *g, float dx, float dy) {
+    static unsigned char seen[sizeof hud_anchors / sizeof *hud_anchors];
+    size_t i = (size_t)(a - hud_anchors);
+    if (hud_probe_mode() < 4 || seen[i]) return;
+    seen[i] = 1;
+    rt_log("hud: dock %s %s < %s at %.1f,%.1f by %.1f,%.1f", a->layout, a->pane, a->parent, g[3], g[7], dx, dy);
+}
+
+
+static int hud_edges(void) {
+    static int on = -1;
+    if (on < 0) on = !strcmp(cfg_value("MKW_HUD_POSITION"), "edges");
+    return on;
+}
+
+// A pane of a hud or menu layout moved to its edge, a widened band's child kept at its width, or a map icon moved with
+// its map (g: its global matrix, 3x4 row-major; layout and depth: hud_layout_of)
+static void hud_dock(uint64_t pane, float *g, int layout, int depth) {
+    const HudAnchor *a = hud_anchor_of(pane, layout, depth);
+    float dx = 0, dy = 0;
+    if (a) {
+        hud_offset(a, aspect_scale, g[3], g[7], &dx, &dy);
+        if (a->kind == HUD_MINIMAP || a->kind == HUD_SUBMAP) {
+            // the extent through the whole 2x2: the map's own matrix need not be a plain scale (a first version read
+            // only g[0]/g[5] and got an empty rect at run time)
+            const float *size = (const float *)(uintptr_t)(pane + 0x50);
+            float hw = (fabsf(g[0]) * size[0] + fabsf(g[1]) * size[1]) / 2;
+            float hh = (fabsf(g[4]) * size[0] + fabsf(g[5]) * size[1]) / 2;
+            hud_map.x0 = g[3] - hw, hud_map.x1 = g[3] + hw, hud_map.y0 = g[7] - hh, hud_map.y1 = g[7] + hh;
+            hud_map.dx = dx, hud_map.dy = dy, hud_map.valid = 1;
+            hud_map.sub = a->kind == HUD_SUBMAP;
+        }
+        if ((a->kind == HUD_BAND || a->kind == HUD_WIDEN) && aspect_scale > 1) {
+            g[0] *= aspect_scale, g[1] *= aspect_scale, g[2] *= aspect_scale;
+            if (a->kind == HUD_BAND) hud_band_add(pane);
+        }
+        hud_probe_dock(a, g, dx, dy);
+    } else if (aspect_scale > 1 && hud_band_child(pane)) {
+        // a widened band's child: undo the band's stretch (its x row was scaled by aspect_scale about the band)
+        const float *b = (const float *)(uintptr_t)(pane_parent(pane) + 0x70);
+        g[0] /= aspect_scale, g[1] /= aspect_scale, g[2] /= aspect_scale;
+        g[3] = b[3] + (g[3] - b[3]) / aspect_scale;
+        return;
+    } else if (hud_map_icon(pane, g, layout)) {
+        dx = hud_map.dx, dy = hud_map.dy;
+    }
+    g[3] += dx, g[7] += dy;
+}
+
+// In place of the 1.8.0 calls of nn::ui2d's pane global-matrix builder (pane, draw info; version.c pane_matrix_fn):
+// the builder itself, then a list mask, a prompt or (MKW_HUD_POSITION=edges) a race HUD piece placed for an output
+// that is not 16:9. Children built after it multiply by its matrix.
+static void host_pane_matrix(Cpu *c) {
+    static int resolved;   // a flag, not a counter: once++ on every pane overflowed a signed int (UB) in a long run
+    if (!resolved) resolved = 1, hud_resolve();
+    uint64_t pane = c->x[0], info = c->x[1];
+    rt_call(c, rt_main_addr(rt_version()->pane_matrix_fn), 2, pane, info);
+    if (!(aspect_scale > 0) || aspect_scale == 1) return;
+    float *g = (float *)(uintptr_t)(pane + 0x70);
+    int depth = 0, layout = hud_edges() || hud_probe_mode() ? hud_layout_of(pane, &depth) : -1;
+    hud_probe(pane, g);
+    uint64_t at = split_at;
+    if (at && frame_step_ticks() + 1 - at < 30) return;   // a split screen keeps its place
+    int side = aspect_scale > 1 ? ui_list_mask(pane) : 0, ax;
+    if (side) {
+        ui_mask_place(side, g, ((const float *)(uintptr_t)(pane + 0x50))[0], aspect_scale);
+        ui_mask_mark(pane, 1);
+    } else if (ui_prompt(pane, &ax)) {
+        ui_prompt_place(g, ax, aspect_scale);
+    } else if (hud_edges()) {
+        hud_dock(pane, g, layout, depth);
+    }
+}
+
 static void host_ui_proj(Cpu *c) {
     float *s = (float *)(uintptr_t)(c->x[0] + 0x10);
     float *m = (float *)(uintptr_t)c->x[1];
@@ -325,6 +967,9 @@ static void host_ui_proj(Cpu *c) {
     if ((full == 1 || ui_tall_backdrop(c)) && !ov_movie_playing()) {
         if (aspect_scale < 1) m[5] /= aspect_scale, m[7] /= aspect_scale;
         else m[0] *= aspect_scale, m[3] *= aspect_scale;
+    } else if (full == 0 && aspect_scale > 1 && c->x[22] == c->x[23] - 0x20 && plat_mem_readable(c->x[23] - 0x70, 0xe0) &&
+               ui_mask_mark(c->x[23] - 0x70, 0)) {
+        m[0] *= aspect_scale, m[3] *= aspect_scale;   // a list mask placed by host_pane_matrix: drawn wide, where it was
     }
     // A split screen (uw14-split): each player's HUD is on its half of the canvas (its quarter with three or four,
     // left or right all the same), now in the middle of the picture; moved to the middle of its half of the picture,
@@ -434,6 +1079,7 @@ static void aspect_set(const RtGame *g) {
         if (!strcmp(g->patch_sets[i].name, "aspect")) g->patch_on[i] = aspect_out != 0;
         if (!strcmp(g->patch_sets[i].name, "vertplus"))
             g->patch_on[i] = aspect_out > 0 && aspect_scale < 1;
+        if (!strcmp(g->patch_sets[i].name, "display")) g->patch_on[i] = aspect_out != 0;   // 1.8.0's table only
     }
     if (aspect_out) rt_log("patches: camera aspect %.3f, x%.3f over 16:9 (MKW_ASPECT %s)", aspect_out, aspect_scale,
                            cfg_value("MKW_ASPECT"));
@@ -471,6 +1117,13 @@ static void output_size(const RtGame *g) {
         }
     }
     if (!lines && aspect_out && !(at_screen && aspect_scale < 1)) lines = 1440;
+    // With the display set (1.8.0) the picture takes the output's shape itself (display_fit): a tall output gets the
+    // rows of that shape too, or the fitted picture would be shrunk into 16:9's lines. Without a size of its own the
+    // output stays the game's (output_lines at 16:9: 3840x2160), which display_fit fits.
+    int display = 0;
+    for (int i = 0; i < g->npatch_sets; i++)
+        if (!strcmp(g->patch_sets[i].name, "display")) display = g->patch_on[i];
+    output_wh[0] = (uint32_t)(native * 16 / 9), output_wh[1] = (uint32_t)native;
     for (int i = 0; i < g->npatch_sets; i++) {
         if (strcmp(g->patch_sets[i].name, "output")) continue;
         if (lines <= 0 || (off && !strcmp(off, "0"))) {
@@ -480,11 +1133,12 @@ static void output_size(const RtGame *g) {
         int tall_at_screen = at_screen && aspect_out > 0 && aspect_scale < 1;   // 16:9 at the lines
         uint32_t wide = aspect_out && !tall_at_screen ? ((uint32_t)(lines * aspect_out + 0.5f) + 1) & ~1u : 0;
         uint32_t wh[2] = {wide ? wide : (uint32_t)(lines * 16 / 9), (uint32_t)lines};
-        if (aspect_out > 0 && aspect_scale < 1 && !at_screen) {
+        if (aspect_out > 0 && aspect_scale < 1 && (!at_screen || display)) {
             int w = 0, h = 0;
-            if (!strcmp(res, "original")) gfx_window_shape(&w, &h);
+            if (!strcmp(res, "original") && !at_screen) gfx_window_shape(&w, &h);
             aspect_tall_target(wh, lines, aspect_out, w, h);
         }
+        output_wh[0] = wh[0], output_wh[1] = wh[1];
         memcpy((void *)(uintptr_t)(g->patch_page + OUTPUT_SIZE), wh, sizeof wh);
         g->patch_on[i] = 1;
         rt_log("patches: game output %ux%u instead of %dx%d (MKW_RESOLUTION %s, MKW_ASPECT %s, window lines %d)",
@@ -495,7 +1149,10 @@ static void output_size(const RtGame *g) {
 
 void rt_patches_init(void) {
     const RtGame *g = rt_game();
-    if (!g->npatch_sets) return;
+    if (!g->npatch_sets) {
+        logic_hz_set(g);   // no sets: MKW_LOGIC_HZ back to 60
+        return;
+    }
     if (!plat_mem_commit(g->patch_page, 0x1000))
         rt_fatal("patches: cannot commit the patch page at %#llx", (unsigned long long)g->patch_page);
     char list[512];
@@ -514,6 +1171,7 @@ void rt_patches_init(void) {
     output_size(g);
     shadow_set(g);
     seed_set(g);
+    logic_hz_set(g);
     frame_rate_init(g->patch_page);
 }
 
@@ -556,6 +1214,10 @@ void rt_patch_hosts(void) {
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_ROWS_HOST, host_ui_rows);
     if (g->npatch_sets) rt_register_host(g->patch_page + UI_ROWS2_HOST, host_ui_rows2);
     if (g->npatch_sets) rt_register_host(g->patch_page + FX_VIEW_HOST, host_fx_view);
+    if (g->npatch_sets) rt_register_host(g->patch_page + DISPLAY_SIZE_HOST, host_display_size);
+    if (g->npatch_sets) rt_register_host(g->patch_page + DISPLAY_SET_HOST, host_display_set);
+    if (g->npatch_sets) rt_register_host(g->patch_page + PANE_MATRIX_HOST, host_pane_matrix);
+    if (g->npatch_sets) rt_register_host(g->patch_page + LOGIC_HZ_HOST, host_logic_step);
     if (g->npatch_sets) frame_rate_host(g->patch_page);
     if (g->npatch_sets) race_scene_host(g->patch_page);
     if (g->npatch_sets) rt_register_host(g->patch_page + CAMERA_EVENT_HOST, host_camera_event);

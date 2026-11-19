@@ -99,6 +99,53 @@ def test_add_reports_truncated_shortcuts(
     assert vdf.read_bytes() == data
 
 
+@pytest.mark.parametrize("userdata_kind", ["missing", "file", "empty", "denied"])
+def test_add_reports_unavailable_profiles(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], userdata_kind: str,
+) -> None:
+    userdata = tmp_path / "userdata"
+    if userdata_kind == "file":
+        userdata.touch()
+    elif userdata_kind in ("empty", "denied"):
+        userdata.mkdir()
+    if userdata_kind == "denied":
+        iterdir = Path.iterdir
+
+        def deny_userdata(path):
+            if path == userdata:
+                raise PermissionError("userdata access denied")
+            return iterdir(path)
+
+        monkeypatch.setattr(Path, "iterdir", deny_userdata)
+    monkeypatch.setattr(steam, "steam_dir", lambda: tmp_path)
+    monkeypatch.setattr(sys, "argv", ["steam.py", "add", "--name", NAME, "--exe", EXE, "--dir", "/games/mkw"])
+
+    with pytest.raises(SystemExit) as exited:
+        steam.main()
+
+    assert exited.value.code == 1
+    want = "error io userdata access denied\n" if userdata_kind == "denied" else "error nosteam\n"
+    assert capsys.readouterr().out == want
+
+
+def test_add_uses_only_profile_directories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    userdata = tmp_path / "userdata"
+    for profile in ("0", "123", "other"):
+        (userdata / profile).mkdir(parents=True)
+    (userdata / "456").touch()
+    monkeypatch.setattr(steam, "steam_dir", lambda: tmp_path)
+    monkeypatch.setattr(steam, "steam_running", lambda _: False)
+    monkeypatch.setattr(steam, "write_art", lambda grid, *_: grid / "icon.png")
+    monkeypatch.setattr(sys, "argv", ["steam.py", "add", "--name", NAME, "--exe", EXE, "--dir", "/games/mkw"])
+
+    steam.main()
+
+    assert capsys.readouterr().out == "done 1 0\n"
+    assert list(userdata.rglob("shortcuts.vdf")) == [userdata / "123/config/shortcuts.vdf"]
+
+
 def test_no_steam_pid_is_not_running(tmp_path: Path) -> None:
     # a pid file that is not there (or is not a number) reads as Steam closed, never as an error
     if os.name == "nt":

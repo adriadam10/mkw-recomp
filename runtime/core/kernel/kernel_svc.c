@@ -88,6 +88,7 @@ int kern_svc(Cpu *c, uint32_t imm) {
             return 1;
         }
         RtThread *t = thr_new(prio, core >= 0 ? core : MAIN_CORE, core >= 0 ? 1ull << core : APP_MASK);
+        if (core == -1) t->ideal = -1;   // don't care (a console refuses it here; ours takes it): none to report
         t->entry = x[1];
         t->arg = x[2];
         t->stack_top = x[3] & ~15ull;
@@ -187,7 +188,10 @@ int kern_svc(Cpu *c, uint32_t imm) {
         RtThread *t = h_get((uint32_t)x[2], O_THREAD);
         x[0] = t ? R_OK : R_BAD_HANDLE;
         if (t) {
-            x[1] = (uint64_t)(uint32_t)t->core;
+            // the guest's ideal core, not our hint: Atmosphère's KThread::GetCoreMask returns the virtual ideal core,
+            // -1 after SetThreadCoreMask(-1, ...); the hint (0 for a thread created with -1) next to a mask without
+            // it made a pair the game copies to its network thread and SetThreadCoreMask refuses (#343)
+            x[1] = (uint64_t)(uint32_t)t->ideal;
             x[2] = t->mask;
         }
         unlock();
@@ -200,7 +204,7 @@ int kern_svc(Cpu *c, uint32_t imm) {
         uint64_t mask = core == -2 ? 1ull << MAIN_CORE : x[2];   // -2: the process's ideal core, alone
         if (core == -2) core = MAIN_CORE;
         // the checks of Atmosphère's kern_svc_thread.cpp SetThreadCoreMask (-1/-3: svc_types_common.hpp)
-        int keep = core == -3 && t ? t->core : core;   // no update: the ideal core stays and must be in the mask
+        int keep = core == -3 && t ? t->ideal : core;   // no update: the ideal core stays and must be in the mask
         uint32_t bad = (mask & ~APP_MASK) || core < -3 || core >= NCORE ? R_INVALID_CORE
                        : !mask || (keep >= 0 && !(mask >> keep & 1)) ? R_INVALID_COMBINATION : R_OK;
         if (t && bad) {
@@ -209,7 +213,8 @@ int kern_svc(Cpu *c, uint32_t imm) {
             return 1;
         }
         if (t) {
-            if (core >= 0) t->core = core;   // -1: no ideal core; ours stays a hint, core_take checks the mask
+            if (core != -3) t->ideal = core;   // -1: no ideal core (KThread::SetCoreMask stores it as is)
+            if (core >= 0) t->core = core;     // -1: ours stays a hint, core_take checks the mask
             t->mask = mask;
             if (t == tcur && t->cur_core >= 0 && !core_allowed(t, t->cur_core)) {   // move off a forbidden core
                 core_put(t);

@@ -177,6 +177,11 @@ static void tab_screen(float scale) {
         const char *names[5] = {"16:9", menu_text(UI_MENU_ASPECT_WINDOW), "21:9", "32:9", "48:9"};
         opt_choice_list("MKW_ASPECT", UI_MENU_ASPECT, vals, names, 5, UI_MENU_ASPECT_DESC);
     }
+    {   // the race HUD in the middle 16:9 of a wider or taller picture, or at its edges (core/boot/patches.c), at start
+        static const char *const vals[] = {"16:9", "edges"};
+        const char *names[2] = {menu_text(UI_MENU_HUD_POSITION_16X9), menu_text(UI_MENU_HUD_POSITION_EDGES)};
+        opt_choice_list("MKW_HUD_POSITION", UI_MENU_HUD_POSITION, vals, names, 2, UI_MENU_HUD_POSITION_DESC);
+    }
     {   // the game's own HDR picture on an HDR display (gfx/nvn/host/gfx_hdr.c), live
         static const char *const vals[] = {"auto", "off"};
         const char *names[2] = {menu_text(UI_MENU_FPS_AUTO), menu_text(UI_MENU_PERF_OFF)};

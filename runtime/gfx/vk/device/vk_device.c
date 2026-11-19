@@ -13,6 +13,7 @@
 #include "host.h"
 #include "vk.h"
 #include "vk_defaults.h"
+#include "vk_gpu_check.h"
 #include "platform/platform.h"
 
 static VkCtx g_vk;
@@ -160,6 +161,67 @@ static int name_has(const char *s, const char *sub) {
     return 0;
 }
 
+// pick_device's rules for device i, but the queue family (which needs the window to ask about presenting); shared with
+// the start screen's check (vk_gpu_report) so both say the same. want, name: MKW_GPU_INDEX and MKW_GPU_NAME.
+static VkGpuWhy gpu_why(VkPhysicalDevice pd, const VkPhysicalDeviceProperties *p, uint32_t i, int want, const char *name,
+                        const char **ext) {
+    *ext = NULL;
+    if (want >= 0 && (int)i != want) return VK_GPU_SKIPPED;
+    if (name && *name && !name_has(p->deviceName, name)) return VK_GPU_SKIPPED;
+    if (p->apiVersion < VK_API_VERSION_1_3) return VK_GPU_OLD;
+    if ((*ext = missing_required(pd))) return VK_GPU_EXT;
+    return VK_GPU_OK;
+}
+
+// The device a usable one beats: the one MKW_GPU_INDEX names, then discrete, integrated, the rest (CPU renderers too).
+static int gpu_score(const VkPhysicalDeviceProperties *p, uint32_t i, int want) {
+    return (int)i == want ? 100 : p->deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 3
+           : p->deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ? 2 : 1;
+}
+
+static int gpu_want(const char **name) {
+    const char *e = cfg_get("MKW_GPU_INDEX");   // no fixed default: the best device when unset
+    *name = cfg_get("MKW_GPU_NAME");
+    return e && *e ? atoi(e) : -1;
+}
+
+void vk_gpu_report(VkInstance inst, VkGpuReport *r) {
+    memset(r, 0, sizeof *r);
+    r->best = -1;
+    VkPhysicalDevice pd[VK_GPU_REPORT_MAX];
+    uint32_t n = VK_GPU_REPORT_MAX;
+    if (vkEnumeratePhysicalDevices(inst, &n, pd) < 0) n = 0;   // VK_INCOMPLETE keeps the first VK_GPU_REPORT_MAX
+    const char *name;
+    int want = gpu_want(&name), best_score = -1;
+    for (uint32_t i = 0; i < n; i++) {
+        VkGpuInfo *g = &r->gpu[i];
+        VkPhysicalDeviceProperties p;
+        vkGetPhysicalDeviceProperties(pd[i], &p);
+        snprintf(g->name, sizeof g->name, "%s", p.deviceName);
+        g->api = p.apiVersion, g->type = p.deviceType;
+        if (p.apiVersion >= VK_API_VERSION_1_2) {   // the driver's name and version (Mesa's release, NVIDIA's)
+            VkPhysicalDeviceDriverProperties dp = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES};
+            VkPhysicalDeviceProperties2 p2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &dp};
+            vkGetPhysicalDeviceProperties2(pd[i], &p2);
+            snprintf(g->driver, sizeof g->driver, "%s %s", dp.driverName, dp.driverInfo);
+        }
+        g->why = gpu_why(pd[i], &p, i, want, name, &g->ext);
+        if (g->why == VK_GPU_OK) {
+            uint32_t nq = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(pd[i], &nq, NULL);
+            VkQueueFamilyProperties qp[16];
+            if (nq > 16) nq = 16;
+            vkGetPhysicalDeviceQueueFamilyProperties(pd[i], &nq, qp);
+            int gc = 0;
+            for (uint32_t q = 0; q < nq; q++)
+                gc |= (qp[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (qp[q].queueFlags & VK_QUEUE_COMPUTE_BIT);
+            if (!gc) g->why = VK_GPU_QUEUE;
+        }
+        if (g->why == VK_GPU_OK && gpu_score(&p, i, want) > best_score) best_score = gpu_score(&p, i, want), r->best = (int)i;
+    }
+    r->n = (int)n;
+}
+
 // First discrete GPU with Vulkan 1.3, the required extensions and a graphics+present queue; MKW_GPU_INDEX (index) or
 // MKW_GPU_NAME (case-insensitive part of the name) overrides.
 static int pick_device(void) {
@@ -168,20 +230,19 @@ static int pick_device(void) {
     if (!n) { rt_log("vk: no Vulkan device"); return 0; }
     VkPhysicalDevice *pd = calloc(n, sizeof *pd);
     vkEnumeratePhysicalDevices(g_vk.instance, &n, pd);
-    const char *e = cfg_get("MKW_GPU_INDEX");   // no fixed default: the best device when unset
-    int want = e && *e ? atoi(e) : -1;
-    const char *name = cfg_get("MKW_GPU_NAME");
+    const char *name;
+    int want = gpu_want(&name);
     int best = -1, best_score = -1;
     for (uint32_t i = 0; i < n; i++) {
         VkPhysicalDeviceProperties p;
         vkGetPhysicalDeviceProperties(pd[i], &p);
         rt_log("vk: gpu %u: %s (type %d, api %u.%u.%u)", i, p.deviceName, (int)p.deviceType, VK_API_VERSION_MAJOR(p.apiVersion),
                VK_API_VERSION_MINOR(p.apiVersion), VK_API_VERSION_PATCH(p.apiVersion));
-        if (want >= 0 && (int)i != want) continue;
-        if (name && *name && !name_has(p.deviceName, name)) continue;
-        if (p.apiVersion < VK_API_VERSION_1_3) { rt_log("vk: gpu %u skipped: Vulkan below 1.3", i); continue; }
-        const char *miss = missing_required(pd[i]);
-        if (miss) { rt_log("vk: gpu %u skipped: missing extension %s", i, miss); continue; }
+        const char *miss;
+        VkGpuWhy why = gpu_why(pd[i], &p, i, want, name, &miss);
+        if (why == VK_GPU_SKIPPED) continue;
+        if (why == VK_GPU_OLD) { rt_log("vk: gpu %u skipped: Vulkan below 1.3", i); continue; }
+        if (why == VK_GPU_EXT) { rt_log("vk: gpu %u skipped: missing extension %s", i, miss); continue; }
         uint32_t nq = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(pd[i], &nq, NULL);
         VkQueueFamilyProperties *qp = calloc(nq ? nq : 1, sizeof *qp);
@@ -189,8 +250,7 @@ static int pick_device(void) {
         uint32_t fam = find_gfx_family(pd[i], qp, nq);
         free(qp);
         if (fam == UINT32_MAX) { rt_log("vk: gpu %u skipped: no graphics+compute+present queue family", i); continue; }
-        int score = (int)i == want ? 100 : p.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 3
-                  : p.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ? 2 : 1;
+        int score = gpu_score(&p, i, want);
         if (score > best_score) { best_score = score; best = (int)i; }
     }
     if (best < 0) {

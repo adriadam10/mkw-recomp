@@ -15,7 +15,7 @@ each drive's root. A few levels deep, hidden folders skipped, within a time budg
 screen's list back for long (launcher_finddumps.cpp reads the lines when the search ends; until then step 1 says it
 is looking).
 
-Output: one line per copy, "dump<TAB>nup|nx|folder<TAB><version or ?><TAB><path>", then "done <count>". The installation
+Output: one UTF-8 line per copy, "dump<TAB>nup|nx|folder<TAB><version or ?><TAB><path>", then "done <count>". The installation
 folder itself (--game) is left out.
 
 Usage: python -I finddumps.py [--game DIR] [--seconds 4] [ROOT...]   (ROOTs replace the usual places: tests)
@@ -166,6 +166,8 @@ def search(roots: list[Path], game: Path | None, seconds: float, emit) -> int:
 
 
 def main() -> None:
+    # SDL reads the paths as UTF-8, even when Windows' redirected Python stdout uses a legacy code page.
+    sys.stdout.reconfigure(encoding="utf-8", errors=sys.stdout.errors)
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--game", type=Path, help="the installation folder, left out")
     ap.add_argument("--seconds", type=float, default=4.0)

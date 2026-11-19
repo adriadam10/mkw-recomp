@@ -160,12 +160,29 @@ site aspect main 17f5084 ad4092a0 947fefaf   # ldp q0, q4, [x21, #0x10] -> bl ho
 # page + 0xf20). The group draw that calls it (main+0x137b40, through main+0x139570) passes its group as a mask
 # (1 << group) that main+0x139570 keeps in w22: RtVersion.fx_group_* (version.c).
 site aspect main 139b60 94a9d254 94dadcf0
+# nn::ui2d's pane global-matrix builder main+0x17f89f0 (pane+0x70, 3x4, from its translation, rotation, scale at
+# +0x30..+0x4c, flags at +0x58/+0x5b and its parent's (+0x18) global matrix): its only three callers (no tail branches)
+# call host_pane_matrix (patches.c), which calls it and then places the character and kart lists' capture masks for a
+# wider output.
+site aspect main 2f65c4 9454090b 94d3ea0b      # bl main+0x17f89f0 -> bl host_pane_matrix (patch page + 0xdf0)
+site aspect main 17ec8e8 94003042 94801142     # same
+site aspect main 17f9724 97fffcb3 947fddb3     # same
 
 # Race FOV for tall Window (host_camera_fov, patches.c): main+0x88f30 is 1.0.0's main+0x45f524 (the only caller of
 # main+0x8a5b0, 1.0.0's 460c10); the same block stores the FOV at [entry+0xa0] and its sinf/cosf/tanf at +0xa4..0xac,
 # with the entry in x20 and the half factor in s14 (version.c fov_entry_x, fov_half_v). Separate set, as in 1.0.0.
 set vertplus MKW_VERTPLUS_PATCH 0
 site vertplus main 894a4 1e2e0808 94dd9ea3   # fmul s8, s0, s14 -> bl host_camera_fov (patch page + 0xf30); 1.0.0's 45fba4
+
+# The picture's size: 1.8.0 sizes its render targets and the window crop from the display object's requested size at
+# +0x10 (version.c display_store), not from the output set's, so a taller or wider output alone keeps a 16:9 picture
+# that the present stretches. Its only writers take the output's shape (patches.c host_display_size/host_display_set):
+# the store in main+0x372240 (which saves x30), and both calls of the leaf setter main+0xde6060, whose own store cannot
+# take a bl (its ret would return into the hook). On with the aspect set, for any output that is not 16:9.
+set display MKW_DISPLAY_PATCH 0
+site display main 3723b4 f900092c 94d1fad7   # str x12, [x9, #0x10] -> bl host_display_size (patch page + 0xf10)
+site display main 372840 9429ce08 94d1f9b0   # bl main+0xde6060 -> bl host_display_set (patch page + 0xf00)
+site display main de5b58 94000142 94a82cea   # same
 
 # Shadow map: main+0xb72c0 is 1.0.0's main+0x233358, the RenderBuffer creation (the only function using the string
 # "shadow_map_depth"; width and height at [x0+0x68] and [x0+0x88]); its caller main+0xb6e40 is 1.0.0's main+0x22d45c.
@@ -202,3 +219,15 @@ site seed main ba83fc 948016ad 94b122ed   # same; 1.0.0's ab7900
 site seed main be9b74 947f10cf 94b01d0f   # same; sead::Random constructor, 1.0.0's 922084
 site seed main e4c8e0 94758574 94a691b4   # same; 1.0.0's c006e0
 site seed main 16a0eec 945433f1 94854031   # same; the other sead::Random constructor, 1.0.0's 15585a4
+
+# Game logic at any rate (MKW_LOGIC_HZ), as 1.0.0's logichz set (patches-mkw.txt): the step record writers are
+# main+0x8d3f0 (1.0.0: main+0x45e7ec) and the event virtual main+0x8de90 (1.0.0: main+0x159fe4), same code.
+set logichz MKW_LOGIC_HZ_PATCH 0
+site logichz main 8d418 b9000109 94dd8e72   # str w9, [x8] (1/60) -> bl host_logic_step (patch page + 0xde0)
+site logichz main 8d424 b9000509 d503201f   # str w9, [x8, #4] (1.0) -> nop
+site logichz main 8df64 b9000109 94dd8b9f   # str w9, [x8] (1/60) -> bl host_logic_step (patch page + 0xde0)
+site logichz main 8df70 b9000509 d503201f   # str w9, [x8, #4] (1.0) -> nop
+site logichz main 8e09c b9000109 94dd8b51   # str w9, [x8] (1/60) -> bl host_logic_step (patch page + 0xde0)
+site logichz main 8e0a8 b9000509 d503201f   # str w9, [x8, #4] (1.0) -> nop
+site logichz main 8e1dc b9000109 94dd8b01   # str w9, [x8] (1/60) -> bl host_logic_step (patch page + 0xde0)
+site logichz main 8e1e8 b9000509 d503201f   # str w9, [x8, #4] (1.0) -> nop

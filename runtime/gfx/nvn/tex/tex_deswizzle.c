@@ -113,6 +113,8 @@ static int move(const nvn_texdesc *d, unsigned level, unsigned layer, uint8_t *b
     return 0;
 }
 
+uint64_t nvn_texels_box_bl;
+
 int nvn_texels_box(const nvn_texdesc *d, unsigned level, unsigned layer, uint32_t x, uint32_t y, uint32_t z, uint32_t wb,
                    uint32_t h, void *storage, void *rows, size_t pitch, int to_linear) {
     uint8_t *st = storage, *ln = rows;
@@ -132,6 +134,7 @@ int nvn_texels_box(const nvn_texdesc *d, unsigned level, unsigned layer, uint32_
     uint32_t row_bytes, nrows, slices, bpb; uint64_t base; unsigned th, td;
     if (nvn_deswizzle_geom(d, level, layer, &row_bytes, &nrows, &slices, &base, &th, &td, &bpb)) return -1;
     if (x + (uint64_t)wb > row_bytes || y + (uint64_t)h > nrows || z >= slices) return -1;
+    __atomic_fetch_add(&nvn_texels_box_bl, (uint64_t)wb * h, __ATOMIC_RELAXED);
     for (uint32_t r = 0; r < h; r++) {
         uint8_t *q = ln + r * pitch;
         for (uint32_t i = 0; i < wb;) {

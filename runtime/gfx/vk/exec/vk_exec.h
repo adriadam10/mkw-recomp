@@ -155,6 +155,8 @@ typedef struct {
                                                                // their pass, in-pass barriers, pass restarts, layout
                                                                // transitions
     uint64_t skip[8];   // draws not executed, by reason (VK_SKIP_*): the gap between draws_seen and draws
+    uint64_t cpu_idx[3], cpu_idx_bytes;   // draws whose indices the CPU builds (byte indices widened, quads, line
+                                          // loops: vk_exec_ops.c) and the bytes it writes for them
 } VkExecFrame;
 enum { VK_SKIP_OFF, VK_SKIP_SCISSOR, VK_SKIP_PROGRAM, VK_SKIP_NO_VS, VK_SKIP_SHADER_MISSING,
        VK_SKIP_PIPE_WAIT, VK_SKIP_PIPE_FAILED, VK_SKIP_MESH };

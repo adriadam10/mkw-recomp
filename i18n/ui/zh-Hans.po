@@ -137,6 +137,24 @@ msgctxt "UI_MENU_ASPECT_WINDOW"
 msgid "Window"
 msgstr "窗口"
 
+msgctxt "UI_MENU_HUD_POSITION"
+msgid "HUD position"
+msgstr "HUD 位置"
+
+msgctxt "UI_MENU_HUD_POSITION_DESC"
+msgid ""
+"On a picture wider or taller than 16:9, keep the race HUD in the middle 16:9 area (the console's "
+"place) or put it at the screen's edges and corners. Takes effect at the next start."
+msgstr "在比 16:9 更宽或更高的画面上,将比赛 HUD 保留在中间的 16:9 区域(主机上的位置),或移到屏幕的边缘和角落。下次启动时生效。"
+
+msgctxt "UI_MENU_HUD_POSITION_16X9"
+msgid "16:9 area"
+msgstr "16:9 区域"
+
+msgctxt "UI_MENU_HUD_POSITION_EDGES"
+msgid "Screen edges"
+msgstr "屏幕边缘"
+
 msgctxt "UI_MENU_QUALITY"
 msgid "Quality"
 msgstr "画质"
@@ -794,10 +812,12 @@ msgstr "Guide 键"
 
 msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
 msgid ""
-"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
-"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+"Note: If using the Guide button, turn off 'Guide button focuses Steam' in Steam (Settings -> "
+"Controller -> Advanced Settings).\n\nOn Windows, also turn off 'Allow your controller to open "
+"Game Bar' (Settings -> Gaming -> Game Bar)."
 msgstr ""
-"注意:如果使用 Guide 键,建议在 Steam 中关闭 'Guide button focuses Steam'(设置 -> 控制器 -> 高级设置),以免 Steam 盖在游戏上打开。"
+"注意:如果使用 Guide 键,请关闭 Steam 中的 'Guide button focuses Steam'(设置 -> 控制器 -> 高级设置)。\n\n在 Windows 上,另请关闭 "
+"'Allow your controller to open Game Bar'(设置 -> 游戏 -> Game Bar)。"
 
 msgctxt "UI_BINDS_HELP"
 msgid ""
@@ -2719,6 +2739,57 @@ msgstr ""
 msgctxt "UI_LAUNCH_FOUND_FOLDER"
 msgid "folder"
 msgstr ""
+
+msgctxt "UI_LAUNCH_GPU_NONE"
+msgid "No graphics card here can run the game"
+msgstr "这台电脑上没有能运行游戏的显卡"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_OLD"
+msgid "%s: its driver offers %s, and the game needs Vulkan 1.3"
+msgstr "%s：其驱动提供 %s，而游戏需要 Vulkan 1.3"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_EXT"
+msgid "%s (%s): its driver lacks %s, which the game needs"
+msgstr "%s (%s)：其驱动缺少游戏需要的 %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_QUEUE"
+msgid "%s: it has no queue that does both graphics and compute"
+msgstr "%s：没有能同时处理图形和计算的队列"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SKIPPED"
+msgid "%s: not the one chosen in Settings, Screen, Graphics card"
+msgstr "%s：不是在 设置 > 画面 > 显卡 中选择的那张"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SOFTWARE"
+msgid "%s draws on the processor, not on a graphics card: far too slow to play"
+msgstr "%s 用处理器而不是显卡绘制：太慢，无法游玩"
+
+msgctxt "UI_LAUNCH_GPU_NO_DRIVER"
+msgid "No Vulkan driver was found."
+msgstr "未找到 Vulkan 驱动。"
+
+msgctxt "UI_LAUNCH_GPU_HELP"
+msgid ""
+"The game needs Vulkan 1.3. On AMD and Intel that is Mesa 22.0 or newer, newer than Debian 11 and "
+"Ubuntu 20.04 ship; on NVIDIA, its driver 510 or newer. Some older graphics cards cannot have it "
+"at all. The setup can run now: the game starts once the driver is updated."
+msgstr ""
+"游戏需要 Vulkan 1.3。在 AMD 和 Intel 上即 Mesa 22.0 或更新版本，比 Debian 11 和 Ubuntu 20.04 自带的更新；在 NVIDIA 上为驱动 "
+"510 或更新版本。部分旧显卡完全无法支持。现在就可以进行设置：驱动更新后游戏即可启动。"
+
+msgctxt "UI_LAUNCH_GPU_HELP_WIN"
+msgid ""
+"The game needs Vulkan 1.3: install the latest driver from your graphics card's maker (AMD, Intel "
+"or NVIDIA; on NVIDIA, 510 or newer). Some older graphics cards cannot have it at all. The setup "
+"can run now: the game starts once the driver is updated."
+msgstr ""
+"游戏需要 Vulkan 1.3：请安装显卡厂商（AMD、Intel 或 NVIDIA）的最新驱动（NVIDIA 需 510 "
+"或更新版本）。部分旧显卡完全无法支持。现在就可以进行设置：驱动更新后游戏即可启动。"
 
 #. A product name: keep it as Steam shows it in your language.
 msgctxt "UI_MENU_GROUP_RPT"

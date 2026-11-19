@@ -24,6 +24,7 @@ server offering a package not released).
 
 import argparse
 import hashlib
+import http.client
 import json
 import os
 import platform
@@ -32,9 +33,9 @@ import shutil
 import ssl
 import sys
 import time
-import urllib.error
 import urllib.request
 import zipfile
+from contextlib import suppress
 from pathlib import Path
 
 REPO = os.environ.get("MKW_UPDATE_REPO") or "adriadam10/mkw-recomp"
@@ -126,13 +127,21 @@ def fetch(args: argparse.Namespace) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     part = dest / (asset["name"] + ".part")
     h, done, total, step = hashlib.sha256(), 0, int(asset["size"]), max(1, int(asset["size"]) // 200)
-    with get(asset["browser_download_url"], FETCH_TIMEOUT) as r, part.open("wb") as f:
-        while chunk := r.read(1 << 20):
-            f.write(chunk)
-            h.update(chunk)
-            if done // step != (done + len(chunk)) // step:
-                emit("progress", done + len(chunk), total)
-            done += len(chunk)
+    with get(asset["browser_download_url"], FETCH_TIMEOUT) as r:
+        f = part.open("wb")
+        try:
+            with f:
+                while chunk := r.read(1 << 20):
+                    f.write(chunk)
+                    h.update(chunk)
+                    if done // step != (done + len(chunk)) // step:
+                        emit("progress", done + len(chunk), total)
+                    done += len(chunk)
+        except OSError, http.client.HTTPException:
+            # Windows needs the handle closed before unlinking. Report the download error even if unlink fails.
+            with suppress(OSError):
+                part.unlink(missing_ok=True)
+            raise
     if done != total or "sha256:" + h.hexdigest() != digest:
         part.unlink()
         raise ValueError(f"{asset['name']} came damaged ({done} of {total} bytes or another sha256): try again")
@@ -201,7 +210,7 @@ def main() -> None:
     args = ap.parse_args()
     try:
         {"check": check, "fetch": fetch, "clean": clean}[args.cmd](args)
-    except (OSError, ValueError, KeyError, zipfile.BadZipFile, urllib.error.URLError) as e:
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile, http.client.HTTPException) as e:
         emit("error", args.cmd, str(e).replace("\n", " "))
         sys.exit(1)
 

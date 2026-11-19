@@ -308,6 +308,8 @@ void rt_shot_request(const char *path);                    // the next presented
 void gfx_aspect_set(float a);  // gfx_present.c, from patches.c: MKW_ASPECT's width / height when wider than 16:9, else 0
 int ov_movie_playing(void);  // ov_codec.c: a full-screen movie (1280 wide or more) gave a frame in the last half second
 uint64_t frame_step_ticks(void);                           // game time since the first present in 60 Hz ticks (input scripts)
+int frame_logic_hz(void);                                  // game.c MKW_LOGIC_HZ: game steps and vsync ticks a second (60)
+void frame_logic_hz_60(void);                              // patches.c: the version has no logichz set, 60 whatever it says
 // In-launch A/B measurement: MKW_AB=<seconds> splits the world clock (frame_step_world_us) into blocks of that much
 // game time in the order A B B A (repeated; B A A B with MKW_AB_INVERT=1); rt_ab() is 1 in the B blocks, 0 in A
 // blocks, before the world clock and without MKW_AB. rt_knob(name, def) reads the switch MKW_<name> once per call
@@ -337,6 +339,7 @@ int fps_auto_step(FpsAuto *a, double measured_ms, double real_ms);   // a frame'
 int probe_discord(void);                                   // discord_probe.c: Rich Presence against the local Discord
 int probe_dsu(void);                                       // dsu_probe.c: the DSU motion client against a fake server
 int probe_fps(void);                                       // fps_probe.c: the controller on synthetic frame times
+int probe_merge(void);                                     // merge_probe.c: the shadow write-back's two implementations
 void lat_input_read(void);                                 // vk_latency.c MKW_LATENCY: the game read the controller
 void lat_game_present(uint64_t slot);                      // ... and presented the frame shown at slot (pacer, ns)
 void lat_mark(const char *what);                           // ... a frame event, logged in MKW_PROBE's window

@@ -177,6 +177,51 @@ def test_fetch_update_package(
             assert out.stat().st_mode & 0o777 == 0o755
 
 
+@pytest.mark.parametrize("failure", ["incomplete", "reset"])
+def test_fetch_interrupted_download(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], failure: str,
+) -> None:
+    import hashlib
+    import http.client
+    import io
+
+    first, last = b"first chunk", b"last chunk"
+
+    class InterruptedResponse(io.BytesIO):
+        def read(self, size: int = -1) -> bytes:
+            if self.tell() == 0:
+                return super().read(size)
+            if failure == "incomplete":
+                raise http.client.IncompleteRead(b"", len(last))
+            raise ConnectionResetError("connection reset")
+
+    asset = {
+        "name": "mkw-recomp-v9.8.7-x86_64.AppImage",
+        "size": len(first + last),
+        "digest": "sha256:" + hashlib.sha256(first + last).hexdigest(),
+        "browser_download_url": "https://example.invalid/download",
+    }
+    monkeypatch.setattr(update, "latest_asset", lambda _: ("v9.8.7", asset))
+    monkeypatch.setattr(update, "get", lambda *_: InterruptedResponse(first))
+    monkeypatch.setattr(sys, "argv", ["update.py", "fetch", "--os", "linux", "--tag", "v9.8.7", "--dest", str(tmp_path)])
+
+    with pytest.raises(SystemExit) as exited:
+        update.main()
+
+    assert exited.value.code == 1
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0] == f"progress {len(first)} {asset['size']}"
+    assert len(lines) == 2 and lines[1].startswith("error fetch ")
+    assert not list(tmp_path.iterdir())
+
+    monkeypatch.setattr(update, "get", lambda *_: io.BytesIO(first + last))
+    update.main()
+    out = tmp_path / asset["name"]
+    assert out.read_bytes() == first + last
+    assert capsys.readouterr().out.splitlines()[-1] == f"ready {out.resolve()}"
+    assert list(tmp_path.iterdir()) == [out]
+
+
 def test_romfs_version_matches_main() -> None:
     # #315: 1.0.0's exefs/main with 1.8.0's RomFS passed the file count and crashed while warming up
     import versions
@@ -452,6 +497,39 @@ def test_copy_removes_other_versions_files(tmp_path: Path) -> None:
     assert (dst / "UI/Product_180.sarc.zs").is_file()
 
 
+def test_copy_keeps_installed_files_when_source_scan_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import gamecopy
+
+    src, dst = tmp_path / "dump", tmp_path / "install"
+    blocked = src / "sub"
+    installed = dst / "sub/file.bin"
+    blocked.mkdir(parents=True)
+    installed.parent.mkdir(parents=True)
+    (blocked / "file.bin").write_bytes(b"new version")
+    installed.write_bytes(b"old version")
+    stale = dst / "stale.bin"
+    stale.write_bytes(b"stale")
+    scandir = os.scandir
+
+    def fail_subdirectory(path):
+        if Path(path) == blocked:
+            raise PermissionError("can't scan source subdirectory")
+        return scandir(path)
+
+    with monkeypatch.context() as fault:
+        fault.setattr(os, "scandir", fail_subdirectory)
+        with pytest.raises(PermissionError, match="can't scan source subdirectory"):
+            gamecopy.copy_tree(src, dst, 1, "1.8.0", verify_existing=True)
+
+    assert installed.read_bytes() == b"old version"
+    assert stale.is_file()
+    gamecopy.copy_tree(src, dst, 1, "1.8.0", verify_existing=True)
+    assert installed.read_bytes() == b"new version"
+    assert not stale.exists()
+
+
 @pytest.fixture
 def loose_romfs_setup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
@@ -695,6 +773,23 @@ def test_keys_ignore_files_the_package_does_not_ship(tmp_path: Path, monkeypatch
     assert shaderstep.shipped(files) == files  # a checkout: no list
     (tmp_path / "FILES").write_text("a.py\n")
     assert shaderstep.shipped(files) == [tmp_path / "a.py"]
+
+
+def test_shipped_follows_the_appimage_setup_symlink(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # #632: the AppImage's setup/ is a symlink into its mount and ROOT is resolved; a file named through the symlink
+    # (prepare.py run as <game>/setup/src/tools/prepare/prepare.py) stopped the setup at check with a ValueError
+    import shaderstep  # noqa: PLC0415
+
+    mount = tmp_path / "mount/setup/src"
+    mount.mkdir(parents=True)
+    (mount / "a.py").write_text("x")
+    (mount / "FILES").write_text("a.py\n")
+    (tmp_path / "game").mkdir()
+    (tmp_path / "game/setup").symlink_to(tmp_path / "mount/setup")
+    monkeypatch.setattr(shaderstep, "ROOT", mount.resolve())
+    monkeypatch.setattr(shaderstep, "SHIPPED", mount / "FILES")
+    via_link = tmp_path / "game/setup/src/a.py"
+    assert shaderstep.shipped([via_link]) == [via_link]
 
 
 @pytest.mark.parametrize("version,index,runs", [(3, True, []), (2, True, ["pipeline_pairs.py"]),

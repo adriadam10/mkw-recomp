@@ -25,6 +25,7 @@ typedef enum {
     UI_MENU_WINDOW_SIZE, UI_MENU_WINDOW_SIZE_DESC,
     UI_MENU_RESOLUTION, UI_MENU_RESOLUTION_DESC, UI_MENU_RESOLUTION_ORIGINAL,
     UI_MENU_ASPECT, UI_MENU_ASPECT_DESC, UI_MENU_ASPECT_WINDOW,
+    UI_MENU_HUD_POSITION, UI_MENU_HUD_POSITION_DESC, UI_MENU_HUD_POSITION_16X9, UI_MENU_HUD_POSITION_EDGES,
     UI_MENU_QUALITY, UI_MENU_QUALITY_DESC, UI_MENU_QUALITY_CUSTOM,
     UI_MENU_PRESENT, UI_MENU_PRESENT_DESC, UI_MENU_PRESENT_MAILBOX, UI_MENU_PRESENT_VSYNC, UI_MENU_PRESENT_IMMEDIATE,
     UI_MENU_PRESENT_IN_USE,   // "in use: %s" under the value when the swapchain got another mode than the setting
@@ -263,6 +264,12 @@ typedef enum {
     // the setup's copies found in the usual places (launcher.cpp found_copies): the list's title, the line while it
     // looks, and the kind of a loose copy
     UI_LAUNCH_FOUND, UI_LAUNCH_FOUND_SEARCHING, UI_LAUNCH_FOUND_FOLDER,
+    // no GPU here can run the game (launcher.cpp gpu_bad, vk_gpu_check.h): the warning, then one line per GPU: OLD "%s:
+    // ... %s ..." (name, what its driver offers), EXT "%s ... %s ... %s" (name, what it offers, the missing extension),
+    // QUEUE and SKIPPED "%s" (name), SOFTWARE "... %s ..." (the CPU renderer's name); NO_DRIVER with no Vulkan at all;
+    // HELP what to install (HELP_WIN on Windows, where Mesa and the Linux releases mean nothing)
+    UI_LAUNCH_GPU_NONE, UI_LAUNCH_GPU_OLD, UI_LAUNCH_GPU_EXT, UI_LAUNCH_GPU_QUEUE, UI_LAUNCH_GPU_SKIPPED,
+    UI_LAUNCH_GPU_SOFTWARE, UI_LAUNCH_GPU_NO_DRIVER, UI_LAUNCH_GPU_HELP, UI_LAUNCH_GPU_HELP_WIN,
     // Steam Remote Play Together (steam/steam_rpt.c), the General tab's group: the buttons; CONNECTED "%d connected" (the
     // guests) beside Invite; the notes of a greyed-out group (no App ID, the start screen, Steam not available)
     UI_MENU_GROUP_RPT, UI_MENU_RPT_INVITE, UI_MENU_RPT_INVITE_DESC, UI_MENU_RPT_LINK, UI_MENU_RPT_LINK_DESC,

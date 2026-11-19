@@ -141,6 +141,26 @@ msgctxt "UI_MENU_ASPECT_WINDOW"
 msgid "Window"
 msgstr "หน้าต่าง"
 
+msgctxt "UI_MENU_HUD_POSITION"
+msgid "HUD position"
+msgstr "ตำแหน่ง HUD"
+
+msgctxt "UI_MENU_HUD_POSITION_DESC"
+msgid ""
+"On a picture wider or taller than 16:9, keep the race HUD in the middle 16:9 area (the console's "
+"place) or put it at the screen's edges and corners. Takes effect at the next start."
+msgstr ""
+"บนภาพที่กว้างหรือสูงกว่า 16:9 จะคง HUD ของการแข่งไว้ในพื้นที่ 16:9 ตรงกลาง "
+"(ตำแหน่งเดียวกับบนเครื่อง) หรือย้ายไปที่ขอบและมุมของหน้าจอ มีผลเมื่อเริ่มครั้งถัดไป"
+
+msgctxt "UI_MENU_HUD_POSITION_16X9"
+msgid "16:9 area"
+msgstr "พื้นที่ 16:9"
+
+msgctxt "UI_MENU_HUD_POSITION_EDGES"
+msgid "Screen edges"
+msgstr "ขอบหน้าจอ"
+
 msgctxt "UI_MENU_QUALITY"
 msgid "Quality"
 msgstr "คุณภาพ"
@@ -845,11 +865,13 @@ msgstr "ปุ่ม Guide"
 
 msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
 msgid ""
-"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
-"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+"Note: If using the Guide button, turn off 'Guide button focuses Steam' in Steam (Settings -> "
+"Controller -> Advanced Settings).\n\nOn Windows, also turn off 'Allow your controller to open "
+"Game Bar' (Settings -> Gaming -> Game Bar)."
 msgstr ""
-"หมายเหตุ: หากใช้ปุ่ม Guide เราแนะนำให้ปิด 'Guide button focuses Steam' ใน Steam (การตั้งค่า -> "
-"คอนโทรลเลอร์ -> การตั้งค่าขั้นสูง) เพื่อไม่ให้ Steam เปิดทับเกม"
+"หมายเหตุ: หากใช้ปุ่ม Guide ให้ปิด 'Guide button focuses Steam' ใน Steam (การตั้งค่า -> "
+"คอนโทรลเลอร์ -> การตั้งค่าขั้นสูง)\n\nบน Windows ให้ปิด 'Allow your controller to open Game Bar' "
+"(การตั้งค่า -> เกม -> Game Bar) ด้วย"
 
 msgctxt "UI_BINDS_HELP"
 msgid ""
@@ -2806,6 +2828,59 @@ msgstr ""
 msgctxt "UI_LAUNCH_FOUND_FOLDER"
 msgid "folder"
 msgstr ""
+
+msgctxt "UI_LAUNCH_GPU_NONE"
+msgid "No graphics card here can run the game"
+msgstr "ไม่มีการ์ดจอในเครื่องนี้ที่รันเกมได้"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_OLD"
+msgid "%s: its driver offers %s, and the game needs Vulkan 1.3"
+msgstr "%s: ไดรเวอร์รองรับ %s แต่เกมต้องการ Vulkan 1.3"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_EXT"
+msgid "%s (%s): its driver lacks %s, which the game needs"
+msgstr "%s (%s): ไดรเวอร์ขาด %s ซึ่งเกมต้องการ"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_QUEUE"
+msgid "%s: it has no queue that does both graphics and compute"
+msgstr "%s: ไม่มีคิวที่ทำทั้งกราฟิกและการคำนวณพร้อมกัน"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SKIPPED"
+msgid "%s: not the one chosen in Settings, Screen, Graphics card"
+msgstr "%s: ไม่ใช่การ์ดที่เลือกไว้ใน การตั้งค่า > หน้าจอ > การ์ดจอ"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SOFTWARE"
+msgid "%s draws on the processor, not on a graphics card: far too slow to play"
+msgstr "%s วาดภาพด้วยโปรเซสเซอร์ ไม่ใช่การ์ดจอ: ช้าเกินกว่าจะเล่นได้"
+
+msgctxt "UI_LAUNCH_GPU_NO_DRIVER"
+msgid "No Vulkan driver was found."
+msgstr "ไม่พบไดรเวอร์ Vulkan"
+
+msgctxt "UI_LAUNCH_GPU_HELP"
+msgid ""
+"The game needs Vulkan 1.3. On AMD and Intel that is Mesa 22.0 or newer, newer than Debian 11 and "
+"Ubuntu 20.04 ship; on NVIDIA, its driver 510 or newer. Some older graphics cards cannot have it "
+"at all. The setup can run now: the game starts once the driver is updated."
+msgstr ""
+"เกมต้องการ Vulkan 1.3 บน AMD และ Intel คือ Mesa 22.0 ขึ้นไป ซึ่งใหม่กว่าที่มากับ Debian 11 และ "
+"Ubuntu 20.04 บน NVIDIA คือไดรเวอร์ 510 ขึ้นไป การ์ดจอรุ่นเก่าบางรุ่นไม่รองรับเลย "
+"การตั้งค่าทำได้ตั้งแต่ตอนนี้ เกมจะเริ่มเมื่ออัปเดตไดรเวอร์แล้ว"
+
+msgctxt "UI_LAUNCH_GPU_HELP_WIN"
+msgid ""
+"The game needs Vulkan 1.3: install the latest driver from your graphics card's maker (AMD, Intel "
+"or NVIDIA; on NVIDIA, 510 or newer). Some older graphics cards cannot have it at all. The setup "
+"can run now: the game starts once the driver is updated."
+msgstr ""
+"เกมต้องการ Vulkan 1.3: ติดตั้งไดรเวอร์ล่าสุดจากผู้ผลิตการ์ดจอของคุณ (AMD, Intel หรือ NVIDIA; บน "
+"NVIDIA ต้อง 510 ขึ้นไป) การ์ดจอรุ่นเก่าบางรุ่นไม่รองรับเลย การตั้งค่าทำได้ตั้งแต่ตอนนี้ "
+"เกมจะเริ่มเมื่ออัปเดตไดรเวอร์แล้ว"
 
 #. A product name: keep it as Steam shows it in your language.
 msgctxt "UI_MENU_GROUP_RPT"

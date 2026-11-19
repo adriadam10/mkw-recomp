@@ -17,6 +17,13 @@
 //   heap libraries: the game's (pead, its heaps' layout: name at +0x20, lock flag at +0xc8) and a middleware's sead
 //   (1.0.0 main+0x15511f4, 1.8.0 main+0x1699b30, layout 8 bytes longer: a SafeString name); the game's allocator
 //   reads a heap by the first layout (s255h/s255i: a sead heap given to it crashed in main+0x247320).
+// - display size (16/11/2026): 1.8.0's render targets and window crop follow the display object's requested size
+//   at +0x10 (main+0x471c70 scales it into the targets, main+0x471700 makes it the crop that main+0x69d110 passes
+//   to nvnWindowSetCrop), not the output set's GraphicsSystem fields: with a 2448x1848 output the crop stayed
+//   2560x1440, and with MKW_RESOLUTION=1080 it was 1920x1080 (MKW_TRACE=gfx). Its only writers are
+//   str x12, [x9, #0x10] at main+0x3723b4 (the per-mode size, in main+0x372240, which saves x30) and the leaf
+//   setter main+0xde6060 (str x9, [x0 + w2 * 8 + 0x10]), called from main+0x372840 and main+0xde5b58 (the initial
+//   size). A leaf's own store cannot take a bl: its ret would return there, so its two calls are hooked instead.
 #include <string.h>
 
 #include "version.h"
@@ -98,6 +105,11 @@ static const RtVersion versions[] = {
         .aspect_first_lr = 0x8a6d8,   // 1.0.0's 460d44 (its fdiv at 8a6d4)
         .fov_entry_x = 20,            // main+0x894a4, 1.0.0's 45fba4: fmul s8, s0, s14, entry in x20
         .fov_half_v = 14,
+        .display_store = 0x3723b4,    // str x12, [x9, #0x10]
+        .display_set_fn = 0xde6060,
+        .display_value_reg = 12,
+        .display_base_reg = 9,
+        .pane_matrix_fn = 0x17f89f0,
         .ui_focus_fn = 0x7fd810,
         .camera_service = 0x378ecb8,   // RELATIVE at main+0x36f4148; 9 functions load it
         .race_events = RACE_EVENTS(0x353f5c0, 0x35448c0, 0x354a5d8, 0x353b3a0, 0x353f180, 0x3539c68, 0x3539db8,

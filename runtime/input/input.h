@@ -90,10 +90,14 @@ enum { INPUT_POWER_NONE, INPUT_POWER_UNKNOWN, INPUT_POWER_BATTERY, INPUT_POWER_C
 typedef struct { int state, percent, coarse; char name[64]; } InputPower;
 int input_pad_power(int player, InputPower *out);
 // The same from what SDL says of a gamepad (SDL_GetGamepadPowerInfo's state and percent, its joystick id): the start
-// screen, which reads the gamepads without input.c. index is the pad's order (its player, or its SDL gamepad index
-// on the start screen): on Linux, when SDL reports UNKNOWN, an xone Xbox pad's sysfs level band fills it in.
+// screen, which reads the gamepads without input.c. index is the pad's order among Xbox-named pads (other makes in
+// earlier slots not counted): on Linux, when SDL reports UNKNOWN, an xone Xbox pad's sysfs level band fills it in.
 // Keeps out->name.
 int input_power_from_sdl(int sdl_state, int percent, uint32_t sdl_id, int index, InputPower *out);
+#ifdef __linux__
+// The player's order among Xbox-named gamepads (input.c, for the index above).
+int input_pad_xbox_index(int player);
+#endif
 // The battery as the player reads it, in the menu language: "80 %", "Charging, 80 %", "Low"... (out holds 64 bytes).
 const char *input_power_text(const InputPower *p, char *out, int out_size);
 // input_power.c's watch (started with the gamepads): a notice when a player's battery runs low, once per discharge.

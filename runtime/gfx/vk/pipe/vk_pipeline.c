@@ -1244,16 +1244,22 @@ void vk_pipeline_save(void) {
     }
     size_t size = 0;
     void *data = NULL;
+    uint64_t t0 = plat_now_ms();
     if (vkGetPipelineCacheData(P.device, P.cache, &size, NULL) == VK_SUCCESS && size && (data = malloc(size)) &&
         vkGetPipelineCacheData(P.device, P.cache, &size, data) == VK_SUCCESS) {
+        uint64_t t1 = plat_now_ms();
         if (!plat_file_write_atomic(P.cache_path, data, size)) rt_log("vk_pipeline: cannot write %s", P.cache_path);
+        // one line per save (every 20 s at most): when and how long, against the frame times (#533)
+        rt_log("vk_pipeline: cache saved, %zu KB: copy %llu ms, write %llu ms%s", size >> 10,
+               (unsigned long long)(t1 - t0), (unsigned long long)(plat_now_ms() - t1), race_scene_on() ? " (in a race)" : "");
     }
     free(data);
     plat_mutex_unlock(&save_lock);
 }
 
 // The game never shuts the device down (boot.c and the window end the process), so the cache is saved while it
-// runs: at most every 20 s, and only after new pipelines were built. New pipeline keys are appended every 2 s.
+// runs: at most every 20 s, outside races, and only after new pipelines were built. New pipeline keys are appended
+// every 2 s.
 static void autosave_once(void) {
     static uint64_t last_n, last_ms, last_keys;
     if (!P.ready) return;
@@ -1274,6 +1280,9 @@ static void autosave_once(void) {
         if (ivl != 20000) rt_log("vk_pipeline: autosave %s (MKW_PIPE_AUTOSAVE_S)", ivl > 0 ? e : "off while running");
     }
     if (ivl <= 0 || now - last_ms < (uint64_t)ivl) return;
+    // Not in a race (#533, perf-deck: 0.3-1.1 s hitches mid-race on the Deck): the copy holds the driver's cache lock,
+    // which the replay's fast links wait on. The keys above still go every 2 s; the cache follows at the next menu.
+    if (race_scene_on()) return;
     VkPipeStats s;
     vk_pipeline_stats(&s);
     if (s.graphics + s.compute == last_n) return;

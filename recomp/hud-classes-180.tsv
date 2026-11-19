@@ -1,0 +1,249 @@
+# layout	class	note. Reviewed by hand: classes hud (per-pane anchors), hud-auto (code-placed HUD, by quadrant), menu (chrome anchors only), part (never a root), world (placed from the 3D world), content (centred), fullscreen (backdrop and fade handling), split (split screen)
+AchieveCount_00	part	part of MapInfo_00
+AchieveCount_01	part	part of MapInfo_01
+AfterRaceMenu_00	content	after-race buttons
+Arrow_00	part	part of CharaSelect_00, ChatSelect_00, MachineSelect_00, ManualTechnic_00 ...
+AutomaticDemo_00	hud	attract-demo logo top-right
+Balloon_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4, Watching_00
+BattleCourseSelect_01	menu	key top-right; capture masks get the tall backdrop handling
+BattleTeamScoreSet_00	part	part of TimerBattleMode_00
+BattleTeamScore_00	part	part of BattleTeamScoreSet_00
+BtnIconFooter_00	part	part of BattleCourseSelect_01, CharaSelect_00, CompeRuleRank_00, FaceSelect_00 ...
+CCBtn_00	part	part of MenuCupSelect_00, MenuSurvivalSelect_00
+CaptureFader_00	fullscreen	capture fade
+CaptureScreen_00	fullscreen	screen capture
+CaptureScreen_1	fullscreen	screen capture
+CaptureScreen_2	split	
+CaptureScreen_4	split	
+CharaAnimReady_00	part	part of CharaSelect_00, MachineSelect_00
+CharaChangeOk_00	menu	footer band, OK button bottom-right, text bottom
+CharaScrollType_00	part	part of CharaSelect_00
+CharaSelect_00	menu	key guide bottom-right, footer band; capture masks stay
+CharaThumbnail_00	part	part of CharaScrollType_00, CostumeChange_00
+CharacterSelectBG_00	menu	footer bands bottom, widened; split bands stay
+ChatBalloon_00	part	part of Chat_1, Chat_2, MapPopup_00, RaceInfo_1 ...
+ChatSelectBtn_00	part	part of ChatSelect_00
+ChatSelect_00	menu	key prompts bottom-left; dialog stays
+Chat_1	world	chat balloons over racers; overlap panes read by code
+Chat_2	split	
+CoinCountSet_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4
+CoinCount_00	part	part of CoinCountSet_00
+Coin_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4, Watching_00
+CompeRank_00	part	part of CompeRuleRank_00
+CompeRuleList_00	part	part of CompeRuleRank_00
+CompeRuleRank_00	part	part of OnlineMenu_00, RulePreview_00
+CostumeChange_00	part	part of CostumeChange_1, CostumeChange_2, CostumeChange_4
+CostumeChange_1	hud	costume-change prompt bottom
+CostumeChange_2	split	
+CostumeChange_4	split	
+CourceSelectBtn_00	part	part of MenuCourseSelect_00
+CourseBtn_00	part	part of BattleCourseSelect_01, MapPopup_00
+CupBtn_00	part	part of Dialog_00, MenuCupSelect_00, TicketGP_00, TrophyGetBg_00
+CursorBoxNomal_00	part	part of CharaSelect_00
+CursorBoxOut_00	part	part of MachineSelect_00
+CursorListOut_00	content	list cursor, placed by code over content
+CursorList_00	content	list cursor, placed by code over content
+CursorPointNomal_00	content	cursor, placed by code over content
+CursorPointOut_00	content	cursor, placed by code over content
+CursorPointPhoto_00	world	photo cursor over the picture
+Damage_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4
+DemoTitleLogo_00	content	demo logo, centred
+DialogBtnL_00	part	part of AfterRaceMenu_00, MenuTimeAttack_00, OnlinePauseMenu_00, PauseMenu_00
+DialogBtnS_00	part	part of DialogTimeAttack_00, Dialog_00, FriendList_00, ItemSwitchMenu_00 ...
+DialogBtnUseCam_00	part	part of DialogUseCamera_00
+DialogOk_00	content	dialog
+DialogTimeAttack_00	content	dialog
+DialogUseCamera_00	content	dialog
+Dialog_00	content	dialog
+Dot_00	part	part of PageDot_00
+Dot_01	part	part of PageDot_01
+Dot_02	part	part of PageDot_02
+DriverListName_00	part	part of DriverList_00
+DriverListRank_00	part	part of DriverList_00
+DriverList_00	part	part of Watching_00
+FaceIconList_00	content	video chat faces
+FaceIconList_01	content	video chat faces
+FaceIconList_02	content	video chat faces
+FaceSelectCursor_00	part	part of FaceSelect_00
+FaceSelectEntry_00	part	part of FaceSelect_00
+FaceSelect_00	menu	header top and footer bottom, widened; face list bottom-left; keys bottom-right
+Fader_1	fullscreen	fade
+Fader_2	split	
+Fader_4	split	
+FriendBtn_00	part	part of FriendList_00, OnlineMenu_00
+FriendListGroupBtn_00	part	part of FriendList_00
+FriendList_00	part	part of LocalMenu_00, OnlineMenu_00
+GameMenuBtn_01	part	part of MenuGameSelect_01
+GhostBtn_00	part	part of DialogTimeAttack_00, MenuTimeAttack_00, ResultTimeAttack_00
+GoBtn_01	part	part of DialogOk_00
+GoBtn_02	part	part of CharaChangeOk_00, RuleSelect_00
+Goal_00	part	part of MissionGoal_00, RaceInfo_1
+GroupRule_00	part	part of RulePreview_00, RuleSelectBtn_00
+Hit_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4
+ID_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4
+IconItemSlot_00	part	part of IconItemSlot_01
+IconItemSlot_01	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4
+IconItemSymbol_01	part	part of IconItemSlot_00
+IconItemWarning_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4
+IconItem_00	part	part of IconItemSymbol_01, IconItemWarning_00
+ItemSwitchBtn_00	part	part of ItemSwitchMenu_00
+ItemSwitchMenu_00	content	item switch menu (blur backdrop fills)
+ItemSwitchSelectBtn_00	part	part of ItemSwitchMenu_00
+KeyAssign_00	menu	race and pause prompts: the game places them at the display corners itself, so no anchors (3a moved them twice)
+L_Count	part	part of rc_View_00
+L_CountFin	part	part of RaceFinish_00
+L_RaceText	part	part of RaceText_00
+Lap_00	part	part of Mission_00, RaceInfo_1, RaceInfo_2, RaceInfo_4 ...
+Limitation_00	content	icon
+LoadingIconItem_00	part	part of LoadingItemSlot_00
+LoadingItemSlot_00	part	part of NowLoading_00, TireWipe_01
+LocalMenu_00	content	friend list
+MachineParameterSet_00	part	part of MachineSelect_00
+MachineParameter_00	part	part of MachineParameterSet_00
+MachineScrollType_00	part	part of MachineSelect_00
+MachineSelect_00	menu	key guide bottom-right, footer band; capture masks stay
+MachineThumbnail_00	part	part of CostumeChange_00, MachineScrollType_00
+ManualBG_00	part	part of MenuManual_00
+ManualFreerun_00	part	part of MenuManual_00
+ManualItemBtn_00	part	part of ManualItem_00
+ManualItem_00	part	part of MenuManual_00
+ManualRule_00	part	part of MenuManual_00
+ManualSelectBtn_00	part	part of MenuManual_00
+ManualSelectBtn_01	part	part of ManualTechnic_00
+ManualSelectBtn_02	part	part of ManualFreerun_00, ManualRule_00
+ManualTechnic_00	part	part of MenuManual_00
+MapCameraEffect_00	fullscreen	vignette; camera areas stay
+MapCursor_00	world	world-map cursor
+MapIcon_00	world	map icon (racer icons on the minimap follow it, hud_map_icon)
+MapIcon_01	world	map icon
+MapIcon_02	world	map icon
+MapIcon_03	world	map icon
+MapInfo_00	hud	free-roam medal, panel and P-switch counters bottom-left
+MapInfo_01	hud	world-map counters bottom-left
+MapKey_00	menu	key prompt top-right
+MapLine_00	world	map line
+MapMassIcon_00	world	map icon
+MapPatternBg_00	part	part of CharacterSelectBG_00
+MapPopupIcon_00	part	part of MapPopup_00
+MapPopup_00	world	map popup
+MapStageIllust_00	world	map stage illustration
+MapStageIllust_01	world	map stage illustration
+MapStagePopup_00	world	map stage popup
+Map_00	content	world map
+MenuCourseSelect_00	menu	no chrome: list panel, masks and camera areas stay
+MenuCupSelect_00	menu	N_Btn_00 band to the bottom as one group, P_Base_00 widened; L_Ticket_00, N_CameraArea_* stay
+MenuGameSelect_01	menu	mode buttons and artwork stay; the corner stripe and the caption on it to the bottom-right
+MenuManual_00	menu	footer band bottom, widened
+MenuPlayModeSelect_00	menu	no chrome: buttons stay
+MenuSurvivalSelect_00	menu	title top-left, key top-right, band widened; rally carousel (capture masks) stays
+MenuTimeAttack_00	menu	no chrome: menu panel and camera area stay
+MiniMap_01	hud	race minimap, placed by code; racer icons follow it
+MissionCoinCountSet_00	part	part of Mission_00
+MissionCoinCount_00	part	part of MissionCoinCountSet_00
+MissionGoal_00	content	goal banner, centred
+MissionTitle_00	hud	mission name band at the bottom-left
+Mission_00	hud	free-roam mission HUD: timer and coins top-right, sticker bottom, lap bottom-left
+Movie_00	fullscreen	movie
+NewMark_00	part	part of CharaSelect_00, CharaThumbnail_00, MachineSelect_00, MachineThumbnail_00 ...
+NextGame_00	content	online next game
+NextGame_01	content	online next game; camera areas stay
+Notification_00	part	part of Notifications_00
+Notifications_00	hud	notification top-right
+NowLoading_00	menu	loading item icon bottom-right
+NowLoading_01	menu	logo top-right; camera areas stay
+NowLoading_03	content	MKTV loading, centred
+NowLoading_04	menu	header and footer bands, widened; logo top-right
+Observatory_00	menu	key prompts bottom
+OnlineLoad_00	hud	online loading icon bottom-right
+OnlineMenuBtn_00	part	part of OnlineMenu_00
+OnlineMenu_00	content	online menu
+OnlinePauseMenu_00	hud	online pause: song telop top-right only
+PageDot_00	part	part of CharaSelect_00
+PageDot_01	part	part of MachineSelect_00
+PageDot_02	part	part of StickerSelect_00
+ParadeTelop_00	content	parade telop
+ParadeWord_00	part	part of ParadeTelop_00
+PassedIcon_00	part	part of PassedNum_00
+PassedNum_00	hud	Knockout Tour pass count top-right / top
+PassingRange_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4
+PauseMenu_00	hud	pause: song telop top-right; menu and controller guide stay centred
+PhotoFade_00	fullscreen	fade
+PhotoModeIcon_00	part	part of PhotoModeWord_00
+PhotoModeWord_00	part	part of PhotoMode_01, StickerSelect_00
+PhotoMode_00	hud	photo mode: key guide left; stickers, cursor and frame stay with the picture
+PhotoMode_01	hud	photo mode (stickers): key panel left, footer words bottom-right
+PlayNumBtn_00	part	part of MenuPlayModeSelect_00
+PlayNumBtn_01	part	part of PlayNumBtn_00
+PlayerName_00	part	part of NextGame_00, NextGame_01, OnlinePauseMenu_00
+RaceFinish_00	content	FINISH, centred
+RaceInfo_1	hud	1-player race HUD (Phase 3a anchors)
+RaceInfo_2	split	2-player race HUD
+RaceInfo_4	split	3/4-player race HUD
+RaceTelop	part	part of Roulette_00
+RaceText_00	content	race text, centred
+RankNumber_00	part	part of ParadeWord_00, Rank_00
+Rank_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4, Watching_00
+Replay_00	hud	replay bar and lap bottom-left, keys bottom-right
+ResultBand_00	part	part of Result_01, TrophyGetFront_00
+ResultTimeAttack_00	content	time-trial result buttons
+Result_01	content	results panel
+Retry_00	menu	retry prompt bottom
+Rewind_00	part	part of RaceInfo_1, RaceInfo_2, RaceInfo_4
+Roulette_00	content	course roulette ring
+RulePreviewList_00	part	part of RulePreview_00
+RulePreview_00	content	rule preview
+RuleSelectBtn_00	part	part of RuleSelect_00, SettingWindow_00
+RuleSelectIcon_00	part	part of CompeRuleRank_00, NextGame_00, RulePreview_00, RuleSelectBtn_00 ...
+RuleSelectMiniIcon_00	part	part of RuleSelect_00
+RuleSelect_00	menu	OK prompt bottom; dialog stays
+ScoreNum_00	part	part of BattleTeamScore_00, IconItemSymbol_01, TeamResultScore_00
+SettingWindow_00	part	part of Setting_01, Setting_1, Setting_2, Setting_4
+Setting_01	content	settings
+Setting_1	content	settings
+Setting_2	split	
+Setting_4	split	
+Skip	menu	skip prompt bottom-right
+SongForward_00	part	part of OnlinePauseMenu_00, PauseMenu_00
+SpecialFade_00	fullscreen	fade
+SplitLine_00	split	split-screen divider
+StaffRollHeadline_00	part	part of StaffRoll_00
+StaffRollName_00	part	part of StaffRoll_00
+StaffRoll_00	content	credits
+StickerBtn_00	part	part of StickerSelect_00
+StickerGet_00	content	sticker reward
+StickerPhotoMode_00	part	part of PhotoMode_01
+StickerSelect_00	menu	key bottom-right; capture masks get the tall backdrop handling
+Sticker_00	part	part of Mission_00, StickerGet_00
+SubMonitor	hud	free roam round minimap: bottom-right; the map icons in its rect move with it (HUD_SUBMAP)
+SurvivalBtn_00	part	part of MenuSurvivalSelect_00, NextGame_01
+TeamResultBase_00	part	part of TeamResult_00
+TeamResultScore_00	part	part of TeamResultBase_00
+TeamResultText_00	content	team result
+TeamResultUser_00	part	part of TeamResultBase_00
+TeamResult_00	content	team result
+TeamSelectBase_00	part	part of TeamSelect_00
+TeamSelectBtn_00	part	part of TeamSelect_00
+TeamSelectEmpty_00	part	part of TeamSelectBase_00
+TeamSelect_00	content	team select
+TelopFooter_00	menu	footer telop bottom
+TelopFooter_01	menu	footer telop bottom (its State animation carries it to the centre: not pushed)
+TelopRule_00	content	rule telop, centre band
+TicketGP_00	part	part of MenuCupSelect_00
+TimeDifference_00	part	part of RaceInfo_1
+TimeLimit_00	hud	time-limit badge top-right
+TimerBattleMode_00	hud	battle timer and team score top-right
+TimerBattle_00	part	part of TimerBattleMode_00
+TimerMission_00	part	part of Mission_00
+Timer_00	part	part of RaceInfo_1
+TireWipe_01	menu	loading item icon bottom-right; wipe fills
+TitleLauncher_00	menu	logo bottom-left, loading bottom-right
+TitleLogo_00	menu	version text bottom-right; logo and press-start stay
+TitleOptionBtn_00	part	part of MenuPlayModeSelect_00
+TrophyGetBg_00	content	trophy
+TrophyGetFront_00	content	trophy
+VideoChat_00	part	part of Damage_00, FaceIconList_00, FaceIconList_01, FaceIconList_02 ...
+VoteCourseBtn_00	part	part of Roulette_00, Vote_00
+VoteLine_00	part	part of Vote_00
+Vote_00	menu	key prompt top-right; overlap and replace panes stay (read by code)
+Watching_00	hud	spectate HUD: place BR, lap BL, live mark TL, name bottom
+rc_View_00	content	countdown, centred

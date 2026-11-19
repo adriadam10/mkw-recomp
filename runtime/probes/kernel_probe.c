@@ -460,12 +460,27 @@ static void test_core_args(Cpu *c) {
     CHECK(sv(c, 0x0F, h, -1, 0, 0) != 0, "SetThreadCoreMask with an empty mask accepted");
     CHECK(sv(c, 0x0F, h, -3, 1u << 1, 0) != 0, "SetThreadCoreMask(-3) with the ideal core outside the new mask accepted");
     CHECK(sv(c, 0x0E, 0, 0, h, 0) == 0 && c->x[1] == 4 && c->x[2] == 0x18, "a refused SetThreadCoreMask changed the thread");
+    // GetThreadCoreMask reports the ideal core the guest set (Atmosphère KThread::GetCoreMask), not our scheduler
+    // hint: -1 after "don't care". The game copies a thread's (core, mask) to its network thread (#343), so the pair
+    // read back must be accepted by SetThreadCoreMask.
+    uint32_t h2;
+    CHECK(try_create(c, 0, &h2) == 0, "CreateThread on core 0");
+    CHECK(sv(c, 0x0F, h2, -1, 1u << 2, 0) == 0, "SetThreadCoreMask(-1, mask 0x4)");
+    CHECK(sv(c, 0x0E, 0, 0, h2, 0) == 0 && (int32_t)c->x[1] == -1 && c->x[2] == 0x4,
+          "GetThreadCoreMask after SetThreadCoreMask(-1, 0x4): core %d mask %#llx (want -1, 0x4)", (int32_t)c->x[1],
+          (unsigned long long)c->x[2]);
+    CHECK(sv(c, 0x0F, h2, (uint64_t)c->x[1], c->x[2], 0) == 0, "the (core, mask) read back refused by SetThreadCoreMask");
+    CHECK(sv(c, 0x0F, h2, 4, 1u << 4, 0) == 0 && sv(c, 0x0F, h2, -3, 1u << 4 | 1u << 5, 0) == 0 &&
+              sv(c, 0x0E, 0, 0, h2, 0) == 0 && c->x[1] == 4 && c->x[2] == 0x30,
+          "SetThreadCoreMask(-3) after core 4: core %llu mask %#llx (want 4, 0x30)", (unsigned long long)c->x[1],
+          (unsigned long long)c->x[2]);
     // the special ideal cores (svc_types_common.hpp): -1 don't care keeps the mask given, -2 the process's core alone
     CHECK(sv(c, 0x0F, h, -1, 0x3f, 0) == 0 && sv(c, 0x0E, 0, 0, h, 0) == 0 && c->x[2] == 0x3f,
           "SetThreadCoreMask(-1, 0x3f): mask %#llx (want 0x3f)", (unsigned long long)c->x[2]);
     CHECK(sv(c, 0x0F, h, -2, 0, 0) == 0 && sv(c, 0x0E, 0, 0, h, 0) == 0 && c->x[2] == 1,
           "SetThreadCoreMask(-2): mask %#llx (want 0x1, the process's ideal core)", (unsigned long long)c->x[2]);
     CHECK(sv(c, 0x16, h, 0, 0, 0) == 0, "CloseHandle(thread %#x)", h);
+    CHECK(sv(c, 0x16, h2, 0, 0, 0) == 0, "CloseHandle(thread %#x)", h2);
     printf("core arguments: cores 0-%d accepted, %d and masks outside refused: %s\n", PROBE_CORES - 1, PROBE_CORES,
            failures == before ? "ok" : "FAIL");
 }

@@ -7,6 +7,7 @@ Usage: uv run pytest tests
 """
 
 import struct
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -61,6 +62,22 @@ def test_nx_and_loose_copies(tmp_path: Path) -> None:
     loose(tmp_path / "dumps/MKW", BUILD_180)
     loose(tmp_path / "dumps/Other", bytes(8))
     assert found([tmp_path]) == {("nx", "?", "mkw.nx"), ("folder", "1.8.0", "MKW")}
+
+
+@pytest.mark.parametrize("name", ["Plain", "Café", "玩家"])
+def test_cli_emits_utf8_dump_paths(tmp_path: Path, name: str) -> None:
+    path = nup(tmp_path / f"{name}.nup", [(MKW, 0)])
+    # -I ignores PYTHONIOENCODING. Give the CLI the same initial pipe encoding as cp1252 Windows explicitly.
+    driver = (
+        "import runpy,sys; sys.stdout.reconfigure(encoding='cp1252'); "
+        "sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name='__main__')"
+    )
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", driver, str(ROOT / "tools/prepare/finddumps.py"), str(tmp_path)],
+        capture_output=True, timeout=10,
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    assert result.stdout.decode("utf-8").splitlines() == [f"dump\tnup\t1.0.0\t{path}", "done 1"]
 
 
 def test_installation_hidden_and_deep_folders_left_out(tmp_path: Path) -> None:
