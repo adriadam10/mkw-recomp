@@ -19,6 +19,8 @@ static void show(int result) {
 static int run(int argc, char **argv) {
     exe = argv[0];
     boot_paths(argc, argv);
+    const char *env_log_name = getenv("MKW_LOG_NAME");
+    printf("log=%s\nlog_env=%s\n", probe_log_name ? probe_log_name : "", env_log_name ? env_log_name : "");
     held = cfg_get("MKW_ROMFS");
     show(0);
     char line[PLAT_PATH_MAX * 3];
