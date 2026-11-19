@@ -86,8 +86,8 @@ static void remove_modal(void) {
     ImGui::TextUnformatted(text);
     ImGui::PopTextWrapPos();
     if (ImGui::Button(menu_text(UI_PLAYER_REMOVE))) {
-        if (!strcmp(active_id(), P.removing)) pick("");
         P.failed = !player_remove(P.base, P.removing);
+        if (!P.failed && !strcmp(active_id(), P.removing)) pick("");
         refresh();
         ImGui::CloseCurrentPopup();
     }
