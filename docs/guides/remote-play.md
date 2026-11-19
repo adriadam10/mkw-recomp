@@ -14,20 +14,47 @@ It is off by default and changes nothing until you set it up.
   Play Together. Steam treats mkw as that game while it runs, so your friends see its name. Use an App ID you own or are
   allowed to use. RetroArch (`1118310`) is free and supports Remote Play Together.
 - Steam's runtime library next to `mkw` / `mkw.exe`: `libsteam_api.so` on Linux, `steam_api64.dll` on Windows,
-  Steamworks SDK 1.62 or newer.
+  Steamworks SDK 1.62 or newer. **The release does not include it**: [Get Steam's library](#get-steams-library) says
+  where to download it and where to put it.
+
+## Get Steam's library
+
+The game's releases do not carry Valve's library, so download it once and put it in the game's folder. Without it the
+menu's Remote Play Together rows stay greyed out and `logs/mkw.log` says
+`steam: Remote Play Together is off: Steam's library is missing`.
+
+**Where it goes**
+
+| System | File | Folder |
+|---|---|---|
+| Windows | `steam_api64.dll` | the folder of `mkw.exe` (where you unpacked the zip) |
+| Linux, AppImage | `libsteam_api.so` | `~/.local/share/mkw-recomp`, where the AppImage runs its copy of `mkw` |
+| Linux, built from source | `libsteam_api.so` | the folder of `mkw` (`build/dist/linux`) |
+
+**Where to get it**, any one of these:
+
+1. **Steamworks.NET's archive, no account needed.** Download
+   [`Steamworks.NET-Standalone_2025.165.0.zip`](https://github.com/rlabrecque/Steamworks.NET/releases/download/2025.165.0/Steamworks.NET-Standalone_2025.165.0.zip)
+   from the [Steamworks.NET 2025.165.0 release](https://github.com/rlabrecque/Steamworks.NET/releases/tag/2025.165.0),
+   open it and take `Windows-x64/steam_api64.dll` (Windows) or `OSX-Linux-x64/libsteam_api.so` (Linux). These are
+   Valve's files of Steamworks SDK 1.65. To check your copy: `steam_api64.dll` has the SHA-256
+   `e6d9bafb9a41e42fba7b21553db49f8719027af3f0deb23ff86cfc44d60e776d`, `libsteam_api.so`
+   `eb2dd015b84177cf4f4326fe578aab375fd8931bbbd719c7492420d9777007fe` (Windows: `certutil -hashfile steam_api64.dll
+   SHA256`; Linux: `sha256sum libsteam_api.so`).
+2. **The script, if you build from source.** `uv run tools/build/steamlib.py` (Linux) or
+   `uv run tools/build/steamlib.py --target windows` downloads the same archive, checks both SHA-256 and puts the file
+   in `build/dist/<target>`; `--dest DIR` puts it in another folder (`--dest ~/.local/share/mkw-recomp` for the
+   AppImage).
+3. **Valve's Steamworks SDK.** With a Steamworks account, download the SDK from
+   [partner.steamgames.com](https://partner.steamgames.com/) and take `redistributable_bin/win64/steam_api64.dll` or
+   `redistributable_bin/linux64/libsteam_api.so` (SDK 1.62 or newer).
+
+A file older than SDK 1.62 is refused: the log names what it lacks (`... is older than Steamworks SDK 1.62`).
 
 ## Set up
 
-1. **The library.** After building, run:
-
-   ```sh
-   uv run tools/build/steamlib.py                    # Linux: build/dist/linux/libsteam_api.so
-   uv run tools/build/steamlib.py --target windows   # Windows: build/dist/windows/steam_api64.dll
-   ```
-
-   It downloads Valve's SDK 1.65 copy (from the Steamworks.NET release, checked by sha256). Pass `--dest DIR` for
-   another folder: the one that holds `mkw`. The Linux AppImage runs its copy of `mkw` in `~/.local/share/mkw-recomp`,
-   so that is the folder there.
+1. **The library.** Put `steam_api64.dll` (Windows) or `libsteam_api.so` (Linux) in the game's folder, as
+   [Get Steam's library](#get-steams-library) says.
 
 2. **The App ID.** In `mkw.ini` next to `mkw`:
 

@@ -13,7 +13,8 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   player. mkw runs under the App ID of a Steam game you own that supports Remote Play Together (RetroArch, 1118310, is
   free): `steam_appid` in `mkw.ini`, or Settings > General, where an App ID can be typed and is kept in a list.
   Picking local multiplayer with too few controllers asks whether the other players connect controllers or join over
-  Steam. Steam's library is not in the release: `tools/build/steamlib.py` puts it next to mkw. Set-up and the App
+  Steam. Steam's library (`steam_api64.dll`, `libsteam_api.so`) is not in the release: [Get Steam's
+  library](docs/guides/remote-play.md#get-steams-library) says where to download it and where to put it. Set-up and the App
   IDs tried: [docs/guides/remote-play.md](docs/guides/remote-play.md).
 
 ## 0.1.13

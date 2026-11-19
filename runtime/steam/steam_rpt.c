@@ -434,7 +434,8 @@ void steam_rpt_start(void) {
 
     char tried[PLAT_PATH_MAX];
     void *lib = open_library(tried, sizeof tried);
-    if (!lib) { fail("Steam's library is missing: put " STEAM_LIBRARY " next to mkw (looked for %s)", tried); return; }
+    if (!lib) { fail("Steam's library is missing: put " STEAM_LIBRARY " next to mkw, from docs/guides/remote-play.md "
+                    "(Get Steam's library); looked for %s", tried); return; }
     const char *missing = NULL;
 #define BIND(field, name) \
     if (!(*(void **)&api.field = plat_lib_sym(lib, name)) && !missing) missing = name;

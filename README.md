@@ -146,7 +146,8 @@ Beyond the console, all optional and off (or at the console's value) by default:
   steers and its first buttons are A, B, X, Y; for the pedals, put a `gamecontrollerdb.txt` (SDL's format) in the game
   folder.
 - **Steam Remote Play Together**: friends far away join local multiplayer through Steam, with their controller or
-  keyboard ([docs/guides/remote-play.md](docs/guides/remote-play.md)).
+  keyboard ([docs/guides/remote-play.md](docs/guides/remote-play.md)). It needs Steam's `steam_api64.dll` /
+  `libsteam_api.so`, not in the release: [where to get it](docs/guides/remote-play.md#get-steams-library).
 - **Hacks**: turbo (hold or toggle F2), skip movies, unlock everything, the same randomness every time, straight to
   time trial or free roam.
 - **Languages**: the menus in 20 languages; the game itself also in Catalan, Galician, Basque and Turkish.
