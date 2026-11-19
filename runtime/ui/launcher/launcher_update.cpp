@@ -425,9 +425,24 @@ int update_revert(const char *exe_dir, char *why, unsigned cap) {
     char kept[1200], kept_tag[1200], next[1300];
     kept_appimage(app, kept, kept_tag, sizeof kept);
     snprintf(next, sizeof next, "%s.next", app);
-    if (!SDL_RenamePath(app, next) || !SDL_RenamePath(kept, app) || !SDL_RenamePath(next, kept)) {
+    if (plat_file_exists(next)) {
+        snprintf(why, cap, "recovery file %.300s already exists", next);
+        rt_log("update: Undo stopped because %s already exists", next);
+        return 0;
+    }
+    if (!SDL_RenamePath(app, next)) {
         snprintf(why, cap, "%s", SDL_GetError());
-        if (!plat_file_exists(app)) SDL_RenamePath(plat_file_exists(next) ? next : kept, app);
+        return 0;
+    }
+    bool previous_installed = SDL_RenamePath(kept, app);
+    if (!previous_installed || !SDL_RenamePath(next, kept)) {
+        snprintf(why, cap, "%s", SDL_GetError());
+        // Put the previous version back first so that restoring the current one cannot overwrite it.
+        if ((previous_installed && !SDL_RenamePath(app, kept)) || !SDL_RenamePath(next, app)) {
+            rt_log("update: Undo failed (%s), rollback failed (%s); check %s, %s and %s",
+                   why, SDL_GetError(), app, kept, next);
+            snprintf(why, cap, "rollback failed; check the AppImage and its .previous and .next files");
+        }
         return 0;
     }
     write_lines(kept_tag, rt_port_version, "");
