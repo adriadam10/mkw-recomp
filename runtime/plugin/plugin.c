@@ -207,6 +207,10 @@ static int (*const setting_set_slot[MAX_PLUGINS])(const char *, const char *) = 
 _Static_assert(MAX_PLUGINS == 32, "one setting_get / setting_set pair per plugin slot");
 
 
+// gfx/nvn/procs/nvn2.c: images a plugin fills (version 3)
+uint32_t nvn2_native_image_create(int w, int h, void **pixels, int *row_bytes);
+int nvn2_native_image_touch(uint32_t handle);
+
 static const MkwPluginApi api_template = {
     .size = sizeof(MkwPluginApi),
     .version = MKW_PLUGIN_API_VERSION,
@@ -229,6 +233,8 @@ static const MkwPluginApi api_template = {
     .overlay_show = plugin_overlay_show,
     .on_exit = api_on_exit,
     .settings_tab = api_settings_tab,
+    .native_image_create = nvn2_native_image_create,
+    .native_image_touch = nvn2_native_image_touch,
 };
 
 // A plugin that declines or fails to load is told to the player too: the mod they enabled does nothing this run.

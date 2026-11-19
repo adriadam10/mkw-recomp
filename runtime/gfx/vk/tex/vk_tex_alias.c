@@ -217,6 +217,25 @@ static void gpu_written_locked(Tex *e) {
     own_add(e);
 }
 
+// A texture the GPU wrote is gpu_owned: its image is newer than the storage, so make_fresh never uploads it again. A
+// plugin's native image (nvn2.c) is the other way round: the game renders its placeholder into its own textures over
+// the image's pool once (1.8.0's GameChat camera textures, built at boot over each native image's pool, flags 0x40),
+// then samples them while the plugin rewrites the pixels. The host's rewrite takes them back: no write-back of the
+// GPU render, and the next check uploads the storage (whose pages vk_guest_written just stamped).
+void vk_texture_host_rewrote(uint64_t addr) {
+    static volatile int32_t logged;
+    lock();
+    for (Tex *p = entries_at(addr); p; p = p->next_at) {
+        if (p->released || !p->pub.mirrored || !p->pub.gpu_owned) continue;
+        p->pub.gpu_owned = 0;
+        p->gpu_dirty = 0;
+        if (plat_inc32(&logged) <= 16)
+            rt_log("vk: texture at %#llx (%ux%u fmt %#x flags %#x) takes its storage again over its GPU render",
+                   (unsigned long long)addr, p->t.d.width, p->t.d.height, p->t.d.format, p->t.d.flags);
+    }
+    unlock();
+}
+
 void vk_texture_gpu_written(const tex_t *t) {
     if (!t || !t->mem) return;
     if (tracing((uintptr_t)t->mem)) {   // with the replay function that wrote it (copies, clears, render targets)

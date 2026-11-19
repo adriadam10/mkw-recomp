@@ -140,6 +140,9 @@ typedef struct {
     void (*write_texels)(const tex_t *t, const view_t *v, const NVNcopyRegion *r, const uint8_t *src, uint64_t row, uint64_t img);
     void (*guest_written)(uint64_t addr, uint64_t size);   // host wrote pool storage (3.2)
     void (*guest_read)(uint64_t addr, uint64_t size);      // the CPU reads pool storage: GPU-written texels go there first
+    // Optional (NULL: guest_written alone). The host rewrote the storage at addr on purpose (a plugin's native image,
+    // nvn2.c): textures there take its bytes again even where the GPU rendered into them before.
+    void (*host_rewrote)(uint64_t addr, uint64_t size);
     // The CPU waited for fence: small render targets and pitch textures written by work up to it go to their storage
     // (vk_texture.c vk_texture_write_back_small).
     void (*cpu_synced)(uint64_t fence);
