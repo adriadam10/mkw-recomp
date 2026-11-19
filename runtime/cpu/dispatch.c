@@ -40,6 +40,13 @@ static uint64_t g_table_bytes, g_functions;
 static struct { uint64_t addr; GuestFn fn; } g_host[HOST_CAP];
 static uint64_t g_nhost;
 
+// rt_dispatch_override: indirect calls to a function start run a host function instead (plugins). Applied by
+// rt_dispatch_init: the flat slot is left 0, so the call takes dispatch_slow's host lookup; the translated function
+// is kept as the original.
+typedef struct { uint64_t addr; GuestFn fn, original; } AddrOverride;
+static AddrOverride *g_ovr;
+static int g_novr, g_cap_ovr;
+
 void rt_fatal(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -92,6 +99,45 @@ void rt_register_host(uint64_t addr, GuestFn fn) {
     g_host[h].addr = addr;
     g_host[h].fn = fn;
     g_nhost++;
+}
+
+int rt_dispatch_override(uint64_t addr, GuestFn fn) {
+    if (g_ready || !addr || (addr & 3) || !fn) return 0;
+    for (int i = 0; i < g_novr; i++)
+        if (g_ovr[i].addr == addr) { g_ovr[i].fn = fn; return 1; }   // a later plugin wins
+    if (g_novr == g_cap_ovr) {
+        g_cap_ovr = g_cap_ovr ? g_cap_ovr * 2 : 32;
+        if (!(g_ovr = realloc(g_ovr, (size_t)g_cap_ovr * sizeof *g_ovr))) rt_fatal("rt_dispatch_override: out of memory");
+    }
+    g_ovr[g_novr++] = (AddrOverride){addr, fn, NULL};
+    return 1;
+}
+
+GuestFn rt_dispatch_original(uint64_t addr) {
+    for (int i = 0; i < g_novr; i++)
+        if (g_ovr[i].addr == addr) return g_ovr[i].original;
+    return NULL;
+}
+
+// Before the table is sealed: each override's translated function becomes its original, its slot 0 and the host
+// function goes to the host table. An address where no function starts is fatal: the plugin's table is for another
+// build of the game.
+static void apply_overrides(uint32_t *slot, uint64_t lo, uint64_t slots, uintptr_t anchor) {
+    for (int i = 0; i < g_novr; i++) {
+        AddrOverride *o = &g_ovr[i];
+        uint64_t k = (o->addr - lo) >> 2;
+        if (o->addr < lo || k >= slots || !slot[k])
+            rt_fatal("dispatch: a plugin overrides %#llx, where no function of the game starts",
+                     (unsigned long long)o->addr);
+        o->original = (GuestFn)(anchor + slot[k]);
+        slot[k] = 0;
+        uint64_t h = host_hash(o->addr);
+        while (g_host[h].addr && g_host[h].addr != o->addr) h = (h + 1) & (HOST_CAP - 1);
+        if (!g_host[h].addr && g_nhost >= HOST_CAP / 2) rt_fatal("dispatch: more than %d host functions", HOST_CAP / 2);
+        g_nhost += !g_host[h].addr;
+        g_host[h].addr = o->addr;
+        g_host[h].fn = o->fn;
+    }
 }
 
 static void *table_alloc(uint64_t bytes) {
@@ -162,6 +208,7 @@ void rt_dispatch_init(const RtModule *mods, int count) {
             slot[(m->addrs[k] - lo) >> 2] = (uint32_t)((uintptr_t)m->fns[k] - anchor);
         g_functions += m->count;
     }
+    apply_overrides(slot, lo, slots, anchor);
     table_seal(slot, bytes);
 
     g_table_bytes = bytes;

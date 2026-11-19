@@ -112,7 +112,6 @@ typedef struct {                       // normalized: zero where the state is dy
     uint8_t blend_en, dsb, fbl, alpha_func;   // dsb: an enabled target blends with a SRC1 factor; fbl: VkPipeState.feedback;
                                               // alpha_func: VkCompareOp + 1 of NVN's alpha test, 0 off
     uint32_t wmask;
-    float alpha_ref;                   // the alpha test's reference (spirv_alpha_test); 0 when off
     uint8_t blend[8][6];               // src, dst, op, src alpha, dst alpha, alpha op (VkBlendFactor / VkBlendOp)
     uint32_t attr_fmt[32], attr_off[32];
     uint8_t attr_bind[32];
@@ -134,7 +133,7 @@ typedef struct { uint32_t kind, topo_class, attr_fmt[32], attr_off[32]; uint8_t 
 
 typedef struct { uint32_t kind, missing; const GfxShader *vs; uint8_t clamp, poly_mode, minus_w, pad; GfxShaderIo fin[32]; } PrKey;
 
-typedef struct { uint32_t kind; uint8_t dsb, samples, a2c, alpha_func; float alpha_ref, pad; const GfxShader *fs; } FsKey;
+typedef struct { uint32_t kind; uint8_t dsb, samples, a2c, alpha_func; const GfxShader *fs; } FsKey;
 
 typedef struct { uint32_t kind; uint8_t n_color, samples, a2c, logic_op, blend_en, pad[3]; uint32_t color[8], depth, stencil, wmask;
                  uint8_t blend[8][6]; } FoKey;
@@ -251,3 +250,7 @@ void workers_drain(void);
 VkPipeline pipe_graphics(const VkPipeState *s, const VkPipeInfo **info, int async, int *pending, uint32_t wait_ms,
                            int low);
 void prebuild_start(void);
+// vk_pipe_pairs.c: the shader libraries of every program pair in pipeline-pairs.bin, at boot
+void pairs_prewarm(void);
+int vk_pipeline_compute_warm(const GfxShader *cs, uint32_t first);   // caller holds P.lock (released while it builds)
+void pairs_release(void);   // after vk_pipeline_prewarm: the SPIR-V only the pairs prewarm read

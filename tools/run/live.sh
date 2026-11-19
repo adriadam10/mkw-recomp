@@ -48,8 +48,9 @@ export MKW_TRACE=${MKW_TRACE:-gfx,present}
 # otherwise). MKW_BACKGROUND_WINDOW=0 brings the window to the front.
 export MKW_BACKGROUND_WINDOW=${MKW_BACKGROUND_WINDOW:-1} MKW_ASSUME_FOCUS=${MKW_ASSUME_FOCUS:-1}
 tools/run/kwin-rule.sh --ensure >/dev/null   # the rule that keeps that window minimized and without focus
-# job start runs a systemd service, which does not inherit this shell's environment: the MKW_* go by env.
-mapfile -t vars < <(env | grep -E '^(MKW_|ENABLE_GAMESCOPE_WSI=)')
+# job start runs a systemd service, which does not inherit this shell's environment: the MKW_* go by env, and the
+# SDL_* hints too (SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1: tools/run/vpad.py's pad reaches the unfocused window).
+mapfile -t vars < <(env | grep -E '^(MKW_|SDL_|ENABLE_GAMESCOPE_WSI=)')
 [ -n "${LIVE_LIB:-}" ] && vars+=("LD_LIBRARY_PATH=$(realpath "$LIVE_LIB")")
 JOB_MEM=${JOB_MEM:-7G} tools/run/job.sh start "$n" env "${vars[@]}" bash -c "timeout -s KILL $secs ${LIVE_WRAP:-} $bin > build/run/$n.log 2>&1"
 echo "live: $n up; commands: tools/run/ctl.sh $n frame|shot PATH|dump DIR [ubo]|flight|press <ticks> <button> [hold]|stop"

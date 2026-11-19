@@ -11,8 +11,10 @@
 # no-op once built and rebuilds a partial download.
 
 EXEFS ?= game/exefs
-GEN ?= build/generated
-PATCHES ?= recomp/patches-mkw.txt
+# GEN and PATCHES default to the dump's version (recomp/versions.py): 1.0.0 uses build/generated with
+# patches-mkw.txt, 1.8.0 uses build/generated-180 with patches-mkw-180.txt. Set them to override.
+GEN ?=
+PATCHES ?=
 # The release tag without its v (0.1.11), or tag-commits-hash between tags:
 # the same source as the binary's own version (port_version in
 # tools/build/build.py: describe --tags --always --dirty, "dev" outside git).
@@ -23,7 +25,7 @@ VERSION ?= $(patsubst v%,%,$(shell git describe --tags --always --dirty 2>/dev/n
 
 help:
 	@echo "build            dev binary build/mkw (needs generated C, see generated)"
-	@echo "generated        AArch64 to C from your dump (EXEFS, GEN and PATCHES)"
+	@echo "generated        AArch64 to C from your dump (EXEFS; GEN and PATCHES override the auto-detected version)"
 	@echo "shaders          extract and translate the shaders"
 	@echo "selftest         build, then build/mkw --selftest"
 	@echo "check            the CI checks job except its build (ruff, docs, cfg rows, no-game-code grep, pytest)"
@@ -33,13 +35,13 @@ help:
 	@echo "appimage-aarch64 dist for AArch64, packed as build/release/mkw-recomp-VERSION-aarch64.AppImage"
 	@echo "windows          player's zip build/release/mkw-recomp-VERSION-windows-x64.zip"
 	@echo "clean            remove build objects and packed releases, keep sources and caches"
-	@echo "Overrides: EXEFS, GEN, PATCHES (1.8.0: recomp/patches-mkw-180.txt), VERSION"
+	@echo "Overrides: EXEFS, GEN, PATCHES, VERSION"
 
 build:
-	uv run tools/build/build.py --gen "$(GEN)" --exefs "$(EXEFS)"
+	uv run tools/build/build.py --exefs "$(EXEFS)" $(if $(GEN),--gen "$(GEN)")
 
 generated:
-	uv run python recomp/gen.py --exefs "$(EXEFS)" --out "$(GEN)" --jobs 8 --patches "$(PATCHES)"
+	uv run python recomp/gen.py --exefs "$(EXEFS)" --jobs 8 $(if $(GEN),--out "$(GEN)") $(if $(PATCHES),--patches "$(PATCHES)")
 
 shaders:
 	uv run tools/shaders/extract.py && uv run tools/shaders/translate.py

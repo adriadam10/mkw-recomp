@@ -21,7 +21,7 @@ class ItemValue:
         self.symbols = None        # enum symbol names for the value, if any
         self.table_inputs = None   # input tuple recovered through a TABLES row
         self.table_ambiguous = False
-        self.notes = []
+        self.notes = ()            # a list once read_values has one to add
 
     @property
     def value(self):
@@ -104,30 +104,59 @@ def _enum_symbols(spec, type_name, value):
     return list(names) if names else None
 
 
-def read_values(spec, cls, word):
-    """Read every assignment of `cls` out of `word`."""
-    out = []
+def _read_plan(spec, cls):
+    """Per item of `cls`, what read_values needs, resolved once instead of per word: (item, (slot, runs) of each
+    slot, value -> symbols map or None, its note for an unnamed value, the call table's decode rows or None, its
+    note). The decoder's hottest path: 58 % of a shader update's decoding (mkw-recomp, 18/11/2026)."""
+    plan = []
     for item in cls.items:
-        iv = ItemValue(item)
-        for slot in item.slots:
-            iv.slot_values.append((slot, slot.extract(word)))
+        names = unnamed = rows = no_row = None
         if item.kind == "field" and item.format_type:
-            iv.symbols = _enum_symbols(spec, item.format_type, iv.value)
-            if iv.symbols is None and item.format_type in spec.enum_tables:
-                iv.notes.append("value not named by its type")
+            _enum_symbols(spec, item.format_type, 0)  # builds the type's value -> names map
+            names = _ENUM_NAMES.get((id(spec), item.format_type), {})
+            unnamed = "value not named by its type" if item.format_type in spec.enum_tables else None
         elif item.kind == "call":
             table = spec.tables.get(item.call_name)
             if table and table.get("decode") and len(item.slots) == 1:
-                rows = table["decode"].get(str(iv.value))
-                if rows:
-                    iv.table_inputs = rows[0]
-                    iv.table_ambiguous = len(rows) > 1
-                else:
-                    iv.notes.append("no table row produces this value")
+                rows, no_row = table["decode"], "no table row produces this value"
             elif len(item.slots) > 1:
                 # `A,B = Call(x,y)` writes two slots; the table
                 # model is one output per row, so the pair is not inverted.
-                iv.notes.append("pair-form call, slots read raw")
+                no_row = "pair-form call, slots read raw"
+        plan.append((item, [(s, s.runs) for s in item.slots], names, unnamed, rows, no_row))
+    return plan
+
+
+def read_values(spec, cls, word):
+    """Read every assignment of `cls` out of `word`."""
+    plan = cls.__dict__.get("read_plan")
+    if plan is None or plan[0] is not spec:
+        plan = cls.read_plan = (spec, _read_plan(spec, cls))
+    out = []
+    for item, slots, names, unnamed, rows, no_row in plan[1]:
+        iv = ItemValue(item)
+        sv = iv.slot_values
+        for slot, runs in slots:
+            v = 0
+            for p, m, i in runs:
+                v |= ((word >> p) & m) << i
+            sv.append((slot, v))
+        value = sv[0][1] if sv else None
+        if names is not None:
+            symbols = names.get(value)
+            if symbols:
+                iv.symbols = list(symbols)
+            elif unnamed:
+                iv.notes = [unnamed]
+        elif rows is not None:
+            found = rows.get(str(value))
+            if found:
+                iv.table_inputs = found[0]
+                iv.table_ambiguous = len(found) > 1
+            else:
+                iv.notes = [no_row]
+        elif no_row:
+            iv.notes = [no_row]
         out.append(iv)
     return out
 

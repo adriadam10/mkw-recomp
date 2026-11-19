@@ -1,4 +1,4 @@
-"""Build the game: compile the generated C (build/generated, from recomp/gen.py) and the runtime, link build/mkw (or
+"""Build the game: compile the generated C (from recomp/gen.py) and the runtime, link build/mkw (or
 build/mkw.exe with --target windows).
 
 Why: the generated code is ~0.9 GB of C in ~355 chunks; Ninja recompiles only what changed and runs the chunks in
@@ -16,9 +16,10 @@ where it is the only target and ninja comes from PATH or else MSYS2 UCRT64 (C:/m
 Objects go to build/obj-win. The window, input, keyboard and menu are SDL3 on both systems; platform/win32.c replaces
 platform/linux.c.
 
-Usage: uv run tools/build/build.py [--target linux|windows] [--gen build/generated] [--exefs DIR] [--romfs DIR]
+Usage: uv run tools/build/build.py [--target linux|windows] [--gen DIR] [--exefs DIR] [--romfs DIR]
        [--jobs N] [--frame-pointers] [--dry-run]
-Heavy (all cores, several GB): our runs go through tools/run/job.sh.
+Heavy (all cores, several GB): our runs go through tools/run/job.sh. --gen defaults to the dump's version
+(recomp/versions.py: build/generated, build/generated-180).
 """
 
 import argparse
@@ -53,12 +54,28 @@ GEN_FLAGS = ["-O1", "-fno-strict-aliasing", "-Wno-return-type", "-Wno-unused-lab
              *ARCH_FLAGS[ARCH], *GEN_ARCH_FLAGS[ARCH]]  # fmt: skip
 RT_FLAGS = ["-O2", "-g", "-Wall", "-fno-strict-aliasing", *ARCH_FLAGS[ARCH]]
 sys.path.insert(0, str(ROOT / "recomp"))
-from versions import detect as detect_version  # noqa: E402  (the game version of a dump: patches, RtGame.version)
+import versions  # noqa: E402  (the game version of a dump: generated dir, patches, RtGame.version)
+from versions import detect as detect_version  # noqa: E402
 
 
 def gen_modules(gen: Path) -> list[str]:
     """The modules the generator wrote, in layout order (1.0.0: main, subsdk0, sdk; 1.8.0 adds subsdk1)."""
     return [m["name"] for m in json.loads((gen / "layout.json").read_text())]
+
+
+def check_gen(gen: Path, exefs: Path) -> None:
+    """Fail fast when the generated C does not belong to the dump (1.0.0 built with 1.8.0's C or the reverse)."""
+    v = detect_version(exefs)
+    layout = gen / "layout.json"
+    if not layout.is_file():
+        sys.exit(f"{gen} has no layout.json: run `make generated EXEFS={exefs}` first"
+                 + (f" (1.8.0 writes {versions.gen_dir_for(v)})" if v.number != 100 else ""))
+    gen_mods, exefs_mods = set(gen_modules(gen)), set(versions.modules(exefs))
+    if gen_mods != exefs_mods:
+        want = versions.gen_dir_for(v)
+        sys.exit(f"{gen} has {', '.join(sorted(gen_mods))} but {exefs} is {v.name}"
+                 f" ({', '.join(sorted(exefs_mods))}): run `make generated EXEFS={exefs}`"
+                 + (f" (writes {want})" if gen != want else ""))
 
 
 def set_arch(arch: str) -> None:
@@ -223,13 +240,14 @@ def defaults_glue(exefs: Path, romfs: Path, dist: bool) -> str:
 RT_EXPORTS = ("rt_dispatch", "rt_sj_owner", "rt_svc", "rt_udf", "rt_ticks", "rt_spin_gate", "fnprof_hit")
 
 
-def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: Path | None,
+def ninja_file(target: Target, gen: Path | None, out: Path, rt_extra: list[str], dist: Path | None,
                runtime_only: bool = False, ld_extra: list[str] | None = None,
                sys_flags: list[str] | None = None) -> str:  # fmt: skip
     """dist: the player's build into that folder, the runtime (mkw, mkw.exe) and the game code apart (mkwgame.so,
     mkwgame.dll); else build/mkw with the game code linked in. runtime_only (with dist): the runtime alone, what a
     release ships and the CI builds, without the game's generated C."""
     inc = " ".join(f"-I{d}" for d in sorted({RUNTIME} | {p.parent for p in RUNTIME.rglob("*.h")}))
+    gen_inc = f"-I{gen}" if gen else ""  # --runtime-only has no generated C (it wrote -INone)
     gid = f'-DRT_GAME_ID=\\"{game_id()}\\"'
     pic = ["-fPIC"] if dist and target is LINUX else []
     link_flags = list(target.link_flags) + (ld_extra or [])
@@ -247,8 +265,8 @@ def ninja_file(target: Target, gen: Path, out: Path, rt_extra: list[str], dist: 
     lines = [
         f"builddir = {out}",
         f"genflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} -I{RUNTIME / 'cpu'}",
-        f"rtflags = {' '.join(RT_FLAGS + target.rt_flags + rt_extra)} {gid} {inc} -I{gen} -I{out / 'rt'} -I{target.vma}",
-        f"tabflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} {gid} {inc} -I{gen}",
+        f"rtflags = {' '.join(RT_FLAGS + target.rt_flags + rt_extra)} {gid} {inc} {gen_inc} -I{out / 'rt'} -I{target.vma}",
+        f"tabflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} {gid} {inc} {gen_inc}",
         f"ldflags = {' '.join(link_flags)}",
         (
             f"rule cc\n  command = {cc} $genflags -MD -MF $out.d -c $in -o $out\n  depfile = $out.d\n  deps = gcc"
@@ -359,7 +377,8 @@ def windows_host_ninja(text: str) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--gen", type=Path, default=ROOT / "build/generated")
+    ap.add_argument("--gen", type=Path, default=None,
+                    help="generated C dir (default: the dump's version: build/generated, build/generated-180)")
     ap.add_argument("--target", choices=("linux", "windows"), default="linux")
     ap.add_argument("--arch", choices=tuple(ARCH_FLAGS), default=ARCH, help="Linux: the CPU (default: this machine's)")
     ap.add_argument("--out", type=Path, help="object directory (default build/obj, build/obj-win for windows)")
@@ -388,6 +407,11 @@ def main() -> None:
         help="runtime with frame pointers: perf call graphs (-g) of where threads block, e.g. -e cs",
     )
     args = ap.parse_args()
+    if args.gen is None and not args.runtime_only:
+        try:
+            args.gen = versions.default_gen(args.exefs)
+        except (FileNotFoundError, ValueError) as e:
+            ap.error(f"cannot detect the game version of {args.exefs}: {e}")
     # Absolute, not resolved (game/ is a link): ninja puts $in in each command and ccache hashes the input's path, so a
     # relative --gen next to the absolute default rebuilt all 623 objects for real on every switch (16/11/2026).
     for name in ("gen", "exefs", "romfs", "out"):
@@ -418,6 +442,8 @@ def main() -> None:
             sys.exit(f"{tool} not found" + (" (uv run tools/build/windeps.py)" if target is WINDOWS else ""))
     if not (target.vma / "vk_mem_alloc.h").is_file():
         sys.exit(f"{target.vma}/vk_mem_alloc.h missing (tools/build/README.md)")
+    if not args.runtime_only:
+        check_gen(args.gen, args.exefs)
     jobs = args.jobs or max(1, min(os.cpu_count() or 1, int(mem_total_gb() * 0.6 / args.job_mem_gb)))
     (args.out / "rt").mkdir(parents=True, exist_ok=True)
     glue = [(args.out / "rt/defaults.c", defaults_glue(args.exefs, args.romfs, dist is not None))]

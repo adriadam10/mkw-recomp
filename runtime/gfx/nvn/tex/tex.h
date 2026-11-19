@@ -30,6 +30,11 @@ int nvn_deswizzle_geom(const nvn_texdesc *d, unsigned level, unsigned layer, uin
 // The copy loop on its own, for callers that know the level geometry (bl points at the level's first byte).
 void tex_bl_copy(uint8_t *bl, uint8_t *lin, size_t pitch, uint32_t row_bytes, uint32_t rows, uint32_t slices,
                  unsigned th, unsigned td, int to_linear);
+// Linear rows [r0, r1) of one block-linear level and layer as nvn_deswizzle writes them (row r is block row r % rows
+// of slice r / rows of a 3D level), touching nothing else of dst: one level split over threads (tex_par_for). *n_rows
+// gets the level's rows times its slices. -1 for linear storage and for what nvn_deswizzle rejects.
+int nvn_deswizzle_rows(const nvn_texdesc *d, unsigned level, unsigned layer, const void *src_storage, void *dst_linear,
+                       size_t dst_pitch, uint32_t r0, uint32_t r1, uint32_t *n_rows);
 
 // ---- tex_astc.c (LAS Recomp runtime/nvn/astc.c, MIT) ----
 // ASTC LDR 2D to RGBA8, bit-exact with astcenc's 8-bit decode. blocks: row-major 16-byte blocks covering
@@ -40,9 +45,17 @@ void astc_decode_ldr(const uint8_t *blocks, uint32_t width, uint32_t height, uin
 bool astc_decode_block(const uint8_t block[16], uint32_t bw, uint32_t bh, bool srgb, uint8_t *rgba_out);
 // 1 when every texel of the block decodes to alpha 255, from its endpoints alone (no texel is decoded).
 bool astc_block_alpha_one(const uint8_t block[16], uint32_t bw, uint32_t bh);
-// tex_astc_mt.c: the same bytes as astc_decode_ldr, large images split by block rows over a worker pool; blocks.
+// tex_astc_mt.c: the same bytes as astc_decode_ldr, large images split by block rows over the texture workers.
 void astc_decode_ldr_mt(const uint8_t *blocks, uint32_t width, uint32_t height, uint32_t bw, uint32_t bh, bool srgb,
                         uint8_t *rgba_out);
+
+// ---- tex_par.c ----
+// fn(ctx, i) for every i in [0, n), on the caller and the texture workers; returns when all are done. One job at a
+// time: while the workers are busy (another caller, or fn calling it) the caller does every item itself. Items should
+// take tens of microseconds or more: each job wakes every worker.
+typedef void TexParFn(void *ctx, uint32_t i);
+void tex_par_for(uint32_t n, TexParFn *fn, void *ctx);
+int tex_par_threads(void);   // the threads a job runs on, the caller included (1: no workers)
 
 // ---- vk_formats.c (LAS Recomp runtime/nvn/vulkan/textures.c format table, MIT) ----
 typedef struct TexVkFormat {

@@ -333,6 +333,9 @@ static inline int64_t plat_ftell64(FILE *f) { return (int64_t)ftello(f); }
 #endif
 void plat_file_delete(const char *path);
 int64_t plat_file_size(const char *path);                 // bytes of a file, -1 when missing or unreadable
+// Last write time of a file or a directory in the OS's units (as PlatFileId.write_time), only to compare two paths of
+// one volume; 0 when missing. A directory's moves when an entry in it is created, renamed or removed.
+uint64_t plat_path_write_time(const char *path);
 int plat_file_set_readonly(const char *path, int on);     // sets or clears the read-only attribute; 1 on success
 // An exclusive lock on path (created if missing), held until the process ends: 1 taken, 0 when another process holds
 // it, -1 when the file cannot be opened. The OS drops it when the process dies, however it dies.
@@ -465,4 +468,6 @@ void plat_mem_info(float *used_mb, float *total_mb, float *proc_mb);
 // This process's memory in bytes: resident (the working set) and private (Windows: committed private bytes; Linux: the
 // resident anonymous pages). 0 when unknown.
 void plat_process_memory(uint64_t *resident, uint64_t *private_bytes);
+// Hands the C heap's free pages back to the system after a large release of small blocks.
+void plat_heap_trim(void);
 

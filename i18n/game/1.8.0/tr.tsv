@@ -1,0 +1,20 @@
+# Texts 1.8.0 reworded or retagged: used over ../tr.tsv for a 1.8.0 copy or later (tools/i18n/game_texts.py)
+LayoutMsg/MenuTimeAttack_00/MenuTimeAttack_00:L_MenuBtn_02/T_Text_00	Tekrarı İzle
+MsgMain/GrandprixCupName/Name_GP09	{0E 0000 0002 0002 005F}Altın Ralli
+MsgMain/GrandprixCupName/Name_GP10	{0E 0000 0002 0002 005F}Buz Rallisi
+MsgMain/GrandprixCupName/Name_GP11	{0E 0000 0002 0002 005F}Ay Rallisi
+MsgMain/GrandprixCupName/Name_GP12	{0E 0000 0002 0002 005F}Dikenli Ralli
+MsgMain/GrandprixCupName/Name_GP13	{0E 0000 0002 0002 005F}Kiraz Rallisi
+MsgMain/GrandprixCupName/Name_GP14	{0E 0000 0002 0002 005F}Palamut Rallisi
+MsgMain/GrandprixCupName/Name_GP15	{0E 0000 0002 0002 005F}Bulut Rallisi
+MsgMain/GrandprixCupName/Name_GP16	{0E 0000 0002 0002 005F}Kalp Rallisi
+MsgMain/Help/FreeRun_06	Fotoğraf Modu
+MsgMain/Menu/2263	Tekrarı İzle
+MsgMain/Menu/2271	Hayalet verisi indirildi!
+MsgMain/Menu/5202	Yarışmak için oda kurulsun mu?
+MsgMain/Menu/5221	Bu odadan ayrılmak istiyor musun?
+MsgMain/Race/9504	{0E 0000 0002 0002 004B}İlk{0E 0000 0002 0002 0064} {0E 0000 0003 0002 0004}4{0E 0000 0003 0002 FFFF}{0E 0000 0002 0002 004B}'e gir!
+MsgMain/Race/9508	{0E 0000 0002 0002 004B}İlk {0E 0000 0002 0002 0064}{0E 0000 0003 0002 0004}8{0E 0000 0003 0002 FFFF}{0E 0000 0002 0002 004B}'e gir!
+MsgMain/Race/9512	{0E 0000 0002 0002 004B}İlk {0E 0000 0002 0002 0064}{0E 0000 0003 0002 0004}12{0E 0000 0003 0002 FFFF}{0E 0000 0002 0002 004B}'ye gir!
+MsgMain/Race/9516	{0E 0000 0002 0002 004B}İlk {0E 0000 0002 0002 0064}{0E 0000 0003 0002 0004}16{0E 0000 0003 0002 FFFF}{0E 0000 0002 0002 004B}'ya gir!
+MsgMain/Race/9520	{0E 0000 0002 0002 004B}İlk{0E 0000 0002 0002 0064} {0E 0000 0003 0002 0004}20{0E 0000 0002 0002 004B}'ye{0E 0000 0002 0002 0064}{0E 0000 0003 0002 FFFF} {0E 0000 0002 0002 004B}gir!

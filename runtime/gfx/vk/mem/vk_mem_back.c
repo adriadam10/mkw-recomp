@@ -400,7 +400,8 @@ void lazy_back(PoolRec *r) {
                    (unsigned long long)r->lo, (unsigned long long)r->size, r->flags);
     } else {
         r->lazy = 0;   // no storage: as a pool whose import failed at init (its addresses resolve as unbacked)
-        rt_log("vk: lazy pool %#llx+%#llx flags %#x: no GPU storage", (unsigned long long)r->lo,
-               (unsigned long long)r->size, r->flags);
+        int32_t failures = plat_inc32(&n_import_failures);
+        rt_log("vk: lazy pool %#llx+%#llx flags %#x: no GPU storage (%d backing failures so far)",
+               (unsigned long long)r->lo, (unsigned long long)r->size, r->flags, failures);
     }
 }

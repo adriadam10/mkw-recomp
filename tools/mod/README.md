@@ -2,7 +2,8 @@
 
 Mod import and merging for the start screen's Mods page (`runtime/ui/launcher/mods.cpp` runs these
 tools the way `launcher_setup.cpp` runs `tools/prepare/prepare.py`: the package's Python, one event
-per line).
+per line). The importer emits UTF-8 on its stdout/stderr pipes on every platform, so Unicode names and paths
+reach the launcher intact.
 
 | File | What it is |
 |---|---|
@@ -21,9 +22,11 @@ Timer/
 ├── mod.json
 ├── romfs/            optional: overlays the game's RomFS
 │   └── Layout/...    (import.py writes romfs/manifest.tsv itself)
-└── exefs/            optional: the original Switch patches, for Switch/emulator use
-    ├── <build id>.ips
-    └── <build id>.pchtxt
+├── exefs/            optional: the original Switch patches, for Switch/emulator use
+│   ├── <build id>.ips
+│   └── <build id>.pchtxt
+└── plugin/           optional: native libraries (.so, .dll) the runtime loads with the mod on
+                      (runtime/plugin/mkw_plugin.h; mod.json "has_plugin", and the page warns)
 ```
 
 ```json

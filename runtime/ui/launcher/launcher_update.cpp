@@ -19,6 +19,7 @@
 #endif
 
 #include "ui/launcher/launcher_update.h"
+#include "ui/launcher/launcher_setup.h"
 
 extern "C" {
 #include "cfg.h"
@@ -30,7 +31,9 @@ extern const char rt_port_version[];
 static SDL_Mutex *g_lock;
 static UpdateState g_state;
 static SDL_Process *g_proc;
+static bool g_preparing;    // g_proc is the new package's prepare.py --next, not update.py
 static char g_dest[1200];   // where the download goes
+static char g_game[1200];   // the game folder the update is set up in, beside the version played
 
 static void set_state(void (*fn)(UpdateState &, const char *), const char *arg) {
     SDL_LockMutex(g_lock);
@@ -72,14 +75,35 @@ static bool installable(const char *exe_dir, char *dest, size_t cap) {
 #endif
 }
 
-// One event line of update.py (its header lists them).
+// The mark of a finished download, <dest>/ready: its tag and the package's path. A later start that is offered the
+// same release sets it up beside again (prepare.py --next resumes, or finds it done) instead of downloading it again.
+static void ready_mark(char *p, size_t cap) {
+    snprintf(p, cap, "%s/ready", g_dest);
+}
+
+// One event line of the new package's prepare.py --next (its header lists them).
+static void on_prepare_line(UpdateState &s, char *line, char *arg) {
+    if (!strcmp(line, "step") && arg) {
+        int i = setup_step_index(arg);
+        if (i >= 0) s.step = i, s.done = s.total = 0;
+    } else if (!strcmp(line, "progress") && arg) {
+        sscanf(arg, "%lld %lld", &s.done, &s.total);
+    } else if (!strcmp(line, "error") && arg) {
+        char *why = strchr(arg, ' ');
+        snprintf(s.error, sizeof s.error, "%s", why && why[1] ? why + 1 : arg);
+    }
+}
+
+// One event line of update.py or of the new package's prepare.py --next (their headers list them).
 static void on_line(char *line) {
     rt_log("update: %s", line);
     char *arg = strchr(line, ' ');
     if (arg) *arg++ = 0;
     SDL_LockMutex(g_lock);
     UpdateState &s = g_state;
-    if (!strcmp(line, "update") && arg) {
+    if (g_preparing) {
+        on_prepare_line(s, line, arg);
+    } else if (!strcmp(line, "update") && arg) {
         long long b = 0;
         if (sscanf(arg, "%95s %lld", s.tag, &b) == 2) s.bytes = b, s.phase = UPDATE_OFFER;
     } else if (!strcmp(line, "latest")) {
@@ -94,6 +118,42 @@ static void on_line(char *line) {
         fail(s, why ? why + 1 : arg);
     }
     SDL_UnlockMutex(g_lock);
+}
+
+static bool spawn(const char *const *args, bool preparing);
+static bool read_lines(const char *path, char *a, size_t acap, char *b, size_t bcap);
+static bool write_lines(const char *path, const char *a, const char *b);
+
+// The downloaded package's prepare.py --next: the update set up in setup-next/ beside the version played, at low
+// priority, while the player plays on (#429: before, the download was installed at once and the new version's start
+// set everything up, with no way back to the version in place). Linux: the new AppImage's own entry (AppRun
+// --prepare-next), which runs its tools without copying its mkw over the running one.
+static void prepare_next(void) {
+    UpdateState s = update_state();
+    const char *ver = s.tag[0] == 'v' ? s.tag + 1 : s.tag;   // prepare.py --port, the version as the build spells it
+#ifdef _WIN32
+    char python[1300], script[1300];
+    snprintf(python, sizeof python, "%s/setup/python/python.exe", s.path);
+    snprintf(script, sizeof script, "%s/setup/src/tools/prepare/nextsetup.py", s.path);
+    bool can = plat_file_exists(script);   // a package from before --next: its start sets up as before
+    snprintf(script, sizeof script, "%s/setup/src/tools/prepare/prepare.py", s.path);
+    const char *args[] = {python, "-I", script, "--game", g_game, "--runtime", s.path, "--next", "--port", ver, nullptr};
+#else
+    bool can = true;   // only newer releases are offered, and every one since this has the AppRun entry
+    const char *args[] = {s.path, "--prepare-next", "--game", g_game, "--port", ver, nullptr};
+#endif
+    SDL_LockMutex(g_lock);
+    g_state.phase = can && g_game[0] ? UPDATE_PREPARING : UPDATE_PREPARED;
+    g_state.step = -1, g_state.done = g_state.total = 0, g_state.error[0] = 0;
+    SDL_UnlockMutex(g_lock);
+    if (!can || !g_game[0]) return;
+    rt_log("update: setting %s up beside this version in %s", s.tag, g_game);
+    if (!spawn(args, true)) {
+        SDL_LockMutex(g_lock);
+        g_state.phase = UPDATE_PREPARED;
+        snprintf(g_state.error, sizeof g_state.error, "%s", SDL_GetError());
+        SDL_UnlockMutex(g_lock);
+    }
 }
 
 static int SDLCALL reader(void *) {
@@ -120,17 +180,38 @@ static int SDLCALL reader(void *) {
     SDL_WaitProcess(g_proc, true, &code);
     SDL_DestroyProcess(g_proc);
     g_proc = nullptr;
+    bool prepare = false;
+    char mark[1300], tag[96], path[1200];
+    ready_mark(mark, sizeof mark);
     SDL_LockMutex(g_lock);
-    // A check that fails (offline, GitHub down) offers nothing and says nothing: only a download's failure is shown.
-    if (g_state.phase == UPDATE_CHECKING) g_state.phase = UPDATE_IDLE;
-    if (g_state.phase == UPDATE_FETCHING) fail(g_state, code ? "the download stopped" : "no package came");
-    if (g_state.phase == UPDATE_FAILED && !g_state.tag[0]) g_state.phase = UPDATE_IDLE;
+    if (g_preparing) {   // done or not, the update can be installed: a failure leaves its start to set up as before
+        g_state.phase = UPDATE_PREPARED;
+        if (code && !g_state.error[0]) snprintf(g_state.error, sizeof g_state.error, "stopped (code %d)", code);
+    } else {
+        // A check that fails (offline, GitHub down) offers nothing and says nothing: only a download's failure is shown.
+        if (g_state.phase == UPDATE_CHECKING) g_state.phase = UPDATE_IDLE;
+        if (g_state.phase == UPDATE_FETCHING) fail(g_state, code ? "the download stopped" : "no package came");
+        if (g_state.phase == UPDATE_FAILED && !g_state.tag[0]) g_state.phase = UPDATE_IDLE;
+        // offered a release already downloaded by an earlier start: set up beside again, no download
+        if (g_state.phase == UPDATE_OFFER && read_lines(mark, tag, sizeof tag, path, sizeof path) &&
+            !strcmp(tag, g_state.tag) && SDL_GetPathInfo(path, nullptr)) {
+            snprintf(g_state.path, sizeof g_state.path, "%s", path);
+            g_state.phase = UPDATE_READY;
+        }
+        prepare = g_state.phase == UPDATE_READY;
+    }
+    UpdateState s = g_state;
     SDL_UnlockMutex(g_lock);
     rt_log("update: ended with code %d", code);
+    if (prepare) {
+        write_lines(mark, s.tag, s.path);
+        prepare_next();
+    }
     return 0;
 }
 
-static bool spawn(const char *const *args) {
+static bool spawn(const char *const *args, bool preparing) {
+    g_preparing = preparing;
     g_proc = SDL_CreateProcess(args, true);
     if (!g_proc) {
         rt_log("update: cannot start %s: %s", args[0], SDL_GetError());
@@ -143,13 +224,15 @@ static bool spawn(const char *const *args) {
 void update_check_start(const char *exe_dir) {
     if (!g_lock) g_lock = SDL_CreateMutex();
     char python[1200], script[1200];
-    if (!cfg_bool("MKW_UPDATE_CHECK") || !installable(exe_dir, g_dest, sizeof g_dest) ||
+    if (g_proc || !cfg_bool("MKW_UPDATE_CHECK") || !installable(exe_dir, g_dest, sizeof g_dest) ||
         !find_tools(exe_dir, python, script, sizeof python))
         return;
+    snprintf(g_game, sizeof g_game, "%s", cfg_game_dir() ? cfg_game_dir() : "");
     g_state = UpdateState{};
     g_state.phase = UPDATE_CHECKING;
+    g_state.step = -1;
     const char *args[] = {python, "-I", script, "check", "--version", rt_port_version, nullptr};
-    if (!spawn(args)) g_state.phase = UPDATE_IDLE;
+    if (!spawn(args, false)) g_state.phase = UPDATE_IDLE;
 }
 
 void update_fetch_start(const char *exe_dir) {
@@ -163,7 +246,7 @@ void update_fetch_start(const char *exe_dir) {
     g_state.done = 0, g_state.total = s.bytes;
     SDL_UnlockMutex(g_lock);
     const char *args[] = {python, "-I", script, "fetch", "--tag", s.tag, "--dest", g_dest, nullptr};
-    if (!spawn(args)) set_state(fail, SDL_GetError());
+    if (!spawn(args, false)) set_state(fail, SDL_GetError());
 }
 
 UpdateState update_state(void) {
@@ -280,7 +363,10 @@ static void kept_appimage(const char *app, char *path, char *tag_path, size_t ca
 
 int update_apply(const char *exe_dir) {
     UpdateState s = update_state();
-    if (s.phase != UPDATE_READY) return 0;
+    if (s.phase != UPDATE_PREPARED && s.phase != UPDATE_READY) return 0;
+    char mark[1300];
+    ready_mark(mark, sizeof mark);
+    SDL_RemovePath(mark);   // installed: no later start sets it up beside again
 #ifdef _WIN32
     char why[1700];
     if (!swap_in(exe_dir, s.path, why, sizeof why)) {

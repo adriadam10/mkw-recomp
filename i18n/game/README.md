@@ -1,6 +1,9 @@
 # i18n/game
 
-The game's own texts in languages it does not ship, over one it does: `ca`, `gl` and `eu` over its Spain Spanish.
+The game's own texts in languages it does not ship, over one it does: `ca`, `gl` and `eu` over its Spain Spanish, `tr`
+over its British English. The letters a language needs and the game's fonts lack (Turkish ğ Ğ ş Ş İ) are composed
+into a copy of those fonts at setup from their own breve, dot and cedilla (`tools/i18n/game_fonts.py`), in the same
+overlay.
 Each `base/<lang>.tsv` has one `label<TAB>text` line per translated text; labels are the game's (`MsgMain/Menu/2203`), and
 only our translation is here, never Nintendo's text. A label left out stays in Spanish.
 
@@ -14,5 +17,5 @@ player into `lang/<lang>/`, and choosing the language in Settings > Game shows t
 
 | Folder | Contents |
 |---|---|
-| [base/](base/README.md) | One `<lang>.tsv` per language: Catalan, Galician, Basque |
+| [base/](base/README.md) | One `<lang>.tsv` per language: Catalan, Galician, Basque, Turkish |
 | `1.8.0/` | The texts 1.8.0 changed, per language |

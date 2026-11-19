@@ -15,7 +15,6 @@
 #include "platform/platform.h"
 
 #define MAX_HOSTFN 4096   // dispatch.c holds HOST_CAP / 2 host functions
-#define MAX_ADDED 64
 
 #ifdef _WIN32
 // PE/COFF: the linker sorts .ovr$a < .ovr$m (entries, host.h) < .ovr$z by the text after '$'.
@@ -49,8 +48,8 @@ typedef struct {
 } Slot;
 static Slot slots[MAX_HOSTFN];
 static int nslots;
-static RtHostEntry added[MAX_ADDED];
-static int nadded;
+static RtHostEntry *added;   // overrides from probes and plugins (plugin/plugin.c), any number
+static int nadded, cap_added;
 static int sealed;
 
 static GuestFn table_find(const RtHostEntry *start, const RtHostEntry *stop, const char *name) {
@@ -60,10 +59,17 @@ static GuestFn table_find(const RtHostEntry *start, const RtHostEntry *stop, con
     return NULL;
 }
 
+// The latest added override of name wins (a plugin loaded later over an earlier one), then the linked table.
 GuestFn hostfn_override(const char *name) {
-    for (int i = 0; i < nadded; i++)
+    for (int i = nadded - 1; i >= 0; i--)
         if (!strcmp(added[i].name, name)) return added[i].fn;
     return table_find(ovr_start, ovr_stop, name);
+}
+
+// The runtime's own handler of name (a linked override or observer), whatever was added over it.
+GuestFn hostfn_stock(const char *name) {
+    GuestFn f = table_find(ovr_start, ovr_stop, name);
+    return f ? f : table_find(obs_start, obs_stop, name);
 }
 
 GuestFn hostfn_observer(const char *name) { return table_find(obs_start, obs_stop, name); }
@@ -87,7 +93,10 @@ const char *hostfn_table_name(int observers, int i) {
 
 void hostfn_add_override(const char *name, GuestFn fn) {
     if (ldr_count()) rt_fatal("hostfn_add_override(%s) after ldr_load", name);
-    if (nadded == MAX_ADDED) rt_fatal("hostfn_add_override: more than %d", MAX_ADDED);
+    if (nadded == cap_added) {
+        cap_added = cap_added ? cap_added * 2 : 64;
+        if (!(added = realloc(added, (size_t)cap_added * sizeof *added))) rt_fatal("hostfn_add_override: out of memory");
+    }
     added[nadded++] = (RtHostEntry){name, fn};
 }
 

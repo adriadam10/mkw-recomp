@@ -120,6 +120,42 @@ static int test_deswizzle(void) {
     return 0;
 }
 
+// nvn_deswizzle_rows in bands of `band` rows, done in any order over the texture workers (vk_tex_upload.c's split of an
+// upload), against the whole level: the same bytes, and the padding past each row left alone.
+typedef struct { const nvn_texdesc *d; unsigned lv, layer; const uint8_t *store; uint8_t *lin; size_t pitch; uint32_t band; } RowsJob;
+static void rows_item(void *ctx, uint32_t i) {
+    const RowsJob *J = ctx;
+    nvn_deswizzle_rows(J->d, J->lv, J->layer, J->store, J->lin, J->pitch, i * J->band, (i + 1) * J->band, NULL);
+}
+static int check_rows(const nvn_texdesc *d, unsigned lv, unsigned layer) {
+    uint32_t rb, rows, sl, bpb, all = 0; uint64_t base; unsigned th, td;
+    if (nvn_deswizzle_geom(d, lv, layer, &rb, &rows, &sl, &base, &th, &td, &bpb)) { printf("probe-vkmem: FAIL rows geometry\n"); return 1; }
+    nvn_texlayout L;
+    nvn_tex_layout(d, &L);
+    size_t pitch = rb + 24, n = pitch * rows * sl;
+    uint8_t *store = malloc(L.size), *want = malloc(n), *got = malloc(n);
+    for (uint64_t i = 0; i < L.size; i++) store[i] = rnd8();
+    memset(want, 0x5A, n);
+    if (nvn_deswizzle(d, lv, layer, store, want, pitch)) { printf("probe-vkmem: FAIL rows reference\n"); return 1; }
+    for (uint32_t band = 1; band <= rows * sl + 1; band = band * 3 + 1) {
+        memset(got, 0x5A, n);
+        if (nvn_deswizzle_rows(d, lv, layer, store, got, pitch, 0, 0, &all) || all != rows * sl) {
+            printf("probe-vkmem: FAIL rows count format %#x level %u: %u, want %u\n", d->format, lv, all, rows * sl);
+            return 1;
+        }
+        RowsJob J = {d, lv, layer, store, got, pitch, band};
+        tex_par_for((all + band - 1) / band, rows_item, &J);
+        if (memcmp(got, want, n)) {
+            printf("probe-vkmem: FAIL rows format %#x target %d level %u layer %u in bands of %u differ from nvn_deswizzle\n",
+                   d->format, d->target, lv, layer, band);
+            return 1;
+        }
+        g_cases++;
+    }
+    free(store), free(want), free(got);
+    return 0;
+}
+
 // nvn_texels_box against the whole-level path on random boxes: a box read equals the box cut from the deswizzled level,
 // and a box write leaves the storage as deswizzle, overwrite the box, swizzle does (nothing outside the box changes).
 static int check_box(const nvn_texdesc *d, unsigned lv, unsigned layer) {
@@ -174,7 +210,9 @@ static int test_box(void) {
         nvn_texdesc da = {.target = 4, .format = fmt[i], .width = 96, .height = 80, .depth = 3, .levels = 2};
         nvn_texdesc d3 = {.target = 2, .format = fmt[i], .width = 72, .height = 40, .depth = 5, .levels = 2};
         for (unsigned lv = 0; lv < 2; lv++)
-            if (check_box(&d2, lv, 0) || check_box(&da, lv, 2) || check_box(&d3, lv, 0)) return 1;
+            if (check_box(&d2, lv, 0) || check_box(&da, lv, 2) || check_box(&d3, lv, 0) || check_rows(&d2, lv, 0) ||
+                check_rows(&da, lv, 2) || check_rows(&d3, lv, 0))
+                return 1;
     }
     return 0;
 }

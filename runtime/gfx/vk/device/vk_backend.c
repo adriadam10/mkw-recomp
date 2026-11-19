@@ -38,7 +38,8 @@ typedef struct { VkImage image; VkFormat format; int w, h, has_crop, crop[4]; ui
 static PlatMutex pl = PLAT_MUTEX_INIT;
 static PlatCond pcv = PLAT_COND_INIT;   // job queued, job taken, job submitted
 static PresentJob job;
-static int pending, busy, present_thread;
+static int pending, busy;
+static PlatThread *present_thread;   // kept, not detached: replay_core places it (MKW_SUBMIT_APART)
 
 // Sleeps on a high-resolution timer to 1 ms before at, then yields until at: the timer alone wakes up to ~0.5 ms late.
 static void wait_until(uint64_t at) {
@@ -163,10 +164,8 @@ static void present_image(const tex_t *t, const int crop[4], uint64_t at_ns, uin
     }
     vk_upload_flush(0);   // an upload vk_texture_get just recorded goes before the blit
     plat_mutex_lock(&pl);
-    if (!present_thread) {
-        if (!plat_thread_spawn(present_main, NULL, "vk present", 0)) rt_fatal("vk: cannot start the present thread");
-        present_thread = 1;
-    }
+    if (!present_thread && !(present_thread = plat_thread_new(present_main, NULL, "vk present")))
+        rt_fatal("vk: cannot start the present thread");
     while (pending) plat_cond_wait(&pcv, &pl);   // one present in waiting at most
     job = j;
     pending = 1;
@@ -298,8 +297,26 @@ static void held_wait(Held *h) {
 // a slow core for want of fast ones (#497) it stays off: 0.1.12's split, the one measured there. Off on Windows until measured
 // there: its scheduler places threads by their activity, and its process mask would also hold the background threads.
 #define FAST_CORES_MIN 8
+// MKW_SUBMIT_APART (default 1; 0 the old placement; "ab" in the B blocks only): the threads "vk submit" and "vk present"
+// with the frame's threads, not on the replay thread's processor. On Linux a thread starts on its creator's
+// processors, and both are started by the replay thread after it has pinned itself (the first part to defer, the
+// first present), so they shared its one processor: on an i7-14700F in a Grand Prix run, "vk replay", "vk submit" and
+// "vk present" on processor 14, every other frame thread on 0-13 (aff2, 18/11/2026). Each submit then waits for the
+// replay thread to give up its processor, so the replay thread sent more parts itself (vk_sync_parts_flush). In-run A/B
+// and its inverted twin (sb-ab0, sb-ab1, 18/11/2026, Grand Prix, 60 s): a part waited 34-39 us from its deferral to
+// its vkQueueSubmit2 together, 11-13 us apart; others than the submit thread sent 9.0-10.4 % of the parts together,
+// 1.5-2.3 % apart. The frame the same (-0.00 ms, scene balanced): that machine holds the 60 fps cap with the replay
+// thread at ~6.5 ms; a CPU the frame waits on (the 660M) was not measured. The present thread is not measured on its
+// own. They are moved by handle, at each change and when one starts (the next frame: one frame on the replay's
+// processor).
+static void helpers_place(uint64_t mask) {
+    PlatThread *h[2] = {vk_sync_submit_thread(), present_thread};
+    for (int i = 0; i < 2; i++)
+        if (h[i]) plat_thread_affinity(h[i], mask);
+}
+
 static void replay_core(void) {
-    static int mode = -1, fmode = 0, applied = 0, c = -1;
+    static int mode = -1, fmode = 0, smode = 0, applied = 0, placed = 0, c = -1;
     static uint64_t all, own, fast;
     if (mode < 0) {
         uint64_t first;
@@ -321,6 +338,10 @@ static void replay_core(void) {
             rt_log("vk: the replay thread alone on processor %d (the last of %d %s cores), the others off its core%s "
                    "(MKW_REPLAY_CORE)", c, __builtin_popcountll(pick), pick == first ? "physical" : "fastest",
                    mode == 2 ? " in the B blocks" : "");
+            smode = rt_knob("SUBMIT_APART", "1");
+            rt_log("vk: vk submit and vk present %s (MKW_SUBMIT_APART)",
+                   smode == 2 ? "with the frame's threads in the B blocks, on the replay's processor in the A blocks"
+                   : smode ? "with the frame's threads, off the replay's processor" : "on the replay's processor");
         } else {
             mode = 0;
         }
@@ -341,12 +362,16 @@ static void replay_core(void) {
                        "default needs %d (MKW_FAST_CORES=1 forces it)", left, FAST_CORES_MIN);
         }
     }
-    int on = RT_KNOB_ON(mode), fon = fmode ? RT_KNOB_ON(fmode) : 0, state = on | fon << 1;
-    if (state == applied) return;
-    applied = state;
+    int on = RT_KNOB_ON(mode), fon = fmode ? RT_KNOB_ON(fmode) : 0, son = smode ? RT_KNOB_ON(smode) : 0,
+        state = on | fon << 1 | son << 2, helpers = !!vk_sync_submit_thread() + !!present_thread;
+    if (state == applied && helpers == placed) return;
     uint64_t base = fon ? fast : all, others = on ? base & ~plat_cpu_core_of(c) : base;
-    plat_process_affinity(others);
-    plat_thread_affinity(NULL, on ? own : base);
+    if (state != applied) {
+        plat_process_affinity(others);
+        plat_thread_affinity(NULL, on ? own : base);
+    }
+    if (mode) helpers_place(on && !son ? own : others);
+    applied = state, placed = helpers;
 }
 
 // MKW_REPLAY_DELAY_US (a measurement, default 0): the replay thread waits that long before each

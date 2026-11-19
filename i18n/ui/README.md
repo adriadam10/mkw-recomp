@@ -7,7 +7,7 @@ The game's own texts are not here: the game ships them in 16 languages and picks
 |---|---|
 | `mkw.pot` | The English: each entry's `msgctxt` is its id in `runtime/gfx/nvn/host/ui_text.h`, its `msgid` the English text |
 | `ja.po`, `fr.po`, `de.po`, `it.po`, `es.po`, `nl.po`, `pt.po`, `pt-BR.po`, `ru.po`, `zh-Hans.po`, `zh-Hant.po`, `ko.po` | One translation per language the game ships |
-| `es-419.po`, `ca.po`, `gl.po`, `eu.po`, `pl.po`, `tr.po`, `uk.po`, `th.po` | Menu languages the game's first version does not ship: its texts are then in Spanish (ca, gl, eu) or English (tr, uk); `pl` and `th` are in the game itself since its updates 1.5.0 and 1.7.0 (a 1.8.0 dump) |
+| `es-419.po`, `ca.po`, `gl.po`, `eu.po`, `pl.po`, `tr.po`, `uk.po`, `th.po` | Menu languages the game's first version does not ship: its texts are then in Spanish (ca, gl, eu) or English (uk), and in our own translations of the game (ca, gl, eu, tr: `i18n/game`); `pl` and `th` are in the game itself since its updates 1.5.0 and 1.7.0 (a 1.8.0 dump) |
 
 The first translation of each language is ours, with the game's own words for its modes and items
 (`tools/i18n/game_texts.py`); corrections by native speakers are welcome.

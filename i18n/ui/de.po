@@ -8,6 +8,21 @@ msgctxt "UI_SWKBD_DEFAULT_NAME"
 msgid "Player"
 msgstr "Spieler"
 
+#. The on-screen number pad the game opens to ask for a number: its confirm key (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_OK"
+msgid "OK"
+msgstr "OK"
+
+#. The on-screen number pad: the wide button under the keys that closes it without a number
+msgctxt "UI_KEYPAD_CANCEL"
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#. The on-screen number pad: the key that erases the last digit (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_DELETE"
+msgid "Delete"
+msgstr "Löschen"
+
 msgctxt "UI_MENU_TITLE"
 msgid "Settings"
 msgstr "Einstellungen"
@@ -835,6 +850,35 @@ msgctxt "UI_MENU_ICONS_IN_USE"
 msgid "in use: %s"
 msgstr "in Verwendung: %s"
 
+msgctxt "UI_MENU_MENU_SHORTCUT"
+msgid "Menu shortcut"
+msgstr "Menü-Shortcut"
+
+msgctxt "UI_MENU_MENU_SHORTCUT_DESC"
+msgid ""
+"Choose which controller input opens this menu (Start + Select or the Guide button). Keyboard "
+"defaults to F1 or Esc."
+msgstr ""
+"Wähle, welche Controller-Eingabe dieses Menü öffnet (Start + Select oder die Guide-Taste). "
+"Tastatur: standardmäßig F1 oder Esc."
+
+msgctxt "UI_MENU_SHORTCUT_MINUS_PLUS"
+msgid "Start + Select"
+msgstr "Start + Select"
+
+msgctxt "UI_MENU_SHORTCUT_GUIDE"
+msgid "Guide button"
+msgstr "Guide-Taste"
+
+msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
+msgid ""
+"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
+"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+msgstr ""
+"Hinweis: Bei Verwendung der Guide-Taste empfehlen wir, in Steam 'Guide button focuses Steam' zu "
+"deaktivieren (Einstellungen -> Controller -> Erweiterte Einstellungen), damit sich Steam nicht "
+"über das Spiel legt."
+
 msgctxt "UI_BINDS_HELP"
 msgid ""
 "Select a cell and press A or Enter, then the key, mouse button or controller button. Delete or X "
@@ -911,11 +955,12 @@ msgstr "Spieler %d: %s"
 msgctxt "UI_MENU_PAD_BATTERY_DESC"
 msgid ""
 "The battery of each player's controller, as the controller reports it. Some controllers report "
-"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+"none. A Switch 2 controller over Bluetooth reports a voltage and an Xbox controller on Linux's "
+"xone driver a level, each shown as high, medium or low."
 msgstr ""
 "Der Akku des Controllers jedes Spielers, wie der Controller ihn meldet. Manche Controller melden "
-"keinen. Ein Switch 2-Controller über Bluetooth meldet eine Spannung, angezeigt als hoch, mittel "
-"oder niedrig."
+"keinen. Ein Switch 2-Controller über Bluetooth meldet eine Spannung und ein Xbox-Controller unter "
+"Linux mit dem xone-Treiber einen Ladestand, jeweils angezeigt als hoch, mittel oder niedrig."
 
 msgctxt "UI_MENU_PADS_NONE"
 msgid "No controller connected"
@@ -2313,6 +2358,14 @@ msgstr ""
 "Mod eventuell nicht angezeigt oder zerstört das Bild"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
+msgctxt "UI_MOD_PLUGIN"
+msgid ""
+"Native plugin: runs its own program on your computer alongside the game. Enable it only if you "
+"trust where it comes from"
+msgstr ""
+"Natives Plugin: führt neben dem Spiel ein eigenes Programm auf deinem Computer aus. Aktiviere es "
+"nur, wenn du seiner Herkunft vertraust"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "Code: Das Ein- oder Ausschalten erstellt den Spielcode vor dem Spielen neu (einige Minuten)"
@@ -2373,6 +2426,22 @@ msgstr "Neuigkeiten"
 msgctxt "UI_LAUNCH_RETRY"
 msgid "Try again"
 msgstr "Erneut versuchen"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARING"
+msgid "Setting up %s in the background. You can keep playing meanwhile."
+msgstr "%s wird im Hintergrund eingerichtet. Du kannst währenddessen weiterspielen."
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARED"
+msgid "%s is ready"
+msgstr "%s ist bereit"
+
+msgctxt "UI_LAUNCH_UPDATE_RESTART"
+msgid "Restart with it"
+msgstr "Damit neu starten"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
+msgid "It could not be set up in advance (%s): it will be set up when it starts."
+msgstr "Konnte nicht vorab eingerichtet werden (%s): Dies geschieht beim Start."
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.

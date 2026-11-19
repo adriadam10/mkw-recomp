@@ -167,6 +167,46 @@ void vk_glyphs_redo(void) {
     unlock();
 }
 
+// The deswizzle of an upload, over the texture workers (tex_par.c): each level and layer in bands of block rows, so the
+// first level (three quarters of the bytes) spreads too. It ran serially on the replay thread, ~44 ms of the course
+// load's 1.5 s peak (tl-fp1, 16/11/2026), at memcpy speed (16-25 GB/s on an i7-14700F, tex_bl_copy); the bands write
+// apart, so the staging bytes are the same. Storage that has no row split (linear, or no CPU layout) is one item.
+// Measured on replays of four captures (RX 6700 XT, i7-14700F, 17/11/2026; MKW_TEX_PAR=0 against 1, same images):
+// textures of 512 KiB or more 16.0-17.0 -> 7.9-8.4 ms per capture (title, tt8, photo: 2x with 8 threads), the
+// smaller ones left on the caller (5-11 ms over 400-900 uploads of ~140 KiB: waking the workers for each would cost
+// what it saves). gp397's whole deswizzle: 19.7 -> 15.4 ms with this threshold, 19.5 -> 16.0 with 1 MiB.
+#define UP_BAND (128u << 10)        // bytes of a band
+#define UP_PAR_MIN (512ull << 10)   // a smaller texture deswizzles on the caller
+typedef struct {
+    uint8_t *dst, *tmp;            // where its rows go (tmp: the CPU decodes' input, freed by upload)
+    size_t pitch;
+    uint32_t level, layer;
+    uint32_t band, first;          // block rows per item (0: one nvn_deswizzle), its first item
+    int bad;                       // no CPU layout: uploaded as zeros
+} UpPart;
+typedef struct {
+    const nvn_texdesc *d;
+    const void *mem;
+    UpPart *pt;
+    uint32_t n;
+} UpJob;
+
+static void up_deswizzle(void *ctx, uint32_t i) {
+    const UpJob *J = ctx;
+    uint32_t lo = 0, hi = J->n - 1;   // the last part whose first item is at most i
+    while (lo < hi) {
+        uint32_t mid = (lo + hi + 1) / 2;
+        if (J->pt[mid].first <= i) lo = mid; else hi = mid - 1;
+    }
+    UpPart *q = &J->pt[lo];
+    if (!q->band) {
+        q->bad = nvn_deswizzle(J->d, q->level, q->layer, J->mem, q->dst, q->pitch) != 0;
+        return;
+    }
+    uint32_t r0 = (i - q->first) * q->band;
+    nvn_deswizzle_rows(J->d, q->level, q->layer, J->mem, q->dst, q->pitch, r0, r0 + q->band, NULL);
+}
+
 static void upload(Tex *e) {
     static volatile int32_t n_bad, n_undecoded;
     if (tracing(e->pub.addr))
@@ -208,14 +248,47 @@ static void upload(Tex *e) {
     uint8_t *stg;
     VkCommandBuffer cb = vk_upload_begin_staging(total, &sb, (void **)&stg);
     uint8_t *rmap = acheck ? vk_staging(decoded, &rbuf, &ralloc) : NULL;
+    UpPart *pt = calloc(n, sizeof *pt);
+    uint32_t items = 0;
+    uint64_t raw_all = 0;
+    k = 0;
+    for (uint32_t lv = 0; lv < levels; lv++)
+        for (uint32_t ly = 0; ly < layers; ly++, k++) {
+            uint32_t w = rg[k].imageExtent.width, h = rg[k].imageExtent.height, sl = rg[k].imageExtent.depth;
+            uint32_t rb = (w + bw - 1) / bw * (uint32_t)bpb, rows = (h + bh - 1) / bh, all = 0;
+            size_t raw = (size_t)rb * rows * sl;
+            UpPart *q = &pt[k];
+            q->level = lv + drop, q->layer = ly, q->pitch = rb, q->first = items;
+            q->tmp = (astc && !agpu) || rgb ? malloc(raw) : NULL;
+            q->dst = q->tmp ? q->tmp : stg + rg[k].bufferOffset;
+            if (!nvn_deswizzle_rows(d, q->level, ly, t->mem, q->dst, rb, 0, 0, &all) && all)
+                q->band = UP_BAND / rb ? UP_BAND / rb : 1;
+            items += q->band ? (all + q->band - 1) / q->band : 1;
+            raw_all += raw;
+        }
+    UpJob job = {d, t->mem, pt, n};
+    uint64_t dz0 = plat_now_ns();
+    if (raw_all >= UP_PAR_MIN) tex_par_for(items, up_deswizzle, &job);
+    else for (uint32_t i = 0; i < items; i++) up_deswizzle(&job, i);
+    if (rt_trace & RT_TRACE_PERF) {   // MKW_TRACE=perf: the deswizzle's wall time on this thread, split and not
+        static volatile int64_t dz_ns[2], dz_bytes[2];
+        static volatile int32_t dz_n;
+        int split = raw_all >= UP_PAR_MIN;
+        __atomic_add_fetch(&dz_ns[split], (int64_t)(plat_now_ns() - dz0), __ATOMIC_RELAXED);
+        __atomic_add_fetch(&dz_bytes[split], (int64_t)raw_all, __ATOMIC_RELAXED);
+        if (plat_inc32(&dz_n) % 256 == 0)
+            rt_log("perf: upload deswizzle: %d uploads; over the texture workers %.1f MiB in %.1f ms, on the caller "
+                   "(under %llu KiB) %.1f MiB in %.1f ms", dz_n, dz_bytes[1] / 1048576.0, dz_ns[1] / 1e6,
+                   UP_PAR_MIN >> 10, dz_bytes[0] / 1048576.0, dz_ns[0] / 1e6);
+    }
     k = 0;
     for (uint32_t lv = 0; lv < levels; lv++)
         for (uint32_t ly = 0; ly < layers; ly++, k++) {
             uint32_t w = rg[k].imageExtent.width, h = rg[k].imageExtent.height, sl = rg[k].imageExtent.depth;
             uint32_t rb = (w + bw - 1) / bw * (uint32_t)bpb, rows = (h + bh - 1) / bh;
             size_t raw = (size_t)rb * rows * sl;
-            uint8_t *dst = stg + rg[k].bufferOffset, *tmp = (astc && !agpu) || rgb ? malloc(raw) : NULL;
-            if (nvn_deswizzle(d, lv + drop, ly, t->mem, tmp ? tmp : dst, rb)) {
+            uint8_t *dst = stg + rg[k].bufferOffset, *tmp = pt[k].tmp;
+            if (pt[k].bad) {
                 log_limited(&n_bad, "texture %#llx fmt %#x target %d: level %u layer %u has no CPU layout; uploaded as zeros",
                             (unsigned long long)e->pub.addr, d->format, d->target, lv, ly);
                 memset(tmp ? tmp : dst, 0, raw);
@@ -242,6 +315,7 @@ static void upload(Tex *e) {
             }
             free(tmp);
         }
+    free(pt);
     uint8_t *raw_copy = acheck ? malloc(total) : NULL;
     if (raw_copy) memcpy(raw_copy, stg, total);
     barrier(cb, ALL_RW, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT);

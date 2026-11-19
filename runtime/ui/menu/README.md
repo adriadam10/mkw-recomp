@@ -6,6 +6,7 @@ The in-game menu (F1) and what it shares with the start screen: look, settings t
 |---|---|
 | `menu.cpp`, `menu.h` | Menu core: ImGui state, event queue, controller navigation, Vulkan back end and pages; `menu_choice`, a question with buttons over the game (local players or Remote Play Together); no window system |
 | `menu_notice.cpp`, `menu_notice.h` | `menu_notice`: a timed line at the top of the picture, menu open or not (missing controllers) |
+| `text_entry.cpp`, `text_entry.h` | The number pad of a software keyboard request for a number or a code (`sdk/swkbd/swkbd_sdl.c`): drawn in the overlay, worked with a controller, the mouse or the keys; `MKW_KEYPAD_TEST=<frame>` opens one to try it |
 | `menu_sdl.cpp` | Event adapter for the SDL3 window |
 | `settings_tabs.cpp`, `settings_tabs.h` | The settings tabs (bar and rows of each tab), shared by the menu and the start screen; the Controls tab starts with each player's controller and its battery while the game runs |
 | `menu_look.cpp`, `menu_look.h` | Colours and sizes of the menu, and the fonts it shares with the start screen (embedded Roboto) |

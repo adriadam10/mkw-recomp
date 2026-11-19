@@ -18,6 +18,7 @@ behind that code was seen there, not in MKW.
 | [steam/](steam/README.md) | Steam Remote Play Together (off unless `steam_appid` is set): guests' controllers and keyboards as players |
 | [gfx/](gfx/README.md) | NVN over Vulkan: API front end (`nvn/`) and back end (`vk/`) |
 | [platform/](platform/README.md) | Operating system layer: `linux.c`, `win32.c` |
+| [plugin/](plugin/README.md) | Native plugins of the enabled mods and the API they get (`mkw_plugin.h`) |
 | [ui/](ui/README.md) | Menu and overlay (Dear ImGui) |
 | [shaders/](shaders/README.md) | The runtime's own shaders (ASTC, FSR 1) |
 | [probes/](probes/README.md) | Self-tests per subsystem |

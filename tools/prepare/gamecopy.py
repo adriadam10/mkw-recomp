@@ -15,9 +15,20 @@ from machine import Failed, emit
 COPY_JOBS = 6  # files copied at once: NTFS creates ~170 small files a second from one stream, ~460 from six (Windows test PC, 08/11/2026)
 
 
-def copy_one(s: Path, t: Path) -> None:
-    """One file, unless already there with the same size (resume); through .part, so a cut copy is never taken."""
-    if t.is_file() and t.stat().st_size == s.stat().st_size:
+def same_contents(s: Path, t: Path) -> bool:
+    """Check equal-sized files when the destination can contain bytes from another version."""
+    if s.samefile(t):
+        return True
+    with s.open("rb") as source, t.open("rb") as target:
+        while block := source.read(1 << 20):
+            if block != target.read(len(block)):
+                return False
+        return not target.read(1)
+
+
+def copy_one(s: Path, t: Path, *, verify_existing: bool = False) -> None:
+    """Keep a complete copy, or write through .part so an interrupted copy is never taken."""
+    if t.is_file() and t.stat().st_size == s.stat().st_size and (not verify_existing or same_contents(s, t)):
         return
     part = t.with_name(t.name + ".part")
     shutil.copyfile(s, part)
@@ -64,7 +75,7 @@ def clear_dir(d: Path, src: Path) -> None:
         print(f"copy: {d} emptied before unpacking {src}", file=sys.stderr)
 
 
-def copy_tree(src: Path, dst: Path, total: int, version: str = "") -> None:
+def copy_tree(src: Path, dst: Path, total: int, version: str = "", *, verify_existing: bool = False) -> None:
     """src into dst with progress, COPY_JOBS files at a time: the RomFS's 205 660 files one by one were most of a
     copy's time on Windows, where creating a file costs more than its bytes. With version, then the files src does
     not have are removed (remove_stale), so the folder is src's."""
@@ -75,7 +86,7 @@ def copy_tree(src: Path, dst: Path, total: int, version: str = "") -> None:
         for d, _, files in os.walk(src):
             out = dst / Path(d).relative_to(src)
             out.mkdir(parents=True, exist_ok=True)
-            pending += [pool.submit(copy_one, Path(d, f), out / f) for f in files]
+            pending += [pool.submit(copy_one, Path(d, f), out / f, verify_existing=verify_existing) for f in files]
             kept.update(Path(d, f).relative_to(src).as_posix() for f in files)
         for fut in as_completed(pending):
             fut.result()

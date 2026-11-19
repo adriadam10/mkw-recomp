@@ -18,7 +18,8 @@ Usage: python -I update.py check --version VER [--os linux|windows]
        python -I update.py fetch --tag TAG --dest DIR [--os linux|windows]
        python -I update.py clean --game DIR [--previous VERSION]
 MKW_UPDATE_REPO=owner/name (default adriadam10/mkw-recomp) and MKW_UPDATE_AS=<version> (compare as that version: a
-test) change what is asked.
+test) change what is asked; MKW_UPDATE_API=<url> asks <url>/releases/latest instead of GitHub's (a test: a local
+server offering a package not released).
 """
 
 import argparse
@@ -93,7 +94,8 @@ def version_key(v: str) -> tuple[int, int, int] | None:
 
 
 def latest_asset(os_name: str) -> tuple[str, dict]:
-    with get(f"https://api.github.com/repos/{REPO}/releases/latest", CHECK_TIMEOUT) as r:
+    api = os.environ.get("MKW_UPDATE_API") or f"https://api.github.com/repos/{REPO}"
+    with get(f"{api}/releases/latest", CHECK_TIMEOUT) as r:
         rel = json.load(r)
     if rel.get("draft") or rel.get("prerelease"):
         raise ValueError("the latest release is not a published one")
@@ -175,7 +177,7 @@ def clean(args: argparse.Namespace) -> None:
                     shutil.rmtree(p) if p.is_dir() and not p.is_symlink() else p.unlink()
                 n += 1
                 break
-            except OSError:   # a running exe on Windows; in keep/, a leftover entry the previous clean-up left
+            except OSError:  # a running exe on Windows; in keep/, a leftover entry the previous clean-up left
                 time.sleep(1)
     shutil.rmtree(game / "update", ignore_errors=True)
     emit("cleaned", n)

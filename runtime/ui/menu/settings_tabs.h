@@ -9,6 +9,7 @@ enum { TAB_SCREEN, TAB_GRAPHICS, TAB_SOUND, TAB_CONTROLS, TAB_GENERAL, TAB_ADVAN
 void settings_list_gpus(VkInstance inst);   // once: the Vulkan devices the Screen tab offers (MKW_GPU_INDEX)
 void settings_select(int tab);              // that tab at the next layout
 void settings_opened(void);                 // the pages were (re)opened: the first row takes the cursor
+void settings_opened_menu(void);            // the in-game menu opened: no row takes the cursor, "Continue" does
 bool settings_modal(void);                  // a confirmation or a key capture is open: B and Esc are its own
 void settings_tabs(float scale, float bottom);   // the tab bar and the shown page; bottom: height kept below it
 void settings_tabs_done(void);              // after the window's own B / Esc handling, each frame

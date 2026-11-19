@@ -53,6 +53,13 @@ APPRUN = """#!/bin/sh
 # the game the setup builds; setup/ and the libraries stay in the mount.
 set -eu
 here=$(dirname "$(readlink -f "$0")")
+if [ "${1:-}" = --prepare-next ]; then
+    # the start screen of the version still played sets this one up beside it (prepare.py --next): this package's
+    # tools, and no copy of its mkw over the one running
+    shift
+    export LD_LIBRARY_PATH="$here/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    exec "$here/setup/python/bin/python3" -I "$here/setup/src/tools/prepare/prepare.py" --runtime "$here" --next "$@"
+fi
 home=${XDG_DATA_HOME:-$HOME/.local/share}/mkw-recomp
 mkdir -p "$home"
 if ! cmp -s "$here/mkw" "$home/mkw"; then

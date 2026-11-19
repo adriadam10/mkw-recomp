@@ -24,3 +24,4 @@ int setup_tool(const char *exe_dir, const char *rel, char *python, char *script,
 void setup_start(const char *exe_dir, const char *game_dir, const char *source, int link_romfs);
 void setup_cancel(void);
 SetupState setup_state(void);                // a copy, any time
+int setup_step_index(const char *name);      // a step's name in prepare.py's events: its index, -1 when unknown

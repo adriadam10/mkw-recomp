@@ -122,7 +122,7 @@ def search(roots: list[Path], game: Path | None, seconds: float, emit) -> int:
     for root in roots:
         stack = [(root, 0)]
         while stack:
-            if time.monotonic() > end or found >= MAX_FOUND:
+            if time.monotonic() >= end or found >= MAX_FOUND:
                 return found
             d, depth = stack.pop()
             try:
@@ -138,27 +138,30 @@ def search(roots: list[Path], game: Path | None, seconds: float, emit) -> int:
                 found += 1
                 continue  # a copy's own folders hold no other copy
             try:
-                entries = list(os.scandir(d))
+                with os.scandir(d) as entries:
+                    while found < MAX_FOUND and time.monotonic() < end:
+                        e = next(entries, None)
+                        if e is None:
+                            break
+                        name = e.name
+                        try:
+                            if e.is_file(follow_symlinks=False):
+                                low = name.lower()
+                                if low.endswith(".nup"):
+                                    v = nup_version(Path(e.path))
+                                    if v:
+                                        emit("nup", v, Path(e.path))
+                                        found += 1
+                                elif low.endswith(".nx") and is_nx(Path(e.path)):
+                                    emit("nx", "?", Path(e.path))
+                                    found += 1
+                            elif e.is_dir(follow_symlinks=False) and depth < DEPTH:
+                                if not name.startswith(".") and name not in SKIP:
+                                    stack.append((Path(e.path), depth + 1))
+                        except OSError:
+                            continue
             except OSError:
                 continue
-            for e in entries:
-                name = e.name
-                try:
-                    if e.is_file(follow_symlinks=False):
-                        low = name.lower()
-                        if low.endswith(".nup"):
-                            v = nup_version(Path(e.path))
-                            if v:
-                                emit("nup", v, Path(e.path))
-                                found += 1
-                        elif low.endswith(".nx") and is_nx(Path(e.path)):
-                            emit("nx", "?", Path(e.path))
-                            found += 1
-                    elif e.is_dir(follow_symlinks=False) and depth < DEPTH:
-                        if not name.startswith(".") and name not in SKIP:
-                            stack.append((Path(e.path), depth + 1))
-                except OSError:
-                    continue
     return found
 
 

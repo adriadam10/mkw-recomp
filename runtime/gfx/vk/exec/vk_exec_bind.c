@@ -404,22 +404,26 @@ static void tex_info(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage,
                       .separate = (uint8_t)separate, .valid = 1, .image = image, .out = *out};
 }
 
-static void support_in(const VkExec *ex, float in[3]) {   // what support_fill reads: viewport size, point size
+// What support_fill reads: viewport size, point size and the alpha test's reference (0 with the test off, so a
+// reference the game sets for no test makes no new buffer).
+static void support_in(const VkExec *ex, float in[SUP_IN]) {
     in[0] = ex->in_pass && ex->has_vp ? ex->vp[0][2] : (float)ex->pass_w;
     in[1] = ex->in_pass && ex->has_vp ? ex->vp[0][3] : (float)ex->pass_h;
     in[2] = ex->point_size > 0 ? ex->point_size : 1.0f;
+    int at = ex->pipe.color.alpha_func && ex->pipe.color.alpha_func != NVN_ALPHA_FUNC_ALWAYS;
+    in[3] = at ? ex->alpha_ref : 0;
 }
 
-static void support_fill(uint8_t *b, float w, float h, float point_size);
+static void support_fill(uint8_t *b, const float in[SUP_IN]);
 
 // The support buffer for the bound viewport and point size: the last one of this command buffer when its inputs or
 // contents are the same, else a new one in scratch.
 static VkDescriptorBufferInfo support_info(VkExec *ex) {
-    float in[3];
+    float in[SUP_IN];
     support_in(ex, in);
     if (!B.sup_valid || memcmp(in, B.sup_in, sizeof in)) {   // support_fill reads only these
         uint8_t tmp[SUPPORT_BYTES];
-        support_fill(tmp, in[0], in[1], in[2]);
+        support_fill(tmp, in);
         memcpy(B.sup_in, in, sizeof in);
         if (!B.sup_valid || memcmp(tmp, B.support, SUPPORT_BYTES)) {   // a new buffer only when the contents changed
             VkBuffer sb;
@@ -432,8 +436,11 @@ static VkDescriptorBufferInfo support_info(VkExec *ex) {
     return (VkDescriptorBufferInfo){B.sup_buf, B.sup_off, SUPPORT_BYTES};
 }
 
-static void support_fill(uint8_t *b, float w, float h, float point_size) {
+// The alpha test's reference goes in the first float, Ryujinx's FragmentAlphaTest slot (spirv_alpha_test reads it).
+static void support_fill(uint8_t *b, const float in[SUP_IN]) {
+    float w = in[0], h = in[1], point_size = in[2];
     memset(b, 0, SUPPORT_BYTES);
+    memcpy(b, &in[3], 4);
     float inv[4] = {w > 0 ? 2.0f / w : 0, h > 0 ? 2.0f / h : 0, 0, 0}, size[4] = {w, h, 0, 0};
     memcpy(b + 144, inv, 16);
     memcpy(b + 160, size, 16);
@@ -593,13 +600,12 @@ static int bind_sig(const VkExec *ex, const VkPipeInfo *info) {
     PUT(vk_mem_gen() + vk_usnap_gen());   // both only grow
     for (int i = 0; i < ex->nfbl && i < 9; i++) PUT((uintptr_t)ex->fbl_img[i]);
     if (l->sup) {
-        float in[3];
+        float in[SUP_IN];
         support_in(ex, in);
-        uint64_t a;
-        uint32_t ps;
-        memcpy(&a, in, 8), memcpy(&ps, &in[2], 4);
+        uint64_t a, b;
+        memcpy(&a, in, 8), memcpy(&b, &in[2], 8);
         PUT(a);
-        PUT(ps);
+        PUT(b);
     }
     if (l->c0) PUT(c0_binst);
     for (int i = 0; i < l->np; i++) PUT(ubo_ptr(ex, l->p[i].st, l->p[i].res));

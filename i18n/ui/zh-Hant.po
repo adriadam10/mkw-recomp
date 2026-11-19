@@ -8,6 +8,21 @@ msgctxt "UI_SWKBD_DEFAULT_NAME"
 msgid "Player"
 msgstr "玩家"
 
+#. The on-screen number pad the game opens to ask for a number: its confirm key (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_OK"
+msgid "OK"
+msgstr "確定"
+
+#. The on-screen number pad: the wide button under the keys that closes it without a number
+msgctxt "UI_KEYPAD_CANCEL"
+msgid "Cancel"
+msgstr "取消"
+
+#. The on-screen number pad: the key that erases the last digit (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_DELETE"
+msgid "Delete"
+msgstr "刪除"
+
 msgctxt "UI_MENU_TITLE"
 msgid "Settings"
 msgstr "設定"
@@ -759,6 +774,31 @@ msgctxt "UI_MENU_ICONS_IN_USE"
 msgid "in use: %s"
 msgstr "正在使用：%s"
 
+msgctxt "UI_MENU_MENU_SHORTCUT"
+msgid "Menu shortcut"
+msgstr "選單快速鍵"
+
+msgctxt "UI_MENU_MENU_SHORTCUT_DESC"
+msgid ""
+"Choose which controller input opens this menu (Start + Select or the Guide button). Keyboard "
+"defaults to F1 or Esc."
+msgstr "選擇哪個控制器輸入開啟此選單(Start + Select 或 Guide 按鈕)。鍵盤預設為 F1 或 Esc。"
+
+msgctxt "UI_MENU_SHORTCUT_MINUS_PLUS"
+msgid "Start + Select"
+msgstr "Start + Select"
+
+msgctxt "UI_MENU_SHORTCUT_GUIDE"
+msgid "Guide button"
+msgstr "Guide 按鈕"
+
+msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
+msgid ""
+"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
+"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+msgstr ""
+"注意:如果使用 Guide 按鈕,建議在 Steam 中關閉 'Guide button focuses Steam'(設定 -> 控制器 -> 進階設定),以免 Steam 蓋在遊戲上開啟。"
+
 msgctxt "UI_BINDS_HELP"
 msgid ""
 "Select a cell and press A or Enter, then the key, mouse button or controller button. Delete or X "
@@ -831,8 +871,11 @@ msgstr "玩家%d：%s"
 msgctxt "UI_MENU_PAD_BATTERY_DESC"
 msgid ""
 "The battery of each player's controller, as the controller reports it. Some controllers report "
-"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
-msgstr "每位玩家控制器的電量，以控制器回報的為準。有些控制器不回報電量。透過藍牙連接的 Switch 2 控制器回報的是電壓，顯示為高、中、低。"
+"none. A Switch 2 controller over Bluetooth reports a voltage and an Xbox controller on Linux's "
+"xone driver a level, each shown as high, medium or low."
+msgstr ""
+"每位玩家控制器的電量，以控制器回報的為準。有些控制器不回報電量。透過藍牙連接的 Switch 2 控制器回報的是電壓，Linux 上使用 xone 驅動程式的 Xbox "
+"控制器回報的是等級，均顯示為高、中、低。"
 
 msgctxt "UI_MENU_PADS_NONE"
 msgid "No controller connected"
@@ -2193,6 +2236,12 @@ msgid ""
 msgstr "取代著色器：移植版在設定過程中轉換遊戲的著色器，因此此模組可能無法顯示，或導致畫面異常"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
+msgctxt "UI_MOD_PLUGIN"
+msgid ""
+"Native plugin: runs its own program on your computer alongside the game. Enable it only if you "
+"trust where it comes from"
+msgstr "原生外掛：會在你的電腦上與遊戲一同執行它自己的程式。僅在信任其來源時啟用"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "程式碼：開啟或關閉會在遊玩前重新建置遊戲程式碼（需幾分鐘）"
@@ -2250,6 +2299,22 @@ msgstr "新功能"
 msgctxt "UI_LAUNCH_RETRY"
 msgid "Try again"
 msgstr "重試"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARING"
+msgid "Setting up %s in the background. You can keep playing meanwhile."
+msgstr "正在背景準備 %s。在此期間可以繼續遊戲。"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARED"
+msgid "%s is ready"
+msgstr "%s 已準備就緒"
+
+msgctxt "UI_LAUNCH_UPDATE_RESTART"
+msgid "Restart with it"
+msgstr "用它重新啟動"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
+msgid "It could not be set up in advance (%s): it will be set up when it starts."
+msgstr "無法提前準備（%s）：將在啟動時準備。"
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.

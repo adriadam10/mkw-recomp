@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Refuse a commit message in Spanish: this repo is public and its commits go in English (6319339 and 8d49747 reached
+# main in Spanish, 17/11/2026). The subject fails with ñ, an accented vowel, ¿¡ or one common Spanish word; the body
+# when those words are over 8% of it, leaving out lines that quote text ("…" or ->), as fixes of es-419 strings or a
+# player's path do.
+# Installed by: git config core.hooksPath tools/git   (git runs it with the message file as $1)
+set -euo pipefail
+
+words='la|los|las|del|que|con|para|una|sin|también|ahora|cuando|desde|ya|pero'
+count() { (grep -o -i -w -E "$1" <<<"$2" || true) | wc -l; }
+lines=$(grep -v -E '^(#|[A-Za-z-]+: )' "$1" || true)   # no git template, no trailers (Co-Authored-By)
+subject=$(head -n1 <<<"$lines")
+body=$(tail -n +2 <<<"$lines" | grep -v -E '"|->' || true)
+if grep -q -E '[ñÑáéíóúÁÉÍÓÚ¿¡]' <<<"$subject" || (($(count "$words" "${subject#*: }") > 0)) ||
+    (($(count "$words" "$body") * 100 > $(count '[[:alpha:]]+' "$body") * 8)); then
+    echo "commit-msg: the message looks Spanish; commits in this repo go in English" >&2
+    exit 1
+fi

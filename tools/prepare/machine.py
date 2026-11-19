@@ -8,6 +8,8 @@ import json
 import os
 import subprocess
 import sys
+import time
+from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/build"))
@@ -15,8 +17,13 @@ import build  # (mem_total_gb, windows_memory_gb)
 
 
 def emit(*words: object) -> None:
-    """One event for the start screen (stdout) and the same line for logs/setup.log (stderr)."""
-    print(*words, flush=True)
+    """One event for the start screen (stdout) and the same line for logs/setup.log (stderr). A start screen that is
+    gone (the player closed the game while an update was set up beside it, prepare.py --next) does not stop the setup:
+    its events go on to the log alone, and the next start resumes from the state."""
+    try:
+        print(*words, flush=True)
+    except OSError:  # BrokenPipeError on Linux, EINVAL on Windows
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
     print(*words, file=sys.stderr)
 
 
@@ -110,6 +117,31 @@ def tool_env(glslc: str) -> dict[str, str]:
     return env
 
 
+def hold_lock(game: Path) -> object:
+    """<game>/setup.lock held until this process ends; a second setup of the folder waits for the first. Why: an update
+    set up in the background (prepare.py --next) may still run, its start screen closed, when the next start resumes
+    it or the player sets up again; two at once wrote the same setup-work. Returns the open file (keep it)."""
+    f = open(game / "setup.lock", "a+b")  # noqa: SIM115
+    waited = False
+    while True:
+        try:
+            if os.name == "nt":
+                import msvcrt  # noqa: PLC0415
+
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl  # noqa: PLC0415
+
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return f
+        except OSError:
+            if not waited:
+                print("setup: another setup of this folder is running: waiting for it", file=sys.stderr)
+                waited = True
+            time.sleep(2)
+
+
 def own_children() -> None:
     """A cancel from the start screen ends this process: its tools (gen.py's workers, the compilers, glslc) must end with
     it. POSIX: our own process group, killed on SIGTERM. Windows: a job object that kills its processes when its last
@@ -140,7 +172,36 @@ def own_children() -> None:
     lim = Limits()
     ctypes.c_uint32.from_buffer(lim.basic, 16).value = 0x2000  # LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
     k32.SetInformationJobObject(wintypes.HANDLE(job), 9, ctypes.byref(lim), ctypes.sizeof(lim))
-    k32.AssignProcessToJobObject(wintypes.HANDLE(job), wintypes.HANDLE(k32.GetCurrentProcess()))
+    if k32.AssignProcessToJobObject(wintypes.HANDLE(job), wintypes.HANDLE(k32.GetCurrentProcess())):
+        global _JOB
+        _JOB = job
+
+
+_JOB = None  # own_children's job on Windows: children_cpu reads its accounting
+
+
+def children_cpu() -> float:
+    """CPU seconds of the finished tools so far: os.times' children on POSIX. On Windows those are 0, so the job's
+    total (every process it ever held, ended ones included) minus this process's own; 0 without the job."""
+    if os.name != "nt":
+        t = os.times()
+        return t.children_user + t.children_system
+    if _JOB is None:
+        return 0.0
+    import ctypes
+    from ctypes import wintypes
+
+    class Basic(ctypes.Structure):  # JOBOBJECT_BASIC_ACCOUNTING_INFORMATION, times in 100 ns
+        _fields_ = [("user", ctypes.c_int64), ("kernel", ctypes.c_int64), ("period_user", ctypes.c_int64),
+                    ("period_kernel", ctypes.c_int64), ("faults", wintypes.DWORD), ("total", wintypes.DWORD),
+                    ("active", wintypes.DWORD), ("terminated", wintypes.DWORD)]  # fmt: skip
+
+    info = Basic()
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    if not k32.QueryInformationJobObject(wintypes.HANDLE(_JOB), 1, ctypes.byref(info), ctypes.sizeof(info), None):
+        return 0.0
+    own = os.times()
+    return max(0.0, (info.user + info.kernel) / 1e7 - own.user - own.system)
 
 
 def mem_available_gb() -> float:
@@ -160,11 +221,11 @@ def mem_available_gb() -> float:
     return 8.0
 
 
-def shader_jobs() -> int:
+def shader_jobs(share: float = 1.0) -> int:
     """Every core, as far as memory goes: a worker and its glslc take ~0.25 GB (four took 1.0 GB, 06/11/2026) and up
     to 0.75 GB on the largest programs (translate.py). Half the cores, as before, left 8 of 12 idle: 40 min."""
     cores = min(os.cpu_count() or 1, 61) if os.name == "nt" else os.cpu_count() or 1  # Windows' pool limit (#222)
-    return max(1, min(cores, int(mem_available_gb() / 0.75)))
+    return max(1, min(cores, int(mem_available_gb() * share / 0.75)))
 
 
 def mem_gb() -> float:
@@ -174,15 +235,28 @@ def mem_gb() -> float:
         return 8.0
 
 
-def run(cmd: list[str], env: dict[str, str] | None = None, progress_prefix: str = "") -> None:
-    """A tool's run; its 'progress n total' lines (translate.py) pass through, the rest goes to stderr."""
+def run(
+    cmd: list[str],
+    env: dict[str, str] | None = None,
+    progress_prefix: str = "",
+    on_progress: Callable[[str], None] | None = None,
+) -> None:
+    """A tool's run; its 'progress n total' lines (translate.py) pass through, the rest goes to stderr, and at its end
+    "time: tool <name> <wall> s, cpu <s> s": a step's line alone did not say which of its tools took the time (the
+    shaders step is spec, extract, translate and pipeline_pairs); its CPU is that of every tool that ended meanwhile,
+    a step run beside included (children_cpu). on_progress takes the progress lines instead of the start screen (a step run beside, beside.py)."""
+    t0, c0 = time.monotonic(), children_cpu()
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", env=env)
     tail = []
     for line in p.stdout:
         if progress_prefix and line.startswith(progress_prefix):
-            emit(line.strip())
+            (on_progress or emit)(line.strip())
         else:
             sys.stderr.write(line)
             tail = (tail + [line.strip()])[-5:]
-    if p.wait():
-        raise Failed(f"{Path(cmd[1] if len(cmd) > 1 else cmd[0]).name} failed: {' / '.join(tail)}")
+    rc = p.wait()
+    name = Path(cmd[1] if len(cmd) > 1 else cmd[0]).name
+    cpu = children_cpu() - c0
+    print(f"time: tool {name} {time.monotonic() - t0:.1f} s, cpu {cpu:.1f} s", file=sys.stderr)
+    if rc:
+        raise Failed(f"{name} failed: {' / '.join(tail)}")

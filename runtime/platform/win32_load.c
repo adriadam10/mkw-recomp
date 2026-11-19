@@ -1,5 +1,6 @@
 // Windows implementation of platform.h, machine load and the desktop shortcut (the parts: win32_int.h).
 #include <io.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <windows.h>
 #define COBJMACROS
@@ -227,6 +228,8 @@ void plat_process_memory(uint64_t *resident, uint64_t *private_bytes) {
     if (K32GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS *)&pm, sizeof pm))
         *resident = pm.WorkingSetSize, *private_bytes = pm.PrivateUsage;
 }
+
+void plat_heap_trim(void) { _heapmin(); }
 
 // Placed maps are Linux-only (vk_memory.c placed_pool): nothing to undo here.
 int plat_mem_replace_anon(uint64_t addr, uint64_t n) { (void)addr, (void)n; return 0; }

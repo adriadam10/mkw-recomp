@@ -97,11 +97,20 @@ int cap_replay_main(int argc, char **argv) {
         else if (i + 1 < argc && !strcmp(argv[i], "--tag")) tag = argv[++i];
         else return usage();
     }
+    // MKW_REPLAY_PREWARM=1 (diagnosis): the boot's prewarm first (pipeline-pairs.bin, pipeline-keys.bin), to count
+    // the draws that still find shader libraries missing (the "gpl:" line at the end). The prewarm only runs with the
+    // background builds, so it makes MKW_PIPE_SYNC default to 0: with 1 it was skipped without a word (pw1, 18/11/2026).
+    const char *pw = getenv("MKW_REPLAY_PREWARM");
+    int prewarm = pw && strcmp(pw, "0");
     env_default("MKW_REPLAY_ASYNC", "0");
-    env_default("MKW_PIPE_SYNC", "1");
+    env_default("MKW_PIPE_SYNC", prewarm ? "0" : "1");
     env_default("MKW_REPLAY_PAR_WARM", "0");   // chunks from the first submission (vk_exec_par.c)
     env_default("MKW_BACKGROUND_WINDOW", "hidden");   // a replay shows no window: its images are read back
     vk_pipeline_async_enable();   // MKW_PIPE_SYNC=0: background builds and the draws' waits, as in the game
+    if (prewarm) {
+        if (strcmp(getenv("MKW_PIPE_SYNC"), "0")) rt_log("cap: MKW_REPLAY_PREWARM needs MKW_PIPE_SYNC=0: no prewarm");
+        else vk_pipeline_prewarm();
+    }
     const char *par = getenv("MKW_REPLAY_PAR");
     if (!tag) tag = par && strcmp(par, "0") ? "par" : "serial";
     char path[1024], out_default[1024];
@@ -372,6 +381,7 @@ int cap_replay_main(int argc, char **argv) {
     vk_mem_replay_log(presents);    // mirror and shadow traffic per presented frame (MKW_MEMORY=mirror)
     long errors = vk_validation_errors_total();
     vk_exec_par_log();   // how many submissions went in chunks: a replay that never chunks compares serial with serial
+    if (getenv("MKW_REPLAY_PREWARM") && strcmp(getenv("MKW_REPLAY_PREWARM"), "0")) vk_pipeline_save();   // its "gpl:" line
     static const char *const names[] = {"", "meta", "mem", "zero", "pool init", "pool fini", "mapv", "texreg", "sampreg",
                                         "texrel", "progrel", "submit", "present", "wtex", "gwritten", "finish", "frame",
                                         "end", "gpumem", "sparse", "wimg"};

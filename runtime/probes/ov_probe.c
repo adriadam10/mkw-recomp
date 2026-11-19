@@ -287,7 +287,8 @@ static void probe_oe(void) {
         {NULL, "en-US", "en-US"}, {NULL, "be-BY", "en-US"}, {NULL, "xx", "en-US"},     {NULL, "ja-JP", "ja"},
         {NULL, "fr-CA", "fr-CA"}, {NULL, "es-MX", "es-419"}, {NULL, "es_ES", "es"},     {NULL, "zh-Hant-TW", "zh-Hant"},
         {NULL, "zh-CN", "zh-Hans"}, {NULL, "en-GB", "en-GB"}, {NULL, "ru", "ru"},       {"ja", "fr-FR", "ja"},
-        {"en-US", NULL, "en-US"}, {NULL, "ca-ES", "es"}, {NULL, "eu", "es"},       {NULL, "pl-PL", "en-US"}, {"ca", NULL, "es"}};
+        {"en-US", NULL, "en-US"}, {NULL, "ca-ES", "es"}, {NULL, "eu", "es"},       {NULL, "pl-PL", "en-US"}, {"ca", NULL, "es"},
+        {NULL, "tr-TR", "en-GB"}, {"tr", NULL, "en-GB"}};
     int bad = 0;
     for (size_t i = 0; i < sizeof cases / sizeof *cases; i++) {
         set_env("MKW_LANG", cases[i].lang);
@@ -299,9 +300,9 @@ static void probe_oe(void) {
                    cases[i].locale ? cases[i].locale : "", got, cases[i].want);
         }
     }
-    // Automatic follows a menu language the game ships; the menu's "en" keeps the locale's English
+    // Automatic follows a menu language the game ships or we rebuild (ca, tr); the menu's "en" keeps the locale's English
     static const struct { const char *menu, *locale, *want; } menus[] = {
-        {"ja", "en-US", "ja"}, {"en", "en-GB", "en-GB"}, {"en", "de-DE", "en-US"}, {"tr", "de-DE", "de"},
+        {"ja", "en-US", "ja"}, {"en", "en-GB", "en-GB"}, {"en", "de-DE", "en-US"}, {"uk", "de-DE", "de"}, {"tr", "de-DE", "en-GB"},
         {"zh-Hant", "en-US", "zh-Hant"}, {"pt-BR", "pt-PT", "pt-BR"}, {"ca", "en-US", "es"}};
     set_env("MKW_LANG", NULL);
     for (size_t i = 0; i < sizeof menus / sizeof *menus; i++) {
@@ -850,42 +851,68 @@ static void probe_swkbd(void) {
            "minimum length, the Win32 window with OK and Cancel)\n", n - bad, n, def);
 }
 
-// ---- the menu's input gate: Minus+Plus is consumed, a menu that is open leaves the game a neutral pad
+// ---- the menu's input gate: Minus+Plus (or the Guide button) is consumed, a menu that is open leaves the game a neutral pad
 static void probe_menu_gate(void) {
     const uint64_t minus = 1ull << 11, plus = 1ull << 10, a = 1ull;
+    cfg_set("MKW_MENU_SHORTCUT", "minus_plus");
     int held = 0;
     int32_t st[4] = {100, -200, 300, -400};
     uint64_t b = minus | a;   // Minus alone, a frame before Plus: reaches the guest unchanged
-    int t1 = input_menu_gate(&held, 0, &b, st);
+    int t1 = input_menu_gate(&held, 0, &b, st, 0);
     CHECK(!t1 && b == (minus | a) && st[0] == 100 && st[3] == -400 && !held, "Minus alone changed: toggle %d buttons %#llx", t1,
           (unsigned long long)b);
     b = minus | plus | a;     // both down: the guest sees neither, the menu toggles once
-    int t2 = input_menu_gate(&held, 0, &b, st);
+    int t2 = input_menu_gate(&held, 0, &b, st, 0);
     CHECK(t2 == 1 && b == a && held, "Minus+Plus: toggle %d buttons %#llx", t2, (unsigned long long)b);
     b = minus | plus;         // still held with the menu open: no second toggle, a neutral pad
-    int t3 = input_menu_gate(&held, 1, &b, st);
+    int t3 = input_menu_gate(&held, 1, &b, st, 0);
     CHECK(!t3 && b == 0 && st[0] == 0 && st[1] == 0 && st[2] == 0 && st[3] == 0, "menu open: toggle %d buttons %#llx", t3,
           (unsigned long long)b);
     b = a | plus; st[0] = 5;  // the menu is open and the pad is neutral whatever is pressed
-    input_menu_gate(&held, 1, &b, st);
+    input_menu_gate(&held, 1, &b, st, 0);
     CHECK(b == 0 && st[0] == 0, "an open menu left buttons %#llx", (unsigned long long)b);
     b = 0;                    // released, then pressed again toggles again
-    input_menu_gate(&held, 0, &b, st);
+    input_menu_gate(&held, 0, &b, st, 0);
     b = minus | plus;
-    CHECK(input_menu_gate(&held, 0, &b, st) == 1, "the second hold did not toggle");
+    CHECK(input_menu_gate(&held, 0, &b, st, 0) == 1, "the second hold did not toggle");
     // Plus released first while Minus is still down: Minus must not leak; a new Minus press after both are up passes
     held = 0;
     b = minus | plus;
-    input_menu_gate(&held, 0, &b, st);
+    input_menu_gate(&held, 0, &b, st, 0);
     b = minus;
-    int t4 = input_menu_gate(&held, 0, &b, st);
+    int t4 = input_menu_gate(&held, 0, &b, st, 0);
     CHECK(!t4 && b == 0 && held, "Minus left down after Plus leaked: buttons %#llx", (unsigned long long)b);
     b = 0;
-    input_menu_gate(&held, 0, &b, st);
+    input_menu_gate(&held, 0, &b, st, 0);
     b = minus | a;
-    int t5 = input_menu_gate(&held, 0, &b, st);
+    int t5 = input_menu_gate(&held, 0, &b, st, 0);
     CHECK(!t5 && b == (minus | a) && !held, "Minus after the release did not pass: buttons %#llx", (unsigned long long)b);
     printf("menu gate: Minus alone passes, Minus+Plus is consumed and toggles once per hold, an open menu gives a neutral pad\n");
+    // Guide mode: Minus+Plus pass through, the Guide button toggles once per press
+    cfg_set("MKW_MENU_SHORTCUT", "guide");
+    held = 0;
+    b = minus | plus | a;   // the chord is a game press now, not the shortcut
+    int g1 = input_menu_gate(&held, 0, &b, st, 0);
+    CHECK(!g1 && b == (minus | plus | a) && !held, "guide mode: Minus+Plus changed: toggle %d buttons %#llx", g1,
+          (unsigned long long)b);
+    b = a;
+    int g2 = input_menu_gate(&held, 0, &b, st, 1);
+    CHECK(g2 == 1 && b == a && held, "guide mode: Guide did not toggle: toggle %d buttons %#llx", g2,
+          (unsigned long long)b);
+    b = a;   // still held: no second toggle
+    int g3 = input_menu_gate(&held, 0, &b, st, 1);
+    CHECK(!g3 && b == a && held, "guide mode: held Guide toggled again: toggle %d buttons %#llx", g3,
+          (unsigned long long)b);
+    b = a;
+    input_menu_gate(&held, 0, &b, st, 0);   // released
+    b = a;
+    CHECK(input_menu_gate(&held, 0, &b, st, 1) == 1, "guide mode: the second press did not toggle");
+    b = a;   // with the menu open, Guide gives a neutral pad and no toggle
+    int g4 = input_menu_gate(&held, 1, &b, st, 1);
+    CHECK(!g4 && b == 0 && st[0] == 0 && st[1] == 0 && st[2] == 0 && st[3] == 0,
+          "guide mode menu open: toggle %d buttons %#llx", g4, (unsigned long long)b);
+    cfg_set("MKW_MENU_SHORTCUT", "minus_plus");
+    printf("menu gate (guide): Minus+Plus passes through, Guide toggles once per press, an open menu gives a neutral pad\n");
 }
 
 // ---- shared fonts: the extracted files when present (the missing case is a fatal child)

@@ -143,6 +143,7 @@ void vk_fg_release(void);   // before the device goes away
 void vk_queue_lock(void);
 void vk_queue_unlock(void);
 void vk_sync_parts_flush(void);   // queue lock held: the parts waiting for the submit thread to the queue (vk_sync.c)
+struct PlatThread *vk_sync_submit_thread(void);   // the thread "vk submit" once started, else NULL (vk_sync.c)
 // Copy of the last presented swapchain image, for probes: on, the next presents read the image back into a host buffer
 // and wait for the GPU. *px stays valid until the next present; the format is the swapchain's. Returns 0 with no frame.
 // The rectangle {x, y, w, h} of a dw x dh swapchain image a cw x ch picture is presented in (gfx_present.c,
@@ -424,6 +425,8 @@ typedef struct {
     uint8_t bound;                 // aliases physical-pool memory (physical and virtual pools)
     uint8_t block_views;           // BC image that renders through uncompressed views of its blocks (BLOCK_TEXEL_VIEW_
                                    // COMPATIBLE + EXTENDED_USAGE: only those views may use COLOR_ATTACHMENT)
+    uint8_t block_ca_skipped;      // the GFX9 guard (vk_tex_gfx9.c) left this 3D BC volume without that usage: it does
+                                   // not crash addrlib, and a draw into it writes nothing (vk_exec_rt.c logs it)
     uint8_t swz[4];               // NVN texture swizzle selectors (nvnTextureBuilderSetSwizzle); a view swizzle replaces them
     uint8_t fb_usage;              // created with ATTACHMENT_FEEDBACK_LOOP usage (VK_FEEDBACK_LAYOUT, attachable images)
     uint8_t listed;                // a render target whose MUTABLE_FORMAT lists its views' formats: format and twin
@@ -632,8 +635,8 @@ typedef struct VkPipeState {
                                            // (OP_PRIM_RESTART, set by op_draw_idx); dynamic state only
     uint8_t feedback;                      // the fragment shader samples an attachment of the pass in the feedback
                                            // layout: 1 colour, 2 depth/stencil (VK_PIPELINE_CREATE_*_FEEDBACK_LOOP_BIT_EXT)
-    float alpha_ref;                       // OP_ALPHA_REF; 0 unless color.alpha_func tests (the draw clears it). It
-                                           // fills padding: KeyRec (pipeline-keys.bin) keeps its size
+    float pad_ref;                         // 0. The alpha test's reference was here until 17/11/2026; it now goes in
+                                           // the support buffer (support_in), not the pipeline. KeyRec keeps its size
     blend_st blend[8];                    // OP_BIND_STATE kind 0, indexed by blend_st.target
     color_st color;                        // kinds 1-5
     chmask_st chmask;
@@ -645,7 +648,7 @@ typedef struct VkPipeState {
     const GfxShader *mesh;                 // a task/mesh draw whose vs is the task program: its mesh program; NULL
                                            // otherwise (a mesh program alone sits in vs)
 } VkPipeState;
-_Static_assert(__builtin_offsetof(VkPipeState, blend) == 64, "alpha_ref must stay in the padding (KeyRec size)");
+_Static_assert(__builtin_offsetof(VkPipeState, blend) == 64, "pad_ref must stay in the padding (KeyRec size)");
 void vk_pipe_state_defaults(VkPipeState *s);   // NVN defaults of every state object (shaders and formats left 0)
 enum { VK_PIPE_SUPPORT = GFX_RES_KINDS };      // VkPipeBinding.kind of the support buffer
 #define VK_PIPE_STAGE_NVN 0x80                 // VkPipeBinding.stage of a task or mesh binding: this | its NVN stage (6, 7)
@@ -696,7 +699,8 @@ void vk_pipeline_async_enable(void);
 void vk_pipeline_async_busy(unsigned *inflight, int *building);
 // Boot prewarm, before the guest runs (rt_boot): loads the shaders pipeline-keys.bin names, translating the ones not
 // cached under the current translator from their stored inputs, and builds every recorded pipeline, on all cores.
-// No-op without vk_pipeline_async_enable, with MKW_PIPE_PREBUILD=0 or with MKW_GPU=null.
+// No-op without vk_pipeline_async_enable, with MKW_PIPE_PREBUILD=0 or with MKW_GPU=null. First the shader libraries of
+// every program pair of the game copy (pipeline-pairs.bin, vk_pipe_pairs.c).
 void vk_pipeline_prewarm(void);
 VkPipeline vk_pipeline_compute(const GfxShader *cs, const VkPipeInfo **info);
 // The same with the program's FIRST_STORE set (gfx_shader_first_store): 1 only the first invocation's stores, 2 all

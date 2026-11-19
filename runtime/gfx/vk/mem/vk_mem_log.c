@@ -91,10 +91,11 @@ void vk_mem_census(uint64_t frame) {
         total[r->kind] += r->size, count[r->kind]++;
     }
     plat_mutex_unlock_shared(&pool_lock);
-    rt_log("mem: census at frame %llu: import %llu pools %.1f MiB (%d without a GPU buffer), physical %llu pools %.1f MiB, "
+    rt_log("mem: census at frame %llu: import %llu pools %.1f MiB (%d backing failures so far), physical %llu pools %.1f MiB, "
            "virtual %llu pools %.1f MiB of address space",
            (unsigned long long)frame, (unsigned long long)count[POOL_IMPORT], total[POOL_IMPORT] / 1048576.0,
-           n_import_failures, (unsigned long long)count[POOL_PHYS], total[POOL_PHYS] / 1048576.0,
+           __atomic_load_n(&n_import_failures, __ATOMIC_RELAXED), (unsigned long long)count[POOL_PHYS],
+           total[POOL_PHYS] / 1048576.0,
            (unsigned long long)count[POOL_VIRT], total[POOL_VIRT] / 1048576.0);
     static const char *const kinds[] = {"", "import", "physical", "virtual"};
     for (int j = 0; j < ng; j++) {

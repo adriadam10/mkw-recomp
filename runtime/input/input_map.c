@@ -325,10 +325,11 @@ void input_mouse_stick(int32_t dx, int32_t dy, double dt_s, float sens, int32_t 
     out[1] = (int32_t)lrint(y);
 }
 
-// Minus and Plus held together open or close the menu. *held: latched from the poll where both go down until neither is
-// down (the caller keeps it). Every poll of the latch reports neither to the game, so releasing one button first does not
-// leak the other; Minus alone before Plus reaches the game unchanged. With the menu open the game sees a neutral pad.
-// Returns 1 in the poll where both go down: the caller toggles the menu once.
+// Minus and Plus held together open or close the menu, or a press of the Guide button when MKW_MENU_SHORTCUT=guide.
+// *held: latched from the poll where both go down (or the Guide goes down) until neither is down (the caller keeps
+// it). Every poll of the latch reports neither to the game, so releasing one button first does not leak the other;
+// Minus alone before Plus reaches the game unchanged. With the menu open the game sees a neutral pad.
+// Returns 1 in the poll where the shortcut goes down: the caller toggles the menu once. guide: the Guide button held.
 static int chord(int *held, uint64_t *buttons, uint64_t combo) {
     uint64_t raw = *buttons & combo;
     int edge = 0;
@@ -342,8 +343,22 @@ static int chord(int *held, uint64_t *buttons, uint64_t combo) {
     return edge;
 }
 
-int input_menu_gate(int *held, int menu_open, uint64_t *buttons, int32_t sticks[4]) {
-    int edge = chord(held, buttons, 1ull << B_MINUS | 1ull << B_PLUS);
+int input_menu_gate(int *held, int menu_open, uint64_t *buttons, int32_t sticks[4], int guide) {
+    static int last_guide = -1;   // the shortcut mode at the last poll: a switch drops a half-held chord
+    int guide_mode = !strcmp(cfg_value("MKW_MENU_SHORTCUT"), "guide");
+    if (guide_mode != last_guide) {
+        *held = 0;
+        last_guide = guide_mode;
+    }
+    int edge = 0;
+    if (!guide_mode) {
+        edge = chord(held, buttons, 1ull << B_MINUS | 1ull << B_PLUS);
+    } else if (*held) {
+        *held = guide;
+    } else if (guide) {
+        *held = 1;
+        edge = 1;
+    }
     if (menu_open) {
         *buttons = 0;
         sticks[0] = sticks[1] = sticks[2] = sticks[3] = 0;

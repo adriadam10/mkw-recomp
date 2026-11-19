@@ -6,7 +6,10 @@ The shader translator (`sm86/translate`), the SPIR-V patcher and the recompiler'
 |---|---|
 | `test_warp32.py` | Executes the translator's actual shuffle/ballot helpers and emitted signed/unsigned reductions as C++ on synthetic 32/64/128-lane subgroups, with distinct values per logical warp and partially active masks |
 | `test_spirv_images.py` | Integer image variants of synthetic compute shaders through the production patcher (`t_spirv_images.c`): signed and unsigned storage images, separate image/sampler construction, input preservation and actionable failure reasons; optional SPIR-V validation |
+| `test_translate_base.py` | `translate.py --base`: a program's outputs linked from the played version's pass, a rewrite that leaves the played file, a resumed pass that keeps what is there |
+| `test_pack.py` | `tools/shaders/pack.py`: each program's three files in `shaders.pack` by key in the runtime's order, and a folder written after the pack makes it stale |
 | `test_flow.py` | Shapes of control flow ptxas leaves that the translator must structure as the branch graph runs them (`sm86/translate/frontend/flow.py`, checked with `flow_sim`): a jump into a tail that an if / else shares |
+| `test_int_hints.py` | The integer input and output hints (`sm86/translate/glsl/int_hints.py`) on MKW's texel-coordinate input, a float attribute compared as an integer and a flat-copy fragment program |
 | `test_first_store.py` | The split of a compute program's first-invocation store (`sm86/translate/glsl/first_store.py`) on MKW's 32x1 and 8x4 preambles, and the shapes it must leave alone |
 | `test_mods.py` | Code patches shipped by mods (`recomp/patches.py` `load_mods`): a mod with spans only, two mods on one address stop the generate, no `mods/` folder leaves the table as it was |
 

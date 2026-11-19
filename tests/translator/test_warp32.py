@@ -4,6 +4,7 @@ Each logical warp has different values and ballot bits, so accidentally reading 
 Usage: uv run pytest tests/translator/test_warp32.py
 """
 
+import os
 import shutil
 import subprocess
 import sys
@@ -40,7 +41,10 @@ def run_helpers(tmp_path: Path, body: str) -> None:
     src, exe = tmp_path / "warp.cpp", tmp_path / "warp.exe"
     helpers = getattr(common, "WARP_FN", "") + "\n" + common.SHFL_FN.replace("out bool ok", "bool &ok")
     src.write_text(HARNESS + helpers + body)
-    subprocess.run([cc, "-std=c++17", "-O1", str(src), "-o", str(exe)], check=True)
+    # Windows runners pair LLVM's clang++ with MSVC's STL, which may demand a newer Clang than the image installs
+    # (STL1000 on MSVC 14.52); this harness only needs <cstdint>, <cstdio>, <initializer_list> and <limits>.
+    stl = ["-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"] if os.name == "nt" else []
+    subprocess.run([cc, "-std=c++17", "-O1", *stl, str(src), "-o", str(exe)], check=True)
     p = subprocess.run([str(exe)], capture_output=True, text=True)
     assert p.returncode == 0, p.stderr
 

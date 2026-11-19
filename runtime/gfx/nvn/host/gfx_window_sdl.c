@@ -9,7 +9,7 @@
 // gfx_window_start (wsys_open).
 //
 // MKW_WINDOW_SIZE is in pixels. On a display that scales windows (Wayland, HiDPI) the window asks for its pixels in
-// the display's units (SDL_GetWindowDisplayScale), and SDL reports mouse positions in those units: input_sdl.c and the
+// the display's units (SDL_GetWindowPixelDensity), and SDL reports mouse positions in those units: input_sdl.c and the
 // menu scale them back (gfx_window_sdl_density).
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,9 +77,12 @@ static int is_fullscreen(void) { return (SDL_GetWindowFlags(g_win) & SDL_WINDOW_
 
 // The window's size in its units for w x h pixels.
 static void set_pixel_size(int w, int h) {
-    float scale = SDL_GetWindowDisplayScale(g_win);
-    if (!(scale > 0)) scale = 1;
-    SDL_SetWindowSize(g_win, (int)(w / scale + 0.5f), (int)(h / scale + 0.5f));
+    // Pixels per window unit, not the display's scale: on Windows SDL's window units are pixels already (density 1)
+    // while the display scale is the system's text scaling, so 2560x1440 at 125 % opened 2048x1152 (18/11/2026).
+    // Where windows are scaled (Wayland, macOS) the density is that scale, as the display scale was.
+    float density = SDL_GetWindowPixelDensity(g_win);
+    if (!(density > 0)) density = 1;
+    SDL_SetWindowSize(g_win, (int)(w / density + 0.5f), (int)(h / density + 0.5f));
 }
 
 static void set_fullscreen(int on) {

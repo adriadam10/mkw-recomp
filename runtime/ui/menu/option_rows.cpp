@@ -54,11 +54,13 @@ static bool g_indent;                    // opt_indent
 static bool g_mouse;
 
 // The description pane: this frame's hovered and selected rows, the page's first row, and the last one shown.
-struct Desc { char text[512]; };
+struct Desc { char text[512]; char note[512]; };   // the Steam note is 346 bytes in Thai (#579)
 static Desc g_hover, g_focus, g_first, g_shown;
 
-// disabled: the note of a row opt_disable_next greyed out, else NULL.
-static void desc_set(Desc &d, UiTextId desc, const char *key, const CfgMeta *m, const char *disabled) {
+// disabled: the note of a row opt_disable_next greyed out, else NULL. note: a dim line under the description,
+// for a row whose value needs a word (NULL: none).
+static void desc_set(Desc &d, UiTextId desc, const char *key, const CfgMeta *m, const char *disabled,
+                     const char *note = nullptr) {
     int n = snprintf(d.text, sizeof d.text, "%s", menu_text(desc));
     if (n < 0 || n >= (int)sizeof d.text) return;
     if (disabled)
@@ -67,6 +69,7 @@ static void desc_set(Desc &d, UiTextId desc, const char *key, const CfgMeta *m, 
         snprintf(d.text + n, sizeof d.text - n, "\n\n%s %s", menu_text(UI_MENU_SET_BY_ENV), key);
     else if (m && !m->live && !g_look->quiet)
         snprintf(d.text + n, sizeof d.text - n, "\n\n%s", menu_text(UI_MENU_AFTER_RESTART));
+    snprintf(d.note, sizeof d.note, "%s", note ? note : "");
 }
 
 void opt_focus_first(void) { g_focus_req = true; }
@@ -135,6 +138,10 @@ void opt_end(void) {
     ImGui::PopStyleVar();
     ImGui::PushTextWrapPos(0);
     ImGui::TextUnformatted(g_shown.text);
+    if (g_shown.note[0]) {
+        ImGui::Spacing();
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(g_look->dim), "%s", g_shown.note);
+    }
     ImGui::PopTextWrapPos();
     ImGui::EndChild();
     ImGui::PopID();
@@ -146,6 +153,7 @@ struct RowView {
     bool is_default;     // the value is the setting's default: the "default" mark, the value not highlighted
     bool arrows;         // a stepper: < value >, the arrows click too
     const char *note;    // under the value instead of the "default" mark; NULL for none
+    const char *desc_note = nullptr;   // a dim line under the description; NULL for none
 };
 
 // One row: draws it, handles A / click and left / right while selected. Returns 2 (A / click), -1 / +1 (left / right) or
@@ -191,9 +199,9 @@ static int row_text(const char *key, const char *label, UiTextId desc, const Row
             ImGui::SetKeyOwner(k, ImGui::GetItemID());
         }
     }
-    if (foc && !g_mouse) desc_set(g_focus, desc, key, m, disabled);
-    if (hov) desc_set(g_hover, desc, key, m, disabled);
-    if (!g_first.text[0]) desc_set(g_first, desc, key, m, disabled);
+    if (foc && !g_mouse) desc_set(g_focus, desc, key, m, disabled, v.desc_note);
+    if (hov) desc_set(g_hover, desc, key, m, disabled, v.desc_note);
+    if (!g_first.text[0]) desc_set(g_first, desc, key, m, disabled, v.desc_note);
 
     ImDrawList *dl = ImGui::GetWindowDrawList();
     ImFont *font = ImGui::GetFont();
@@ -334,7 +342,7 @@ void opt_text(UiTextId text, bool warn) {
 }
 
 bool opt_choice_list(const char *key, UiTextId label, const char *const *values, const char *const *names, int n,
-                     UiTextId desc, int cur, const char *note) {
+                     UiTextId desc, int cur, const char *note, const char *desc_note) {
     const CfgMeta *m = cfg_meta(key);
     const char *now = cfg_value(key);
     if (cur < 0)
@@ -343,7 +351,7 @@ bool opt_choice_list(const char *key, UiTextId label, const char *const *values,
     int def = -1;
     for (int i = 0; m && i < n; i++)
         if (!strcmp(values[i], m->def)) def = i;
-    RowView v = {cur >= 0 ? names[cur] : now, cur == def, true, note};
+    RowView v = {cur >= 0 ? names[cur] : now, cur == def, true, note, desc_note};
     int step = row(key, label, desc, v);
     if (!step || n <= 0) return false;
     int nv;
@@ -355,7 +363,8 @@ bool opt_choice_list(const char *key, UiTextId label, const char *const *values,
     return true;
 }
 
-bool opt_choice(const char *key, UiTextId label, const UiTextId *names, int n, UiTextId desc, const char *note) {
+bool opt_choice(const char *key, UiTextId label, const UiTextId *names, int n, UiTextId desc, const char *note,
+                const char *desc_note) {
     enum { MAX = 32 };
     const CfgMeta *m = cfg_meta(key);
     const char *values[MAX], *shown[MAX];
@@ -371,7 +380,7 @@ bool opt_choice(const char *key, UiTextId label, const UiTextId *names, int n, U
     }
     if (n > k) n = k;
     for (int i = 0; i < n; i++) shown[i] = menu_text(names[i]);
-    return opt_choice_list(key, label, values, shown, n, desc, -1, note);
+    return opt_choice_list(key, label, values, shown, n, desc, -1, note, desc_note);
 }
 
 bool opt_slider(const char *key, UiTextId label, float lo, float hi, UiTextId desc, float step, const char *fmt) {

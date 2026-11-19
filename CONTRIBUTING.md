@@ -17,7 +17,8 @@
   and servers, relays or room systems for playing over the internet, are not accepted here: they belong in a separate
   repository, such as [MKWMP](https://github.com/anarqz/mkwmp). Pull requests that add them are closed. What stays
   here is what the game already does offline: local play and its LAN mode (`MKW_LAN`, also over a VPN), and generic,
-  documented hooks that such projects can build on.
+  documented hooks that such projects can build on: the native plugin API of
+  [runtime/plugin/mkw_plugin.h](runtime/plugin/mkw_plugin.h), loaded from a mod the player enables.
 - **Licenses.** Code may be taken from MIT-compatible projects only, naming the source and commit in the code and in
   the table of [docs/project/research.md](docs/project/research.md#sources) in the same pull request. From GPL projects (eden-nx2,
   oboromi, Eglantine…) and from projects without a license, ideas only, never code.

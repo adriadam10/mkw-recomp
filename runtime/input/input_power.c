@@ -1,8 +1,9 @@
 // The players' controller batteries (discussion #516): what SDL reports for each player's gamepad (a percentage for
 // DualShock 4 and DualSense, nine levels for a Switch Pro Controller and Joy-Con, four for an Xbox pad over XInput),
 // or for a Switch 2 controller over Bluetooth, which SDL sees as a virtual gamepad without one, its voltage band from
-// switch2.c. The game never asks (nn::hid::system::GetNpadPowerInfo has no caller in MKW): the menu (F1), the start
-// screen and a notice show it.
+// switch2.c, or on Linux for an Xbox pad on the xone driver, whose battery SDL leaves UNKNOWN: its sysfs level band
+// from linux_power.c (High/Medium/Low, never a percent). The game never asks (nn::hid::system::GetNpadPowerInfo has
+// no caller in MKW): the menu (F1), the start screen and a notice show it.
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL3/SDL.h>
@@ -15,12 +16,15 @@
 #include "ui/menu/menu.h"
 #include "ui_text.h"
 #include "platform/platform.h"
+#ifdef __linux__
+#include "linux_power.h"
+#endif
 
 // A battery at or under LOW_PCT warns once; it warns again only after it was back over REARM_PCT or charging. Our
 // choice, not a measure: about the last tenth of a play session on a DualSense.
 enum { LOW_PCT = 15, REARM_PCT = 30, WATCH_NS = 2000000000 };
 
-int input_power_from_sdl(int st, int pct, uint32_t id, InputPower *out) {
+int input_power_from_sdl(int st, int pct, uint32_t id, int index, InputPower *out) {
     // MKW_BATTERY_TEST=<percent>: every gamepad on battery at that level (virtual gamepads have none), for the rows,
     // the start screen and the notice without a controller running down
     const char *t = cfg_get("MKW_BATTERY_TEST");
@@ -37,6 +41,11 @@ int input_power_from_sdl(int st, int pct, uint32_t id, InputPower *out) {
                  : st == SDL_POWERSTATE_NO_BATTERY ? INPUT_POWER_WIRED
                                                    : INPUT_POWER_UNKNOWN;
     out->percent = out->state == INPUT_POWER_WIRED || out->state == INPUT_POWER_UNKNOWN ? -1 : pct;
+#ifdef __linux__
+    // xone (the Xbox wireless dongle driver) reports the battery to sysfs/UPower only, so SDL says UNKNOWN: read its
+    // level band there (index: the player on the game side, the SDL gamepad order on the start screen).
+    if (out->state == INPUT_POWER_UNKNOWN && linux_power_lookup(index, out->name, out)) return out->state;
+#endif
     return out->state;
 }
 
@@ -44,7 +53,7 @@ int input_pad_power(int player, InputPower *out) {
     *out = (InputPower){INPUT_POWER_NONE, -1, 0, ""};
     uint32_t id = 0;
     int pct = -1, st = input_pad_power_sdl(player, out->name, sizeof out->name, &id, &pct);
-    return st == -2 ? out->state : input_power_from_sdl(st, pct, id, out);
+    return st == -2 ? out->state : input_power_from_sdl(st, pct, id, player, out);
 }
 
 const char *input_power_text(const InputPower *p, char *out, int out_size) {

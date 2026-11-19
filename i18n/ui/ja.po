@@ -8,6 +8,21 @@ msgctxt "UI_SWKBD_DEFAULT_NAME"
 msgid "Player"
 msgstr "プレイヤー"
 
+#. The on-screen number pad the game opens to ask for a number: its confirm key (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_OK"
+msgid "OK"
+msgstr "OK"
+
+#. The on-screen number pad: the wide button under the keys that closes it without a number
+msgctxt "UI_KEYPAD_CANCEL"
+msgid "Cancel"
+msgstr "キャンセル"
+
+#. The on-screen number pad: the key that erases the last digit (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_DELETE"
+msgid "Delete"
+msgstr "削除"
+
 msgctxt "UI_MENU_TITLE"
 msgid "Settings"
 msgstr "設定"
@@ -770,6 +785,32 @@ msgctxt "UI_MENU_ICONS_IN_USE"
 msgid "in use: %s"
 msgstr "使用中: %s"
 
+msgctxt "UI_MENU_MENU_SHORTCUT"
+msgid "Menu shortcut"
+msgstr "メニューショートカット"
+
+msgctxt "UI_MENU_MENU_SHORTCUT_DESC"
+msgid ""
+"Choose which controller input opens this menu (Start + Select or the Guide button). Keyboard "
+"defaults to F1 or Esc."
+msgstr "このメニューを開くコントローラーの入力を選択します(Start + Select または Guide ボタン)。キーボードは F1 または Esc です。"
+
+msgctxt "UI_MENU_SHORTCUT_MINUS_PLUS"
+msgid "Start + Select"
+msgstr "Start + Select"
+
+msgctxt "UI_MENU_SHORTCUT_GUIDE"
+msgid "Guide button"
+msgstr "Guide ボタン"
+
+msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
+msgid ""
+"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
+"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+msgstr ""
+"注: Guide ボタンを使う場合は、Steam のオーバーレイが開かないように、Steam の 'Guide button focuses Steam'(設定 -> コントローラ -> "
+"詳細設定)をオフにすることをおすすめします。"
+
 msgctxt "UI_BINDS_HELP"
 msgid ""
 "Select a cell and press A or Enter, then the key, mouse button or controller button. Delete or X "
@@ -843,10 +884,11 @@ msgstr "プレイヤー%d: %s"
 msgctxt "UI_MENU_PAD_BATTERY_DESC"
 msgid ""
 "The battery of each player's controller, as the controller reports it. Some controllers report "
-"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+"none. A Switch 2 controller over Bluetooth reports a voltage and an Xbox controller on Linux's "
+"xone driver a level, each shown as high, medium or low."
 msgstr ""
 "各プレイヤーのコントローラーの電池残量（コントローラーが報告する値）。報告しないコントローラーもあります。Bluetooth接続のSwitch "
-"2のコントローラーは電圧を報告し、高・中・低で表示します。"
+"2のコントローラーは電圧を、LinuxのxoneドライバーのXboxコントローラーはレベルを報告し、高・中・低で表示します。"
 
 msgctxt "UI_MENU_PADS_NONE"
 msgid "No controller connected"
@@ -2209,6 +2251,12 @@ msgid ""
 msgstr "シェーダーを置き換えます。移植版は準備中にゲームのシェーダーを変換するため、このModは表示されない、または映像が崩れる場合があります"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
+msgctxt "UI_MOD_PLUGIN"
+msgid ""
+"Native plugin: runs its own program on your computer alongside the game. Enable it only if you "
+"trust where it comes from"
+msgstr "ネイティブプラグイン：ゲームと一緒にあなたのコンピューターで独自のプログラムを実行します。入手元を信頼できる場合のみ有効にしてください"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "コード: オン/オフを切り替えると、プレイ前にゲームのコードを再ビルドします（数分）"
@@ -2267,6 +2315,22 @@ msgstr "新機能"
 msgctxt "UI_LAUNCH_RETRY"
 msgid "Try again"
 msgstr "もう一度試す"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARING"
+msgid "Setting up %s in the background. You can keep playing meanwhile."
+msgstr "%s をバックグラウンドで準備しています。その間もプレイを続けられます。"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARED"
+msgid "%s is ready"
+msgstr "%s の準備ができました"
+
+msgctxt "UI_LAUNCH_UPDATE_RESTART"
+msgid "Restart with it"
+msgstr "このバージョンで再起動"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
+msgid "It could not be set up in advance (%s): it will be set up when it starts."
+msgstr "事前に準備できませんでした（%s）。起動時に準備されます。"
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.

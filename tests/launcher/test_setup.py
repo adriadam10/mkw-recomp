@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -269,19 +270,16 @@ assert machine.package_dir(Path(sys.argv[2])) == Path(sys.argv[3])
 def test_warm_uses_launcher_with_selected_installation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     game, runtime = tmp_path / ODD / "game", tmp_path / "launcher"
     calls = []
-    process = SimpleNamespace(terminate=lambda: None, wait=lambda timeout: 0)
 
     def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
         calls.append((argv, kwargs))
-        return process
+        return SimpleNamespace(returncode=0)
 
-    monkeypatch.setattr(prepare.subprocess, "Popen", start)
-    monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
+    monkeypatch.setattr(prepare.subprocess, "run", start)
     prepare.warm(game, game / "setup-work", runtime)
     argv, kwargs = calls[0]
-    assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw"))]
+    assert argv == [str(runtime / ("mkw.exe" if os.name == "nt" else "mkw")), "--prewarm"]
     assert kwargs["env"]["MKW_GAME_DIR"] == str(game)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(game / "setup-work/warm-profile")
 
 
 @pytest.mark.skipif(os.name == "nt", reason="creating directory symlinks requires Windows privileges")
@@ -295,19 +293,17 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
     alias.symlink_to(target, target_is_directory=True)
     runtime, source = tmp_path / "launcher", tmp_path / "dump"
     calls = []
-    process = SimpleNamespace(terminate=lambda: None, wait=lambda timeout: 0)
 
     def start(argv: list[str], **kwargs: object) -> SimpleNamespace:
         calls.append((argv, kwargs))
-        return process
+        return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(prepare, "own_children", lambda: None)
     monkeypatch.setattr(prepare.update, "ca_file", lambda: None)
     monkeypatch.setattr(prepare, "STEPS", ("check", "warm"))
     monkeypatch.setattr(prepare, "check", lambda *args: (source / "exefs", source / "romfs",
                                                        SimpleNamespace(name="test")))
-    monkeypatch.setattr(prepare, "WARM_SECONDS", 0)
-    monkeypatch.setattr(prepare.subprocess, "Popen", start)
+    monkeypatch.setattr(prepare.subprocess, "run", start)
     monkeypatch.setattr(sys, "argv", ["prepare.py", "--game", str(alias), "--runtime", str(runtime),
                                       "--source", str(source)])
     # main opens its setup log on stderr. Restore pytest's capture stream after exercising the real argument path
@@ -320,9 +316,8 @@ def test_setup_preserves_short_alias_for_warmup(tmp_path: Path, monkeypatch: pyt
         if sys.stderr is not original_stderr:
             sys.stderr.close()
     argv, kwargs = calls[0]
-    assert argv == [str(runtime / "mkw")]
+    assert argv == [str(runtime / "mkw"), "--prewarm"]
     assert kwargs["env"]["MKW_GAME_DIR"] == str(alias)
-    assert kwargs["env"]["MKW_PROFILE_DIR"] == str(alias / "setup-work/warm-profile")
 
 
 @pytest.mark.parametrize("driver", ["clang", "lld-link", "zig"])
@@ -457,6 +452,87 @@ def test_copy_removes_other_versions_files(tmp_path: Path) -> None:
     assert (dst / "UI/Product_180.sarc.zs").is_file()
 
 
+@pytest.fixture
+def loose_romfs_setup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> tuple[Path, Callable[[str], None]]:
+    game = tmp_path / "PC installation"
+    game.mkdir()
+    for version, data in (("1.0.0", b"old!"), ("1.8.0", b"new!")):
+        src = tmp_path / version
+        (src / "exefs").mkdir(parents=True)
+        (src / "exefs/main").write_bytes(b"synthetic header")
+        (src / "romfs").mkdir()
+        for name in ("shared.bin", "second.bin", version):
+            (src / "romfs" / name).write_bytes(data)
+
+    monkeypatch.setattr(prepare, "STEPS", ("check", "exefs", "romfs"))
+    monkeypatch.setattr(prepare, "own_children", lambda: None)
+    monkeypatch.setattr(prepare.update, "ca_file", lambda: None)
+    monkeypatch.setattr(prepare.build, "game_id", lambda: "synthetic")
+    # setup.lock is held until the process ends; here every run shares this process, and a run that exits early leaves
+    # its open lock file in the SystemExit traceback pytest.raises keeps, so the next run would wait for it forever
+    monkeypatch.setattr(prepare, "hold_lock", lambda _game: None)
+
+    def check(src: Path, *_: Path) -> tuple[Path, Path, SimpleNamespace]:
+        return src / "exefs", src / "romfs", SimpleNamespace(name=src.name, romfs_files=3)
+
+    monkeypatch.setattr(prepare, "check", check)
+
+    def run(version: str) -> None:
+        log = game / "logs/setup.log"
+        log.parent.mkdir(exist_ok=True)
+        with log.open("w", encoding="utf-8") as log_stream, monkeypatch.context() as patch:
+            patch.setattr(sys, "stderr", log_stream)
+            patch.setattr(sys, "argv", ["prepare.py", "--source", str(tmp_path / version), "--game", str(game),
+                                        "--romfs", "copy", "--jobs", "1"])
+            prepare.main()
+
+    return game / "romfs", run
+
+
+def test_loose_romfs_replaces_same_size_files_when_switching_versions(loose_romfs_setup) -> None:
+    romfs, run = loose_romfs_setup
+    run("1.0.0")
+    run("1.8.0")
+
+    assert (romfs / "shared.bin").read_bytes() == b"new!"
+    assert not (romfs / "1.0.0").exists()
+    assert (romfs / "1.8.0").exists()
+
+
+@pytest.mark.parametrize("recovery", ["first-copy", "retry-switch", "return-to-old"])
+def test_interrupted_loose_romfs_copy(loose_romfs_setup, monkeypatch: pytest.MonkeyPatch, recovery: str) -> None:
+    romfs, run = loose_romfs_setup
+    if recovery != "first-copy":
+        run("1.0.0")
+    copyfile = shutil.copyfile
+
+    def interrupt(source: Path, target: Path) -> Path:
+        if source.name == "second.bin":
+            raise OSError("simulated interrupted copy")
+        return copyfile(source, target)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(shutil, "copyfile", interrupt)
+        with pytest.raises(SystemExit) as failed:
+            run("1.8.0")
+        assert failed.value.code == 1
+
+    shared = romfs / "shared.bin"
+    assert shared.read_bytes() == b"new!"
+    os.utime(shared, (1_700_000_000, 1_700_000_000))
+    timestamp = shared.stat().st_mtime_ns
+    if recovery == "return-to-old":
+        run("1.0.0")
+        assert shared.read_bytes() == (romfs / "second.bin").read_bytes() == b"old!"
+        assert not (romfs / "1.8.0").exists()
+    else:
+        run("1.8.0")
+        assert (romfs / "second.bin").read_bytes() == b"new!"
+        assert shared.stat().st_mtime_ns == timestamp
+
+
 def test_package_has_the_launchers_tools() -> None:
     # every script the start screen runs (setup_tool(exe_dir, "mod/import.py", ...)) is copied into the package by
     # tools/build/dist.py's SOURCES: until 13/11/2026 tools/mod was not, and the Mods page said "no setup tools"
@@ -470,6 +546,11 @@ def test_package_has_the_launchers_tools() -> None:
     for cpp in (ROOT / "runtime/ui/launcher").glob("*.cpp"):
         wanted |= set(re.findall(r'setup_tool\([^,]+, "([^"]+)"', cpp.read_text(encoding="utf-8")))
     assert wanted - {"prepare/prepare.py"}, "no setup_tool calls found: the pattern is stale"
+    # and every tool prepare.py runs by its path (ROOT / "tools/....py"): until 18/11/2026 shaderstep.py ran
+    # tools/shaders/pipeline_pairs.py, which no package carried, and every setup from main failed at its shaders
+    for py in (ROOT / "tools/prepare").glob("*.py"):
+        found = re.findall(r'ROOT / "tools/([^"]+\.py)"', py.read_text(encoding="utf-8"))
+        wanted |= set(found)
     for rel in sorted(wanted):
         path = f"tools/{rel}"
         assert any(path == s or path.startswith(s.rstrip("/") + "/") for s in sources), f"{path} not in dist.py SOURCES"
@@ -599,3 +680,38 @@ def test_space_checked_before_copying(tmp_path: Path, monkeypatch: pytest.Monkey
     with pytest.raises(gamecopy.Failed) as e:
         gamecopy.check_space(tmp_path / "game", 5 * gamecopy.GIB)
     assert e.value.code == "space" and e.value.detail.startswith("5.0 GB, 2.0 GB free in ")
+
+
+def test_keys_ignore_files_the_package_does_not_ship(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # a package unzipped by hand over an older one keeps the files it moved (0.1.13's sm86/translate/flow.py): only
+    # the listed ones count, so the update does not redo the shaders
+    import shaderstep  # noqa: PLC0415
+
+    (tmp_path / "a.py").write_text("new")
+    (tmp_path / "stale.py").write_text("old")
+    monkeypatch.setattr(shaderstep, "ROOT", tmp_path)
+    monkeypatch.setattr(shaderstep, "SHIPPED", tmp_path / "FILES")
+    files = [tmp_path / "a.py", tmp_path / "stale.py"]
+    assert shaderstep.shipped(files) == files  # a checkout: no list
+    (tmp_path / "FILES").write_text("a.py\n")
+    assert shaderstep.shipped(files) == [tmp_path / "a.py"]
+
+
+@pytest.mark.parametrize("version,index,runs", [(3, True, []), (2, True, ["pipeline_pairs.py"]),
+                                                (2, False, ["extract.py", "pipeline_pairs.py"])])  # fmt: skip
+def test_ensure_pairs(tmp_path: Path, monkeypatch, version: int, index: bool, runs: list[str]) -> None:
+    """The warm step's pipeline-pairs.bin: one of the package's format kept; another version's written again (an
+    update whose shaders key did not change kept a v2 file the v3 runtime rejected), with extract.py first when
+    setup-work/shaders is gone."""
+    import shaderstep
+
+    dest, work = tmp_path / "game", tmp_path / "work"
+    (work / "shaders").mkdir(parents=True)
+    dest.mkdir()
+    if index:
+        (work / "shaders/index.csv").write_text("sha1,stage\n")
+    (dest / "pipeline-pairs.bin").write_bytes(shaderstep.pipeline_pairs.MAGIC + version.to_bytes(4, "little") + bytes(4))
+    calls: list[str] = []
+    monkeypatch.setattr(shaderstep, "run", lambda cmd, **_: calls.append(Path(cmd[1]).name))
+    shaderstep.ensure_pairs(tmp_path / "exefs", tmp_path / "romfs", work, dest)
+    assert shaderstep.PAIRS_VERSION == 3 and calls == runs

@@ -25,6 +25,7 @@
 #include "ui/menu/menu_notice.h"
 #include "ui/menu/settings_tabs.h"
 #include "ui/menu/option_rows.h"
+#include "ui/menu/text_entry.h"
 
 extern "C" {
 #include "cfg.h"
@@ -37,6 +38,7 @@ extern "C" {
 #include "sysinfo.h"
 #include "ui/menu/menu.h"
 #include "ui_text.h"
+#include "plugin/plugin.h"
 // host.h and vk.h pull in cpu.h, which is C only: the functions the menu needs from them, as declared there.
 void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void vk_queue_lock(void);
@@ -72,10 +74,11 @@ static void set_open(int open) { change_open(open); }
 static int g_failed_flag();
 extern "C" int menu_is_open(void) { return g_open.load(std::memory_order_relaxed); }
 extern "C" void menu_toggle(void) {
-    if (!g_failed_flag()) change_open(-1);
+    if (!g_failed_flag() && !text_entry_up()) change_open(-1);   // the number pad is modal, as the applet
 }
 
-// ---- events from the window adapter, queued while the menu is open; the present path hands them to ImGui
+// ---- events from the window adapter, queued while the menu or the number pad is up; the present path hands them to
+// ImGui
 enum { EV_KEY, EV_POS, EV_BUTTON, EV_WHEEL, EV_FOCUS, EV_MAX = 256 };
 struct Ev { int type, a, b; float x, y; };
 static PlatMutex ev_lock = PLAT_MUTEX_INIT;
@@ -83,7 +86,7 @@ static Ev ev_q[EV_MAX];
 static int ev_n;
 
 static void push(Ev e) {
-    if (!menu_is_open()) return;
+    if (!menu_is_open() && !text_entry_up()) return;
     plat_mutex_lock(&ev_lock);
     if (e.type == EV_POS && ev_n && ev_q[ev_n - 1].type == EV_POS) ev_q[ev_n - 1] = e;   // only the newest position
     else if (ev_n < EV_MAX) ev_q[ev_n++] = e;
@@ -122,6 +125,7 @@ static const struct { int bit; ImGuiKey key; } pad_keys[] = {
     {B_Y, ImGuiKey_GamepadFaceLeft}, {B_L, ImGuiKey_GamepadL1}, {B_R, ImGuiKey_GamepadR1},
     {B_ZL, ImGuiKey_GamepadL2}, {B_ZR, ImGuiKey_GamepadR2}, {B_LEFT, ImGuiKey_GamepadDpadLeft},
     {B_UP, ImGuiKey_GamepadDpadUp}, {B_RIGHT, ImGuiKey_GamepadDpadRight}, {B_DOWN, ImGuiKey_GamepadDpadDown},
+    {B_PLUS, ImGuiKey_GamepadStart},   // the number pad's OK
 };
 static uint64_t pad_prev;   // buttons at the last frame; a button held when the menu opened counts once released
 static int stick_dir = -1;  // the D-pad button the left stick holds, -1 none
@@ -377,7 +381,9 @@ static void layout_choice(uint32_t w, uint32_t h, float scale) {
 }
 
 // ---- the window: title, tabs (L / R or Q / E switch), the page, and the bottom row with "Continue" and "Quit game".
-// B on the gamepad and Esc close it.
+// B on the gamepad and Esc close it. Opening focuses "Continue" (g_focus_continue, spent on the first layout), so a
+// stray gamepad deflection cannot retune a setting.
+static int g_focus_continue;   // the just-opened menu focuses "Continue"
 static void layout_menu(uint32_t w, uint32_t h, float scale) {
     ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), ImVec2((float)w, (float)h), IM_COL32(0, 0, 0, 120));
     float ww = fminf(w * 0.88f, 1400 * scale), wh = fminf(h * 0.86f, 820 * scale);
@@ -408,6 +414,11 @@ static void layout_menu(uint32_t w, uint32_t h, float scale) {
     const char *cont = menu_text(UI_MENU_CONTINUE), *quit = menu_text(UI_MENU_QUIT);
     float bw = fmaxf(ImGui::CalcTextSize(cont).x, ImGui::CalcTextSize(quit).x) + st.FramePadding.x * 4;
     ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - st.WindowPadding.x - bw * 2 - st.ItemSpacing.x, y));
+    if (g_focus_continue) {   // discussion #577: opening focuses "Continue", so left/right move between the bottom
+        ImGui::SetKeyboardFocusHere();   // buttons instead of retuning the first setting row. SetKeyboardFocusHere
+        ImGui::SetNavCursorVisible(true);   // leaves the cursor hidden (NoSetNavCursorVisible): show the gold outline
+        g_focus_continue = 0;
+    }
     if (ImGui::Button(cont, ImVec2(bw, 0))) set_open(0);
     ImGui::SameLine();
     if (ImGui::Button(quit, ImVec2(bw, 0))) gfx_window_request_close();
@@ -690,6 +701,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     if (g_test.next_set < g_test.n_sets && frame >= g_test.sets[g_test.next_set].frame) test_apply_sets(frame);
     if (g_perf_save.exchange(0)) cfg_save();
     perf_tick(plat_now_ns(), frame, t);
+    text_entry_test(frame);
     classic_poll();   // MKW_CLASSIC_GP or _VS changed: the cups and routes in the game's memory (core/hacks/classic.c)
     bool open = g_open.load(std::memory_order_relaxed);
     if (!open && g_choice_up.load()) choice_answer(-1);   // F1 or Esc closed the menu over a choice: no answer
@@ -701,7 +713,7 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
             settings_select(0);
             set_open(1);
             open = true;
-        } else if (!g_perf_mode && !menu_notice_shown()) {
+        } else if (!g_perf_mode && !menu_notice_shown() && !text_entry_up() && !plugins_overlay_wanted()) {
             return 0;
         }
     }
@@ -730,17 +742,26 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
         io.ClearInputKeys();
         io.ClearInputMouse();
         g_last_ns = 0;
-        settings_opened();   // opening: the first row has the cursor
+        settings_opened_menu();   // opening focuses "Continue" (g_focus_continue), not the first row
+        // the test hook's pages keep the first row focused for stable screenshots (settings_select survives
+        // settings_opened_menu, so only a plain open takes "Continue")
+        g_focus_continue = (g_test.page < 0);
         if (GImGui->OpenPopupStack.Size) ImGui::ClosePopupToLevel(0, false);   // a confirmation left open on closing
     }
     io.DisplaySize = ImVec2((float)t->width, (float)t->height);
     double dt = g_last_ns ? (t0 - g_last_ns) / 1e9 : 1 / 60.0;
     io.DeltaTime = (float)(dt < 1e-4 ? 1e-4 : dt > 0.1 ? 0.1 : dt);
     g_last_ns = t0;
-    if (!open) {   // the overlay alone: no input reaches ImGui
+    bool entry = text_entry_up();
+    int entry_new = text_entry_opened();   // what was held or queued before the pad went up does not press its keys
+    if (entry_new && !reset) {
+        io.ClearInputKeys();
+        io.ClearInputMouse();
+    }
+    if (!open && !entry) {   // the overlay alone: no input reaches ImGui
     } else if (g_test.page < 0) {
         drain_events(io);
-        pad_events(io, reset);
+        pad_events(io, reset || entry_new);
     } else {   // the test hook's pages: the user's input in a background test window must not change settings
         plat_mutex_lock(&ev_lock);
         ev_n = 0;
@@ -749,10 +770,12 @@ extern "C" int menu_overlay_frame(uint64_t frame, const MenuTarget *t, const cha
     ImGui_ImplVulkan_NewFrame();
     ui_id_check("in-game menu");
     ImGui::NewFrame();
+    plugins_overlay_draw((float)t->width, (float)t->height, scale);
     if (open && g_choice_up.load()) layout_choice(t->width, t->height, scale);
     else if (open) layout_menu(t->width, t->height, scale);
     perf_draw(t, scale);
     menu_notice_draw((float)t->width, scale);
+    text_entry_draw((float)t->width, (float)t->height, scale);
     ImGui::Render();
     if (open) g_save_pending = opt_save_tick(0);
     g_cost_ns += plat_now_ns() - t0;

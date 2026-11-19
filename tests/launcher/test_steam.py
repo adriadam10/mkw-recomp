@@ -75,6 +75,30 @@ def test_add_creates_the_file(tmp_path: Path) -> None:
     assert [r["AppName"] for r in got] == [NAME]
 
 
+@pytest.mark.parametrize(
+    "data",
+    [b"\x00shortcuts\x00", b"\x00shortcuts\x00\x02appid\x00\x01"],
+    ids=["truncated-map", "truncated-integer"],
+)
+def test_add_reports_truncated_shortcuts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], data: bytes,
+) -> None:
+    config = tmp_path / "userdata/123/config"
+    config.mkdir(parents=True)
+    vdf = config / "shortcuts.vdf"
+    vdf.write_bytes(data)
+    monkeypatch.setattr(steam, "steam_dir", lambda: tmp_path)
+    monkeypatch.setattr(steam, "write_art", lambda *_: config / "icon.png")
+    monkeypatch.setattr(sys, "argv", ["steam.py", "add", "--name", NAME, "--exe", EXE, "--dir", "/games/mkw"])
+
+    with pytest.raises(SystemExit) as result:
+        steam.main()
+
+    assert result.value.code == 1
+    assert capsys.readouterr().out == "error io shortcuts.vdf contains incomplete or invalid Steam shortcut data\n"
+    assert vdf.read_bytes() == data
+
+
 def test_no_steam_pid_is_not_running(tmp_path: Path) -> None:
     # a pid file that is not there (or is not a number) reads as Steam closed, never as an error
     if os.name == "nt":

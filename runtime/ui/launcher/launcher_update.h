@@ -1,24 +1,30 @@
 // The start screen's update (ui/launcher/launcher_update.cpp): GitHub's latest published release, offered at start,
-// downloaded by tools/prepare/update.py with the package's Python, then put in place here and the program started
-// again, which sets up again only what changed (prepare.py without --source).
+// downloaded by tools/prepare/update.py with the package's Python, then set up beside the version still played by the
+// new package's prepare.py --next (the player keeps playing meanwhile, #429), and put in place here when the player
+// restarts with it: its first start only swaps the prepared files in (tools/prepare/nextsetup.py).
 #pragma once
 
-enum UpdatePhase { UPDATE_IDLE, UPDATE_CHECKING, UPDATE_OFFER, UPDATE_FETCHING, UPDATE_READY, UPDATE_FAILED };
+enum UpdatePhase { UPDATE_IDLE, UPDATE_CHECKING, UPDATE_OFFER, UPDATE_FETCHING, UPDATE_READY, UPDATE_FAILED,
+                   UPDATE_PREPARING, UPDATE_PREPARED };
 
 typedef struct {
     int phase;                // UpdatePhase
     char tag[96];             // the release offered, as "v0.1.5"
     long long bytes;          // its package's size
-    long long done, total;    // of the download
-    char path[1200];          // UPDATE_READY: the AppImage (Linux) or the package's folder (Windows)
-    char error[512];          // UPDATE_FAILED: why
+    long long done, total;    // of the download; UPDATE_PREPARING: of the setup's step
+    char path[1200];          // from UPDATE_READY on: the AppImage (Linux) or the package's folder (Windows)
+    char error[512];          // UPDATE_FAILED: why; UPDATE_PREPARED: why the setup beside failed ("" when it did not)
+    int step;                 // UPDATE_PREPARING: prepare.py's step (setup_step_index), -1 none yet
 } UpdateState;
 
-void update_check_start(const char *exe_dir);   // at start: nothing unless MKW_UPDATE_CHECK and a packaged install
+// at start: nothing unless MKW_UPDATE_CHECK and a packaged install; a release already downloaded is set up again
+// beside (prepare.py --next resumes, or finds it done)
+void update_check_start(const char *exe_dir);
 void update_fetch_start(const char *exe_dir);   // the offered release, once UPDATE_OFFER (or again after its failure)
 UpdateState update_state(void);                 // a copy, any time
-// UPDATE_READY: the new files in place of the old ones (renamed to *.old, removed at the next start). 1: done, start the
-// program again with update_relaunch once the window is gone; 0: nothing changed, the error is in the state.
+// UPDATE_PREPARED: the new files in place of the old ones (renamed to *.old, removed at the next start). 1: done, start
+// the program again with update_relaunch once the window is gone; 0: nothing changed, the error is in the state. A
+// setup beside that failed only leaves the new version's first start to set up as before.
 int update_apply(const char *exe_dir);
 void update_relaunch(const char *exe_dir);   // the new program; on Linux this process becomes it
 // The version the last update replaced, kept for Undo (Windows: update-previous/ beside the program; Linux: the

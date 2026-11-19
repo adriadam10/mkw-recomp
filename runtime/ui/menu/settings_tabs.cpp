@@ -112,8 +112,9 @@ static void row_game_lang(void) {
         {"nl", UI_MENU_LANGNAME_NL}, {"pt", UI_MENU_LANGNAME_PT}, {"pt-BR", UI_MENU_LANGNAME_PT_BR},
         {"ru", UI_MENU_LANGNAME_RU},
         {"zh-CN", UI_MENU_LANGNAME_ZH_HANS}, {"zh-TW", UI_MENU_LANGNAME_ZH_HANT}, {"ko", UI_MENU_LANGNAME_KO},
-        // ours, rebuilt over the game's Spanish (tools/i18n/game_texts.py)
+        // ours, rebuilt over the game's Spanish and British English (tools/i18n/game_texts.py)
         {"ca", UI_MENU_LANGNAME_CA}, {"gl", UI_MENU_LANGNAME_GL}, {"eu", UI_MENU_LANGNAME_EU},
+        {"tr", UI_MENU_LANGNAME_TR},
         // added by updates (Polish 1.5.0, Thai 1.7.0): listed only when this copy of the game ships them
         {"pl", UI_MENU_LANGNAME_PL}, {"th", UI_MENU_LANGNAME_TH},
     };
@@ -389,6 +390,13 @@ static void pad_rows(void) {
     if (!shown) opt_text(UI_MENU_PADS_NONE);
 }
 
+// Under the Menu shortcut description while Guide is picked: Steam's overlay opens on it too (as does the
+// Xbox Game Bar on Windows), so the game may never see it.
+static const char *shortcut_guide_note(void) {
+    if (strcmp(cfg_value("MKW_MENU_SHORTCUT"), "guide")) return nullptr;
+    return menu_text(UI_MENU_SHORTCUT_STEAM_NOTE);
+}
+
 static void tab_controls(float scale) {
     opt_begin("##controls", scale);
     pad_rows();
@@ -397,6 +405,9 @@ static void tab_controls(float scale) {
     static const UiTextId icons[] = {UI_MENU_AUTO, UI_MENU_ICONS_NINTENDO, UI_MENU_ICONS_XBOX, UI_MENU_ICONS_PLAYSTATION,
                                      UI_MENU_ICONS_KEYBOARD};
     opt_choice("MKW_BUTTON_ICONS", UI_MENU_BUTTON_ICONS, icons, 5, UI_MENU_BUTTON_ICONS_DESC, button_icons_note());
+    static const UiTextId shortcut[] = {UI_MENU_SHORTCUT_MINUS_PLUS, UI_MENU_SHORTCUT_GUIDE};
+    opt_choice("MKW_MENU_SHORTCUT", UI_MENU_MENU_SHORTCUT, shortcut, 2, UI_MENU_MENU_SHORTCUT_DESC, nullptr,
+               shortcut_guide_note());
     opt_toggle("MKW_MOTION", UI_MENU_MOTION, UI_MENU_MOTION_DESC);
     opt_slider("MKW_RUMBLE_STRENGTH", UI_MENU_RUMBLE_STRENGTH, 0, 300, UI_MENU_RUMBLE_STRENGTH_DESC, 10, "%.0f %%");
     opt_slider("MKW_RUMBLE_CURVE", UI_MENU_RUMBLE_CURVE, 0.2f, 1.5f, UI_MENU_RUMBLE_CURVE_DESC, 0.05f, "%.2f");
@@ -695,6 +706,15 @@ void settings_select(int tab) { g_tab_request = tab; }
 
 void settings_opened(void) {
     g_focus_page = g_tab_request >= 0 ? g_tab_request : g_tab;   // the first row has the cursor
+    g_modal = false;
+}
+
+// The in-game menu opened (discussion #577): no row takes the cursor, layout_menu focuses "Continue" instead, so a
+// stray D-pad deflection on open cannot retune a setting. A pending tab request survives: tab switches in
+// settings_tabs still focus the new page's first row, and the test hook's settings_select(0) keeps its screenshots
+// on the first row.
+void settings_opened_menu(void) {
+    g_focus_page = -1;
     g_modal = false;
 }
 

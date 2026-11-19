@@ -26,7 +26,8 @@
 // MKW_LAUNCHER_EXIT_AFTER_SETUP=1 quits when that setup ends, after saving the page as <shot out>-end.png (its result
 // is in the log); MKW_LAUNCHER_SHOT then takes its shot without quitting. During a shot the update check runs only
 // with MKW_UPDATE_AS (tools/prepare/update.py: compare as that version). MKW_LAUNCHER_UPDATE=1 takes the update offered
-// at once, as its button does; MKW_LAUNCHER_BACKUP=1 and MKW_LAUNCHER_UNDO=1 press the Tools page's Back up and Undo
+// at once, as its button does, and MKW_LAUNCHER_RESTART=1 its Restart with it once it is set up beside;
+// MKW_LAUNCHER_BACKUP=1 and MKW_LAUNCHER_UNDO=1 press the Tools page's Back up and Undo
 // update once (Undo confirmed too; MKW_LAUNCHER_UNDO=ask leaves its dialog open, for a shot). The last run's notice (launcher_lastrun.h) is read during a shot only with
 // MKW_LAUNCHER_LASTRUN=1.
 #include <SDL3/SDL.h>
@@ -201,7 +202,7 @@ static bool pad_power(int i, InputPower *w, char *text, int size) {
     snprintf(w->name, sizeof w->name, "%s", n ? n : "");
     int pct = -1;
     SDL_PowerState st = SDL_GetGamepadPowerInfo(g, &pct);
-    input_power_from_sdl(st, pct, SDL_GetGamepadID(g), w);
+    input_power_from_sdl(st, pct, SDL_GetGamepadID(g), i, w);
     input_power_text(w, text, size);
     return true;
 }
@@ -386,7 +387,8 @@ static bool pad_row(float w, float hgt) {
         if (ImGui::IsItemHovered()) {
             ImGui::BeginTooltip();
             for (int i = 0; pad_power(i, &w, power, sizeof power); i++)
-                ImGui::Text(menu_text(UI_MENU_PAD_PLAYER), i + 1, w.name), ImGui::SameLine(), ImGui::TextDisabled("%s", power);
+                ImGui::Text(menu_text(UI_MENU_PAD_PLAYER), i + 1, w.name), ImGui::SameLine(0, 8 * s),
+                    ImGui::TextDisabled("%s", power);
             ImGui::EndTooltip();
         }
     } else {
@@ -485,17 +487,21 @@ static void make_shortcut(void) {
     rt_log("launcher: desktop shortcut %s %s", ok ? "made:" : "failed", ok ? made : "");
 }
 
+static const UiTextId kStepText[SETUP_STEPS] = {UI_LAUNCH_STEP_CHECK, UI_LAUNCH_STEP_EXEFS, UI_LAUNCH_STEP_ROMFS,
+                                                UI_LAUNCH_STEP_GENERATE, UI_LAUNCH_STEP_COMPILE, UI_LAUNCH_STEP_SHADERS,
+                                                UI_LAUNCH_STEP_WARM, UI_LAUNCH_STEP_CLEANUP};
+
 // The update offered (launcher_update.h) as a card in the accent: the release, the version in use and the download's
-// size, with Update and a link to the release's notes; then the download's progress; a failed download in red with its
-// reason and Try again. Once downloaded it is installed and the program starts again. A failed check shows nothing.
+// size, with Update and a link to the release's notes; then the download's progress, and its setup beside the version
+// played (Play stays the first button and works all along, #429); once set up, Restart with it. A failed download in
+// red with its reason and Try again. A failed check shows nothing.
 static void update_card(float w) {
     UpdateState u = update_state();
-    if (u.phase == UPDATE_READY) {
-        if (update_apply(L.exe_dir)) L.relaunch = 1, L.result = LAUNCHER_QUIT;
-        return;
-    }
     bool failed = u.phase == UPDATE_FAILED && u.tag[0];
-    if (u.phase != UPDATE_OFFER && u.phase != UPDATE_FETCHING && !failed) return;
+    if (u.phase == UPDATE_READY || u.phase == UPDATE_PREPARING) u.phase = UPDATE_PREPARING;   // READY: starting it
+    if (u.phase != UPDATE_OFFER && u.phase != UPDATE_FETCHING && u.phase != UPDATE_PREPARING &&
+        u.phase != UPDATE_PREPARED && !failed)
+        return;
     char text[700];
     ImGui::PushID("update");   // its Try again and the failed setup's share a page (files) and a label
     card_begin(w);
@@ -509,12 +515,27 @@ static void update_card(float w) {
         snprintf(text, sizeof text, menu_text(UI_LAUNCH_UPDATE_DETAIL), rt_port_version,
                  (int)((u.bytes + (1 << 19)) >> 20));
         ImGui::TextColored(col4(LOOK_HEADING), "%s", text);
-        if (accent_button(menu_text(UI_LAUNCH_UPDATE_NOW)) || getenv("MKW_LAUNCHER_UPDATE")) update_fetch_start(L.exe_dir);
+        if (ImGui::Button(menu_text(UI_LAUNCH_UPDATE_NOW)) || getenv("MKW_LAUNCHER_UPDATE")) update_fetch_start(L.exe_dir);
         ImGui::SameLine();
         if (ImGui::Button(menu_text(UI_LAUNCH_WHATS_NEW))) {
             snprintf(text, sizeof text, "https://github.com/%s/releases/tag/%s", repo(), u.tag);
             SDL_OpenURL(text);
         }
+    } else if (u.phase == UPDATE_PREPARING) {
+        snprintf(text, sizeof text, menu_text(UI_LAUNCH_UPDATE_PREPARING), u.tag);
+        ImGui::TextWrapped("%s", text);
+        snprintf(text, sizeof text, "%s", u.step >= 0 ? menu_text(kStepText[u.step]) : "");
+        ImGui::ProgressBar(u.total > 0 ? (float)u.done / (float)u.total : 0, ImVec2(w - 2 * card_pad(), 0), text);
+    } else if (u.phase == UPDATE_PREPARED) {
+        snprintf(text, sizeof text, menu_text(UI_LAUNCH_UPDATE_PREPARED), u.tag);
+        ImGui::TextUnformatted(text);
+        if (u.error[0]) {
+            snprintf(text, sizeof text, menu_text(UI_LAUNCH_UPDATE_PREPARE_FAILED), u.error);
+            ImGui::TextColored(col4(LOOK_HEADING), "%s", text);
+        }
+        bool press = ImGui::Button(menu_text(UI_LAUNCH_UPDATE_RESTART)) || getenv("MKW_LAUNCHER_RESTART");
+        if (press && update_apply(L.exe_dir))
+            L.relaunch = 1, L.result = LAUNCHER_QUIT;
     } else {
         snprintf(text, sizeof text, menu_text(UI_LAUNCH_UPDATE_FETCHING), u.tag);
         ImGui::TextUnformatted(text);
@@ -794,7 +815,7 @@ static bool status_link(bool ready) {
 // (launcher_backdrop.cpp): the player's splash.png, or the logo's flag.
 static void page_main(float w, float h) {
     float s = L.scale, left = 96 * s, cw = 440 * s, edge = 56 * s, lh = ImGui::GetTextLineHeight();
-    bool files = rt_game_present() && !files_gone(), ready = files && update_state().phase != UPDATE_FETCHING;
+    bool files = rt_game_present() && !files_gone(), ready = files;   // the update never touches the files played
     // the column's height, to centre it: logo and title, the gap, Play, the controllers, the menu, the gap and Quit
     float mark = 84 * s, items = item_height(), gap = 12 * s;
     float play_h = fmaxf(52.0f, 76 * s), pad_h = fmaxf(36.0f, 48 * s);
@@ -1005,10 +1026,6 @@ static void page_settings(float w, float h) {
 }
 
 // ---- the game files page: the player's copy, how the RomFS is kept, the setup and its progress
-static const UiTextId kStepText[SETUP_STEPS] = {UI_LAUNCH_STEP_CHECK, UI_LAUNCH_STEP_EXEFS, UI_LAUNCH_STEP_ROMFS,
-                                                UI_LAUNCH_STEP_GENERATE, UI_LAUNCH_STEP_COMPILE, UI_LAUNCH_STEP_SHADERS,
-                                                UI_LAUNCH_STEP_WARM, UI_LAUNCH_STEP_CLEANUP};
-
 static void SDLCALL picked(void *kind, const char *const *files, int) {
     SDL_Event e = {};
     e.type = L.picked_event;
@@ -1142,7 +1159,9 @@ static bool romfs_card(const char *id, bool on, UiTextId title, UiTextId note, f
 // Where the game is installed: Choose game folder (the launcher reopens with it), then under the buttons why the folder
 // chosen cannot be used and that the environment fixes it.
 static void game_dir_button(const SetupState &st, float act_h) {
-    ImGui::BeginDisabled(st.running || update_state().phase == UPDATE_FETCHING || cfg_from_env("MKW_GAME_DIR"));
+    int up = update_state().phase;   // the update's tools are writing beside the game folder
+    ImGui::BeginDisabled(st.running || up == UPDATE_FETCHING || up == UPDATE_READY || up == UPDATE_PREPARING ||
+                         cfg_from_env("MKW_GAME_DIR"));
     if (ImGui::Button(menu_text(UI_LAUNCH_PICK_GAME_DIR), ImVec2(0, act_h))) {
         L.picking = 1;
         SDL_ShowOpenFolderDialog(picked, &L.directory_restart, L.win, cfg_game_dir(), false);
@@ -1535,6 +1554,7 @@ static void page_mods(float w, float h) {
         ImGui::PushTextWrapPos(0);
         if (m->warn_graphics) ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", menu_text(UI_MOD_WARN_GRAPHICS));
         if (m->warn_shaders) ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", menu_text(UI_MOD_WARN_SHADERS));
+        if (m->has_plugin) ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", menu_text(UI_MOD_PLUGIN));
         ImGui::PopTextWrapPos();
         ImGui::Separator();
         ImGui::PopID();
@@ -1771,7 +1791,8 @@ static void page_tools(float w, float h) {
             SDL_OpenURL(note);
         }
         ImGui::SameLine();
-        ImGui::BeginDisabled(u.phase == UPDATE_CHECKING || u.phase == UPDATE_FETCHING);
+        bool busy = u.phase == UPDATE_FETCHING || u.phase == UPDATE_READY || u.phase == UPDATE_PREPARING;
+        ImGui::BeginDisabled(u.phase == UPDATE_CHECKING || busy);
         if (ImGui::Button(menu_text(UI_TOOLS_CHECK), ImVec2(0, act_h))) update_check_start(L.exe_dir);
         ImGui::EndDisabled();
         char kept[96];
@@ -1780,7 +1801,7 @@ static void page_tools(float w, float h) {
             if (undo_why[0]) snprintf(note, sizeof note, menu_text(UI_TOOLS_FAILED), undo_why);
             else snprintf(note, sizeof note, "%s", menu_text(UI_TOOLS_UNDO_NOTE));
             tools_row(text, note, undo_why[0] != 0);
-            ImGui::BeginDisabled(u.phase == UPDATE_FETCHING || setup_state().running);
+            ImGui::BeginDisabled(busy || setup_state().running);
             if (ImGui::Button(menu_text(UI_TOOLS_UNDO), ImVec2(0, act_h)) || undo_test)
                 snprintf(undo_tag, sizeof undo_tag, "%s", kept);   // the dialog opens after the table (below)
             ImGui::EndDisabled();

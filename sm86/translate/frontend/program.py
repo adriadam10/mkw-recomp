@@ -98,10 +98,12 @@ class Decoder:
             d = self.cache.get(word)
             if d is None:
                 d = sass_decode.decode(self.spec, word)
+                # the fields by name once per word, not per instruction (the translator only reads them)
+                d.fields = {getattr(v.item, "name", str(v.item)): v for v in d.values}
                 if len(self.cache) >= CACHE_WORDS:
                     self.cache.clear()
                 self.cache[word] = d
             if d.cls is None:
                 break  # data after the code (constants), never executed
-            out.append(Insn(pc, word, d, {getattr(v.item, "name", str(v.item)): v for v in d.values}))
+            out.append(Insn(pc, word, d, d.fields))
         return sph, out

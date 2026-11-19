@@ -8,6 +8,21 @@ msgctxt "UI_SWKBD_DEFAULT_NAME"
 msgid "Player"
 msgstr "Gracz"
 
+#. The on-screen number pad the game opens to ask for a number: its confirm key (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_OK"
+msgid "OK"
+msgstr "OK"
+
+#. The on-screen number pad: the wide button under the keys that closes it without a number
+msgctxt "UI_KEYPAD_CANCEL"
+msgid "Cancel"
+msgstr "Anuluj"
+
+#. The on-screen number pad: the key that erases the last digit (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_DELETE"
+msgid "Delete"
+msgstr "Usuń"
+
 msgctxt "UI_MENU_TITLE"
 msgid "Settings"
 msgstr "Ustawienia"
@@ -826,6 +841,34 @@ msgctxt "UI_MENU_ICONS_IN_USE"
 msgid "in use: %s"
 msgstr "używane: %s"
 
+msgctxt "UI_MENU_MENU_SHORTCUT"
+msgid "Menu shortcut"
+msgstr "Skrót menu"
+
+msgctxt "UI_MENU_MENU_SHORTCUT_DESC"
+msgid ""
+"Choose which controller input opens this menu (Start + Select or the Guide button). Keyboard "
+"defaults to F1 or Esc."
+msgstr ""
+"Wybierz, które wejście kontrolera otwiera to menu (Start + Select lub przycisk Guide). Klawiatura "
+"domyślnie używa F1 lub Esc."
+
+msgctxt "UI_MENU_SHORTCUT_MINUS_PLUS"
+msgid "Start + Select"
+msgstr "Start + Select"
+
+msgctxt "UI_MENU_SHORTCUT_GUIDE"
+msgid "Guide button"
+msgstr "Przycisk Guide"
+
+msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
+msgid ""
+"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
+"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+msgstr ""
+"Uwaga: jeśli używasz przycisku Guide, zalecamy wyłączenie 'Guide button focuses Steam' w Steam "
+"(Ustawienia -> Kontroler -> Ustawienia zaawansowane), aby Steam nie otwierał się nad grą."
+
 msgctxt "UI_BINDS_HELP"
 msgid ""
 "Select a cell and press A or Enter, then the key, mouse button or controller button. Delete or X "
@@ -902,11 +945,12 @@ msgstr "Gracz %d: %s"
 msgctxt "UI_MENU_PAD_BATTERY_DESC"
 msgid ""
 "The battery of each player's controller, as the controller reports it. Some controllers report "
-"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+"none. A Switch 2 controller over Bluetooth reports a voltage and an Xbox controller on Linux's "
+"xone driver a level, each shown as high, medium or low."
 msgstr ""
 "Bateria kontrolera każdego gracza, tak jak zgłasza ją kontroler. Niektóre kontrolery jej nie "
-"zgłaszają. Kontroler Switch 2 przez Bluetooth zgłasza napięcie, pokazane jako wysokie, średnie "
-"lub niskie."
+"zgłaszają. Kontroler Switch 2 przez Bluetooth zgłasza napięcie, a kontroler Xbox w Linuksie ze "
+"sterownikiem xone poziom naładowania; oba pokazane jako wysokie, średnie lub niskie."
 
 msgctxt "UI_MENU_PADS_NONE"
 msgid "No controller connected"
@@ -2299,6 +2343,14 @@ msgstr ""
 "wyświetlać lub psuć obraz"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
+msgctxt "UI_MOD_PLUGIN"
+msgid ""
+"Native plugin: runs its own program on your computer alongside the game. Enable it only if you "
+"trust where it comes from"
+msgstr ""
+"Natywna wtyczka: uruchamia własny program na twoim komputerze obok gry. Włącz ją tylko, jeśli "
+"ufasz jej źródłu"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "kod: włączenie lub wyłączenie przebudowuje kod gry przed uruchomieniem (kilka minut)"
@@ -2358,6 +2410,22 @@ msgstr "Nowości"
 msgctxt "UI_LAUNCH_RETRY"
 msgid "Try again"
 msgstr "Spróbuj ponownie"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARING"
+msgid "Setting up %s in the background. You can keep playing meanwhile."
+msgstr "Przygotowywanie %s w tle. W międzyczasie możesz dalej grać."
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARED"
+msgid "%s is ready"
+msgstr "%s jest gotowa"
+
+msgctxt "UI_LAUNCH_UPDATE_RESTART"
+msgid "Restart with it"
+msgstr "Uruchom ponownie z nią"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
+msgid "It could not be set up in advance (%s): it will be set up when it starts."
+msgstr "Nie udało się przygotować wcześniej (%s): zostanie przygotowana przy uruchomieniu."
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.

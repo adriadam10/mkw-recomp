@@ -8,6 +8,21 @@ msgctxt "UI_SWKBD_DEFAULT_NAME"
 msgid "Player"
 msgstr "Игрок"
 
+#. The on-screen number pad the game opens to ask for a number: its confirm key (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_OK"
+msgid "OK"
+msgstr "ОК"
+
+#. The on-screen number pad: the wide button under the keys that closes it without a number
+msgctxt "UI_KEYPAD_CANCEL"
+msgid "Cancel"
+msgstr "Отмена"
+
+#. The on-screen number pad: the key that erases the last digit (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_DELETE"
+msgid "Delete"
+msgstr "Стереть"
+
 msgctxt "UI_MENU_TITLE"
 msgid "Settings"
 msgstr "Настройки"
@@ -824,6 +839,34 @@ msgctxt "UI_MENU_ICONS_IN_USE"
 msgid "in use: %s"
 msgstr "сейчас: %s"
 
+msgctxt "UI_MENU_MENU_SHORTCUT"
+msgid "Menu shortcut"
+msgstr "Вызов меню"
+
+msgctxt "UI_MENU_MENU_SHORTCUT_DESC"
+msgid ""
+"Choose which controller input opens this menu (Start + Select or the Guide button). Keyboard "
+"defaults to F1 or Esc."
+msgstr ""
+"Выберите, какая кнопка контроллера открывает это меню (Start + Select или кнопка Guide). На "
+"клавиатуре по умолчанию F1 или Esc."
+
+msgctxt "UI_MENU_SHORTCUT_MINUS_PLUS"
+msgid "Start + Select"
+msgstr "Start + Select"
+
+msgctxt "UI_MENU_SHORTCUT_GUIDE"
+msgid "Guide button"
+msgstr "Кнопка Guide"
+
+msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
+msgid ""
+"Note: If using the Guide button, we recommend disabling 'Guide button focuses Steam' in Steam "
+"(Settings -> Controller -> Advanced Settings) so Steam doesn't open over the game."
+msgstr ""
+"Примечание: если вы используете кнопку Guide, рекомендуем отключить 'Guide button focuses Steam' "
+"в Steam (Настройки -> Контроллер -> Расширенные настройки), чтобы Steam не открывался поверх игры."
+
 msgctxt "UI_BINDS_HELP"
 msgid ""
 "Select a cell and press A or Enter, then the key, mouse button or controller button. Delete or X "
@@ -899,11 +942,12 @@ msgstr "Игрок %d: %s"
 msgctxt "UI_MENU_PAD_BATTERY_DESC"
 msgid ""
 "The battery of each player's controller, as the controller reports it. Some controllers report "
-"none. A Switch 2 controller over Bluetooth reports a voltage, shown as high, medium or low."
+"none. A Switch 2 controller over Bluetooth reports a voltage and an Xbox controller on Linux's "
+"xone driver a level, each shown as high, medium or low."
 msgstr ""
 "Заряд геймпада каждого игрока, как его сообщает геймпад. Некоторые геймпады его не сообщают. "
-"Геймпад Switch 2 по Bluetooth сообщает напряжение, оно показано как высокий, средний или низкий "
-"заряд."
+"Геймпад Switch 2 по Bluetooth сообщает напряжение, а геймпад Xbox в Linux с драйвером xone "
+"уровень заряда; каждый показан как высокий, средний или низкий заряд."
 
 msgctxt "UI_MENU_PADS_NONE"
 msgid "No controller connected"
@@ -2290,6 +2334,14 @@ msgstr ""
 "отображаться или испортить картинку"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
+msgctxt "UI_MOD_PLUGIN"
+msgid ""
+"Native plugin: runs its own program on your computer alongside the game. Enable it only if you "
+"trust where it comes from"
+msgstr ""
+"Нативный плагин: запускает собственную программу на вашем компьютере вместе с игрой. Включайте "
+"его, только если доверяете источнику"
+
 msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "код: включение или отключение заново собирает код игры перед запуском (несколько минут)"
@@ -2350,6 +2402,22 @@ msgstr "Что нового"
 msgctxt "UI_LAUNCH_RETRY"
 msgid "Try again"
 msgstr "Попробовать снова"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARING"
+msgid "Setting up %s in the background. You can keep playing meanwhile."
+msgstr "%s настраивается в фоне. Пока можно продолжать играть."
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARED"
+msgid "%s is ready"
+msgstr "%s готова"
+
+msgctxt "UI_LAUNCH_UPDATE_RESTART"
+msgid "Restart with it"
+msgstr "Перезапустить с ней"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
+msgid "It could not be set up in advance (%s): it will be set up when it starts."
+msgstr "Не удалось подготовить заранее (%s): подготовка пройдёт при запуске."
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.

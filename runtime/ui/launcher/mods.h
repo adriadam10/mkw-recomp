@@ -22,6 +22,7 @@ typedef struct {
     char name[MOD_NAME_MAX], title[96];
     int has_romfs, romfs_files, has_exefs, exefs_match, nswitches, enabled;
     int warn_graphics, warn_shaders;   // mod.json's "warnings" (import.py): files the port treats its own way
+    int has_plugin;                    // a plugin/ folder: native code the runtime loads (runtime/plugin)
     int code;                          // changes the game's code ("image" or "patches"): built into the game code
     char exefs_build[17];   // the first .ips build id, short (16 hex) for the "not this build" line
     ModSwitch switches[MOD_SWITCHES_MAX];
@@ -30,7 +31,7 @@ typedef struct {
 // The import/run state for the page's progress line (launcher_setup.cpp's SetupState, smaller: no steps).
 typedef struct {
     int running, finished;   // finished: 1 imported, -1 failed
-    char done[64];           // the mod's folder name, from import.py's "done <name> ..."
+    char done[MOD_NAME_MAX + 1];   // the mod's folder name, from import.py's "done <name> ...": up to 64 characters
     char code[32];           // import.py's "error <code> ...", or "stopped"
     char error[512];         // the detail after the code
 } ModsState;

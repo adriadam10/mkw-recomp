@@ -7,8 +7,11 @@ and the code: graphics stages start with a 0x80-byte program header (SPH), compu
 BNSH walk adapted from totk-pc-recomp tools/shader_census.py @ c3b9a4e (MIT).
 
 Usage: uv run tools/shaders/extract.py [--romfs DIR|FILE.nup] [--out build/shaders] [--everything]
-Writes <sha1>.ctl and <sha1>.code per stage and index.csv (sha1, stage, code bytes, source file, program index), and
-<sha1>.c1 with the program's own constants (bank c[1]) when it has any: a BRX's jump table lives there.
+Writes <sha1>.ctl and <sha1>.code per stage and index.csv (sha1, stage, code bytes, source file, program index),
+<sha1>.c1 with the program's own constants (bank c[1]) when it has any: a BRX's jump table lives there, and pairs.csv
+(vs sha1, ps sha1): every vertex and fragment stage one program can draw together (an agl program: each of its vertex
+variations with each fragment one). index.csv names each stage once, by the first program holding it, so the pairs
+come from pairs.csv: pairing by its program column found 962 of the 3,119 pairs a run drew.
 """
 
 import argparse
@@ -84,10 +87,60 @@ def bnsh_stages(bnsh: bytes):
             yield i, stage, ctl, bnsh[code_off : code_off + code_size]
 
 
+def bahs_variations(data: bytes, entries: set[int]) -> dict[int, str]:
+    """Entry offset -> "program.variation" of an agl package's vertex and fragment binaries; {} when the arrays do not
+    read back. The table area holds a binary array (u32 byte size, u32 count, then per binary: u32 record size, u32 kind
+    0 vertex / 1 fragment / 3 compute, two u32, the 16-byte entry sharcb_stages reads) right before a program array
+    (u32 byte size, u32 count, then per program: u32 record size, u32 name length, u32 stage mask, u32 index of its
+    first binary, name, macros). A program's binaries run up to the next program's first; its n-th vertex and n-th
+    fragment binary are one variation. Layout from nxnative dm/gfx/tools/shader_split.py bahs_variations @ e4b0d9b (MIT).
+    Without it the census paired none of the 136 program pairs of agl packages a run drew (17/11/2026)."""
+    if not entries:
+        return {}
+    arr = min(entries) - 0x18
+    if arr < 0x20:
+        return {}
+    size, count = struct.unpack_from("<II", data, arr)
+    at, recs = arr + 8, []
+    for _ in range(count):
+        if at + 0x20 > arr + size:
+            return {}
+        rec_size, kind = struct.unpack_from("<II", data, at)
+        if rec_size < 0x20:
+            return {}
+        recs.append((at + 0x10, kind))
+        at += rec_size
+    if at != arr + size:
+        return {}
+    psize, pcount = struct.unpack_from("<II", data, at)
+    q, bases = at + 8, []
+    for _ in range(pcount):
+        if q + 16 > at + psize:
+            return {}
+        rec_size, _name, _mask, base = struct.unpack_from("<4I", data, q)
+        if rec_size < 16 or base > count or (bases and base < bases[-1]):
+            return {}
+        bases.append(base)
+        q += rec_size
+    if not pcount or q != at + psize:
+        return {}
+    bases.append(count)
+    out = {}
+    for p in range(pcount):
+        seen = [0, 0]
+        for entry, kind in recs[bases[p] : bases[p + 1]]:
+            if kind > 1:
+                continue
+            out[entry] = f"{p}.{seen[kind]}"
+            seen[kind] += 1
+    return out
+
+
 def sharcb_stages(data: bytes):
-    """Stages of an agl package (BAHS): records <u64 code offset in pool, u32 control size, i32 control offset>."""
+    """Stages of an agl package (BAHS): records <u64 code offset in pool, u32 control size, i32 control offset>. The
+    program index is "program.variation" (bahs_variations) when the package's arrays read back, else a running number."""
     start, pool_size, pool = struct.unpack_from("<3I", data, 20)
-    at, found = start, {}
+    at, found, entry_of = start, {}, {}
     size_word = struct.pack("<I", CONTROL_SIZE)
     while (at := data.find(size_word, at, pool)) >= 0:
         rec, at = at - 8, at + 4
@@ -98,15 +151,16 @@ def sharcb_stages(data: bytes):
         if not start <= ctl_at <= pool - CONTROL_SIZE or code_off >= pool_size:
             continue
         ctl = data[ctl_at : ctl_at + CONTROL_SIZE]
-        if ctl[:4] == CONTROL_MAGIC:
-            found.setdefault(code_off, ctl)
+        if ctl[:4] == CONTROL_MAGIC and code_off not in found:
+            found[code_off], entry_of[code_off] = ctl, rec
     # Records carry no code size; the control section does at +0x44 (equal to the BNSH record's size in all 3,238
     # programs of the .bfsha files, SPH included).
+    variation = bahs_variations(data, set(entry_of.values()))
     for n, (code_off, ctl) in enumerate(sorted(found.items())):
         size = struct.unpack_from("<I", ctl, CODE_SIZE_AT)[0]
         if code_off + size > pool_size:
             raise ValueError(f"agl program {n}: code past the pool")
-        yield n, None, ctl, data[pool + code_off : pool + code_off + size]
+        yield variation.get(entry_of[code_off], n), None, ctl, data[pool + code_off : pool + code_off + size]
 
 
 def ndsr_stages(data: bytes):
@@ -244,7 +298,7 @@ def main() -> None:
     ap.add_argument("--exefs", type=Path, default=Path(os.environ.get("MKW_GAME", "game")) / "exefs")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
-    rows, seen, stages = [], set(), Counter()
+    rows, seen, stages, pairs = [], set(), Counter(), set()
     sources = archives(args.romfs)
     if not args.shader_dir:
         sources = itertools.chain(sources, everywhere(args.romfs, args.exefs, args.everything))
@@ -260,25 +314,42 @@ def main() -> None:
             found = ndsr_stages(data)
         else:
             continue
+        program, last_vs = {}, None
         for index, slot_stage, ctl, code in found:
             stage = sph_stage(code) or slot_stage or "cs"
             c1 = constants(ctl, code)
             code = trim(code, stage)
             key = hashlib.sha1(ctl + code).hexdigest()
+            if data[:4] == b"NDSR":  # a vertex record is followed by its pixel record (nxnative ndsr_shaders)
+                last_vs = index if stage == "vs" else last_vs
+                index = last_vs
+            if stage in ("vs", "ps") and index is not None:
+                # an agl program's variations pick vertex and fragment binaries apart (program 59 of
+                # DrivePassShaderDefault draws vs variation 33 with ps 129): every vs of a program with every ps
+                group = index.split(".")[0] if isinstance(index, str) else index
+                program.setdefault(group, {"vs": set(), "ps": set()})[stage].add(key)
             if key in seen:
                 continue
             seen.add(key)
             stages[stage] += 1
-            (args.out / f"{key}.ctl").write_bytes(ctl)
-            (args.out / f"{key}.code").write_bytes(code)
-            if c1:
-                (args.out / f"{key}.c1").write_bytes(c1)
+            # named by content: a file an earlier run left is already this program (the setup keeps the folder
+            # between updates, tools/prepare/prepare.py clear_work)
+            for ext, data_ in (("ctl", ctl), ("code", code), ("c1", c1)):
+                p = args.out / f"{key}.{ext}"
+                if data_ and not (p.is_file() and p.stat().st_size == len(data_)):
+                    p.write_bytes(data_)
             rows.append((key, stage, len(code), name, index))
+        pairs |= {(v, f) for p in program.values() for v in p["vs"] for f in p["ps"]}
     with (args.out / "index.csv").open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(("sha1", "stage", "code_bytes", "source", "program"))
         w.writerows(rows)
-    print(f"{len(rows)} distinct stages: " + ", ".join(f"{s} {n}" for s, n in stages.most_common()))
+    with (args.out / "pairs.csv").open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(("vs", "ps"))
+        w.writerows(sorted(pairs))
+    counts = ", ".join(f"{s} {n}" for s, n in stages.most_common())
+    print(f"{len(rows)} distinct stages ({len(pairs)} vs+ps pairs): {counts}")
 
 
 if __name__ == "__main__":

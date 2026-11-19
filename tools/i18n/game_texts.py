@@ -1,5 +1,6 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.14"
+# dependencies = ["fonttools>=4.60"]
 # ///
 """The game's own texts (romfs/Mals/<region><lang>/*.msarc: SARC archives of MSBT files, 1 328 texts per language):
 dumped as "label<TAB>text" lines, and rebuilt in a language the game does not ship.
@@ -7,7 +8,8 @@ dumped as "label<TAB>text" lines, and rebuilt in a language the game does not sh
 The dump is the vocabulary a menu translation reuses (Time Trials, Free Roam, the cups...). A game translation
 (i18n/game/base/<lang>.tsv, same lines) holds only our text, never Nintendo's: build reads the player's own copy, replaces
 each translated label (the rest stays in the base language: a partial translation works) and writes the archives with
-the manifest.tsv of a RomFS overlay (runtime/sdk/fs/romfs.c), which the runtime serves in place of the originals.
+the manifest.tsv of a RomFS overlay (runtime/sdk/fs/romfs.c), which the runtime serves in place of the originals. A
+letter the game's fonts lack (Turkish ğ ş İ) is composed into a copy of them in the same overlay (game_fonts.py).
 
 Labels are "<archive>/<msbt>/<label>", e.g. MsgMain/Menu/2203, the same in every language. A text's control tags
 (colours, the player's name, plurals) are written {0E gggg tttt llll ...} and {0F gggg tttt}, in UTF-16 units as
@@ -32,13 +34,23 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 TRANSLATIONS = ROOT / "i18n" / "game"
 BASE_TSV = TRANSLATIONS / "base"  # <lang>.tsv; the <version>/ folders beside it hold what each update reworded
-# The game language each translation replaces (the one the game is told): Spain's languages over its Spanish
-BASE = {"ca": "EUes", "gl": "EUes", "eu": "EUes"}
+# The game language each translation replaces (the one the game is told): Spain's languages over its Spanish, Turkish
+# over the British English (discussion #593)
+BASE = {"ca": "EUes", "gl": "EUes", "eu": "EUes", "tr": "EUen"}
 TAG = re.compile(r"\{(0[EF](?: [0-9A-F]{4})*)\}")
 
 
 def game_dir() -> Path:
     return Path(os.environ.get("MKW_GAME", ROOT / "game"))
+
+
+def romfs_folder(sub: str) -> Path:
+    """romfs/<sub> of the game copy; from a packed copy (game/romfs a .nup), unpacked once under build/ (Mals ~200 MB,
+    Font ~35 MB)."""
+    sys.path.insert(0, str(ROOT / "tools/prepare"))
+    from nup import romfs_dir
+
+    return romfs_dir(game_dir() / "romfs", sub, ROOT / "build/romfs-mals" / game_dir().resolve().name) / sub
 
 
 # ---- SARC
@@ -240,6 +252,8 @@ def mismatched(source: dict[str, str], texts: dict[str, str]) -> list[str]:
 
 
 def build(lang: str, out: Path, romfs: Path | None = None, strict: bool = True, version: int = 0) -> None:
+    import game_fonts
+
     """strict (the build command, on the copy the translation is made from): a mismatch stops. Not strict (the
     setup): the translation was made on one game version and the player may have another (1.8.0 drops or retags
     labels of 1.0.0, so the setup stopped at its last step for every 1.8.0 dump); those texts stay in the base
@@ -277,6 +291,8 @@ def build(lang: str, out: Path, romfs: Path | None = None, strict: bool = True, 
         (out / rel).write_bytes(data)
         sha = hashlib.sha256
         manifest.append(f"{rel}\t{len(data)}\t{sha(data).hexdigest()}\t{sha(orig).hexdigest()}")
+    font_dir = romfs / "Font" if romfs else romfs_folder("Font")
+    manifest += game_fonts.build(font_dir, "".join(texts.values()), out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "manifest.tsv").write_text(f"# {lang} over {base}, from i18n/game/base/{lang}.tsv\n" + "\n".join(manifest) + "\n")
     n = len(folder_lines(folder))
@@ -304,10 +320,7 @@ def main() -> int:
     b.add_argument("-o", "--out", type=Path)
     sub.add_parser("list", help="the folders the game has")
     args = ap.parse_args()
-    # a packed copy (game/romfs a .nup): its Mals/ unpacked once under build/ (~200 MB)
-    sys.path.insert(0, str(ROOT / "tools/prepare"))
-    from nup import romfs_dir
-    mals = romfs_dir(game_dir() / "romfs", "Mals", ROOT / "build/romfs-mals" / game_dir().resolve().name) / "Mals"
+    mals = romfs_folder("Mals")
     if args.cmd == "list":
         print(" ".join(sorted(p.name for p in mals.iterdir() if p.is_dir())))
     elif args.cmd == "dump":
@@ -323,6 +336,7 @@ def main() -> int:
         done = read_translation(args.lang, game_version(game_dir() / "exefs")) if path.exists() else {}
         sys.stdout.write("".join(f"{k}\t{v}\n" for k, v in folder_lines(mals / BASE[args.lang], True) if k not in done))
     else:
+        romfs_folder("Font")
         build(args.lang, args.out or ROOT / "build" / "lang" / args.lang, mals.parent,
               version=game_version(game_dir() / "exefs"))  # fmt: skip
     return 0

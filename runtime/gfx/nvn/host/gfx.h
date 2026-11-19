@@ -61,7 +61,15 @@ const uint8_t *gfx_shader_input_id(const GfxShader *s);     // the 32-byte id in
 const GfxShader *gfx_shader_load_input(const uint8_t iid[32]);
 // Boot prewarm of the pipeline key records' shaders into out[i]; off with prepared SPIR-V (all NULL, gfx_shader.c).
 void gfx_shader_prewarm(const uint8_t (*iids)[32], size_t n, const GfxShader **out);
+// Every program of spirv/shaders.pack loaded on a thread of its own, while the boot prewarm creates the device; join
+// before the next gfx_shader_prewarm (one at a time). start returns NULL when there is no pack or no thread.
+struct PlatThread *gfx_shader_preload_start(void);
+void gfx_shader_preload_join(struct PlatThread *t);
 const uint32_t *gfx_shader_spirv(const GfxShader *s, uint64_t *words);
+// The calling thread's reads of SPIR-V are the prewarm's (1) or a use (0, the default): only a use keeps a shader's
+// SPIR-V in memory when gfx_shader_spirv_release, after the prewarm, frees the others'. Returns the bytes freed.
+void gfx_shader_spirv_quiet(int on);
+uint64_t gfx_shader_spirv_release(void);
 // Reflection: parsed once per shader from its .res.json and the SPIR-V before it enters the cache.
 enum { GFX_RES_UBO, GFX_RES_SSBO, GFX_RES_TEX, GFX_RES_IMG, GFX_RES_KINDS };
 typedef struct {
@@ -83,6 +91,11 @@ int gfx_shader_stage(const GfxShader *s);                   // GFX_STAGE_VS, GFX
 // A compute program whose first invocation alone resets what the others append to (sm86 glsl/first_store.py): 0 none;
 // 1 split only for dispatches of y = z = 1 groups, 2 for z = 1 (vk_pipeline_compute_first, vk_exec_ops.c)
 int gfx_shader_first_store(const GfxShader *s);
+// Hints of the translator for the setup's prewarm (sm86/translate/glsl/int_hints.py, vk_pipe_pairs.c): the input
+// Locations a vertex shader uses only as integers, and the outputs of a fragment shader that only moves flat inputs'
+// bits (both bit masks, 0 none).
+uint32_t gfx_shader_int_inputs(const GfxShader *s);
+uint32_t gfx_shader_raw_outputs(const GfxShader *s);
 int gfx_shader_resources(const GfxShader *s, int kind, const GfxShaderRes **res);   // count of GFX_RES_* kind; array in *res
 int gfx_shader_spec(const GfxShader *s, const uint32_t **words);   // fixed-address constant words: bank << 16 | byte
 // s with word k fixed to val[k] where fix[k] (specialization constants' defaults); lives for the process; NULL if none

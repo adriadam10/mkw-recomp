@@ -1,7 +1,8 @@
 // SDL3 adapter of the in-game menu: the window's events to menu events (menu.h).
 // Window thread (gfx_window_sdl.c's event loop, after input_sdl_event).
 //
-// F1 opens and closes the menu, Esc opens it (with the menu open, Esc goes to the menu, which closes). Esc also releases
+// F1 opens and closes the menu, Esc opens it (with the menu open, Esc goes to the menu, which closes; with the number
+// pad up, ui/menu/text_entry.h, keys go to the pad and Esc cancels it). Esc also releases
 // the cursor (input_sdl.c sees the event first; closing the menu gives the capture back). While the menu is open, its
 // keys, the mouse and focus changes go to it; the game reads the keyboard through input_sdl.c and gets nothing while
 // the menu is open (input_menu). Mouse positions come in window units and go to the menu in pixels.
@@ -13,7 +14,10 @@ extern "C" {
 #include "input.h"
 #include "input_sdl.h"
 #include "ui/menu/menu.h"
+#include "ui/menu/text_entry.h"
 }
+
+static bool takes_input(void) { return menu_is_open() || text_entry_up(); }
 
 static ImGuiKey key_of(SDL_Scancode sc) {
     // digits, for the rows that take a number (opt_digits: the Steam App ID); SDL orders 1..9 then 0
@@ -40,8 +44,14 @@ static ImGuiKey key_of(SDL_Scancode sc) {
     case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: return ImGuiKey_LeftCtrl;
     case SDL_SCANCODE_Q: return ImGuiKey_Q;   // previous tab
     case SDL_SCANCODE_E: return ImGuiKey_E;   // next tab
-    default: return ImGuiKey_None;
+    default: break;
     }
+    // the number pad's digits: SDL has 1-9 then 0, ImGui 0-9
+    if (sc >= SDL_SCANCODE_1 && sc <= SDL_SCANCODE_9) return (ImGuiKey)(ImGuiKey_1 + (sc - SDL_SCANCODE_1));
+    if (sc == SDL_SCANCODE_0) return ImGuiKey_0;
+    if (sc >= SDL_SCANCODE_KP_1 && sc <= SDL_SCANCODE_KP_9) return (ImGuiKey)(ImGuiKey_Keypad1 + (sc - SDL_SCANCODE_KP_1));
+    if (sc == SDL_SCANCODE_KP_0) return ImGuiKey_Keypad0;
+    return ImGuiKey_None;
 }
 
 extern "C" void menu_sdl_event(const SDL_Event *e) {
@@ -50,7 +60,7 @@ extern "C" void menu_sdl_event(const SDL_Event *e) {
     case SDL_EVENT_KEY_DOWN:
         // Esc with the menu open (opened by F1 too) is not a toggle here: it goes to the menu, which closes itself
         if (!e->key.repeat && (e->key.scancode == SDL_SCANCODE_F1 ||
-                               (e->key.scancode == SDL_SCANCODE_ESCAPE && !menu_is_open()))) {
+                               (e->key.scancode == SDL_SCANCODE_ESCAPE && !takes_input()))) {
             menu_toggle();
             return;
         }
@@ -60,15 +70,15 @@ extern "C" void menu_sdl_event(const SDL_Event *e) {
         }
         [[fallthrough]];
     case SDL_EVENT_KEY_UP:
-        if (!menu_is_open()) return;
+        if (!takes_input()) return;
         if (ImGuiKey k = key_of(e->key.scancode)) menu_event_key(k, e->type == SDL_EVENT_KEY_DOWN);
         return;
     case SDL_EVENT_MOUSE_MOTION:
-        if (menu_is_open()) menu_event_mouse_pos(e->motion.x * d, e->motion.y * d);
+        if (takes_input()) menu_event_mouse_pos(e->motion.x * d, e->motion.y * d);
         return;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP: {
-        if (!menu_is_open()) return;
+        if (!takes_input()) return;
         int b = e->button.button == SDL_BUTTON_LEFT ? 0 : e->button.button == SDL_BUTTON_RIGHT ? 1
               : e->button.button == SDL_BUTTON_MIDDLE ? 2 : -1;
         if (b < 0) return;
@@ -77,7 +87,7 @@ extern "C" void menu_sdl_event(const SDL_Event *e) {
         return;
     }
     case SDL_EVENT_MOUSE_WHEEL:
-        if (menu_is_open()) menu_event_wheel(e->wheel.x, e->wheel.y);
+        if (takes_input()) menu_event_wheel(e->wheel.x, e->wheel.y);
         return;
     case SDL_EVENT_WINDOW_FOCUS_GAINED:
     case SDL_EVENT_WINDOW_FOCUS_LOST:

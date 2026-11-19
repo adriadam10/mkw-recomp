@@ -1,8 +1,8 @@
 """Assemble the player's folder: the runtime and its libraries, and setup/ with the tools that build the game on the
 player's machine. Nothing of the game goes in; the start screen's setup adds it.
 
-Why: the player has no Python, compiler or glslc. setup/ carries a portable CPython (python-build-standalone) with numpy
-and lz4, zig as the C compiler, glslc from conda-forge (Google's own shaderc builds are not downloadable), and the
+Why: the player has no Python, compiler or glslc. setup/ carries a portable CPython (python-build-standalone) with numpy,
+lz4 and fontTools, zig as the C compiler, glslc from conda-forge (Google's own shaderc builds are not downloadable), and the
 sources the setup runs (recomp/, sm86/, tools/, the runtime headers the game code includes). NVIDIA's SM86 spec does
 not go in: the setup builds it (sm86/spec/spec.py). Every download is pinned by sha256, as tools/build/windeps.py; a
 mismatch stops.
@@ -10,7 +10,9 @@ mismatch stops.
 Layout of build/dist/<target>/ (after build.py --dist):
     mkw, mkwgame.id                 the runtime (mkw.exe and its DLLs on Windows; mkwgame.* comes from the setup)
     setup/python, setup/zig, setup/glslc
+    setup/clang/                    (Linux x86-64, Windows) LLVM's own clang of zig's version: llvm_clang.py
     setup/src/                      recomp/, sm86/, tools/{build,prepare,romfs,shaders}, runtime/{cpu,core/boot/gamelib.h}
+    setup/src/FILES                 the list of those files: the only ones prepare.py's keys count
     setup/lib/libmkw.dll.a          (Windows) the runtime's import library the game code library links against
     setup/lib/crt/                  (Windows) zig's C runtime for the target, prebuilt, and link.json: windows_crt()
 The desktop shortcut is the start screen's (a .desktop on Linux, a .lnk on Windows: platform.h).
@@ -34,6 +36,8 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+import llvm_clang
+
 ROOT = Path(__file__).resolve().parents[2]
 DL = ROOT / "build/dist/dl"
 CONDA = "https://conda.anaconda.org/conda-forge/"
@@ -52,6 +56,9 @@ PINS = {
         "lz4": (PYPI + "f1/01/d52c7b11eaa286d49dae619c0eec4aabc0bf3cda7a7467eb77c62c4471f3/"
                 "lz4-4.4.5-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
                 "0bba042ec5a61fa77c7e380351a61cb768277801240249841defd2ff0a10742f"),
+        "fonttools": (PYPI + "35/74/4ea331ecc65ba05a58b1e4e8ccd604c8a15565f876dfbf93fc2a2ea2e22b/"
+                      "fonttools-4.68.0-py3-none-any.whl",
+                      "d76f8fdcb6936f5e1045a0c9dd721a4bf11112e60d1e243bfa1d39f06a8b3104"),
         "shaderc": (CONDA + "linux-64/shaderc-2026.4-hcebf71c_1.conda",
                     "5cbe27520e948983863fd2f2ce59b2585d261430875c42c51a2dec823806694b"),
         "glslang": (CONDA + "linux-64/glslang-16.6.0-h980caa0_0.conda",
@@ -74,6 +81,9 @@ PINS = {
         "lz4": (PYPI + "67/79/a4e91872ab60f5e89bfad3e996ea7dc74a30f27253faf95865771225ccba/"
                 "lz4-4.4.5-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
                 "3b84a42da86e8ad8537aabef062e7f661f4a877d1c74d65606c49d835d36d668"),
+        "fonttools": (PYPI + "35/74/4ea331ecc65ba05a58b1e4e8ccd604c8a15565f876dfbf93fc2a2ea2e22b/"
+                      "fonttools-4.68.0-py3-none-any.whl",
+                      "d76f8fdcb6936f5e1045a0c9dd721a4bf11112e60d1e243bfa1d39f06a8b3104"),
         "shaderc": (CONDA + "linux-aarch64/shaderc-2026.4-h2d14b02_1.conda",
                     "ec6a66f8c593745e8f4aca9ba0400e7a43fdd1a36257fdb4464c083075770259"),
         "glslang": (CONDA + "linux-aarch64/glslang-16.6.0-ha162a40_0.conda",
@@ -96,6 +106,9 @@ PINS = {
         "lz4": (PYPI + "18/2c/8332080fd293f8337779a440b3a143f85e374311705d243439a3349b81ad/"
                 "lz4-4.4.5-cp314-cp314-win_amd64.whl",
                 "92159782a4502858a21e0079d77cdcaade23e8a5d252ddf46b0652604300d7be"),
+        "fonttools": (PYPI + "35/74/4ea331ecc65ba05a58b1e4e8ccd604c8a15565f876dfbf93fc2a2ea2e22b/"
+                      "fonttools-4.68.0-py3-none-any.whl",
+                      "d76f8fdcb6936f5e1045a0c9dd721a4bf11112e60d1e243bfa1d39f06a8b3104"),
         "shaderc": (CONDA + "win-64/shaderc-2026.4-hef10606_1.conda",
                     "d73088bb4b4fc388252d53c1aba4522891c131b7020815198776668e47616caa"),
         "glslang": (CONDA + "win-64/glslang-16.6.0-h8fa7867_0.conda",
@@ -111,8 +124,9 @@ PINS = {
 # tools/mod: the Mods page's import, merge, GameBanana and .ips tools (the launcher runs them; tests/launcher/test_setup.py checks
 # every tool it names is here: until 13/11/2026 none was, and the page failed with "no setup tools" in every package)
 SOURCES = ["recomp", "sm86", "tools/build/build.py", "tools/build/icon.py", "tools/prepare", "tools/mod", "tools/romfs/resolution.py",
-           "tools/i18n/catalog.py", "tools/i18n/game_texts.py", "i18n/game",
+           "tools/i18n/catalog.py", "tools/i18n/game_texts.py", "tools/i18n/game_fonts.py", "i18n/game",
            "tools/shaders/extract.py", "tools/shaders/translate.py", "tools/shaders/shaderc_lib.py",
+           "tools/shaders/pipeline_pairs.py", "tools/shaders/pack.py",
            "runtime/cpu",
            "runtime/core/boot/gamelib.h",
            "tools/github/signatures.toml"]  # fmt: skip  (the known errors tools/prepare/lastrun.py names)
@@ -229,6 +243,9 @@ def copy_sources(src_root: Path) -> None:
             shutil.copytree(s, d, ignore=skip)
         else:
             shutil.copy2(s, d)
+    # what prepare.py's keys count (shaderstep.shipped): files left by an older package unzipped over this one do not
+    files = sorted(p.relative_to(src_root).as_posix() for p in src_root.rglob("*") if p.is_file())
+    (src_root / "FILES").write_text("".join(f"{f}\n" for f in files), encoding="utf-8")
 
 
 def main() -> None:
@@ -253,9 +270,14 @@ def main() -> None:
     setup.mkdir(exist_ok=True)
     unpack_top(got["python"], setup / "python")
     site = setup / "python" / ("Lib/site-packages" if args.target == "windows" else "lib/python3.14/site-packages")
-    for wheel in ("numpy", "lz4"):
+    for wheel in ("numpy", "lz4", "fonttools"):  # fonttools: game_fonts.py
         unpack_wheel(got[wheel], site)
     unpack_top(got["zig"], setup / "zig")
+    if args.target in llvm_clang.PINS:
+        # the game code's chunks ~30 % faster than on zig's LLVM (tools/prepare/fastcc.py)
+        (setup / "clang").mkdir(exist_ok=True)
+        cl = llvm_clang.clang(args.target)
+        shutil.copy2(cl, setup / "clang" / cl.name)
     glslc = setup / "glslc"
     shutil.rmtree(glslc, ignore_errors=True)
     for name in ("shaderc", "glslang", "spirv-tools", "libstdcxx", "libgcc", "vc14_runtime"):
@@ -277,7 +299,7 @@ def main() -> None:
     print(f"{out}: {size / 2**20:.0f} MiB")
     if args.target == "linux" or (args.target == "linux-aarch64" and platform.machine() in ("aarch64", "arm64")):
         # the package's tools run here: a quick proof before a setup relies on them
-        subprocess.run([str(setup / "python/bin/python3"), "-I", "-c", "import numpy, lz4.block"], check=True)
+        subprocess.run([str(setup / "python/bin/python3"), "-I", "-c", "import numpy, lz4.block, fontTools.ttLib"], check=True)
         subprocess.run([str(setup / "zig/zig"), "version"], check=True)
 
 

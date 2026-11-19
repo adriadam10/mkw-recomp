@@ -13,6 +13,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+import probe_build  # tests/launcher: the hang guard of the Windows probe builds
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -68,10 +69,9 @@ def windows_build(tmp_path_factory: pytest.TempPathFactory) -> WindowsProbe:
     includes = [ROOT / "runtime", ROOT / "runtime/cpu", ROOT / "runtime/core/base", ROOT / "runtime/core/boot"]
     sources = [ROOT / "tests/launcher/t_game_dir.c", ROOT / "runtime/core/base/cfg.c",
                ROOT / "runtime/core/base/sysinfo_log.c", ROOT / "runtime/core/boot/gamelib.c"]
-    subprocess.run([cc, "--target=x86_64-w64-windows-gnu", f"--sysroot={kernel32.parent.parent}",
-                    f"-L{libgcc.parent}", "-fuse-ld=lld", "-municode",
-                    *(f"-I{p}" for p in includes), *(str(p) for p in sources), "-o", str(exe)],
-                   check=True, timeout=60)
+    probe_build.build([cc, "--target=x86_64-w64-windows-gnu", f"--sysroot={kernel32.parent.parent}",
+                       f"-L{libgcc.parent}", "-fuse-ld=lld", "-municode",
+                       *(f"-I{p}" for p in includes), *(str(p) for p in sources), "-o", str(exe)])
     return WindowsProbe(exe, runner, env)
 
 

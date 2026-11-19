@@ -1,8 +1,12 @@
 # Adapted from LAS Recomp tools/gen.py @ da35b83 (MIT, Copyright (c) 2026 Peiikai).
 """Generate C for the ExeFS modules: function discovery, then parallel emission into chunked C files.
 
-Usage: gen.py --exefs build/extracted/v121/exefs --out generated/v121 [--modules main,subsdk0,sdk] [--jobs N]
-              [--limit N] [--chunk-fns N] [--chunk-bytes B] [--big-fn B] [--patches FILE]
+Usage: gen.py --exefs game/exefs [--out build/generated-180] [--jobs N]
+              [--modules main,subsdk0,sdk] [--limit N] [--chunk-fns N] [--chunk-bytes B] [--big-fn B]
+              [--patches FILE]
+
+--out and --patches default to the dump's version (recomp/versions.py: 1.0.0 writes build/generated with
+patches-mkw.txt, 1.8.0 writes build/generated-180 with patches-mkw-180.txt).
 
 Output, under --out:
   layout.h, layout.json        module bases (recomp/layout.py)
@@ -47,6 +51,7 @@ import regs  # noqa: E402
 from layout import layout, write as write_layout  # noqa: E402
 from lifter import hx  # noqa: E402
 from module import Module  # noqa: E402
+from versions import default_gen, detect  # noqa: E402  (the dump's version: --out and --patches defaults)
 
 # Written into every generated file: a commit check can refuse anything carrying it (game-derived code).
 GENERATED_MARKER = 'MKW_RECOMP_' + 'GENERATED_FROM_GAME_CODE'
@@ -724,7 +729,8 @@ def remove_stale(moddir, name, nchunks, errors):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--exefs', type=Path, required=True)
-    ap.add_argument('--out', type=Path, required=True)
+    ap.add_argument('--out', type=Path, default=None,
+                    help='where the C goes (default: the dump\u2019s version: build/generated, build/generated-180)')
     ap.add_argument('--modules', default='', help='comma-separated; default: every module of the ExeFS')
     ap.add_argument('--jobs', type=int, default=os.cpu_count() or 4)
     ap.add_argument('--limit', type=int, default=0, help='emit only the first N functions of each module')
@@ -732,7 +738,8 @@ def main():
     ap.add_argument('--chunk-bytes', type=int, default=3000000, help='estimated bytes of C per chunk')
     ap.add_argument('--big-fn', type=int, default=300000, help='estimated bytes of C from which a function gets '
                                                                'its own chunk')
-    ap.add_argument('--patches', type=Path, help='code patch table (recomp/patches.py)')
+    ap.add_argument('--patches', type=Path, default=None,
+                    help='code patch table (recomp/patches.py; default: the dump\u2019s version)')
     ap.add_argument('--mods', type=Path,
                     help='mods with code patches (<mod>/mod.json "patches", merged into the table; default: '
                          'the mods/ beside --exefs when there is one)')
@@ -747,9 +754,18 @@ def main():
     opts = {'reg_locals': args.reg_locals, 'callee_saved': not args.no_callee_saved_trust}
 
     t0 = time.perf_counter()
+    try:
+        version = detect(args.exefs)
+    except (FileNotFoundError, ValueError) as e:
+        raise SystemExit(f'cannot detect the game version of {args.exefs}: {e}') from None
+    if args.out is None:
+        args.out = default_gen(args.exefs)
+        print(f'{version.name}: writing {args.out} with {version.patches.name}', file=sys.stderr)
+    if args.patches is None:
+        args.patches = version.patches
     mods = layout(args.exefs)
     write_layout(mods, args.out)
-    table = patches.load(args.patches, mods) if args.patches else patches.Table()
+    table = patches.load(args.patches, mods)
     bases = {n: b for n, b, _ in mods}
     if args.mods is not None:
         patches.load_mods(table, args.mods, bases)

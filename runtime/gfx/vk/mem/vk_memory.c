@@ -437,7 +437,7 @@ void vk_mem_stats(VkMemStats *s) {
         else s->virtual_pools++;
     }
     plat_mutex_unlock_shared(&pool_lock);
-    s->import_failures = (uint64_t)n_import_failures;
+    s->import_failures = (uint64_t)__atomic_load_n(&n_import_failures, __ATOMIC_RELAXED);
     s->upload_batches = upload_batches();
     plat_mutex_lock(&phys_lock);
     s->phys_host_chunks = (uint64_t)phys_host_n, s->phys_failed_chunks = (uint64_t)phys_failed_n;

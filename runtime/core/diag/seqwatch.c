@@ -126,12 +126,20 @@ void seqwatch_init(void) {
     if ((!on || !*on || *on == '0') && !quick_on) return;
     // Each version's own table: another's offsets would watch unrelated code (1.8.0 had none, so MKW_SEQ_EXIT
     // never ended its runs; 13/11/2026)
-    char own[48];
+    // The setup writes it into the game folder (tools/prepare/seqnodes.py); a source checkout's build/ has
+    // tools/analisis/bin/seq_nodes.py's. Only build/ was read, so a player's Straight to never pressed (18/11/2026).
+    char own[48], setup[PLAT_PATH_MAX + 32];
     snprintf(own, sizeof own, "build/seq_nodes-%d.tsv", rt_version()->number);
+    snprintf(setup, sizeof setup, "%s/seq_nodes-%d.tsv", cfg_game_dir(), rt_version()->number);
     const char *path = cfg_get("MKW_SEQ_NODES");
-    if (!path || !*path) path = rt_version()->number == 100 ? "build/seq_nodes.tsv" : own;
-    FILE *f = fopen(path, "r");
-    if (!f) { rt_log("seq: no %s (uv run tools/analisis/bin/seq_nodes.py): watch off", path); return; }
+    FILE *f = NULL;
+    if (!path || !*path) {
+        if ((f = fopen(setup, "r"))) path = setup;
+        else path = rt_version()->number == 100 ? "build/seq_nodes.tsv" : own;
+    }
+    if (!f) f = fopen(path, "r");
+    if (!f) { rt_log("seq: no %s nor %s (Set up again, or uv run tools/analisis/bin/seq_nodes.py): watch off", setup, path); return; }
+    rt_log("seq: phases from %s", path);
     char line[256];
     while (fgets(line, sizeof line, f) && nnodes < MAX_NODES) {
         unsigned long long getter, slot;

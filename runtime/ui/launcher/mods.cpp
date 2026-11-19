@@ -30,7 +30,7 @@ static struct {
     SDL_Process *proc;
     SDL_Mutex *lock;
     int running, finished;
-    char done[64], code[32], error[512];
+    char done[MOD_NAME_MAX + 1], code[32], error[512];
     char pick[PLAT_PATH_MAX];   // the zip or folder the dialog chose
     int pick_is_zip;
     char name[MOD_NAME_MAX];    // the rename field; empty: import.py takes the mod's own name
@@ -44,7 +44,7 @@ static struct {
     int nconflicts;
     // what the import and merge threads leave for the UI thread (mods_poll): G.mods, G.n and the config are only
     // touched there, since the page draws them every frame without the lock
-    char pending_enable[64];
+    char pending_enable[MOD_NAME_MAX + 1];
     int pending_refresh;
 } G = {};
 
@@ -253,6 +253,7 @@ static int list_cb(const char *name, int kind, uint64_t, void *) {
         if (json_value(json, "has_romfs", v, sizeof v)) m->has_romfs = !strcmp(v, "true") || !strcmp(v, "1");
         if (json_value(json, "romfs_files", v, sizeof v)) m->romfs_files = atoi(v);
         if (json_value(json, "has_exefs", v, sizeof v)) m->has_exefs = !strcmp(v, "true") || !strcmp(v, "1");
+        if (json_value(json, "has_plugin", v, sizeof v)) m->has_plugin = !strcmp(v, "true") || !strcmp(v, "1");
         if (json_value(json, "exefs_match", v, sizeof v)) m->exefs_match = !strcmp(v, "true") || !strcmp(v, "1");
         m->code = strstr(json, "\"image\"") || strstr(json, "\"patches\"");
         const char *warn = strstr(json, "\"warnings\"");   // a list of names; ours, so a search is enough
@@ -576,7 +577,8 @@ static void on_line(char *line) {
     char *arg = strchr(line, ' ');
     if (arg) *arg++ = 0;
     if (!strcmp(line, "done") && arg) {
-        char *sp = strchr(arg, ' ');
+        // Names may contain spaces; '=' cannot survive import.py's clean_name, so only metadata ends the name.
+        char *sp = strstr(arg, " romfs=");
         if (sp) *sp = 0;
         snprintf(G.done, sizeof G.done, "%s", arg);
     } else if (!strcmp(line, "error") && arg) {

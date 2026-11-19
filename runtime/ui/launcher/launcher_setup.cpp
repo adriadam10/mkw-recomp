@@ -17,6 +17,12 @@ extern const char rt_port_version[];
 static const char *const kSteps[SETUP_STEPS] = {"check", "exefs", "romfs", "generate", "compile", "shaders", "warm",
                                                "cleanup"};
 
+int setup_step_index(const char *name) {
+    for (int i = 0; name && i < SETUP_STEPS; i++)
+        if (!strcmp(name, kSteps[i])) return i;
+    return -1;
+}
+
 static SDL_Mutex *g_lock;
 static SetupState g_state = {0, -1, {}, 0, 0, 0, {}, {}};
 static SDL_Process *g_proc;

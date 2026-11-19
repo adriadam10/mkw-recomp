@@ -25,6 +25,12 @@ int rt_linked_modules(RtModule *out, int max);
 // rt_dispatch_init; the registry is fixed afterwards.
 void rt_register_host(uint64_t addr, GuestFn fn);
 
+// Indirect calls to the guest function starting at addr run fn instead (plugins: plugin/plugin.c); a later call for
+// the same addr replaces fn. Before rt_dispatch_init only (0 otherwise); an addr where no function starts is fatal
+// there. rt_dispatch_original: the translated function it replaced, NULL before rt_dispatch_init or if none.
+int rt_dispatch_override(uint64_t addr, GuestFn fn);
+GuestFn rt_dispatch_original(uint64_t addr);
+
 // Build the table from the modules (kept by pointer; they must outlive the process). Call it once, before any guest
 // thread starts: thread creation publishes the table to the threads. Fatal on a malformed table:
 // unsorted or duplicate starts, a start outside its module, overlapping modules, host code spread over 4 GiB.

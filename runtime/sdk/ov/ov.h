@@ -10,7 +10,7 @@
 // ---- ov_system.c
 int ov_handheld(void);                     // MKW_OPERATION_MODE=handheld (default docked); fatal on another value
 const char *ov_language(void);             // the game's language, a Switch language code ("en-US", "zh-Hans", ...)
-// A language the game does not ship whose texts are rebuilt over ov_language() ("ca", "gl", "eu"), else NULL:
+// A language the game does not ship whose texts are rebuilt over ov_language() ("ca", "gl", "eu", "tr"), else NULL:
 // MKW_LANG names it, or unset, the locale's language is one
 const char *ov_text_language(void);
 const char *ov_shared_font_dir(char *buf, size_t n);   // MKW_SHARED_FONTS, else <romfs>/../../firmware/shared-fonts

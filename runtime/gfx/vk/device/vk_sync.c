@@ -93,7 +93,7 @@ typedef struct {
     VkCommandBufferSubmitInfo cbi[2 + VK_SPLIT_EXTRA];
     VkSemaphoreSubmitInfo wait, sig[2];
     VkSubmitInfo2 si;
-    uint64_t fence;
+    uint64_t fence, at;   // at: when it was deferred (kern_now_ns), for the wait the perf line gives
 } PendPart;
 #define PEND_CAP 32
 static PendPart parts[PEND_CAP];   // queue lock
@@ -103,7 +103,8 @@ static PlatCond pend_cv = PLAT_COND_INIT;
 static PlatThread *submit_thread;
 static int submit_on = -1;
 static _Thread_local int in_flush, is_submitter;
-static uint64_t pend_by_thread, pend_by_other, pend_ns;   // queue lock: parts sent by each, time in vkQueueSubmit2
+static uint64_t pend_by_thread, pend_by_other, pend_ns, pend_wait_ns;   // queue lock: parts sent by each, time in
+                                                                         // vkQueueSubmit2, from deferral to it
 
 // What the submission side is doing, for the line a fence wait that reaches its limit logs (stall_log, #138): since
 // when a vkQueueSubmit2 has been running, and the completion thread waiting for the GPU or running a callback (which
@@ -133,6 +134,7 @@ void vk_sync_parts_flush(void) {
     while (pend_n) {
         PendPart *p = &parts[pend_head];
         uint64_t t0 = kern_now_ns();
+        pend_wait_ns += t0 - p->at;
         VkResult r = queue_submit(q, &p->si);
         pend_ns += kern_now_ns() - t0;
         if (is_submitter) pend_by_thread++;
@@ -157,11 +159,16 @@ static void submit_main(void *arg) {
     }
 }
 
+PlatThread *vk_sync_submit_thread(void) { return __atomic_load_n(&submit_thread, __ATOMIC_ACQUIRE); }
+
 // Queue lock held, the part's order taken: parts[] gets it, or the queue now when it is full.
 static void part_defer(const VkSubmitInfo2 *si, const VkCommandBufferSubmitInfo *cbi, int ncbi,
                        const VkSemaphoreSubmitInfo *sig, uint64_t fence) {
-    if (!submit_thread && !(submit_thread = plat_thread_new(submit_main, NULL, "vk submit")))
-        rt_fatal("vk: cannot start the submit thread");
+    if (!submit_thread) {
+        PlatThread *t = plat_thread_new(submit_main, NULL, "vk submit");
+        if (!t) rt_fatal("vk: cannot start the submit thread");
+        __atomic_store_n(&submit_thread, t, __ATOMIC_RELEASE);
+    }
     if (pend_n == PEND_CAP) vk_sync_parts_flush();
     PendPart *p = &parts[(pend_head + pend_n) % PEND_CAP];
     memcpy(p->cbi, cbi, sizeof *cbi * (size_t)ncbi);
@@ -171,6 +178,7 @@ static void part_defer(const VkSubmitInfo2 *si, const VkCommandBufferSubmitInfo 
     memcpy(p->sig, sig, sizeof *sig * si->signalSemaphoreInfoCount);
     p->si.pSignalSemaphoreInfos = p->sig;
     p->fence = fence;
+    p->at = kern_now_ns();
     __atomic_store_n(&pend_n, pend_n + 1, __ATOMIC_RELEASE);
     plat_mutex_lock(&pend_mx);
     plat_cond_signal(&pend_cv);
@@ -454,9 +462,10 @@ static void ss_log(void) {
         vk_queue_lock();
         if (pend_by_thread || pend_by_other)
             rt_log("perf: parts sent by the submit thread %llu, by others taking the queue lock %llu, vkQueueSubmit2 "
-                   "%.1f ms per s (MKW_SUBMIT_THREAD)", (unsigned long long)pend_by_thread,
-                   (unsigned long long)pend_by_other, pend_ns * 1e3 / (double)span);
-        pend_by_thread = pend_by_other = pend_ns = 0;
+                   "%.1f ms per s, %.1f us a part from its deferral to it (MKW_SUBMIT_THREAD)",
+                   (unsigned long long)pend_by_thread, (unsigned long long)pend_by_other, pend_ns * 1e3 / (double)span,
+                   pend_wait_ns / 1e3 / (double)(pend_by_thread + pend_by_other));
+        pend_by_thread = pend_by_other = pend_ns = pend_wait_ns = 0;
         vk_queue_unlock();
         if (plat_lock_report(0, buf, sizeof buf)) rt_log("perf: lock waits since the last line (MKW_LOCK_PROF):%s", buf);
         if (plat_lock_report(1, buf, sizeof buf))

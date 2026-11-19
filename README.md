@@ -149,7 +149,7 @@ Beyond the console, all optional and off (or at the console's value) by default:
   keyboard ([docs/remote-play.md](docs/remote-play.md)).
 - **Hacks**: turbo (hold or toggle F2), skip movies, unlock everything, the same randomness every time, straight to
   time trial or free roam.
-- **Languages**: the menus in 20 languages; the game itself also in Catalan, Galician and Basque.
+- **Languages**: the menus in 20 languages; the game itself also in Catalan, Galician, Basque and Turkish.
 - **Game files**: choose the installation folder; a dump as folders or as one `.nup` or `.nx` file, used where it is;
   updates from the start screen.
 - **Performance overlay** (FPS, or CPU, GPU and memory in full) and a one-click system info for bug reports.
@@ -176,13 +176,20 @@ The start screen's **Mods** page installs mods as they are published for the gam
   searched, with each mod's author, license, screenshots and description. **Install** downloads the file from
   GameBanana, only when you ask for it.
 - **Installed**: your mods, each with an on/off switch; **Import zip / Import folder** takes a mod you already have
-  (`.zip`, `.rar` or `.7z`, with `romfs/` and/or `exefs/` anywhere inside, including the `atmosphere/contents/` layout).
+  (`.zip`, `.rar` or `.7z`, with `romfs/`, `exefs/` and/or `plugin/` anywhere inside, including the
+  `atmosphere/contents/` layout).
 
 Mods that replace game files (`romfs/`: skins, textures, texts, courses) take effect at the next start. Mods that change
 the game's code (`exefs/` `.ips` or `.pchtxt` patches, such as 200cc or 30 FPS) are built into the game code: turning
 one on or off rebuilds it before you play (a few minutes). Two mods that change the same archive are merged file by
 file, and the page asks which one wins where both change the same file. The page warns about mods that replace the
 game's graphics settings or shaders, which the port handles its own way.
+
+A mod with a `plugin/` folder carries a native plugin (`.dll` on Windows, `.so` on Linux) that the game loads at start
+while the mod is on. It runs its own program on your computer, so the page warns about it: turn it on only if you
+trust where it comes from. For modders, the API is one header, [`runtime/plugin/mkw_plugin.h`](runtime/plugin/mkw_plugin.h),
+explained in the wiki's [Writing a plugin](https://github.com/adriadam10/mkw-recomp/wiki/Writing-a-plugin). More on
+installing and ordering mods: the wiki's [Mods](https://github.com/adriadam10/mkw-recomp/wiki/Mods) page.
 
 Mods are made by other people and are not tested by this project: one can crash the game or damage your save. Read a
 mod's page before installing it, keep a copy of your save, and report a mod's problems to its author; when you report
@@ -195,7 +202,7 @@ Linux, with `uv`, `clang`, `lld`, `ninja`, SDL3, Opus, libvpx, zstd, xxHash, the
 `MKW_GAME=<dir>`, then from the repo root:
 
 ```sh
-uv run python recomp/gen.py --exefs game/exefs --out build/generated --jobs 8 --patches recomp/patches-mkw.txt  # 1.8.0: patches-mkw-180.txt
+uv run python recomp/gen.py --exefs game/exefs --jobs 8  # --out/--patches default to the dump's version (1.8.0: build/generated-180)
 uv run tools/shaders/extract.py && uv run tools/shaders/translate.py
 uv run tools/build/build.py              # build/mkw; --target windows builds mkw.exe with llvm-mingw (windeps.py)
 build/mkw

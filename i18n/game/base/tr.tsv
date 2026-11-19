@@ -1,0 +1,1314 @@
+# Turkish for the game's own texts (tools/i18n/game_texts.py): "label<TAB>text", over the game's British English (EUen).
+# Untranslated labels stay in English. Control tags ({0E ...}, {0F ...}) are kept as the dump gives them. The fonts'
+# missing ğ Ğ ş Ş İ are composed at setup (tools/i18n/game_fonts.py).
+LayoutMsg/Damage_00/T_Msg_00	AY!
+LayoutMsg/DialogTimeAttack_00/DialogTimeAttack_00:L_DialogBtn_00/T_Text_00	Evet
+LayoutMsg/DialogTimeAttack_00/DialogTimeAttack_00:L_DialogBtn_01/T_Text_00	Hayır
+LayoutMsg/DialogTimeAttack_00/DialogTimeAttack_00:L_DialogBtn_02/T_Text_00	Tamam
+LayoutMsg/Dialog_00/L_DialogBtnC_00/T_Text_00	Tamam
+LayoutMsg/Dialog_00/T_Group_00	Oda Kimliği
+LayoutMsg/FriendList_00/T_Friend_00	Rakip
+LayoutMsg/FriendList_00/T_Rec_00	Savaş Geçmişi
+LayoutMsg/FriendList_00/T_You_00	Sen
+LayoutMsg/FriendList_00/FriendList_00:L_Go_00/T_Text_00	Katıl
+LayoutMsg/FriendList_00/T_Rec_01	Katılımcılar
+LayoutMsg/Hit_00/T_Msg_00	VURDUN!
+LayoutMsg/MenuGameSelect_01/T_Msg_00	4 yarışlık kupada birinci ol!
+LayoutMsg/MenuGameSelect_01/T_Msg_01	Dayanıklılık yarışında önde kal!
+LayoutMsg/MenuGameSelect_01/T_Msg_02	Rekor için tek başına yarış!
+LayoutMsg/MenuGameSelect_01/T_Msg_03	Özel kurallarla yarış!
+LayoutMsg/MenuGameSelect_01/T_Msg_04	Özel kurallarla savaş!
+LayoutMsg/MenuManual_00/MenuManual_00:L_Headline_00/T_Btn_00	Teknikler
+LayoutMsg/MenuManual_00/MenuManual_00:L_Headline_01/T_Btn_00	Eşyalar
+LayoutMsg/MenuManual_00/MenuManual_00:L_Headline_02/T_Btn_00	Kurallar
+LayoutMsg/MenuManual_00/MenuManual_00:L_Headline_03/T_Btn_00	Serbest Dolaşım
+LayoutMsg/MenuPlayModeSelect_00/MenuPlayModeSelect_00:L_Btn_00/T_Btn_00	Tek Oyunculu
+LayoutMsg/MenuPlayModeSelect_00/MenuPlayModeSelect_00:L_Btn_01/T_Btn_00	Çok Oyunculu
+LayoutMsg/MenuPlayModeSelect_00/MenuPlayModeSelect_00:L_Btn_02/T_Btn_00	Çevrim İçi Oyun
+LayoutMsg/MenuTimeAttack_00/MenuTimeAttack_00:L_MenuBtn_00/T_Text_00	Tek Yarış
+LayoutMsg/MenuTimeAttack_00/MenuTimeAttack_00:L_MenuBtn_01/T_Text_00	Hayalete Karşı Yarış
+LayoutMsg/MenuTimeAttack_00/MenuTimeAttack_00:L_MenuBtn_02/T_Text_00	Hayaleti İzle
+LayoutMsg/MenuTimeAttack_00/MenuTimeAttack_00:L_MenuBtn_03/T_Text_00	Sıralamayı Gör
+LayoutMsg/MenuTimeAttack_00/MenuTimeAttack_00:L_MenuBtn_04/T_Text_00	Hayalet Verisini Yükle
+LayoutMsg/OnlineMenu_00/L_Btn_00/T_Btn_00	Yarış
+LayoutMsg/OnlineMenu_00/L_Btn_01/T_Btn_00	Eleme Turu
+LayoutMsg/OnlineMenu_00/L_Btn_02/T_Btn_00	Savaş
+LayoutMsg/OnlineMenu_00/L_Btn_03/T_Btn_00	Arkadaşlar
+LayoutMsg/PhotoMode_00/T_Attention_00	Kameraya Bak
+LayoutMsg/PhotoMode_00/T_End_00	Bitir
+LayoutMsg/PhotoMode_00/T_Face_00	İfade
+LayoutMsg/PhotoMode_00/T_Gide_00	Kılavuz
+LayoutMsg/PhotoMode_00/T_Posechange_00	Poz
+LayoutMsg/PhotoMode_00/T_Roll_00	Eğim
+LayoutMsg/PhotoMode_00/T_Take_00	Çek
+LayoutMsg/Retry_00/T_Retry_00	Tekrar Dene
+LayoutMsg/RuleSelect_00/T_Change_00	Kuralları Belirle
+LayoutMsg/TeamSelect_00/TeamSelect_00:$DialogBtnS_00/T_Text_00	Tamam
+LayoutMsg/TitleLogo_00/T_Press_00	{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} + {0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} ile başla
+LayoutMsg/Watching_00/T_Text_01	CANLI
+MsgMain/BattleCourse/1701	Mario Bros. Pisti
+MsgMain/BattleCourse/1702	Chain Chomp Çölü
+MsgMain/BattleCourse/1703	Peach Stadyumu
+MsgMain/BattleCourse/1704	Dino Dino Ormanı
+MsgMain/BattleCourse/1705	Dev Simit
+MsgMain/BattleCourse/1706	Tuzlu Tuzlu Otoyol
+MsgMain/BattleCourse/1707	Moo Moo Çayırları
+MsgMain/BattleCourse/1708	DK Geçidi
+MsgMain/Course(adjust)/Adjust_Name_Race_AirshipFortress_A_00	Zeplin Kalesi
+MsgMain/Course(adjust)/Adjust_Name_Race_BigTree_A_00	Palamut Tepeleri
+MsgMain/Course(adjust)/Adjust_Name_Race_Cave_A_00	Karahindiba Mağarası
+MsgMain/Course(adjust)/Adjust_Name_Race_Central_A_00	Peach Stadyumu
+MsgMain/Course(adjust)/Adjust_Name_Race_ChocoMountain_A_00	Çikolata Dağı
+MsgMain/Course(adjust)/Adjust_Name_Race_Cinema_A_00	Boo Sineması
+MsgMain/Course(adjust)/Adjust_Name_Race_Coaster_A_00	Düdüklü Tren Zirvesi
+MsgMain/Course(adjust)/Adjust_Name_Race_DesertHills_A_00	Çöl Tepeleri
+MsgMain/Course(adjust)/Adjust_Name_Race_DinoBones_A_00	Dry Bones Yanardağı
+MsgMain/Course(adjust)/Adjust_Name_Race_DinoDinoJungle_A_00	Dino Dino Ormanı
+MsgMain/Course(adjust)/Adjust_Name_Race_DKJungleParkway_A_00	Uzak Vaha
+MsgMain/Course(adjust)/Adjust_Name_Race_DKPass_A_00	DK Geçidi
+MsgMain/Course(adjust)/Adjust_Name_Race_DonkeyKong_A_00	DK Uzay Limanı
+MsgMain/Course(adjust)/Adjust_Name_Race_FirstCircuit_A_00	Mario Bros. Pisti
+MsgMain/Course(adjust)/Adjust_Name_Race_IceBuildings_A_00	Gökyüzü Dondurması
+MsgMain/Course(adjust)/Adjust_Name_Race_KoopaTroopaBeach_A_00	Koopa Troopa Plajı
+MsgMain/Course(adjust)/Adjust_Name_Race_LagoonCity_A_00	Tuzlu Tuzlu Otoyol
+MsgMain/Course(adjust)/Adjust_Name_Race_Lava_A_00	Bowser'ın Kalesi
+MsgMain/Course(adjust)/Adjust_Name_Race_MooMooFarm_A_00	Moo Moo Çayırları
+MsgMain/Course(adjust)/Adjust_Name_Race_RaftingRiver_A_00	Cheep Cheep Şelalesi
+MsgMain/Course(adjust)/Adjust_Name_Race_Rainbow_A_00	Gökkuşağı Yolu
+MsgMain/Course(adjust)/Adjust_Name_Race_SFCMarioCircuit_G_00	Mario Pisti
+MsgMain/Course(adjust)/Adjust_Name_Race_ShyGuyBazaar_A_00	Shy Guy Çarşısı
+MsgMain/Course(adjust)/Adjust_Name_Race_SnowMountain_A_00	Yıldız Tepe
+MsgMain/Course(adjust)/Adjust_Name_Race_StormClouds_A_00	Büyük ? Blok Harabeleri
+MsgMain/Course(adjust)/Adjust_Name_Race_ToadFactory_A_00	Toad'un Fabrikası
+MsgMain/Course(adjust)/Adjust_Name_Race_WarioShipyard_A_00	Wario'nun Kalyonu
+MsgMain/Course(adjust)/Adjust_Name_Race_WarioStadium_A_00	Wario Stadyumu
+MsgMain/Course(adjust)/Adjust_Name_Race_WestCity_D_00	Taç Şehri
+MsgMain/Course(adjust)/Adjust_Name_Race_PeachBeach_D_00	Peach Plajı
+MsgMain/Course/Name_Race_AirshipFortress_A_00	Zeplin Kalesi
+MsgMain/Course/Name_Race_BigTree_A_00	Palamut Tepeleri
+MsgMain/Course/Name_Race_Cave_A_00	Karahindiba Mağarası
+MsgMain/Course/Name_Race_Central_A_00	Peach Stadyumu
+MsgMain/Course/Name_Race_ChocoMountain_A_00	Çikolata Dağı
+MsgMain/Course/Name_Race_Cinema_A_00	Boo Sineması
+MsgMain/Course/Name_Race_Coaster_A_00	Düdüklü Tren Zirvesi
+MsgMain/Course/Name_Race_DesertHills_A_00	Çöl Tepeleri
+MsgMain/Course/Name_Race_DinoBones_A_00	Dry Bones Yanardağı
+MsgMain/Course/Name_Race_DinoDinoJungle_A_00	Dino Dino Ormanı
+MsgMain/Course/Name_Race_DKJungleParkway_A_00	Uzak Vaha
+MsgMain/Course/Name_Race_DKPass_A_00	DK Geçidi
+MsgMain/Course/Name_Race_DonkeyKong_A_00	DK Uzay Limanı
+MsgMain/Course/Name_Race_FirstCircuit_A_00	Mario Bros. Pisti
+MsgMain/Course/Name_Race_IceBuildings_A_00	Gökyüzü Dondurması
+MsgMain/Course/Name_Race_KoopaTroopaBeach_A_00	Koopa Troopa Plajı
+MsgMain/Course/Name_Race_LagoonCity_A_00	Tuzlu Tuzlu Otoyol
+MsgMain/Course/Name_Race_Lava_A_00	Bowser'ın Kalesi
+MsgMain/Course/Name_Race_MooMooFarm_A_00	Moo Moo Çayırları
+MsgMain/Course/Name_Race_RaftingRiver_A_00	Cheep Cheep Şelalesi
+MsgMain/Course/Name_Race_Rainbow_A_00	Gökkuşağı Yolu
+MsgMain/Course/Name_Race_SFCMarioCircuit_G_00	Mario Pisti
+MsgMain/Course/Name_Race_ShyGuyBazaar_A_00	Shy Guy Çarşısı
+MsgMain/Course/Name_Race_SnowMountain_A_00	Yıldız Tepe
+MsgMain/Course/Name_Race_StormClouds_A_00	Büyük ? Blok Harabeleri
+MsgMain/Course/Name_Race_ToadFactory_A_00	Toad'un Fabrikası
+MsgMain/Course/Name_Race_WarioShipyard_A_00	Wario'nun Kalyonu
+MsgMain/Course/Name_Race_WarioStadium_A_00	Wario Stadyumu
+MsgMain/Course/Name_Race_WestCity_D_00	Taç Şehri
+MsgMain/Course/Name_Race_PeachBeach_D_00	Peach Plajı
+MsgMain/CourseArea(adjust)/Name_AirshipFortress_00	Zeplin Kalesi
+MsgMain/CourseArea(adjust)/Name_BigTree_00	Palamut Tepeleri
+MsgMain/CourseArea(adjust)/Name_Cave_00	Karahindiba Mağarası
+MsgMain/CourseArea(adjust)/Name_Central_00	Peach Stadyumu
+MsgMain/CourseArea(adjust)/Name_ChocoMountain_00	Çikolata Dağı
+MsgMain/CourseArea(adjust)/Name_Cinema_00	Boo Sineması
+MsgMain/CourseArea(adjust)/Name_Coaster	Düdüklü Tren Zirvesi
+MsgMain/CourseArea(adjust)/Name_DesertHills_00	Çöl Tepeleri
+MsgMain/CourseArea(adjust)/Name_DinoBones_00	Dry Bones Yanardağı
+MsgMain/CourseArea(adjust)/Name_DinoDinoJungle_00	Dino Dino Ormanı
+MsgMain/CourseArea(adjust)/Name_DKJungleParkway_00	Uzak Vaha
+MsgMain/CourseArea(adjust)/Name_DKPass_00	DK Geçidi
+MsgMain/CourseArea(adjust)/Name_DonkeyKong	DK Uzay Limanı
+MsgMain/CourseArea(adjust)/Name_FirstCircuit	Mario Bros. Pisti
+MsgMain/CourseArea(adjust)/Name_IceBuildings_00	Gökyüzü Dondurması
+MsgMain/CourseArea(adjust)/Name_KoopaTroopaBeach_00	Koopa Troopa Plajı
+MsgMain/CourseArea(adjust)/Name_LagoonCity_00	Tuzlu Tuzlu Otoyol
+MsgMain/CourseArea(adjust)/Name_Lava_00	Bowser'ın Kalesi
+MsgMain/CourseArea(adjust)/Name_MooMooFarm_00	Moo Moo Çayırları
+MsgMain/CourseArea(adjust)/Name_PeachBeach_00	Peach Plajı
+MsgMain/CourseArea(adjust)/Name_RaftingRiver_00	Cheep Cheep Şelalesi
+MsgMain/CourseArea(adjust)/Name_Rainbow_00	Gökkuşağı Yolu
+MsgMain/CourseArea(adjust)/Name_SFCMarioCircuit_00	Mario Pisti
+MsgMain/CourseArea(adjust)/Name_ShyGuyBazaar_00	Shy Guy Çarşısı
+MsgMain/CourseArea(adjust)/Name_SnowMountain_00	Yıldız Tepe
+MsgMain/CourseArea(adjust)/Name_StormClouds_00	Büyük ? Blok Harabeleri
+MsgMain/CourseArea(adjust)/Name_ToadFactory_00	Toad'un Fabrikası
+MsgMain/CourseArea(adjust)/Name_WarioShipyard_00	Wario'nun Kalyonu
+MsgMain/CourseArea(adjust)/Name_WarioStadium	Wario Stadyumu
+MsgMain/CourseArea(adjust)/Name_WestCity	Taç Şehri
+MsgMain/CourseArea/Name_AirshipFortress_00	Zeplin Kalesi
+MsgMain/CourseArea/Name_BigTree_00	Palamut Tepeleri
+MsgMain/CourseArea/Name_Cave_00	Karahindiba Mağarası
+MsgMain/CourseArea/Name_Central_00	Peach Stadyumu
+MsgMain/CourseArea/Name_ChocoMountain_00	Çikolata Dağı
+MsgMain/CourseArea/Name_Cinema_00	Boo Sineması
+MsgMain/CourseArea/Name_Coaster	Düdüklü Tren Zirvesi
+MsgMain/CourseArea/Name_DesertHills_00	Çöl Tepeleri
+MsgMain/CourseArea/Name_DinoBones_00	Dry Bones Yanardağı
+MsgMain/CourseArea/Name_DinoDinoJungle_00	Dino Dino Ormanı
+MsgMain/CourseArea/Name_DKJungleParkway_00	Uzak Vaha
+MsgMain/CourseArea/Name_DKPass_00	DK Geçidi
+MsgMain/CourseArea/Name_DonkeyKong	DK Uzay Limanı
+MsgMain/CourseArea/Name_FirstCircuit	Mario Bros. Pisti
+MsgMain/CourseArea/Name_IceBuildings_00	Gökyüzü Dondurması
+MsgMain/CourseArea/Name_KoopaTroopaBeach_00	Koopa Troopa Plajı
+MsgMain/CourseArea/Name_LagoonCity_00	Tuzlu Tuzlu Otoyol
+MsgMain/CourseArea/Name_Lava_00	Bowser'ın Kalesi
+MsgMain/CourseArea/Name_MooMooFarm_00	Moo Moo Çayırları
+MsgMain/CourseArea/Name_PeachBeach_00	Peach Plajı
+MsgMain/CourseArea/Name_RaftingRiver_00	Cheep Cheep Şelalesi
+MsgMain/CourseArea/Name_Rainbow_00	Gökkuşağı Yolu
+MsgMain/CourseArea/Name_SFCMarioCircuit_00	Mario Pisti
+MsgMain/CourseArea/Name_ShyGuyBazaar_00	Shy Guy Çarşısı
+MsgMain/CourseArea/Name_SnowMountain_00	Yıldız Tepe
+MsgMain/CourseArea/Name_StormClouds_00	Büyük ? Blok Harabeleri
+MsgMain/CourseArea/Name_ToadFactory_00	Toad'un Fabrikası
+MsgMain/CourseArea/Name_WarioShipyard_00	Wario'nun Kalyonu
+MsgMain/CourseArea/Name_WarioStadium	Wario Stadyumu
+MsgMain/CourseArea/Name_WestCity	Taç Şehri
+MsgMain/Driver/Driver_MarioRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_MarioSheriff_00	Kovboy
+MsgMain/Driver/Driver_MarioDesert_00	Kumul Binicisi
+MsgMain/Driver/Driver_MarioCasual_00	Gezgin
+MsgMain/Driver/Driver_MarioPilot_00	Pilot
+MsgMain/Driver/Driver_MarioVacance_00	Gezi
+MsgMain/Driver/Driver_MarioOffroad_00	Arazi
+MsgMain/Driver/Driver_MarioMechanic_00	Tamirci
+MsgMain/Driver/Driver_LuigiRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_LuigiLagoonCity_00	Gondolcu
+MsgMain/Driver/Driver_LuigiDesert_00	Vaha
+MsgMain/Driver/Driver_LuigiFarmer_00	Çiftçi
+MsgMain/Driver/Driver_LuigiCasual_00	Gezgin
+MsgMain/Driver/Driver_LuigiMechanic_00	Tamirci
+MsgMain/Driver/Driver_LuigiOffroad_00	Arazi
+MsgMain/Driver/Driver_PeachCasual_00	Gezgin
+MsgMain/Driver/Driver_PeachLagoonCity_00	Gezi
+MsgMain/Driver/Driver_PeachFarmer_00	Çiftçi
+MsgMain/Driver/Driver_PeachRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_PeachPilot_00	Pilot
+MsgMain/Driver/Driver_PeachResort_00	Tatil
+MsgMain/Driver/Driver_DaisySwim_00	Mayo
+MsgMain/Driver/Driver_DaisyLagoonCity_00	Tatil
+MsgMain/Driver/Driver_DaisyDesert_00	Vaha
+MsgMain/Driver/Driver_DaisyRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_DaisyCasual_00	Gezgin
+MsgMain/Driver/Driver_YoshiDelivery_00	Yemek Dağıtıcı
+MsgMain/Driver/Driver_YoshiIce_00	Dondurmacı
+MsgMain/Driver/Driver_YoshiRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_YoshiSwim_00	Mayo
+MsgMain/Driver/Driver_YoshiStadium_00	Motorcu
+MsgMain/Driver/Driver_YoshiCasual_00	Gezgin
+MsgMain/Driver/Driver_YoshiMovie_00	Aristokrat
+MsgMain/Driver/Driver_KinopioEngineer_00	Mühendis
+MsgMain/Driver/Driver_KinopioDiner_00	Burgerci
+MsgMain/Driver/Driver_KinopioRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_KinopioExplore_00	Kaşif
+MsgMain/Driver/Driver_KoopaRiders_00	Motorcu
+MsgMain/Driver/Driver_KoopaRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_KoopaOffroad_00	Arazi
+MsgMain/Driver/Driver_KoopaHotrod_00	Turbo Şarjlı
+MsgMain/Driver/Driver_DKOffroad_00	Arazi
+MsgMain/Driver/Driver_WarioDesert_00	Vaha
+MsgMain/Driver/Driver_WarioDiner_00	Motorcu
+MsgMain/Driver/Driver_WarioFactory_00	İşçi
+MsgMain/Driver/Driver_WarioRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_WarioFairy_00	Kötü Arı
+MsgMain/Driver/Driver_WarioPirate_00	Korsan
+MsgMain/Driver/Driver_WarioStadium_00	Yol Serserisi
+MsgMain/Driver/Driver_WaluigiRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_WaluigiHorror_00	Wampir
+MsgMain/Driver/Driver_WaluigiDiner_00	Motorcu
+MsgMain/Driver/Driver_WaluigiStadium_00	Yol Serserisi
+MsgMain/Driver/Driver_RosettaRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_RosettaCasual_00	Gezgin
+MsgMain/Driver/Driver_BabyMarioSwim_00	Mayo
+MsgMain/Driver/Driver_BabyMarioFactory_00	İşçi
+MsgMain/Driver/Driver_BabyMarioRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_BabyLuigiFactory_00	İşçi
+MsgMain/Driver/Driver_BabyLuigiRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_BabyPeachMarine_00	Denizci
+MsgMain/Driver/Driver_BabyPeachExplore_00	Kaşif
+MsgMain/Driver/Driver_BabyPeachCasual_00	Gezgin
+MsgMain/Driver/Driver_BabyPeachRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_BabyDaisyMarine_00	Denizci
+MsgMain/Driver/Driver_BabyDaisyExplore_00	Kaşif
+MsgMain/Driver/Driver_BabyDaisyRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_BabyDaisyCasual_00	Gezgin
+MsgMain/Driver/Driver_BabyRosettaMarine_00	Denizci
+MsgMain/Driver/Driver_BabyRosettaExplore_00	Kaşif
+MsgMain/Driver/Driver_BabyRosettaCasual_00	Gezgin
+MsgMain/Driver/Driver_BabyRosettaRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_KinopicoConductor_00	Makinist
+MsgMain/Driver/Driver_KinopicoIce_00	Dondurmacı
+MsgMain/Driver/Driver_KinopicoRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_KinopicoExplore_00	Kaşif
+MsgMain/Driver/Driver_KoopaJrRiders_00	Motorcu Jr.
+MsgMain/Driver/Driver_KoopaJrScout_00	Kaşif
+MsgMain/Driver/Driver_KoopaJrRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_CatherineLagoonCity_00	Tatil
+MsgMain/Driver/Driver_CatherineRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_NokonokoRunner_00	Koşucu
+MsgMain/Driver/Driver_NokonokoRacing_00	Pro Yarışçı
+MsgMain/Driver/Driver_NokonokoFlagman_00	İşçi
+MsgMain/Driver/Driver_NokonokoSailor_00	Denizci
+MsgMain/Driver/Driver_NokonokoOffroad_00	Arazi
+MsgMain/Driver/Driver_HeyhoSnow_00	Kayak Şıkı
+MsgMain/Driver/Driver_HeyhoRacing_00	Pit Ekibi
+MsgMain/Driver/Driver_JugemAngler_00	Balıkçı
+MsgMain/Driver/Driver_JugemRacing_00	Pit Ekibi
+MsgMain/Driver/Driver_KingTeresaMovie_00	Aristokrat
+MsgMain/Driver/Driver_KingTeresaPirate_00	Korsan
+MsgMain/Driver/Driver_KingTeresaRacing_00	Pro Yarışçı
+MsgMain/DriverCategoryName/Driver_BabyDaisy	Bebek Daisy
+MsgMain/DriverCategoryName/Driver_BabyLuigi	Bebek Luigi
+MsgMain/DriverCategoryName/Driver_BabyMario	Bebek Mario
+MsgMain/DriverCategoryName/Driver_BabyPeach	Bebek Peach
+MsgMain/DriverCategoryName/Driver_BabyRosetta	Bebek Rosalina
+MsgMain/DriverCategoryName/Driver_KingTeresa	Kral Boo
+MsgMain/DriverCategoryName/Driver_Cow	İnek
+MsgMain/DriverCategoryName/Driver_Lifton	Yunus
+MsgMain/DriverCategoryName/Driver_Penguin	Penguen
+MsgMain/DriverCategoryName/Driver_Snowman	Kardan Adam
+MsgMain/GrandprixCupName/Name_Banana	Muz Kupası
+MsgMain/GrandprixCupName/Name_Flower	Çiçek Kupası
+MsgMain/GrandprixCupName/Name_Kinoko	Mantar Kupası
+MsgMain/GrandprixCupName/Name_Konoha	Yaprak Kupası
+MsgMain/GrandprixCupName/Name_Koura	Kabuk Kupası
+MsgMain/GrandprixCupName/Name_Star	Yıldız Kupası
+MsgMain/GrandprixCupName/Name_Thunder	Şimşek Kupası
+MsgMain/GrandprixCupName/Name_Special	Özel Kupa
+MsgMain/GrandprixCupName/Name_GP09	Altın Ralli
+MsgMain/GrandprixCupName/Name_GP10	Buz Rallisi
+MsgMain/GrandprixCupName/Name_GP11	Ay Rallisi
+MsgMain/GrandprixCupName/Name_GP12	Dikenli Ralli
+MsgMain/GrandprixCupName/Name_GP13	Kiraz Rallisi
+MsgMain/GrandprixCupName/Name_GP14	Palamut Rallisi
+MsgMain/GrandprixCupName/Name_GP15	Bulut Rallisi
+MsgMain/GrandprixCupName/Name_GP16	Kalp Rallisi
+MsgMain/Help/HelpButton_01	Kılavuz
+MsgMain/Help/HelpMenu_01	Teknikler
+MsgMain/Help/HelpMenu_02	Eşyalar
+MsgMain/Help/HelpMenu_03	Kurallar
+MsgMain/Help/HelpMenu_04	Serbest Dolaşım
+MsgMain/Help/Technique_01	Roket Kalkış
+MsgMain/Help/Technique_03	Mini Turbo
+MsgMain/Help/Technique_04	Zıplama Hızlanması
+MsgMain/Help/Technique_05	Dönüş Manevrası
+MsgMain/Help/Technique_06	Şarjlı Zıplama
+MsgMain/Help/Technique_07	Ray Sürüşü
+MsgMain/Help/Technique_08	Duvar Sürüşü
+MsgMain/Help/Technique_09	Geri Sar
+MsgMain/Help/Technique_101	Roket Kalkış
+MsgMain/Help/Technique_103	Mini Turbo
+MsgMain/Help/Technique_104	Zıplama Hızlanması
+MsgMain/Help/Technique_105	Dönüş Manevrası
+MsgMain/Help/Technique_106	Şarjlı Zıplama
+MsgMain/Help/Technique_107	Ray Sürüşü
+MsgMain/Help/Technique_108	Duvar Sürüşü
+MsgMain/Help/Technique_109	Geri Sar
+MsgMain/Help/Technique_201	Yarış başındaki geri sayımda 2 göründüğünde\n{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}({0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}) tuşunu basılı tutarsan yarış\nbaşlarken hızlı bir çıkış yaparsın.
+MsgMain/Help/Technique_202	{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} tuşunu dönmek istediğin yöne yatırıp\n{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} tuşunu basılı tutarsan hız\nkaybetmeden daha sıkı dönebilirsin.
+MsgMain/Help/Technique_203	Drift yaparken tekerleklerinin altında kıvılcımlar\nçıkıyorsa {0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} tuşunu bırakarak hız artışı\nalabilirsin. Drift sırasında kıvılcımların rengi\ndeğiştikçe hız artışı biraz daha güçlenir! Akıllı\ndireksiyon KAPALI iken kıvılcımlar en fazla\nüç kez renk değiştirebilir.
+MsgMain/Help/Technique_204	Rampadan atladığın anda {0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} tuşuna\nbasarak akrobasi yapabilir (ve küçük bir\nhız artışı kazanabilirsin)!
+MsgMain/Help/Technique_205	{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} tuşunu sola ya da sağa yatırıp hem\n{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}({0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}) hem de {0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}({0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}) tuşunu basılı tutarsan\nbaktığın yönü hızlıca değiştirebilirsin.
+MsgMain/Help/Technique_206	{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}({0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}) tuşunu basılı tutup ardından {0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}\ntuşuna basarak düz gitmeye devam edersen\ntekerleklerinin altında kıvılcımlar çıkar. Sonra {0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}\ntuşunu bir yöne yatırıp {0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} tuşunu bırakırsan\no yöne küçük bir zıplama yapabilirsin.
+MsgMain/Help/Technique_207	Korkuluk ve elektrik hatları gibi dar yüzeylerde\nsürmek mümkündür. Şarjlı Zıplama ile\nüzerlerine bile zıplayabilirsin.
+MsgMain/Help/Technique_208	Bir duvara bakarken Zıplama Hızlanması ya da\nŞarjlı Zıplama yaparsan o duvar boyunca\nkısa süre sürebilirsin.
+MsgMain/Help/Technique_209	{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} tuşunu basılı tutarsan aracını\nönceki bir konuma döndürebilirsin.
+MsgMain/Help/Item_01	Muz
+MsgMain/Help/Item_02	Üçlü Muz
+MsgMain/Help/Item_03	Hız Mantarı
+MsgMain/Help/Item_04	Üçlü Hız Mantarı
+MsgMain/Help/Item_05	Altın Mantar
+MsgMain/Help/Item_06	Dev Mantar
+MsgMain/Help/Item_07	Yeşil Kabuk
+MsgMain/Help/Item_08	Üçlü Yeşil Kabuk
+MsgMain/Help/Item_09	Kırmızı Kabuk
+MsgMain/Help/Item_10	Üçlü Kırmızı Kabuk
+MsgMain/Help/Item_11	Dikenli Kabuk
+MsgMain/Help/Item_12	Altın Kabuk
+MsgMain/Help/Item_13	Ateş Çiçeği
+MsgMain/Help/Item_14	Buz Çiçeği
+MsgMain/Help/Item_15	Bumerang Çiçeği
+MsgMain/Help/Item_18	Çekiç
+MsgMain/Help/Item_19	Süper Korna
+MsgMain/Help/Item_20	? Blok
+MsgMain/Help/Item_21	Altın
+MsgMain/Help/Item_25	Tüy
+MsgMain/Help/Item_26	Süper Yıldız
+MsgMain/Help/Item_27	Şimşek
+MsgMain/Help/Item_28	Hız Yemeği
+MsgMain/Help/Item_101	Çarpan aracın kontrolünü kaybedip\nsavrulmasına neden olan kaygan bir engel.
+MsgMain/Help/Item_102	Karakterin aracının çevresinde dönen\nüç Muzdan oluşan set. Birer birer\nbırakmak için {0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna bas.
+MsgMain/Help/Item_103	Yendiğinde karaktere kısa süreli\nhız kazandıran lezzetli bir eşya.
+MsgMain/Help/Item_104	Karakterin aracının çevresinde dönen üç\nMantardan oluşan set. Birer birer\nkullanmak için {0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna bas.
+MsgMain/Help/Item_105	Kısa süre boyunca birçok kez kullanılabilen,\nkarakterin art arda hız kazanmasını sağlayan\nparlak bir Mantar. Etkinleştirmek için\n{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna art arda bas.
+MsgMain/Help/Item_106	Kullanıldığında karakteri ve aracını\nbüyüten, hız kazandıran ve diğer\nyarışçıları ezmesini sağlayan\nbüyük bir Mantar.
+MsgMain/Help/Item_107	Düz bir çizgide ilerleyen ve çarptığı\nkarakterin çakılıp durmasına neden\nolan tehlikeli bir eşya.
+MsgMain/Help/Item_108	Karakterin aracının çevresinde dönen üç Yeşil\nKabuktan oluşan set. Birer birer fırlatmak\niçin {0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna bas.
+MsgMain/Help/Item_109	Fırlatan karakterin önündeki herkesi\nhedef alan, araç arayan\nbir kabuk.
+MsgMain/Help/Item_110	Karakterin aracının çevresinde dönen üç Kırmızı\nKabuktan oluşan set. Birer birer fırlatmak\niçin {0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna bas.
+MsgMain/Help/Item_111	Lider karakteri bulup ona çarpan bir kabuk.\nYolda diğer yarışçılara çarpsa bile\ndevam eder ve birinci sıradaki\nkarakterin üzerine çöker.
+MsgMain/Help/Item_112	Pistte ilerlerken altın bırakan ve\nkarakterlere çarpan parlak bir kabuk.
+MsgMain/Help/Item_113	{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna basarak ateş topu\nfırlatmanı sağlayan güçlü bir eşya.\nAteş toplarının çarptığı karakterler\nkontrolünü kaybedip savrulur.
+MsgMain/Help/Item_114	{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna basarak buz topu\nfırlatmanı sağlayan güçlü bir eşya.\nBuz toplarının çarptığı karakterler\nkontrolünü kaybedip savrulur.
+MsgMain/Help/Item_115	{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna basarak bumerang fırlatmanı\nsağlayan bir eşya. Çarpılan karakterler\nkontrolünü kaybedip savrulur.
+MsgMain/Help/Item_116	Kullanan karakteri kısa süreliğine\nBullet Bill'e dönüştüren bir eşya.\nSonra pist boyunca roket gibi ilerler\nve çarptığı diğer karakterleri\nuçurur.
+MsgMain/Help/Item_117	Kısa süre sonra ya da bir karakter\nçarpınca patlayan yürüyen bir bomba.\nYakındaki diğer karakterler\npatlamaya yakalanabilir!
+MsgMain/Help/Item_118	{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna art arda basarak\nfırlatılabilen bir çekiç seti.\nVurulan herkes çakılır.
+MsgMain/Help/Item_119	Yakındaki karakterleri ve eşyaları\ngeri iten son derece güçlü bir korna.
+MsgMain/Help/Item_120	Karakter her {0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşuna bastığında\naltın üreten bir ? Blok. Ayrıca\nhafif bir hız artışı da sağlar.
+MsgMain/Help/Item_121	Kullanan karaktere iki altın veren\nbir eşya. Daha çok altın, karakterin\nhızını artırır.
+MsgMain/Help/Item_122	Karakteri kısa süre saydam yapan\nve Muz ile kabuk gibi tehlikeli\neşyalardan güvenle geçmesini\nsağlayan bir eşya. Ayrıca\nrakiplerden eşya çalar.
+MsgMain/Help/Item_123	Rakiplerin her yerine mürekkep püskürten,\nbir süre görmelerini zorlaştıran\nsinir bozucu bir eşya.
+MsgMain/Help/Item_124	Büyüsüyle tuhaf şeylerin olmasına\nneden olan Kamek'i çağıran bir eşya.
+MsgMain/Help/Item_125	Karakteri havaya yükselten ve Muz ile\nkabuk gibi tehlikeli eşyalardan\nkaçmasını sağlayan bir eşya. Savaş\nmodunda rakibin üzerinden uçmak\nbalon ya da altın çalmayı sağlar.
+MsgMain/Help/Item_126	Kullanan karakteri bir süre daha hızlı\nve yenilmez yapan, çarptığı\nkarakterleri döndürüp savuran\nbir eşya.
+MsgMain/Help/Item_127	Diğer karakterlere yıldırım düşürüp\ntaşıdıkları eşyaları yok eden,\nonları yavaşlatan ve bir süre\nküçülten\nbir eşya.
+MsgMain/Help/Item_128	Karaktere hız kazandıran ve onu farklı\nbir kıyafete dönüştürebilen\nlezzetli bir atıştırmalık.
+MsgMain/Help/Rule_02	Eleme Turu
+MsgMain/Help/Rule_03	Zamana Karşı
+MsgMain/Help/Rule_04	VS Yarışı
+MsgMain/Help/Rule_05	Balon Savaşı
+MsgMain/Help/Rule_06	Altın Avcıları
+MsgMain/Help/Rule_102	Eleme Turu
+MsgMain/Help/Rule_103	Zamana Karşı
+MsgMain/Help/Rule_104	VS Yarışı
+MsgMain/Help/Rule_105	Balon Savaşı
+MsgMain/Help/Rule_106	Altın Avcıları
+MsgMain/Help/Rule_201	Dört yarışlık kupada genel birinciliği hedefle!
+MsgMain/Help/Rule_202	Dünyaya yayılan bir yarışta hayatta kal!
+MsgMain/Help/Rule_203	Tek başına yarış ve en hızlı sürelerini yap!
+MsgMain/Help/Rule_204	Özel kurallarla yarış!
+MsgMain/Help/Rule_205	Eşyaları kullan ve balonları patlat!
+MsgMain/Help/Rule_206	En çok altınla bitirerek kazanmak için altın topla!
+MsgMain/Help/Rule_301	Her yarış, çizgiyi geçtiğin sıraya göre\npuan verir. Grand Prix'teki genel sıran,\ndört yarışın toplam puanına göre\nbelirlenir.
+MsgMain/Help/Rule_302	Karakterlerin ilerlemeye devam etmek için\nyeterince üst sırada bitirmesi gereken kesintisiz yarışlar.
+MsgMain/Help/Rule_303	Mevcut pistlerden istediğini seç.\nÇok iyi bir süre yapmanın anahtarı\nMantarları akıllıca kullanmaktır.
+MsgMain/Help/Rule_304	Setteki yarış sayısı ya da yarış sırasında\ntakım olup olmaması gibi çeşitli kuralları\nayarlayabileceğin bir oyun modu.
+MsgMain/Help/Rule_305	Rakiplerinin balonlarını patlatarak puan kazan.\nMantarla hızlanırken onlara çarparak\nbalonlarını bile çalabilirsin!
+MsgMain/Help/Rule_306	Rakiplerine eşyalarla vurarak altınlarını düşür ya da\nMantarla hızlanırken çarparak\naltınları doğrudan çal!
+MsgMain/Help/Rule_401	Grand Prix'te yedi farklı kupa var.\nHepsini bitirdiğinde ne olur\nacaba?
+MsgMain/Help/Rule_402	Her turun beş kontrol noktası var ve her\nkontrol noktasında alt sıralardaki birkaç yarışçı\nelenir. Önde kal ve sonunda\nbirinci olmaya bak!
+MsgMain/Help/Rule_403	Diğer yarışçıların hayalet verilerine\nkarşı kendini dene. Belki sana\nyeni bir şey öğretirler!
+MsgMain/Help/Rule_404	Ayarlarda Bağlantılı'yı seçersen yarışların\nbir pistten diğerine bağlanır!
+MsgMain/Help/Rule_405	Tüm balonlarını kaybedersen elenirsin...
+MsgMain/Help/Rule_406	Altınlar mini haritanda görünür,\nbu yüzden ona göz kulak ol!
+MsgMain/Help/FreeRun_01	P Düğmeleri
+MsgMain/Help/FreeRun_02	? Panelleri
+MsgMain/Help/FreeRun_03	Peach Madalyonları
+MsgMain/Help/FreeRun_04	Altınlar
+MsgMain/Help/FreeRun_05	Yoshi'nin
+MsgMain/Help/FreeRun_06	Fotoğraflar
+MsgMain/Help/FreeRun_101	Görevi başlatmak için P Düğmesi'nin üzerinden geç.\nBelirli bir görevde zorlanıyorsan\nendişelenme. Pes etme, başaracaksın!
+MsgMain/Help/FreeRun_102	? Panelleri beklenmedik yerlerde saklanıyor\nolabilir. Kaç tane bulabileceğine bak!
+MsgMain/Help/FreeRun_103	Parıldayan Peach Madalyonları dünyaya\nsaçılmış durumda. Kaç tane olabilir ki?
+MsgMain/Help/FreeRun_104	Altın toplayarak ek araçların kilidini açabilirsin.\nBir yerlerde toplanmayı bekleyen\naltın yığınları olduğu söyleniyor...
+MsgMain/Help/FreeRun_105	Dünyada Hız Yemeği sunan türlü dükkânlar var ve\nçok çeşitli yemekler satıyorlar.\nBirçok karakter yediği yemeğe göre\nkılığını değiştirir!
+MsgMain/Help/FreeRun_106	Fotoğraf çekmek için {0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşunu kullanabilirsin.\nDışarı çık, o mükemmel anları yakala ve\n"Peynir!" demeyi unutma.
+MsgMain/MachineType/Vehicle_Stb	Standart Motor
+MsgMain/MachineType/Vehicle_Stk	Standart Kart
+MsgMain/Menu/2001	Tamam
+MsgMain/Menu/2003	Evet
+MsgMain/Menu/2004	Hayır
+MsgMain/Menu/2051	Başlamak için {0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF} + {0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşlarına bas
+MsgMain/Menu/2053	Sırala
+MsgMain/Menu/2054	Ayrıntılar
+MsgMain/Menu/2055	Hız
+MsgMain/Menu/2056	İvme
+MsgMain/Menu/2057	Ağırlık
+MsgMain/Menu/2058	Kontrol
+MsgMain/Menu/2059	Karıştır
+MsgMain/Menu/2101	Tek Oyunculu
+MsgMain/Menu/2102	Çok Oyunculu
+MsgMain/Menu/2103	Çevrim İçi Oyun
+MsgMain/Menu/2104	Yerel Oyun
+MsgMain/Menu/2105	Çıkartmalar
+MsgMain/Menu/2106	LAN Oyunu
+MsgMain/Menu/2110	Harita
+MsgMain/Menu/2111	Serbest Dolaşım
+MsgMain/Menu/2202	Eleme Turu
+MsgMain/Menu/2203	Zamana Karşı
+MsgMain/Menu/2204	VS Yarışı
+MsgMain/Menu/2205	Savaş
+MsgMain/Menu/2211	4 yarışlık kupada birinci ol!
+MsgMain/Menu/2212	Dayanıklılık yarışında önde kal!
+MsgMain/Menu/2213	Rekor için tek başına yarış!
+MsgMain/Menu/2214	Özel kurallarla yarış!
+MsgMain/Menu/2215	Özel kurallarla savaş!
+MsgMain/Menu/2216	24 kişiye kadar birlikte yarışabilir!
+MsgMain/Menu/2217	24 kişilik eleme yarışında hayatta kal!
+MsgMain/Menu/2219	24 kişiye kadar birlikte savaşabilir!
+MsgMain/Menu/2231	Arkadaşlarını topla ve yarış!
+MsgMain/Menu/2221	Grand Prix başlatılsın mı?
+MsgMain/Menu/2222	Eleme Turu başlatılsın mı?
+MsgMain/Menu/2223	Zamana Karşı başlatılsın mı?
+MsgMain/Menu/2224	Tekrar başlatılsın mı?
+MsgMain/Menu/2225	Yarış başlatılsın mı?
+MsgMain/Menu/2226	Savaş başlatılsın mı?
+MsgMain/Menu/2227	Çıkmak istiyor musun?
+MsgMain/Menu/2228	Çıkmak istiyor musun?
+MsgMain/Menu/2229	Başlık ekranına dönülsün mü?
+MsgMain/Menu/2235	Ayna
+MsgMain/Menu/2261	Tek Yarış
+MsgMain/Menu/2262	Hayalete Karşı Yarış
+MsgMain/Menu/2263	Hayaleti İzle
+MsgMain/Menu/2264	Sıralamayı Gör
+MsgMain/Menu/2272	Hayalet Verisini Yükle
+MsgMain/Menu/2266	Bu hayalet verisi indirilsin mi?
+MsgMain/Menu/2268	Hayalet verisi silinsin mi?
+MsgMain/Menu/2269	Hayalet verisi silindi.
+MsgMain/Menu/2270	Hayalet verisi indiriliyor...
+MsgMain/Menu/2271	Hayalet verisi indirildi!\nYarış başlatılsın mı?
+MsgMain/Menu/2273	Hayalet verisi yüklensin mi?
+MsgMain/Menu/2274	Bu pist için henüz\nhayalet verisi oluşturmadın!
+MsgMain/Menu/2275	Kendi hayalet verini\nindiremezsin.
+MsgMain/Menu/2276	Daha fazla hayalet verisi indiremezsin.\nYer açmak için tüm hayalet\nverilerini {0E 0000 0003 0002 0000}silmek{0E 0000 0003 0002 FFFF} ister misin?
+MsgMain/Menu/2277	{0E 0000 0003 0002 0000}Sildiğin hayalet verileri\nkalıcı olarak kaybolur.{0E 0000 0003 0002 FFFF}\nDevam etmek istiyor musun?
+MsgMain/Menu/2278	İndirdiğin tüm hayalet\nverileri silindi.
+MsgMain/Menu/2281	Bu hayalet verisini\nzaten indirdin.
+MsgMain/Menu/2282	Bu hayalet verisi {0E 0000 0003 0002 0000}sana ait{0E 0000 0003 0002 FFFF}.\nYine de silmek istiyor musun?
+MsgMain/Menu/2301	Sınıf
+MsgMain/Menu/2306	Ayna
+MsgMain/Menu/2308	Atla
+MsgMain/Menu/2311	COM Zorluğu
+MsgMain/Menu/2312	Kolay
+MsgMain/Menu/2314	Zor
+MsgMain/Menu/2315	COM Yok
+MsgMain/Menu/2321	Pist Seçimi
+MsgMain/Menu/2322	Bağlantılı
+MsgMain/Menu/2323	Serbest
+MsgMain/Menu/2324	Rastgele
+MsgMain/Menu/2331	Yarış Sayısı
+MsgMain/Menu/2332	3 Yarış
+MsgMain/Menu/2333	4 Yarış
+MsgMain/Menu/2334	5 Yarış
+MsgMain/Menu/2335	6 Yarış
+MsgMain/Menu/2336	8 Yarış
+MsgMain/Menu/2337	12 Yarış
+MsgMain/Menu/2338	16 Yarış
+MsgMain/Menu/2339	32 Yarış
+MsgMain/Menu/2351	Takımlar
+MsgMain/Menu/2352	Takımsız
+MsgMain/Menu/2353	İki Takım
+MsgMain/Menu/2354	Üç Takım
+MsgMain/Menu/2355	Dört Takım
+MsgMain/Menu/2371	Raunt Sayısı
+MsgMain/Menu/2372	3 Raunt
+MsgMain/Menu/2373	4 Raunt
+MsgMain/Menu/2374	5 Raunt
+MsgMain/Menu/2375	6 Raunt
+MsgMain/Menu/2376	8 Raunt
+MsgMain/Menu/2381	Ara
+MsgMain/Menu/2382	10 saniye
+MsgMain/Menu/2383	Bir dakika
+MsgMain/Menu/2384	Beş dakika
+MsgMain/Menu/2391	Eşyalar
+MsgMain/Menu/2393	Çılgın
+MsgMain/Menu/2402	VS Yarışı
+MsgMain/Menu/2404	Eleme Turu
+MsgMain/Menu/2405	Balon Savaşı
+MsgMain/Menu/2406	Altın Avcıları
+MsgMain/Menu/3003	Serbest dolaşım başlatılsın mı?
+MsgMain/Menu/3004	Başlık ekranına\ndönülüyor.
+MsgMain/Menu/5001	Yarış
+MsgMain/Menu/5002	Eleme Turu
+MsgMain/Menu/5004	Arkadaşlar
+MsgMain/Menu/5005	Oda Oluştur
+MsgMain/Menu/5006	Oda Kimliğiyle Ara
+MsgMain/Menu/5007	Katıl
+MsgMain/Menu/5008	Oda
+MsgMain/Menu/5009	Savaş
+MsgMain/Menu/5013	Oyuncular aranıyor...
+MsgMain/Menu/5014	Yarış birazdan başlıyor!
+MsgMain/Menu/5017	Pist seçildi!
+MsgMain/Menu/5019	Şu an katılamazsın. Lütfen bekle.
+MsgMain/Menu/5020	Katıldın!
+MsgMain/Menu/5021	{0E 0001 0001 0004 0000 0000} katıldı!
+MsgMain/Menu/5022	Kurallar belirlendi!
+MsgMain/Menu/5023	Sonraki yarışa kalan: {0E 0001 0000 0004 0000 0000}
+MsgMain/Menu/5024	Sonraki savaşa kalan: {0E 0001 0000 0004 0000 0000}
+MsgMain/Menu/5026	Sıradaki uygun yarışa katılacaksın. Hazır ol!
+MsgMain/Menu/5027	Sıradaki uygun savaşa katılacaksın. Kemerleri bağla!
+MsgMain/Menu/5028	Oyuncuların katılması bekleniyor...
+MsgMain/Menu/5029	{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} Oyunu başlat
+MsgMain/Menu/5030	{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} Oyunu başlat
+MsgMain/Menu/5031	Savaş birazdan başlıyor!
+MsgMain/Menu/5032	Lütfen kurallar belirlenene kadar bekle.
+MsgMain/Menu/5033	Bağlantın kesildi.
+MsgMain/Menu/5034	Eleme Turu'na katılamıyorsun.
+MsgMain/Menu/5035	İki karakter birbirinden çok uzak. Aradaki mesafe kapatılıyor.
+MsgMain/Menu/5101	Rastgele
+MsgMain/Menu/5102	Değiştir
+MsgMain/Menu/5202	Yarışmak için grup kurulsun mu?
+MsgMain/Menu/5204	Girdiğin kimlik mevcut\nbir odayla eşleşmiyor.
+MsgMain/Menu/5209	Oda Kimliği
+MsgMain/Menu/5212	Savaş Geçmişi
+MsgMain/Menu/5213	Sen
+MsgMain/Menu/5214	Rakip
+MsgMain/Menu/5218	Oda Kimliğini Gir
+MsgMain/Menu/5220	Lütfen bekle...
+MsgMain/Menu/5221	Bu gruptan ayrılınsın mı?
+MsgMain/Menu/5301	Oda dolu.\nLütfen bekle...
+MsgMain/Menu/5302	Bir iletişim hatası\noluştu.
+MsgMain/Menu/5304	Katılmaya çalıştığın\noda bulunamadı.
+MsgMain/Menu/5305	Bir iletişim hatası\noluştu.
+MsgMain/Menu/5307	Bir iletişim hatası\noluştu.
+MsgMain/Menu/5308	Bir iletişim hatası\noluştu.
+MsgMain/Menu/5320	{0E 0001 0000 0004 0000 0000} altın topladın\nve yeni bir {0E 0000 0003 0002 0000}araç{0E 0000 0003 0002 FFFF} açtın!
+MsgMain/Menu/5313	Kayıtlı arkadaşın yok.
+MsgMain/Menu/5314	Katılabileceğin oda yok.
+MsgMain/Menu/5315	Kuralları Belirle
+MsgMain/Menu/5316	Katılımcılar
+MsgMain/Menu/5347	Fotoğraf Modu
+MsgMain/Menu/5328	Kameraya Bak
+MsgMain/Menu/5329	Odak
+MsgMain/Menu/5333	Bitir
+MsgMain/Menu/5334	İfade
+MsgMain/Menu/5335	Çerçeve
+MsgMain/Menu/5336	Kılavuz
+MsgMain/Menu/5340	Poz
+MsgMain/Menu/5341	Eğim
+MsgMain/Menu/5342	Çek
+MsgMain/Menu/5348	Odak: Yok
+MsgMain/Menu/5349	Odak: Karakter
+MsgMain/Menu/5350	Odak: Merkez
+MsgMain/Menu/5353	Fotoğraf çekmeyi bırakmak istiyor musun?
+MsgMain/Menu/5354	Evet
+MsgMain/Menu/5355	Hayır
+MsgMain/Menu/5370	Çerçeve: Yok
+MsgMain/Menu/5371	Çerçeve: 1
+MsgMain/Menu/5372	Çerçeve: 2
+MsgMain/Menu/5373	Çerçeve: 3
+MsgMain/Menu/5374	Çerçeve: 4
+MsgMain/Menu/5375	Çerçeve: 5
+MsgMain/Menu/5376	Çerçeve: 6
+MsgMain/Menu/5377	Çerçeve: 7
+MsgMain/Menu/5378	Çerçeve: 8
+MsgMain/Menu/5379	Çerçeve: 9
+MsgMain/Menu/5380	Çerçeve: 10
+MsgMain/Menu/5381	Çerçeve: 11
+MsgMain/Menu/5382	Çerçeve: 12
+MsgMain/Menu/5383	Çerçeve: 13
+MsgMain/Menu/5309	#MARIO KART WORLD\n\n#YAPIM EKİBİ\n\n\n\n\n\n\n\n\n\n\n#YAPIMCI\nKosuke Yabuki\n\n\n#PROGRAMLAMA YÖNETMENİ\nKenta Sato\n\n\n#SANAT YÖNETMENİ\nMasaaki Ishikawa\n\n\n#PLANLAMA YÖNETMENİ\nShintaro Jikumaru\n\n\n#PROGRAMLAMA SORUMLUSU\nTatsuya Takadera\nShoichi Obayashi\nJun Ito\nTomohiro Nakatani\nJunya Osada\n\n\n#PROGRAMLAMA\nTakeshi Miyamoto\nMasahiro Nakamura\nMifune Hayata\nMasahiro Kishi\nWataru Hinoshita\nAkihiro Umehara\nHiroki Omosako\nKentaro Kawai\nHiroaki Sata\nTatsuya Ogawa\nKenta Isasaka\nKeisuke Niwa\nRei Miyake\nTakanori Tamanaha\nRyota Ishida\nRyota Shigemasa\nRiki Fukunari\nNaoki Motoyama\nShuntaro Yamaguchi\nErika Abe\nRyuya Fujita\nTakumi Saito\nShun Utsugi\nYuto Kobayashi\nAkira Mizukami\nKoichi Sato\nTabi Morinaga\nYusuke Uchida\nMasahiro Miyakami\nMasanobu Yano\nShinya Yano\n\n\n#PLANLAMA SORUMLUSU\nHideaki Nishihara\nMasashi Onishi\nOlivier Nizard\nYugo Hayashi\nMizuki Ebihara\n\n\n#PLANLAMA\nShinichi Ikematsu\nKeiichiro Omura\nRyutaro Kanno\nTetsuya Yamaura\nYuta Yamashita\nKazuhiro Hosoi\nYoji Kamikawa\nKai Kikui\nAyako Akaza\nKo Yamamoto\nKaito Alexander Sumida\nSumire Nakamura\nYusuke Nodama\nRyosuke Takahashi\nMasamichi Yamazaki\n\n\n#ALAN TASARIMI SORUMLUSU\nYoshikazu Hara\nMasahiro Kawanishi\nNorihiro Morita\nNoriko Kitao\nMikiya Hosoi\nAkito Ota\nDaisuke Taneda\nKazue Kaneoka\nHirofumi Orita\n\n\n#ALAN TASARIMI\nTsubasa Fujii\nRyohei Totsuka\nZhaojun Chen\nKeita Tsuji\nHiroshi Yamane\nKanako Okabe\nMari Kubota\nHaruka Tsuchiya\nKanako Matsubara\nKazuki Okamoto\nAoi Aso\nItsuki Nakagawa\nRyota Iwai\nKana Ichigaya\nMaria Kawaguchi\nShoma Kokubo\nMifuyu Kojima\nRisa Takeuchi\nDaichi Dobashi\nShogo Nagata\nYudai Nagata\nTetsuya Kobayashi\nYasutomo Nishibe\nMasato Amma\nAi Kobayashi\nSota Yagiuchi\nHikaru Ishimine\nMie Kobayashi\nMinami Akao\nRikuo Hata\nMayuko Nakamura\nHomi Hada\nTomoko Horii\nTatsuo Shioda\nMiku Ohara\nShigyo To\nShizuka Shiino\nToshikatsu Terashima\nKaori Shoji\nKiyotaka Ujiie\nNanami Aruga\nHiroko Ito\nKotaro Kitada\nMisato Tamai\nSawako Kawana\nJunko Sato\nYoshiko Iida\nTakahiro Haga\nSako Hayashi\nRyota Shida\nShinji Yato\nKanako Uno\nFumiya Ito\nNatsuo Komatsubara\nSatoki Kiriu\nMio Kikuchi\nTeppei Kamata\nNaoya Nihei\nKoji Aoyama\nHiroki Sano\nNobuaki Kuroda\nWakana Imai\nKotono Mizuno\nMamiko Narita\nShiho Fukushima\nHinako Maeda\nRyosuke Kanai\nEriko Kasai\nHikari Konno\nNatsuko Yamashiro\nHatsune Takeshita\nKureha Naito\nYuiko Matsubara\nKanoko Myoken\n\n\n#ALAN TEKNİK TASARIMI\nKoshi Watamura\nShunichi Shirai\nNaoki Mineta\nYuki Terada\nHiroyuki Yamahira\n\n\n#KARAKTER TASARIMI SORUMLUSU\nNaoki Yamada\nHikari Harada\nAkane Usami\nSora Nagaoka\nAmi Takai\n\n\n#KARAKTER TASARIMI\nAi Yamada\nYuko Miyakawa\nYuka Kashima\nKojo Tsukamoto\nKomaki Mo\nMikito Imamura\nRino Taguchi\nYu Hamada\nKaori Mitsuzawa\nMakoto Tada\nRiki Kobayashi\nTomomi Sumaki\nRiko Shibanuma\nSaori Asoma\nKei Ogawa\nRikitaka Ota\nTaisei Negami\nMoeko Hijikata\nRina Eda\nHiroyuki Morishima\nArata Takahashi\nRina Honda\nOsamu Komura\nToshiaki Abe\nTakaharu Tanaka\nHideki Tanaami\nAkira Nakajima\nShihomi Yamamoto\nKenichi Nishizono\nDaisuke Abe\nYoshiya Sasaki\nRyutaro Asami\nRika Aoki\nMakiko Nihari\nAkari Iwakiri\nYuji Watanabe\nJun Kitaoka\nTakamasa Yamaguchi\nHiroaki Todo\nShota Akita\nAkinobu Yamakawa\nYuria Hamada\nRyunosuke Ogami\nKana Yamamoto\nHiroko Kiyonari\nShinya Gima\nAyaka Sugimoto\nYuhei Iwasa\nRisa Sakai\nTomoyo Yamanaka\nTakaaki Koido\nYo Nakajima\n\n\n#ANİMASYON SORUMLUSU\nMizuki Okunaka\n\n\n#ANİMASYON\nChiharu Iki\nTatsuya Sakai\nKanata Jitsusue\nShota Matsuura\nShoei Sato\nHirohisa Togase\n\n\n#KARAKTER TEKNİK TASARIMI\nShikou Yamaue\nYohei Mori\n\n\n#GÖRSEL EFEKT SORUMLUSU\nSosuke Takada\n\n\n#GÖRSEL EFEKTLER\nRyo Kodama\nRyosuke Hagiwara\nKyosuke Kashima\nTomotaka Ishikawa\nKaede Ogi\n\n\n#ARAYÜZ TASARIMI SORUMLUSU\nMariko Tachibana\n\n\n#ARAYÜZ TASARIMI\nJunya Nishino\nKotone Sasaki\nMizuki Homma\nChiharu Takabayashi\nNaoki Nishimura\n\n\n#2D GRAFİKLER\nMisaki Imura\nFuta Ikeda\nToko Minakuchi\n\n\n#SİNEMATİK TASARIM\nHiroki Hirano\nDaisuke Nobori\nYunju Cho\n\n\n#MÜZİK SORUMLUSU\nAtsuko Asahi\n\n\n#MÜZİK\nMaasa Miyoshi\nTakuhiro Honda\nYutaro Takakuwa\n\n\n#SES EFEKTİ SORUMLUSU\nTakahisa Yamamoto\n\n\n#SES EFEKTLERİ\nMitsutoshi Kodama\nTakuya Kojima\nRintaro Sato\nEka Chin\nKyosuke Nagano\nYohei Miyagawa\nNatsuko Yokoyama\n\n\n#TASARIM YÖNETİMİ\nYoshihisa Morimoto\nManabu Takehara\nTakafumi Kiuchi\nManabu Okano\nToshitaka Mukasa\nShunsuke Otsuka\nAkihiro Ando\n\n\n#PROJE YÖNETİMİ\nJunhiro Nishiyama\nAkane Ishikawa\nBungo Takahashi\n\n\n#GRAFİK ÇALIŞMALARI\nChiaki Ogura\nChiharu Sakiyama\nHikaru Ueda\nTaku Ito\nYoshiki Haruhana\nYuki Ijiri\nYuki Shimizu\nYuri Adachi\n\n\n#PROGRAMLAMA DESTEĞİ\nTakumi Sekino\nJun Ito\nTomohisa Saito\nDaisuke Shimizu\nShun Hayami\nNao Ueda\nMengyang Wang\nYuki Kaji\nAtsushi Asakura\nYoshimitsu Yamada\nTakuma Oiso\nShoka Ochi\nYuki Yamada\nShogo Tsuji\nMasafumi Kawamura\nRyosuke Kawakatsu\nJoe Griffiths Oba\nWataru Tanaka\nMasakaze Sato\nHideyuki Sugawara\nSatoshi Miyama\nYuki Onozawa\nShunto Kawae\nJunta Fujinaga\nYuichiro Hiramoto\nGo Mimura\nMasaki Muto\nTakahiro Matsuda\nTakumi Masuda\nKojiro Taguchi\nTakeshi Wakasugi\nMizuki Fujisawa\nTetsuya Nakata\nMakoto Takano\nShuhei Matsuo\nTakahiro Okuda\nYusuke Shiraiwa\nTakuhiro Dohta\n\n\n#TASARIM DESTEĞİ\nKeijiro Inoue\nRyuji Kobayashi\nSatoru Takizawa\nYoshiyuki Oyama\n\n\n#SES DESTEĞİ\nKenta Nagata\nMahito Yokota\nTakahiro Watanabe\n\n\n#TEKNİK DESTEK\nKoichiro Hirano\nSumio Itou\nRyoma Kumamoto\nTomoatsu Nagafuji\nMikiya Ode\nShinji Yamada\nYoshinori Yamazoe\nYujiro Mori\nYoshiki Kawanishi\nTomonori Hiraishi\nYuichi Kurata\n\n\n#TEST\nDaiki Moriyama\nShoichiro Takeyoshi\nAsuka Nishiura\nTakeshi Kiriyama\nSayaka Takagi\nKensuke Oishi\nDaiki Yokouchi\nNaoya Takechi\nMasaki Furukawa\nMario Club Co., Ltd.\n\n\n#NOA YERELLEŞTİRME\nSam AbouHarb\nLauren Ammerman\nGab Bergollo Drouyn\nBilly Carroll\nYanett Cepeda Valor\nOwen Cooney\nMarjolaine Drouin\nDan Fazio\nDutch Hixenbaugh\nMichio Koide\nEgon Lessa\nAlex Lied\nMiya Seeley\nJoe Talbot\nBabi Velho Barreto\nScott Willson\nFelipe Zylbersztajn\n\n\n#NOA DİL KALİTE KONTROL\nJordon Galloway\nPedro Neves do Souto\nPascal Ramirez\nMakiko Szolas\nGabriel Vinado\n\n\n#NOA YERELLEŞTİRME YÖNETİMİ\nReiko Ninomiya\nRich Amtower\nMichael Benedetto\nRaymond Elliget\nBerenice Hofsetz\nNoriko Kaji\nZaher Khan\nLars Knudson\nAnn Lin\nTim O'Leary\nScot Ritchey\nMorgan Ritchie\nGalia Rodríguez Hornedo\nWilliam Romick\nThaddée Wiseur\nKaren Yuen\nÁlex Zarza\n\n\n#NOE YERELLEŞTİRME YAPIMCILARI\nMarko Sistermann\nPete Sheppard\n\n\n#NOE ÇEVİRİ\nMatthew Fosbrook\nPatrick Joyce\nMatthieu Lamouroux\nDavid Caussèque\nAlessandro Tardito\nKent Robello\nGiovanna Prati\nKatharina Glowotz\nHannah Siebert\nEnrique Sánchez Rosa\nJónatan Marcos Millán\nMarijke Pustjens\nChristian Buter\nCarsten Harmans\nRui Mendes\nDaniel Aleixo\nAnton Ivanchikov\nPolina Shenoeva\n\n\n#NOE KALİTE GÜVENCESİ\nStefania Montagnese\nLaurence Uhlen\nVeronica Casi\nSascha Michalke\nJulio Manzaneda Medina\nNils Dudal\nMariña Vieira Vázquez\nSandra de la Peña Rodríguez\nIrina Kaffka\n\n\n#ASYA YERELLEŞTİRMESİ\niQue (China) Ltd.\nMario Club Co., Ltd.\nNintendo (Hong Kong) Limited Taiwan Branch\nNintendo of Korea Co., Ltd.\n\n\n#ASYA YERELLEŞTİRME YÖNETİMİ\nDongyeon Kim\nKyoungim Na\nTakaaki Ueno\nWang Zhonglong\nMisa Matsumoto\n\n\n#ASYA YERELLEŞTİRME KOORDİNASYONU\nSoonil Kim\nChen Yufeng\n\n\n#ASYA DİLLERİ ÇEVİRİSİ\nCheng Wenyen\nDaeho Jeong\nXia Tinghui\nZhang Xi\nSean Shen\n\n\n#ASYA DİLLERİ KALİTE KONTROL\nHu Huiming\nJeewan Chun\nChien Chihhsien\nEiju Umemura\nChen Weiming\nPu Xinyi\n\n\n#SES OYUNCULARI\nKevin Afghani\nDawn M Bennett\nLaila Berzins\nNate Bihldorff\nKo Bonkobara\nPaul Castro Jr.\nGiselle Fernandez\nYuu Hayashi\nKate Higgins\nEri Inagawa\nKenny James\nCourtney Lin\nTsuguo Mogami\nTadd Morgan\nNatsuki Mori\nTakashi Oohara\nCaety Sagoian\nLaura Faye Smith\nLaura Stahl\nKouji Takeda\nSatoshi Taki\nKazumi Totaka\n\n\n#SES YÖNETMENİ\nPatrick Seitz\n\n\n#SES KAYDI\nJonathan Abarca\nPaul Eric Miller\n\n\n#SES STÜDYOSU DESTEĞİ\nLainie Bushey\nCheryl Cowan\nDanny Hunt\nWendi Wills\n\n\n#MÜZİK DÜZENLEMESİ\nMasanori Sasaji\nJun Abe\nShoya Kitagawa\nMaoki Yamamoto\nYoichi Murata\nJun Tomoda\nKeiji Matsumoto\nYoshihiro Arita\nTetsuya Ohyama\nSatoru Shionoya\nTetsuro Toyama\n\n\n#KAYIT VE MİKS MÜHENDİSLİĞİ\nNobuyuki Aoyagi\nTakehiko Naito\n\n\n#MÜZİK YARDIMCI MÜHENDİSLİĞİ\nChie Sato\nSo Shiiba\nAsuka Anzai\n\n\n#MÜZİK PERFORMANSI\nMARIO KART BAND\n\n\n#ÖZEL TEŞEKKÜRLER\nFumihiro Suzuki\nDaisuke Masui\nMakoto Ishii\nDaisuke Uchiyama\nBandai Namco Studios Inc.\nIMAGICA GEEQ Inc.\nHiroshi Uchiyama\nGen Kadoi\nMakiko Takada\nNoriko Sekiya\nFace Music\nSOUND INN STUDIOS Inc.\nARTSVISION Co., Ltd.\nBad Animals\nCup of Tea Productions, Inc.\nKenproduction Co., Ltd.\nHokWai Ng\nShinya Wada\nPedro Avelar\nRyuhei Matsuura\nSébastien Faber\nEmily Itagaki\nTakayuki Haga\nMasato Kimura\nYasuyuki Oyagi\nHideki Konno\n\n\n#GENEL YAPIMCI\nShinya Takahashi\n\n\n#BAŞ YAPIMCI\nShuntaro Furukawa\n\n\nNintendo, telif hakkı amaçları\niçin bu yazılımın\nyazarıdır. Tüm hakları saklıdır.\n© 2025 Nintendo\n\n\n\n\n\n\n\n
+MsgMain/Mission/Mission_RC_WL_00	Mavi altınları topla ve Goomba'lardan kaç!
+MsgMain/Mission/Mission_RC_WL_03	Köprü boyunca uzanan mavi altınları topla!
+MsgMain/Mission/Mission_RC_WL_04	Demiryolu sahasında mavi altınları ara!
+MsgMain/Mission/Mission_RC_WL_05	Havada akrobasiler yaparak altın topla!
+MsgMain/Mission/Mission_RC_WL_08	Platolarda borudan boruya fırla!
+MsgMain/Mission/Mission_WT_WL_00	Savunma hattını yarıp geç!
+MsgMain/Mission/Mission_WT_WL_01	Bloklu kısayoldan Wario Stadyumu'na zıpla!
+MsgMain/Mission/Mission_WT_WL_04	Tehlikeli lastik parkurunda yarış!
+MsgMain/Mission/Mission_WT_WL_05	Kafes köprüden geçen treni geç!
+MsgMain/Mission/Mission_WT_WL_06	Rampadan çık ve asma köprüyü aş!
+MsgMain/Mission/Mission_WT_WL_08	Havada süzül ve köprünün içinden geç!
+MsgMain/Mission/Mission_WT_WL_09	Patlamalı aksiyon sahnesinde yolda gürle!
+MsgMain/Mission/Mission_WT_WL_10	Arazi kısayolundan Mario Bros. Pisti'ne git!
+MsgMain/Mission/Mission_WT_WL_11	Dev mantarın tepesindeki Bitiş Direği'ne nişan al!
+MsgMain/Mission/Mission_WT_WL_12	Bitiş Direği'ne ulaşmak için hortum arka rüzgârına güven!
+MsgMain/Mission/Mission_WT_WL_13	Mantar hızıyla bitişe uç ve batma!
+MsgMain/Mission/Mission_WT2_WL_00	Eşyalarla çöl kumlarında hızla geç!
+MsgMain/Mission/Mission_WT2_WL_01	Shy Guy'lara nehir aşağı yarışmayı göster!
+MsgMain/Mission/Mission_WT2_WL_05	Nehir vadisinde akıntıya karşı yarış!
+MsgMain/Mission/Mission_WT2_WL_06	Arka yol rotasında kendine yol aç!
+MsgMain/Mission/Mission_WT2_WL_07	Rampalardan ve kirişlerden geçerek bitişe yarış!
+MsgMain/Mission/Mission_WT2_WL_08	Uçurum kenarındaki rampadan bitişe çık!
+MsgMain/Mission/Mission_WT2_WL_09	Duvar sürüşü becerilerini göster!
+MsgMain/Mission/Mission_WT2_WL_10	Köprüde art arda akrobasi yap!
+MsgMain/Mission/Mission_WT2_WL_11	Yoshi'ye hızlıca bir şeyler atıştırmaya uç!
+MsgMain/Mission/Mission_WT2_WL_12	Fazladan yükseklik için kaktüslerden akrobasi yap!
+MsgMain/Mission/Mission_WT2_WL_13	Bitişe giderken armadilloları atlat!
+MsgMain/Mission/Mission_WT2_WL_14	O helikopteri takip et!
+MsgMain/Mission/Mission_WT2_WL_15	ÖZEL beceri sınavı #6'da kendini kanıtla!
+MsgMain/Mission/Mission_WT2_WL_18	Çelik rampalarla platodan platoya süzül!
+MsgMain/Mission/Mission_WT3_WL_01	Çorak arazide bir dayanıklılık sınavına gir!
+MsgMain/Mission/Mission_WT3_WL_02	Kanyondaki ani yarışa katıl!
+MsgMain/Mission/Mission_WT3_WL_03	Gözü pek kanyon turuna katıl!
+MsgMain/Mission/Mission_WT3_WL_04	Kayaların tepesindeki yarışçıların arasına dal!
+MsgMain/Mission/Mission_RC_WL_02	Burgerin mavi altınlarını toplamak için ray üstünde git!
+MsgMain/Mission/Mission_WT_WL_03	Tribünlerin arasından bitişe yarış!
+MsgMain/Mission/Mission_WT2_WL_04	Açlığını getir ve bitişe yarış!
+MsgMain/Mission/Mission_RC_WL_07	Tüm mavi altınları toplamak için akrobasileri artır!
+MsgMain/Mission/Mission_WT_WL_02	Trene ne kadar hızlı gidebildiğini göster!
+MsgMain/Mission/Mission_WT2_WL_02	Düdüklü Tren Zirvesi'nin tepesine yarış!
+MsgMain/Mission/Mission_RC_WL_06	Çatılardan mavi altın topla!
+MsgMain/Mission/Mission_WT2_WL_16	Halkalardan ve alevlerin üzerinden rampa yap!
+MsgMain/Mission/Mission_WT2_WL_17	Çatılar boyunca halkaları takip et!
+MsgMain/Mission/Mission_RC_DT_00	Mavi altınları kap ve batma!
+MsgMain/Mission/Mission_RC_DT_01	Mavi altınları kumlardan kurtar!
+MsgMain/Mission/Mission_RC_DT_03	Dağılmış mavi altınları topla!
+MsgMain/Mission/Mission_RC_DT_04	Kurumuş vahada mavi altın topla!
+MsgMain/Mission/Mission_RC_DT_05	Çarşıyı kolla ve mavi altınları kap!
+MsgMain/Mission/Mission_RC_DT_06	Havadaki mavi altınları toplamak için bir araca atla!
+MsgMain/Mission/Mission_RC_DT_07	Mavi altınları toplarken vahada serinle!
+MsgMain/Mission/Mission_RC_DT_08	Harabenin mavi altınları için ipi takip et!
+MsgMain/Mission/Mission_WT_DT_00	Tehlikeli hortumların arasından kıvrıl!
+MsgMain/Mission/Mission_WT_DT_01	Hammer Bros. barikatını yar!
+MsgMain/Mission/Mission_WT_DT_02	Yükselirken Chain Chomp'lardan kaç!
+MsgMain/Mission/Mission_WT_DT_03	Shy Guy'ları nehir yukarı yarışta geç!
+MsgMain/Mission/Mission_WT_DT_04	Kum denizinde bitişe sprint at!
+MsgMain/Mission/Mission_WT_DT_05	İleri atıl ve Bitiş Direği'ne zıpla!
+MsgMain/Mission/Mission_WT_DT_06	Bitişe zamanında varmak için akıllıca atıl!
+MsgMain/Mission/Mission_WT_DT_07	Kıvrımlı rotada süzülerek bitişe ulaş!
+MsgMain/Mission/Mission_WT_DT_08	Shy Guy Mücadelesi #2'ye gir!
+MsgMain/Mission/Mission_WT_DT_09	Shy Guy Mücadelesi #1'e gir!
+MsgMain/Mission/Mission_WT_DT_10	Bitişe ulaşmak için 18 tekerleğin gücünü kullan!
+MsgMain/Mission/Mission_WT_DT_11	Borudan boruya fırlayarak bitişe ulaş!
+MsgMain/Mission/Mission_WT_DT_12	Bitişe doğru atıl, atıl, atıl!
+MsgMain/Mission/Mission_WT_DT_13	Yokuş yukarı giderken Tokotoko'lardan kaç!
+MsgMain/Mission/Mission_WT_DT_14	Blok labirentinde kendine yol aç!
+MsgMain/Mission/Mission_WT_DT_15	Hız kazanmak için antik gemi enkazlarını kullan!
+MsgMain/Mission/Mission_WT_DT_16	Batadon barikatlarının arasından sıyrıl!
+MsgMain/Mission/Mission_WT_DT_17	Bitişe uzun bir ray yolculuğu yap!
+MsgMain/Mission/Mission_WT2_DT_00	Nehirden aşağı yarış ve denize kaç!
+MsgMain/Mission/Mission_WT2_DT_01	Sütundan sütuna zorlu zıplayışlar yap!
+MsgMain/Mission/Mission_WT2_DT_02	Gizlice girmek için dış duvar boyunca git!
+MsgMain/Mission/Mission_WT2_DT_03	Köprüyü akrobasilerle geç!
+MsgMain/Mission/Mission_WT2_DT_04	Tünelde Fire Snake'lerden kaç!
+MsgMain/Mission/Mission_WT2_DT_05	Yoldaki parti yapan bir sürü Pokey'nin yanından geç!
+MsgMain/Mission/Mission_WT2_DT_06	Tren istasyonunun Bitiş Direği'ne süzül!
+MsgMain/Mission/Mission_WT2_DT_07	Shy Guy Mücadelesi #3'e gir!
+MsgMain/Mission/Mission_WT2_DT_08	Her Tokotoko'yu bir sonrakine kadar kovala!
+MsgMain/Mission/Mission_WT2_DT_09	Çölden kaçmak için göklere çık!
+MsgMain/Mission/Mission_WT2_DT_10	Çöl göklerini ve çimenli tepeleri aşıp bitişe ulaş!
+MsgMain/Mission/Mission_WT2_DT_11	Shy Guy Çarşısı'nda zorlu bir tur at!
+MsgMain/Mission/Mission_WT2_DT_12	Yağmur ve altın fırtınasında yarış!
+MsgMain/Mission/Mission_WT3_DT_00	Kumlu bir dayanıklılık sınavına gir!
+MsgMain/Mission/Mission_RC_VL_02	Dar bir yol boyunca mavi altın topla!
+MsgMain/Mission/Mission_RC_VL_04	Kaplıcalarda mavi altın topla!
+MsgMain/Mission/Mission_RC_VL_05	Mavi altınları topla ve Thwomp'lara dikkat et!
+MsgMain/Mission/Mission_RC_VL_06	Mavi altınları toplarken Bully'lerin yanından hızla geç!
+MsgMain/Mission/Mission_RC_VL_07	Raylarda giderken mavi altınları kap!
+MsgMain/Mission/Mission_RC_VL_08	Ürkütücü mezarlığın etrafındaki mavi altınları kap!
+MsgMain/Mission/Mission_RC_VL_09	Dağılmış mavi altınları topla!
+MsgMain/Mission/Mission_RC_VL_11	Büyük merdivenin mavi altınlarını topla!
+MsgMain/Mission/Mission_RC_VL_12	Mavi altınları kapmak için raydan raya zıpla!
+MsgMain/Mission/Mission_WT_VL_02	Lav gölünün üstünden güvenle uç!
+MsgMain/Mission/Mission_WT_VL_03	Whamp'ların arasından kıvrıl!
+MsgMain/Mission/Mission_WT_VL_04	Kamyonu ödünç al ve içinden parçala geç!
+MsgMain/Mission/Mission_WT_VL_05	Dry Bones'la dolu yolda kıvrıl!
+MsgMain/Mission/Mission_WT_VL_06	Kaplıcalara giderken Fish Bones'un yanından geç!
+MsgMain/Mission/Mission_WT_VL_07	Treaded Grrrol geçidinden geç!
+MsgMain/Mission/Mission_WT_VL_08	Yıkık köprünün kirişlerinden geç!
+MsgMain/Mission/Mission_WT_VL_10	Ateş yağmurunun içinden Bullet Bill gibi geç!
+MsgMain/Mission/Mission_WT_VL_11	Zeplin Kalesi'ne aktarmalı uçuş yap!
+MsgMain/Mission/Mission_WT_VL_12	Ateş toplarının dalgalarının arasından kay! Yanma!
+MsgMain/Mission/Mission_WT2_VL_04	Lava süper yıldız olduğunu göster!
+MsgMain/Mission/Mission_WT2_VL_05	Sağdaki yolda hızlanmak için Mantar kullan!
+MsgMain/Mission/Mission_WT2_VL_06	Ciddi bir ip üstünde sürüş becerisi göster!
+MsgMain/Mission/Mission_WT2_VL_07	Soldaki yolda Mantar kullanmadan hızlan!
+MsgMain/Mission/Mission_WT2_VL_08	Gayzerlere bin ve halkalardan geçerek bitişe fırla!
+MsgMain/Mission/Mission_WT2_VL_09	Acı Fire Piranha Plant geçidinden sağ çık!
+MsgMain/Mission/Mission_WT2_VL_10	Helikoptere atla ve ateşli bir sondan kaç!
+MsgMain/Mission/Mission_WT2_VL_11	Pisti akrobasi üstüne akrobasiyle parçala!
+MsgMain/Mission/Mission_WT2_VL_12	Boru ve halka yolunda ilerle!
+MsgMain/Mission/Mission_WT2_VL_13	Sarsıcı sumo basışlarından sıyrıl!
+MsgMain/Mission/Mission_WT2_VL_16	Çelik destekler arasındaki boşluklardan geç!
+MsgMain/Mission/Mission_WT2_VL_17	Kale duvarının tepesine yarış!
+MsgMain/Mission/Mission_WT2_VL_18	Bir vinçte tırman, ötekinden kaç!
+MsgMain/Mission/Mission_WT2_VL_20	Tek atışta delik için uzun bir uçuş yap!
+MsgMain/Mission/Mission_WT3_VL_01	Dev Simit etrafındaki yarışta birkaç atıştırmalık kap!
+MsgMain/Mission/Mission_WT_VL_00	Rocky Wrench sıralarının arasından sıyrıl!
+MsgMain/Mission/Mission_WT2_VL_00	Dönen kulenin tepesine drift at!
+MsgMain/Mission/Mission_WT2_VL_02	Bu Zeplin Kalesi zamana karşı yarışında yeteneklerini göster!
+MsgMain/Mission/Mission_RC_VL_01	Baharatlı yemek alanının etrafında mavi altın topla!
+MsgMain/Mission/Mission_WT_VL_01	Bowser'ın Kalesi'nin duvarlarında zıpla!
+MsgMain/Mission/Mission_WT2_VL_03	Lav havuzlarına düşmeden akrobasi yap!
+MsgMain/Mission/Mission_WT3_VL_00	Bowser'ın uşaklarıyla dolu bir pistte yarış!
+MsgMain/Mission/Mission_RC_VL_10	Mavi altınları toplamak için ip üstünde dengede kal!
+MsgMain/Mission/Mission_RC_VL_15	Ateş toplarından kaç ve mavi altın topla!
+MsgMain/Mission/Mission_WT2_VL_14	Herkese duvar sürüşünün nasıl yapıldığını göster!
+MsgMain/Mission/Mission_RC_FS_03	Sekiz şeklindeki yolda mavi altın topla!
+MsgMain/Mission/Mission_RC_FS_04	Wiggler'ların biriktirdiği mavi altınları topla!
+MsgMain/Mission/Mission_RC_FS_05	Batma hissini yen ve mavi altın topla!
+MsgMain/Mission/Mission_RC_FS_06	Trafiğin arasından kes ve mavi altınları kap!
+MsgMain/Mission/Mission_RC_FS_07	Skeeter'ların su çukurundaki mavi altınları kap!
+MsgMain/Mission/Mission_RC_FS_08	Nehir kenarındaki kamp alanında mavi altınları topla!
+MsgMain/Mission/Mission_RC_FS_09	Mavi altınların peşinde ürkütücü ormana göğüs ger!
+MsgMain/Mission/Mission_WT_FS_02	Ağır ağır giden geyik sürüsünün arasından manevra yap!
+MsgMain/Mission/Mission_WT_FS_03	İpe bin ve bitişe süzül!
+MsgMain/Mission/Mission_WT_FS_04	Yanından geçerken Mario heykeline "merhaba" de!
+MsgMain/Mission/Mission_WT_FS_05	Dev elmaya ulaşmak için çiçek yapraklarını kullan!
+MsgMain/Mission/Mission_WT_FS_06	Mario Pisti'nde zıpla, zıpla, zıpla!
+MsgMain/Mission/Mission_WT_FS_07	Treni kovala ve rayları takip et!
+MsgMain/Mission/Mission_WT_FS_08	Spike'ların saldırılarından kaç ve bitişe ulaş!
+MsgMain/Mission/Mission_WT_FS_09	Akrobasi çalış ve zorlu bir iniş yap!
+MsgMain/Mission/Mission_WT_FS_10	Vahşi doğada maceraya çık ve bitişe ulaş!
+MsgMain/Mission/Mission_WT_FS_11	Yol göster, Ivy Piranha Plant'ler!
+MsgMain/Mission/Mission_WT_FS_12	Yıldızların gücüyle akıntıya karşı ilerle!
+MsgMain/Mission/Mission_WT_FS_13	Raya bin! Çizgiyi izle! Bitişe var!
+MsgMain/Mission/Mission_WT2_FS_05	Perili ormana göğüs ger!
+MsgMain/Mission/Mission_WT2_FS_06	Ağaç tepelerinin arasından süzül!
+MsgMain/Mission/Mission_WT2_FS_07	Perili bataklıkta köprüden köprüye yarış!
+MsgMain/Mission/Mission_WT2_FS_08	Acele et, akıntıya karşı ilerle ve bitişe ulaş!
+MsgMain/Mission/Mission_WT2_FS_09	Bataklığa Süper Yıldızların gücünü göster!
+MsgMain/Mission/Mission_WT2_FS_10	Trafiğin arasından ustaca kıvrıl ve duvar sürüşüyle geç!
+MsgMain/Mission/Mission_WT2_FS_11	Dar arka yolların zıplayışlarında ustalaş!
+MsgMain/Mission/Mission_WT2_FS_12	Palamut Tepeleri'ne akıntı yönünde ilerle!
+MsgMain/Mission/Mission_WT2_FS_13	Giderken Piranha Plant'lerden kaç!
+MsgMain/Mission/Mission_WT2_FS_14	Trafiğin ve Chargin' Chuck'ların arasından kıvrıl!
+MsgMain/Mission/Mission_WT3_FS_01	Ghost Valley 1'e saygı duruşu pistinde yarış!
+MsgMain/Mission/Mission_WT3_FS_02	Ghost Valley 2'ye saygı duruşu pistinde yarış!
+MsgMain/Mission/Mission_WT3_FS_03	Ghost Valley 3'e saygı duruşu pistinde yarış!
+MsgMain/Mission/Mission_WT3_FS_05	Ormanlık alandaki vahşi rotada yarış!
+MsgMain/Mission/Mission_RC_FS_01	Zambak vadisinden inerken mavi altın topla!
+MsgMain/Mission/Mission_WT_FS_01	Palamut fırtınasına dayan!
+MsgMain/Mission/Mission_WT2_FS_00	Ivy Piranha Plant'lerin üstünden yukarı, yukarı, yukarı tırman!
+MsgMain/Mission/Mission_WT2_FS_02	Bitişe giderken Wiggler'ların yanından kıvrıl!
+MsgMain/Mission/Mission_RC_FS_00	Kontrol kulesinin etrafında mavi altın topla!
+MsgMain/Mission/Mission_WT_FS_00	Çeyrek borudan fırla ve devasa bir yükseklik yakala!
+MsgMain/Mission/Mission_WT2_FS_01	Zorlu bir zamana karşı mücadelede kendini sına!
+MsgMain/Mission/Mission_RC_FS_02	Kamera vinçlerine tırman! Hazır... Aksiyon!
+MsgMain/Mission/Mission_WT2_FS_03	Hayaletli bir sinema evrenine göz at!
+MsgMain/Mission/Mission_WT2_FS_04	Raylarla sinema lobisine çık!
+MsgMain/Mission/Mission_WT3_FS_04	Gerçekten sürükleyici bir film deneyimi sırasında yarış!
+MsgMain/Mission/Mission_RC_IC_05	Yokuş aşağı slalom yap ve mavi altınları kap!
+MsgMain/Mission/Mission_RC_IC_07	Snow Pokey'lerin arasında mavi altın topla!
+MsgMain/Mission/Mission_RC_IC_09	Penguenler geçit töreni yaparken mavi altın topla!
+MsgMain/Mission/Mission_RC_IC_10	Mavi altınları toplamak için inip çık!
+MsgMain/Mission/Mission_RC_IC_11	Mavi altınlar için Frost Piranha saldırılarından kıvrıl!
+MsgMain/Mission/Mission_RC_IC_12	Kardan adamların mavi altınlarını kap!
+MsgMain/Mission/Mission_RC_IC_13	Frost Piranha saldırıları arasında mavi altınları kap!
+MsgMain/Mission/Mission_RC_IC_14	Mavi altın toplarken ray akrobasileri göster!
+MsgMain/Mission/Mission_RC_IC_15	Mavi altın toplarken Fuzzy'lerin yanından hızla geç!
+MsgMain/Mission/Mission_RC_IC_16	Kar topları yamaçlardan inerken mavi altınları kap!
+MsgMain/Mission/Mission_WT2_IC_02	Yamaçların çok yukarısında süzül!
+MsgMain/Mission/Mission_WT2_IC_03	Buzlu kuş saldırısına karşı yarış!
+MsgMain/Mission/Mission_WT2_IC_04	Engebeli kır rotasında hızlan!
+MsgMain/Mission/Mission_WT2_IC_07	Bitişe giderken rüzgârı gözle!
+MsgMain/Mission/Mission_WT2_IC_08	Donmuş zirveye acele et!
+MsgMain/Mission/Mission_WT2_IC_09	Bitişe ulaşmak için trafik sıkışıklığının arasından geç!
+MsgMain/Mission/Mission_WT2_IC_10	Bitişe ulaşmak için trene atla!
+MsgMain/Mission/Mission_WT2_IC_15	Ateş toplarıyla yolunu aç!
+MsgMain/Mission/Mission_WT2_IC_16	Buz pateni antrenmanını kes geç!
+MsgMain/Mission/Mission_WT2_IC_17	Kar toplarına katılıp yokuş aşağı yarış!
+MsgMain/Mission/Mission_WT2_IC_18	İleride kar topu tehlikelerine dikkat et!
+MsgMain/Mission/Mission_WT2_IC_19	Yamaçlara ulaşmak için trafiği yar!
+MsgMain/Mission/Mission_WT2_IC_20	İstasyona hızla gitmek için Mantarları kullan!
+MsgMain/Mission/Mission_WT2_IC_22	Gölün üstündeki soğuk pistin üstesinden gel!
+MsgMain/Mission/Mission_WT2_IC_23	Gökyüzünde süzül ve bitişe koş!
+MsgMain/Mission/Mission_WT2_IC_24	Şans için birkaç Yeşil Kabuk al!
+MsgMain/Mission/Mission_WT2_IC_26	Bitişe ulaşmak için kaygan yokuşa tırman!
+MsgMain/Mission/Mission_WT2_IC_30	Yarım kalmış kısayola göğüs ger!
+MsgMain/Mission/Mission_WT2_IC_31	Gerçekten uzun süzülerek becerini göster!
+MsgMain/Mission/Mission_WT3_IC_00	Vanilla Lake'e saygı duruşu pistinde yarış!
+MsgMain/Mission/Mission_RC_IC_02	Gözlemevinin etrafında dön ve mavi altınları kap!
+MsgMain/Mission/Mission_WT2_IC_05	Ice Bros. saldırılarına dikkat et!
+MsgMain/Mission/Mission_WT2_IC_28	Gazı köke ver! Hadi, hadi, hadi!
+MsgMain/Mission/Mission_WT_IC_02	Dönen dondurma külahının tepesine ulaş!
+MsgMain/Mission/Mission_WT2_IC_11	Dondurma yarığından cesur bir kaçış yap!
+MsgMain/Mission/Mission_WT2_IC_32	Bitişe ulaşmak için Mantarını zamanla ve içinden geç!
+MsgMain/Mission/Mission_RC_IC_04	DK Geçidi'nde mavi altınları t-t-t-topla!
+MsgMain/Mission/Mission_WT2_IC_12	ÖZEL beceri sınavı #5'te kendini kanıtla!
+MsgMain/Mission/Mission_WT2_IC_13	Boş tribünlerin arasından bitişe yarış!
+MsgMain/Mission/Mission_WT2_IC_14	Shy Guy snowboard yarışmasına dal!
+MsgMain/Mission/Mission_RC_PL_01	Gizemli mağaralardaki mavi altınları topla!
+MsgMain/Mission/Mission_WT_PL_02	Para-Biddybud kaplı köprüde yukarı yarış!
+MsgMain/Mission/Mission_WT2_PL_03	Zıpla, zıpla, zıpla, zıpla, zıpla, zıpla, zıpla... zıpla!
+MsgMain/Mission/Mission_WT2_PL_04	ÖZEL beceri sınavı #3'te kendini kanıtla!
+MsgMain/Mission/Mission_RC_PL_04	Mavi altınları toplayarak zen'i bul!
+MsgMain/Mission/Mission_WT_PL_05	Şelaleye tırmanarak huzuru ara!
+MsgMain/Mission/Mission_WT2_PL_07	Çanı çalarak dünyayla uyum sağla!
+MsgMain/Mission/Mission_RC_RT_03	Mavi altınları toplamak için hassas sürüş göster!
+MsgMain/Mission/Mission_RC_RT_04	Mavi altınları girdaptan kurtar!
+MsgMain/Mission/Mission_RC_RT_05	Fırtınaya göğüs ger ve mavi altın topla!
+MsgMain/Mission/Mission_RC_RT_06	Mavi altınları dikkatle kap ve deniz havasını içine çek!
+MsgMain/Mission/Mission_RC_RT_07	Mavi altınları Goomba'ların tatil köşesinden kap!
+MsgMain/Mission/Mission_RC_RT_08	Deniz kenarındaki mavi altın partisine dal!
+MsgMain/Mission/Mission_WT_RT_02	Bitişe ulaşmak için büyük bir yükseklik yakala!
+MsgMain/Mission/Mission_WT_RT_03	Denizin ötesinden seslenen deniz kızına ulaş!
+MsgMain/Mission/Mission_WT_RT_04	Tuzlu Tuzlu Otoyol'a süzül!
+MsgMain/Mission/Mission_WT_RT_05	Bitiş Direği'ne ulaşmak için tehlikeli kayalıkları geç!
+MsgMain/Mission/Mission_WT_RT_06	Su direksiyonunda ileri düzey bir antrenmana gir!
+MsgMain/Mission/Mission_WT_RT_07	Su hortumu rüzgârlarına güven!
+MsgMain/Mission/Mission_WT_RT_08	Boomerang Bros. barikatını yar!
+MsgMain/Mission/Mission_WT_RT_09	Yel değirmenini geç!
+MsgMain/Mission/Mission_WT_RT_10	Plaja hızla git! Hadi, hadi, hadi!
+MsgMain/Mission/Mission_WT2_RT_04	Cheep Cheep'ler seni alkışlarken hız için zıpla!
+MsgMain/Mission/Mission_WT2_RT_05	Bitişe giderken adaları gez!
+MsgMain/Mission/Mission_WT2_RT_06	Bulber'lar izlerken dalgalarda sörf yap!
+MsgMain/Mission/Mission_WT2_RT_07	Bitişe ulaşmak için Tüy'de ustalaş!
+MsgMain/Mission/Mission_WT2_RT_08	Çiçek yaprağıyla gazı köke ver!
+MsgMain/Mission/Mission_WT2_RT_09	O yel değirmenlerinin yanından deniz meltemini ara!
+MsgMain/Mission/Mission_WT2_RT_10	Açık denizde su hortumlarına göğüs ger!
+MsgMain/Mission/Mission_WT2_RT_11	Tuzlu Tuzlu Otoyol'un çatılarında parkur yap!
+MsgMain/Mission/Mission_WT2_RT_12	Bitişe ulaşmak için yokuş aşağı zikzak çiz!
+MsgMain/Mission/Mission_WT2_RT_13	Borular ve ince yollar boyunca bitişe git!
+MsgMain/Mission/Mission_WT2_RT_14	Dragoneel'lere binmeye cesaret et!
+MsgMain/Mission/Mission_WT3_RT_00	Issız adanın etrafındaki yarışa katıl!
+MsgMain/Mission/Mission_RC_RT_01	Mavi altınlar için gemi enkazlarına tırman!
+MsgMain/Mission/Mission_WT_RT_01	Altınlarla dolu yolu izleyerek bitişe git!
+MsgMain/Mission/Mission_WT2_RT_01	Kuleden kuleye aralıksız bir uçuş yap!
+MsgMain/Mission/Mission_RC_RT_00	Büyüleyici deniz kızının mavi altınlarını topla!
+MsgMain/Mission/Mission_WT_RT_00	Hız için bazı kutuları kır!
+MsgMain/Mission/Mission_WT2_RT_00	Kuru kalıp bitişe ulaşmak için kısayoldan git!
+MsgMain/Mission/Mission_WT2_RT_02	VIP koltuk kulesine süzül!
+MsgMain/Mission/Mission_WT2_RT_03	Mantar hızıyla kasabadan geç ve bitişe ulaş!
+MsgMain/Mission/Mission_WT2_RT_15	Shy Guy su gösterisinin içinden geç!
+MsgMain/Mission/Mission_RC_JG_02	Mavi altınlara timsahların yardımıyla ulaş!
+MsgMain/Mission/Mission_RC_JG_03	Çizgileri izle ve mavi altınları topla!
+MsgMain/Mission/Mission_RC_JG_05	Mavi altınlar için Ivy Piranha Plant'leri takip et!
+MsgMain/Mission/Mission_RC_JG_06	Mavi altınları kapmak için ormandaki raylara bin!
+MsgMain/Mission/Mission_RC_JG_07	Mavi altınları savan göğünden kap!
+MsgMain/Mission/Mission_RC_JG_08	Mavi altınları kapmak için Ivy Piranha Plant sarmaşıklarına bin!
+MsgMain/Mission/Mission_RC_JG_09	Piranha Plant'lerin istediği mavi altınları kap!
+MsgMain/Mission/Mission_RC_JG_10	Mavi altınlara fırlarken zürafalara dikkat et!
+MsgMain/Mission/Mission_RC_JG_11	Mavi altınları zamanında toplamak için zorlu bir U dönüşü yap!
+MsgMain/Mission/Mission_RC_JG_12	Nehir kenarındaki safaride mavi altınları topla!
+MsgMain/Mission/Mission_RC_JG_13	Gayzer alanının etrafında mavi altın topla!
+MsgMain/Mission/Mission_WT_JG_02	Göğe çık ve nehir vadisi boyunca süzül!
+MsgMain/Mission/Mission_WT_JG_03	Bloktan buluta sıçrayarak bitişe ulaş!
+MsgMain/Mission/Mission_WT_JG_04	İki yandan gelen manda sürülerine göğüs ger!
+MsgMain/Mission/Mission_WT_JG_05	Zebra akınında zikzak çiz!
+MsgMain/Mission/Mission_WT_JG_06	Bitişe ulaşmak için Tüyleri iyi kullan!
+MsgMain/Mission/Mission_WT_JG_07	Şelalelerin üzerinden süzül!
+MsgMain/Mission/Mission_WT_JG_08	Şelalenin kenarından cesur bir atlayış yap!
+MsgMain/Mission/Mission_WT_JG_09	Triceratops'tan rampa gibi fırla!
+MsgMain/Mission/Mission_WT_JG_10	Bitişe ulaşmak için sürünün yardımını kullan!
+MsgMain/Mission/Mission_WT_JG_11	Timsahlara kayda değer yardımları için teşekkür et!
+MsgMain/Mission/Mission_WT_JG_12	Şelalede duvar sürüşü mü? Bu... işe yarayabilir!
+MsgMain/Mission/Mission_WT_JG_13	Enkazdan kaç ve şelalenin karşısına drift at!
+MsgMain/Mission/Mission_WT2_JG_04	Nehir turlarına dal ve çık!
+MsgMain/Mission/Mission_WT2_JG_05	Cesurca süzül! T. rex seni korkutmasın!
+MsgMain/Mission/Mission_WT2_JG_06	Brachiosaurus'lardan destek al!
+MsgMain/Mission/Mission_WT2_JG_08	Gök bloğuna ulaşmak için yükseklere tırman!
+MsgMain/Mission/Mission_WT2_JG_09	Işık hızıyla kayadan kayaya atla, savan çok kalabalık!
+MsgMain/Mission/Mission_WT2_JG_11	Savanı gez ve dev şelaleleri ziyaret et!
+MsgMain/Mission/Mission_WT2_JG_12	Dinozor dolu ormanda arazide yarış!
+MsgMain/Mission/Mission_WT2_JG_13	Kaçak kamyona atla!
+MsgMain/Mission/Mission_WT2_JG_14	Dağa çıkan zorlu yola göğüs ger!
+MsgMain/Mission/Mission_WT3_JG_00	Savandaki dayanıklılık yarışına katıl!
+MsgMain/Mission/Mission_WT3_JG_01	Vahşi dinozorların yanından ve üzerinden hızla geç!
+MsgMain/Mission/Mission_RC_JG_01	Harabelerin altınları arasında mavi altınları topla!
+MsgMain/Mission/Mission_WT_JG_01	Bulutların tepesinde zıpla!
+MsgMain/Mission/Mission_WT2_JG_03	Eski harabelerin üzerindeki zorlu yolda yarış!
+MsgMain/Mission/Mission_RC_JG_00	Mavi altınların peşinde dino kubbeye göğüs ger!
+MsgMain/Mission/Mission_WT2_JG_00	Kubbede ve ötesinde uçuş turuna çık!
+MsgMain/Mission/Mission_WT2_JG_01	ÖZEL beceri testi #4'te kendini kanıtla!
+MsgMain/Mission/Mission_WT2_JG_02	Sırtlarına güven, seni oraya götürürler!
+MsgMain/Mission/Mission_WT2_JG_10	Yukarı, yukarı, bulutlara fırla!
+MsgMain/Mission/Mission_RC_BS_04	Mavi altın toplamayı seviyorsan korna çal!
+MsgMain/Mission/Mission_RC_BS_05	Mavi altınları almak için bir sekiz çiz!
+MsgMain/Mission/Mission_RC_BS_06	Mavi altınları girdabın dalgalarından kurtar!
+MsgMain/Mission/Mission_RC_BS_08	Zorlu bir ray sürüşü görevinde mavi altınları topla!
+MsgMain/Mission/Mission_RC_BS_09	Mavi altınların peşinde hassas sürüş yap!
+MsgMain/Mission/Mission_RC_BS_10	Mavi altınları topla... belki sonunda bir simit de çıkar?
+MsgMain/Mission/Mission_WT_BS_03	Patlayıcıların önüne geçmek için yarış!
+MsgMain/Mission/Mission_WT_BS_04	Bitişe ulaşmak için biraz güçlendirme ödünç al!
+MsgMain/Mission/Mission_WT_BS_05	Şehre giden ekspres trene yetiş!
+MsgMain/Mission/Mission_WT_BS_07	Kupaların kupasına "sarmaşık"la yol bul!
+MsgMain/Mission/Mission_WT_BS_08	Zıpla, zıpla, zıpla ve muhteşem bir manzara noktasına çık!
+MsgMain/Mission/Mission_WT2_BS_04	Uzay limanına giderken araçlardan akrobasi yap!
+MsgMain/Mission/Mission_WT2_BS_05	Arka yoldaki gizli varil kestirmesine bak!
+MsgMain/Mission/Mission_WT2_BS_06	Şehre nehir yolundan git!
+MsgMain/Mission/Mission_WT2_BS_07	Şehre özel uçuşuna bin!
+MsgMain/Mission/Mission_WT2_BS_08	Bitiş Direğine ulaşmak için ince ayar yap!
+MsgMain/Mission/Mission_WT2_BS_10	Kapalı yollardaki trafikte hızla geç!
+MsgMain/Mission/Mission_WT2_BS_11	Bu zorlu denemede akrobasi yapmaktan vazgeçme!
+MsgMain/Mission/Mission_WT2_BS_12	Balık sürülerinin arasından geçerek bitişe ulaş!
+MsgMain/Mission/Mission_WT2_BS_13	Plaja git!
+MsgMain/Mission/Mission_WT2_BS_14	Sekiz şeklindeki zamana karşı yarışta hızlan!
+MsgMain/Mission/Mission_WT2_BS_15	ÖZEL beceri testi #1'de kendini kanıtla!
+MsgMain/Mission/Mission_WT2_BS_16	Bitişe biraz rahat bir yoldan git!
+MsgMain/Mission/Mission_WT2_BS_17	Koopa Troopa Plajı'na zıplaya zıplaya git!
+MsgMain/Mission/Mission_WT2_BS_18	Peach Stadyumu'na balina gibi bir karşılama al!
+MsgMain/Mission/Mission_WT2_BS_19	Uzak şehre tehlikeli bir yolculuğa çık!
+MsgMain/Mission/Mission_WT2_BS_20	Hermity Cone'ların inlerinden geç!
+MsgMain/Mission/Mission_WT2_BS_21	Dinozor dolu sokaklarda yarış!
+MsgMain/Mission/Mission_WT3_BS_02	Sahilde kum ve dalgalara göğüs gererek yarış!
+MsgMain/Mission/Mission_RC_BS_03	Yüzen engel parkurunda mavi altınları topla!
+MsgMain/Mission/Mission_WT2_BS_03	İpler boyunca ray sürüşüyle zirveye çık!
+MsgMain/Mission/Mission_WT3_BS_01	Koopa Beach 1'e saygı duruşu pistinde yarış!
+MsgMain/Mission/Mission_RC_BS_01	Boruları kullanıp fırlatma rampasının mavi altınlarını al!
+MsgMain/Mission/Mission_WT_BS_01	DK Uzay Limanı'ndan geriye doğru yarış!
+MsgMain/Mission/Mission_WT2_BS_01	Klasik DONKEY KONG'u hatırla!
+MsgMain/Mission/Mission_RC_BS_00	Parkın kıvrımlarında mavi altınları topla!
+MsgMain/Mission/Mission_RC_BS_02	Mavi altınları toplamak için kent korkuluklarında kay!
+MsgMain/Mission/Mission_WT_BS_00	Bitişe giderken Bowser'ın uşaklarından kaç!
+MsgMain/Mission/Mission_WT_BS_02	O park yerini kap! Hızlı!
+MsgMain/Mission/Mission_WT2_BS_00	Taç Şehri'nde parkur turuna çık!
+MsgMain/Mission/Mission_WT2_BS_02	Otoparkta efsane gibi drift at!
+MsgMain/Mission/Mission_WT3_BS_00	Dayanıklılığını şehrin her yanındaki yarışta sına!
+MsgMain/Mission/Mission_RC_PL_05	Düşen yaprakların arasında zarifçe mavi altınları topla!
+MsgMain/Mission/Mission_RC_PL_06	Mavi altınları toplamak için çizgiden çizgiye atla!
+MsgMain/Mission/Mission_RC_PL_07	Para-Biddybud'ların arasında mavi altınları topla!
+MsgMain/Mission/Mission_RC_PL_08	TARLALARI ARA. MAVİ ALTINLARI KAÇIR.
+MsgMain/Mission/Mission_RC_PL_09	Thwompy-Whampy duvarında mavi altınları topla!
+MsgMain/Mission/Mission_RC_PL_10	İp üstü yürüyüş parkurunda mavi altınları topla!
+MsgMain/Mission/Mission_RC_PL_11	Akışa kapıl ve mavi altınları topla!
+MsgMain/Mission/Mission_RC_PL_12	Zıpla! Düş! Mavi altınları kap!
+MsgMain/Mission/Mission_RC_PL_13	Mavi altınları kapmak için saman balyalarını ez!
+MsgMain/Mission/Mission_RC_PL_14	Birkaç kolay mavi altın al... ve bir de zorunu!
+MsgMain/Mission/Mission_RC_PL_15	Manzaralı bir arka yolda mavi altınları topla!
+MsgMain/Mission/Mission_RC_PL_16	Karahindiba Mağarası'na giderken mavi altınları topla!
+MsgMain/Mission/Mission_RC_PL_17	Mavi altınları toplarken biraz müzik çal!
+MsgMain/Mission/Mission_WT_PL_06	Gölü geç! Balık yemi olma!
+MsgMain/Mission/Mission_WT_PL_07	Rampalara vur ve bitişe ulaş!
+MsgMain/Mission/Mission_WT_PL_08	Sinyal Böceklerinin altından doğru zamanda geç!
+MsgMain/Mission/Mission_WT_PL_09	Yoshi'nin paket çantasından al! Ya da yedi! Ya da on bir!
+MsgMain/Mission/Mission_WT_PL_10	Gelmiş geçmiş en tehlikeli trafikte kıvrıl!
+MsgMain/Mission/Mission_WT_PL_11	Nehir kıyısındaki araçlardan yararlan!
+MsgMain/Mission/Mission_WT_PL_12	Kestirmelerden geçmek için kamyonu kap!
+MsgMain/Mission/Mission_WT_PL_13	Süper Koopa'ların düşürdüklerini topla!
+MsgMain/Mission/Mission_WT_PL_14	Stadyumun bahçesindeki kestirmeyi not et!
+MsgMain/Mission/Mission_WT_PL_16	Süre dolmadan dağ geçidini parçala!
+MsgMain/Mission/Mission_WT_PL_17	Göle zamanında ulaşmak için yokuş aşağı yarış!
+MsgMain/Mission/Mission_WT_PL_19	Cheep Cheep Şelalesi'ne gizli bir yoldan süzül!
+MsgMain/Mission/Mission_WT_PL_20	Nehir boyunca koş ve bitişe ulaş!
+MsgMain/Mission/Mission_WT2_PL_09	Dikkat et! Yine dikkat et! Bir daha dikkat et!
+MsgMain/Mission/Mission_WT2_PL_10	Riskli bir kestirmede yarış!
+MsgMain/Mission/Mission_WT2_PL_11	Zıplayışlarının zamanlamasına dikkat et!
+MsgMain/Mission/Mission_WT2_PL_12	Sarmaşık Piranha Bitkisi'nin dalını bitişe doğru yönlendir!
+MsgMain/Mission/Mission_WT2_PL_13	Herkese yamaçların yasak olmadığını göster!
+MsgMain/Mission/Mission_WT2_PL_14	Trene binmenin çok tehlikeli bir yolunu göster!
+MsgMain/Mission/Mission_WT2_PL_15	Süper Yıldız gücüyle parla!
+MsgMain/Mission/Mission_WT2_PL_16	Dağın tepesine ulaşmak için akrobasi yapmaktan vazgeçme!
+MsgMain/Mission/Mission_WT2_PL_17	Bir tekne ödünç al ve durdurulamaz ol!
+MsgMain/Mission/Mission_WT2_PL_18	Bahçeyi yakıp yıkan kim varsa kovala!
+MsgMain/Mission/Mission_WT2_PL_19	Chain Chomp sürüsünün arasından bir yol bul!
+MsgMain/Mission/Mission_WT2_PL_20	Çikolata Dağı'na arazi yolundan git!
+MsgMain/Mission/Mission_WT2_PL_22	Havaya! Suya!
+MsgMain/Mission/Mission_WT3_PL_00	Choco Island 2'ye saygı duruşu pistinde yarış!
+MsgMain/Mission/Mission_WT3_PL_01	Choco Island 1'e saygı duruşu pistinde yarış!
+MsgMain/Mission/Mission_WT3_PL_03	Yerel bir amatör yarışa atla!
+MsgMain/Mission/Mission_WT3_PL_04	Gölde yarışırken Dragoneel'lara dikkat et!
+MsgMain/Mission/Mission_RC_Island_00	Altın denizinde mavi altınlara odaklan!
+MsgMain/Mission/Mission_WT_PL_18	Düşen çikolataya dikkat et! Kayalara da!
+MsgMain/Mission/Mission_WT2_PL_21	Koyu çikolatanın içinde hızlan, hızlan, hızlan!
+MsgMain/Mission/Mission_WT_PL_00	Prototip testinin dağınıklığını hoş gör!
+MsgMain/Mission/Mission_WT2_PL_00	ÖZEL beceri testi #2'de kendini kanıtla!
+MsgMain/Mission/Mission_WT2_PL_01	Toad'un Fabrikası'nı gez!
+MsgMain/Mission/Mission_WT2_PL_02	Vincin en tepesine kadar yarış!
+MsgMain/Mission/Mission_RC_PL_02	Borunun mavi altın için orada olduğuna güven!
+MsgMain/Mission/Mission_WT_PL_03	İnek sürüsünün arasından Möööv gibi geç!
+MsgMain/Mission/Mission_WT2_PL_05	Çayırların üzerinden atla ve bitişe fırla!
+MsgMain/Mission/Mission_RC_PL_03	Kontrol kulesinin etrafındaki mavi altınları topla!
+MsgMain/Mission/Mission_WT_PL_04	Peach Stadyumu'nun çok yukarısında göklere çık!
+MsgMain/Mission/Mission_WT2_PL_06	Kapının tepesine akrobasiyle çık!
+MsgMain/Race/9001	Devam
+MsgMain/Race/9002	Çık
+MsgMain/Race/9003	Pisti Değiştir
+MsgMain/Race/9004	Karakteri Değiştir
+MsgMain/Race/9005	Yeniden Başlat
+MsgMain/Race/9006	Sonraki Yarış
+MsgMain/Race/9007	Sonraki
+MsgMain/Race/9008	Tekrar Dene
+MsgMain/Race/9009	Tekrarı İzle
+MsgMain/Race/9010	İzlemeye Devam Et
+MsgMain/Race/9011	Çık
+MsgMain/Race/9012	Sonraki Raunt
+MsgMain/Race/9013	Hayalete Karşı Yarış
+MsgMain/Race/9014	Baştan Tekrar İzle
+MsgMain/Race/9015	Çıkmak istediğine emin misin?
+MsgMain/Race/9016	Seyretmeye Devam Et
+MsgMain/Race/9017	Çık
+MsgMain/Race/9018	Oyunu Başlat
+MsgMain/Race/9019	Serbest Dolaşıma Devam Et
+MsgMain/Race/9020	Serbest Dolaşımdan Çık
+MsgMain/Race/9021	Kuralları Değiştir
+MsgMain/Race/9022	Oda Bilgisini Gör
+MsgMain/Race/9023	Ayarlar/Kumanda
+MsgMain/Race/9025	Kuralları Gör
+MsgMain/Race/9026	Serbest Dolaşıma Dön
+MsgMain/Race/9028	Göreve Devam Et
+MsgMain/Race/9029	Görevden Çık
+MsgMain/Race/9034	SONRAKİ
+MsgMain/Race/9035	BİTİŞ
+MsgMain/Race/9036	HEDEF
+MsgMain/Race/9031	Yeni hayalet verisi oluşturuldu.
+MsgMain/Race/9032	İşte yarış sonuçları!
+MsgMain/Race/9033	Çok geride kaldın...
+MsgMain/Race/9037	Bazı yarışçılar çok geride kaldı...
+MsgMain/Race/9101	Yeni hayalet verini\nyüklemek ister misin?
+MsgMain/Race/9103	Yükleniyor...
+MsgMain/Race/9104	Hayalet verisi yüklendi.
+MsgMain/Race/9105	Hayalet verisi yüklenemiyor.
+MsgMain/Race/9106	{0E 0000 0003 0002 0000}Özel Kupa{0E 0000 0003 0002 FFFF} artık açık!
+MsgMain/Race/9107	{0E 0000 0003 0002 0000}Ayna Modu {0E 0000 0003 0002 FFFF}açıldı!
+MsgMain/Race/9201	Ağır çekim
+MsgMain/Race/9202	Menü
+MsgMain/Race/9203	Değiştir
+MsgMain/Race/9204	Duraklat
+MsgMain/Race/9205	Devam Et
+MsgMain/Race/9221	Ayarlar
+MsgMain/Race/9222	Akıllı Direksiyon
+MsgMain/Race/9223	Açık
+MsgMain/Race/9224	Kapalı
+MsgMain/Race/9225	Eğim Kontrolü
+MsgMain/Race/9226	Açık
+MsgMain/Race/9227	Kapalı
+MsgMain/Race/9228	Otomatik Hızlanma
+MsgMain/Race/9229	Açık
+MsgMain/Race/9230	Kapalı
+MsgMain/Race/9231	Otomatik Eşya Kullanımı
+MsgMain/Race/9232	Açık
+MsgMain/Race/9233	Kapalı
+MsgMain/Race/9234	Yatay Kamera
+MsgMain/Race/9236	Ters
+MsgMain/Race/9237	Dikey Kamera
+MsgMain/Race/9238	Mini Harita
+MsgMain/Race/9239	Hız Yemeği
+MsgMain/Race/9240	Dönüşür
+MsgMain/Race/9241	Dönüşmez
+MsgMain/Race/9281	Eşya kullan
+MsgMain/Race/9282	Yönlendir
+MsgMain/Race/9284	Hızlan
+MsgMain/Race/9301	1. Yarış
+MsgMain/Race/9302	2. Yarış
+MsgMain/Race/9303	3. Yarış
+MsgMain/Race/9304	4. Yarış
+MsgMain/Race/9305	5. Yarış
+MsgMain/Race/9306	6. Yarış
+MsgMain/Race/9307	7. Yarış
+MsgMain/Race/9308	8. Yarış
+MsgMain/Race/9309	9. Yarış
+MsgMain/Race/9310	10. Yarış
+MsgMain/Race/9311	11. Yarış
+MsgMain/Race/9312	12. Yarış
+MsgMain/Race/9313	13. Yarış
+MsgMain/Race/9314	14. Yarış
+MsgMain/Race/9315	15. Yarış
+MsgMain/Race/9316	16. Yarış
+MsgMain/Race/9317	17. Yarış
+MsgMain/Race/9318	18. Yarış
+MsgMain/Race/9319	19. Yarış
+MsgMain/Race/9320	20. Yarış
+MsgMain/Race/9321	21. Yarış
+MsgMain/Race/9322	22. Yarış
+MsgMain/Race/9323	23. Yarış
+MsgMain/Race/9324	24. Yarış
+MsgMain/Race/9325	25. Yarış
+MsgMain/Race/9326	26. Yarış
+MsgMain/Race/9327	27. Yarış
+MsgMain/Race/9328	28. Yarış
+MsgMain/Race/9329	29. Yarış
+MsgMain/Race/9330	30. Yarış
+MsgMain/Race/9331	31. Yarış
+MsgMain/Race/9399	Son Yarış
+MsgMain/Race/9401	1. Raunt
+MsgMain/Race/9402	2. Raunt
+MsgMain/Race/9403	3. Raunt
+MsgMain/Race/9404	4. Raunt
+MsgMain/Race/9405	5. Raunt
+MsgMain/Race/9406	6. Raunt
+MsgMain/Race/9407	7. Raunt
+MsgMain/Race/9499	Son Raunt
+MsgMain/Race/9501	{0E 0000 0003 0002 0004}Birinciliği{0E 0000 0003 0002 FFFF} hedefle!
+MsgMain/Race/9504	{0E 0000 0002 0002 004B}İlk{0E 0000 0002 0002 0064} {0E 0000 0003 0002 0004}4{0E 0000 0003 0002 FFFF}{0E 0000 0002 0002 004B}'e gir!{0E 0000 0002 0002 0064}
+MsgMain/Race/9508	{0E 0000 0002 0002 004B}İlk {0E 0000 0002 0002 0064}{0E 0000 0003 0002 0004}8{0E 0000 0003 0002 FFFF}{0E 0000 0002 0002 004B}'e gir!{0E 0000 0002 0002 0064}
+MsgMain/Race/9512	{0E 0000 0002 0002 004B}İlk {0E 0000 0002 0002 0064}{0E 0000 0003 0002 0004}12{0E 0000 0003 0002 FFFF}{0E 0000 0002 0002 004B}'ye gir!{0E 0000 0002 0002 0064}
+MsgMain/Race/9516	{0E 0000 0002 0002 004B}İlk {0E 0000 0002 0002 0064}{0E 0000 0003 0002 0004}16{0E 0000 0003 0002 FFFF}{0E 0000 0002 0002 004B}'ya gir!{0E 0000 0002 0002 0064}
+MsgMain/Race/9520	{0E 0000 0002 0002 004B}İlk{0E 0000 0002 0002 0064} {0E 0000 0003 0002 0004}20{0E 0000 0002 0002 004B}'ye{0E 0000 0002 0002 0064}{0E 0000 0003 0002 FFFF} {0E 0000 0002 0002 004B}gir!{0E 0000 0002 0002 0064}
+MsgMain/Race/9604	İlk 4'e giremedin.
+MsgMain/Race/9608	İlk 8'e giremedin.
+MsgMain/Race/9612	İlk 12'ye giremedin.
+MsgMain/Race/9616	İlk 16'ya giremedin.
+MsgMain/Race/9620	İlk 20'ye giremedin.
+MsgMain/Race/9701	Merhaba!
+MsgMain/Race/9702	İyi şanslar!
+MsgMain/Race/9703	Hoş geldin!
+MsgMain/Race/9704	Bana kolay davran!
+MsgMain/Race/9705	Elimden geleni yapacağım!
+MsgMain/Race/9706	Hadi başlayalım!
+MsgMain/Race/9707	Daha fazla oyuncu bekleyelim.
+MsgMain/Race/9708	Tamam!
+MsgMain/Race/9709	Biraz gerginim...
+MsgMain/Race/9710	Heyecanlıyım!
+MsgMain/Race/9711	Fotoğraf çekeceğim!
+MsgMain/Race/9712	Yaşasın!
+MsgMain/Race/9713	Çok eğlenceliydi!
+MsgMain/Race/9714	İyi oyundu!
+MsgMain/Race/9715	Çok yazık!
+MsgMain/Race/9716	Haksızlık!
+MsgMain/Race/9717	Bir kez daha!
+MsgMain/Race/9718	Bir dahaki sefere seni yakalayacağım!
+MsgMain/Race/9719	Bu benim son oyunum.
+MsgMain/Race/9720	Ben kaçtım.
+MsgMain/Race/9721	Oynadığın için teşekkürler!
+MsgMain/Race/9722	Teşekkürler!
+MsgMain/Race/9723	İyi geceler!
+MsgMain/Race/9724	Hoşça kal!
+MsgMain/Race/9726	İyisin!
+MsgMain/Race/9727	Harika!
+MsgMain/Race/9728	Dikkat et!
+MsgMain/Race/9729	Elinden geleni yap!
+MsgMain/Race/9730	Aynen öyle!
+MsgMain/Race/9731	Hadi, hadi, hadi!
+MsgMain/Race/9732	Arkana bak!
+MsgMain/Race/9733	Güzel!
+MsgMain/Race/9750	Fotoğraf çekiyorum!
+MsgMain/Race/9751	Yarıştayım!
+MsgMain/Race/9752	Savaştayım!
+MsgMain/Race/9753	İzliyorum!
+MsgMain/Race/9936	CANLI
+MsgMain/Race/9939	AH!
+MsgMain/Race/9940	VURDUM!
+MsgMain/Sticker/10000	Mario Kart World'e başladın!
+MsgMain/Sticker/10001	Toplam {0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000}{0E 0001 0000 0004 0000 0000} topladın!
+MsgMain/Sticker/10002	Toplam {0E 0001 0000 0004 0000 0000} akrobasi yaptın!
+MsgMain/Sticker/10004	Toplam {0E 0001 0000 0004 0000 0000} km sürdün!
+MsgMain/Sticker/10005	Toplam {0E 0001 0000 0004 0000 0000} km süzüldün!
+MsgMain/Sticker/10006	Toplam {0E 0001 0000 0004 0000 0000} kez yarıştın!
+MsgMain/Sticker/10008	Bir ? Paneli etkinleştirdin!
+MsgMain/Sticker/10009	Bir Peach Madalyonu aldın!
+MsgMain/Sticker/10011	Nabbit'i yakaladın!
+MsgMain/Sticker/10012	Chargin' Chuck görevini tamamladın!
+MsgMain/Sticker/10013	Bir görevi tamamladın!
+MsgMain/Sticker/10014	Özel Kupa'da yarıştın!
+LayoutMsg/ChatSelectBtn_00/T_Text_02	Birinciyi izle.
+LayoutMsg/ChatSelectBtn_00/T_Text_03	Birinciyi izle.
+LayoutMsg/DemoMenuGameSelect_00/DemoMenuGameSelect_00:L_Btn_01/T_Btn_00	LAN Oyunu
+LayoutMsg/DialogUseCamera_00/T_MainText_00	Kamera kullanılsın mı?
+LayoutMsg/DialogUseCamera_00/T_SubText_00	Çevrim içi kamerayı kullanmak için\nGameChat'e katılmalısın. Kamera görüntüsü ve mikrofon sesi\nyalnızca diğer GameChat üyelerine gönderilir.
+LayoutMsg/FaceSelect_00/T_Text_00	Lütfen imleci yüzünle hizala.
+LayoutMsg/FaceSelect_00/T_Text_01	Lütfen kamerayı kontrol et.
+LayoutMsg/OnlineMenu_00/L_Btn_04/T_Btn_00	Etkinlikler
+MsgMain/Help/Rule_07	Bob-omb Patlaması
+MsgMain/Help/Rule_107	Bob-omb Patlaması
+MsgMain/Help/Rule_207	Rakiplerinin balonlarını patlat!
+MsgMain/Help/Rule_307	Aynı anda en fazla 10 Bob-omb\ntaşıyabildiğin, yalnızca Bob-omb'lu bir savaş.
+MsgMain/Help/Rule_407	Bob-omb'un ne kadar uzağa uçacağı\n{0E 012D 0000 0004 0000 0000}{0E 0000 0001 0002 0010}{0E 0000 0001 0002 FFFF}{0F 012D 0000} tuşunu ne kadar basılı tuttuğuna bağlı.
+Ver110/Ver110/Version_00	Sürüm {0E 0001 0001 0004 0000 0000}
+Ver110/Ver110/VideoChat_04	Lütfen kamerayı kontrol et.
+Ver110/Ver110/VideoChat_06	Lütfen imleci yüzünle hizala.
+Ver110/Ver110/VideoChat_07	Yakınlaştır
+Ver110/Ver110/VideoChat_08	Tamam
+Ver110/Ver110/VideoChat_09	Taşı
+Ver110/Ver110/VideoChat_10	Kamera kullanılsın mı?
+Ver110/Ver110/VideoChat_11	Kamera Açık
+Ver110/Ver110/VideoChat_12	Kamera Kapalı
+Ver110/Ver110/VideoChat_13	Çevrim içi kamerayı kullanmak için\nGameChat'e katılmalısın. Kamera görüntüsü ve mikrofon sesi\nyalnızca diğer GameChat üyelerine gönderilir.
+Ver110/Ver110/VideoChat_14	GameChat'i açmak için\nC Düğmesine bas.
+Ver120/Ver120/Championship_01	Etkinlikler
+Ver120/Ver120/Championship_02	Etkinlik ara
+Ver120/Ver120/Championship_03	Lütfen etkinlik kimliğini gir.
+Ver120/Ver120/Championship_04	Etkinlik bulundu!
+Ver120/Ver120/Championship_05	Girilen kimlikle\netkinlik bulunamadı.
+Ver120/Ver120/Championship_06	Ayrıntıları Aç/Kapat
+Ver120/Ver120/Championship_07	Etkinlik başlayana kadar\nalıştırma yapılsın mı?
+Ver120/Ver120/Championship_08	Etkinlik sona erdi.
+Ver120/Ver120/Championship_09	Belirlenen yarış sayısını\nzaten tamamladın.
+Ver120/Ver120/Championship_10	Etkinlik başladı!
+Ver120/Ver120/Championship_12	64 Yarış
+Ver120/Ver120/Championship_13	128 Yarış
+Ver120/Ver120/Championship_14	Sınırsız
+Ver120/Ver120/Championship_15	Etkinliğe katılınamıyor.
+Ver120/Ver120/Championship_23	Maksimum Yarış
+Ver120/Ver120/Championship_24	Maksimum Raunt
+Ver120/Ver120/Championship_17	12 Raunt
+Ver120/Ver120/Championship_18	16 Raunt
+Ver120/Ver120/Championship_19	32 Raunt
+Ver120/Ver120/Championship_20	64 Raunt
+Ver120/Ver120/Championship_21	128 Raunt
+Ver120/Ver120/Championship_22	Yalnızca Kapalı Pistler
+Ver120/Ver120/Spectate_01	Seyretmek için bir sürücü seç
+Ver120/Ver120/Spectate_02	Lider
+Ver120/Ver120/VSRace_01	Yalnızca Mantarlar
+Ver120/Ver120/TimeTrials_01	Hayalete Karşı Yarış
+Ver120/Ver120/TimeTrials_02	Tekrarı İzle
+Ver130/Ver130/Join_01	Oda dolu. Lütfen bekle...
+Ver130/Ver130/FreeRun_01	Görevi Başlat
+Ver140/Bgm/BgmTitle_54	Bowser'ın Kalesi: Main Courtyard
+Ver140/Bgm/BgmTitle_68	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_124	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_126	Bowser'ın Kalesi
+Ver140/Bgm/BgmTitle_133	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_135	Koopa Troopa Plajı (Rock Ver.)
+Ver140/Bgm/BgmTitle_142	Koopa Troopa Plajı (Electro Ver.)
+Ver140/Bgm/BgmTitle_146	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_166	Bowser'ın Kalesi
+Ver140/Bgm/BgmTitle_172	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_179	Mario Pisti
+Ver140/Bgm/BgmTitle_188	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_207	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_213	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_236	Zeplin Kalesi
+Ver140/Bgm/BgmTitle_237	Palamut Tepeleri
+Ver140/Bgm/BgmTitle_238	Karahindiba Mağarası
+Ver140/Bgm/BgmTitle_239	Peach Stadyumu
+Ver140/Bgm/BgmTitle_240	Çikolata Dağı
+Ver140/Bgm/BgmTitle_241	Boo Sineması
+Ver140/Bgm/BgmTitle_242	Düdüklü Tren Zirvesi
+Ver140/Bgm/BgmTitle_243	Çöl Tepeleri
+Ver140/Bgm/BgmTitle_244	Dry Bones Yanardağı
+Ver140/Bgm/BgmTitle_245	Dino Dino Ormanı
+Ver140/Bgm/BgmTitle_246	Uzak Vaha
+Ver140/Bgm/BgmTitle_247	DK Geçidi
+Ver140/Bgm/BgmTitle_248	DK Uzay Limanı
+Ver140/Bgm/BgmTitle_249	Mario Bros. Pisti
+Ver140/Bgm/BgmTitle_250	Gökyüzü Dondurması
+Ver140/Bgm/BgmTitle_251	Koopa Troopa Plajı
+Ver140/Bgm/BgmTitle_252	Tuzlu Tuzlu Otoyol
+Ver140/Bgm/BgmTitle_253	Bowser'ın Kalesi
+Ver140/Bgm/BgmTitle_254	Moo Moo Çayırları
+Ver140/Bgm/BgmTitle_255	Peach Plajı
+Ver140/Bgm/BgmTitle_256	Cheep Cheep Şelalesi
+Ver140/Bgm/BgmTitle_257	Gökkuşağı Yolu
+Ver140/Bgm/BgmTitle_258	Mario Pisti
+Ver140/Bgm/BgmTitle_259	Shy Guy Çarşısı
+Ver140/Bgm/BgmTitle_260	Yıldız Tepe
+Ver140/Bgm/BgmTitle_261	Büyük ? Blok Harabeleri
+Ver140/Bgm/BgmTitle_262	Toad'un Fabrikası
+Ver140/Bgm/BgmTitle_263	Wario'nun Kalyonu
+Ver140/Bgm/BgmTitle_264	Wario Stadyumu
+Ver140/Bgm/BgmTitle_265	Taç Şehri
+Ver140/Bgm/BgmTitle_269	Gökkuşağı Yolu'na
+Ver140/Bgm/BgmTitle_271	Mario Pisti
+Ver140/Bgm/BgmTitle_274	Koopa Troopa Plajı
+Ver140/Ver140/ItemSwitch_01	Özel Eşyalar
+Ver140/Ver140/ItemSwitch_02	Rastgele
+Ver140/Ver140/ItemSwitch_03	Hepsi Açık
+Ver140/Ver140/ItemSwitch_04	Hepsi Kapalı
+Ver140/Ver140/BGMVolume_01	Müzik Sesi
+Ver140/Ver140/BGMVolume_03	Yüksek
+Ver140/Ver140/Accompany_01	Yalnızca Oda
+Ver140/Ver140/Accompany_02	Herkes
+Ver140/Ver140/Accompany_03	Oda üyelerini alıp diğer\nçevrim içi oyunculara katılmak ister misin?
+Ver140/Ver140/Accompany_04	Çevrim içi oyunculara en fazla dört\noyuncu birlikte katılabilir.
+Ver140/Ver140/Accompany_05	Şimdi diğer çevrim içi oyunculara katılıyor.
+Ver160/Ver160/BattleRule_01	Bob-omb Patlaması
+Ver170/Ver170/PhotoMode170_00	Çıkartmalar
+Ver170/Ver170/PhotoMode170_02	Sıfırla
+Ver170/Ver170/PhotoMode_Dialog_Reset_00	Tüm değişiklikler kaldırılsın mı?
+Ver170/Ver170/PhotoMode_Dialog_Reset_01	Evet
+Ver170/Ver170/PhotoMode_Dialog_Reset_02	Hayır
+Ver170/Ver170/PhotoSticker_01	Bitir
+Ver170/Ver170/PhotoSticker_03	Çıkartma Menüsü
+Ver170/Ver170/PhotoSticker_06	Geri
+Ver170/Ver170/PhotoSticker_08	Boyut
+Ver170/Ver170/PhotoSticker_10	Eğim
+Ver170/Ver170/PhotoSticker_12	Ayarla
+Ver170/Ver170/Name_GP17	{0E 0000 0002 0002 005F}Matkap Rallisi
+Ver170/Ver170/Name_GP18	{0E 0000 0002 0002 005F}Bumerang Rallisi
+Ver170/Ver170/SpectatingMode_01	Seyirci Modu
+Ver170/Ver170/SpectatingMode_02	İzlemeye başlansın mı?\n\nİzlerken\noynayamazsın.
+Ver170/Ver170/SpectatingMode_03	İzleme durdurulsun mu?
+Ver170/Ver170/SpectatingMode_04	Oda dolu. Yer açılınca\ntekrar dene.
+Ver170/Ver170/SpectatingMode_05	Geçiş yapılamıyor.
+Ver170/Ver170/SpectatingMode_06	Şu anda bir oyuncu\nizlediği için Herkes\nseçilemez.
+Ver170/Ver170/SpectatingMode_07	Kalan oyuncu\nyetersiz.
+Ver180/Ver180/Name_GP19	{0E 0000 0002 0002 005F}Pervane Rallisi
+Ver180/Ver180/Name_GP20	{0E 0000 0002 0002 005F}Şalgam Rallisi
+Ver180/Ver180/Name_Race_SFCMarioCircuit_A_00	{0E 0000 0002 0002 004B}SNES{0E 0000 0002 0002 0064} Mario Pisti 1
+Ver180/Ver180/Name_Race_SFCMarioCircuit_B_00	{0E 0000 0002 0002 004B}SNES{0E 0000 0002 0002 0064} Mario Pisti 2
+Ver180/Ver180/Name_Race_SFCMarioCircuit_C_00	{0E 0000 0002 0002 004B}SNES{0E 0000 0002 0002 0064} Mario Pisti 3
+Ver180/Ver180/Adjust_Name_Race_SFCMarioCircuit_A_00	{0E 0000 0002 0002 004B}SNES{0E 0000 0002 0002 0064} Mario Pisti 1
+Ver180/Ver180/Adjust_Name_Race_SFCMarioCircuit_B_00	{0E 0000 0002 0002 004B}SNES{0E 0000 0002 0002 0064} Mario Pisti 2
+Ver180/Ver180/Adjust_Name_Race_SFCMarioCircuit_C_00	{0E 0000 0002 0002 004B}SNES{0E 0000 0002 0002 0064} Mario Pisti 3
+Ver180/Ver180/PhotoMode_Filter_00	Filtre
+Ver180/Ver180/PhotoMode_Filter_01	Filtre: 1
+Ver180/Ver180/PhotoMode_Filter_02	Filtre: 2
+Ver180/Ver180/PhotoMode_Filter_03	Filtre: 3
+Ver180/Ver180/PhotoMode_Filter_04	Filtre: 4
+Ver180/Ver180/PhotoMode_Filter_05	Filtre: 5
+Ver180/Ver180/PhotoMode_Filter_06	Filtre: 6
+Ver180/Ver180/PhotoMode_Filter_07	Filtre: 7
+Ver180/Ver180/PhotoMode_Filter_08	Filtre: 8

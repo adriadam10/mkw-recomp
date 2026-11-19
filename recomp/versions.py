@@ -7,8 +7,11 @@ keeps the matching rows for its own fixed addresses in runtime/core/boot/version
 
 Usage: from versions import detect; v = detect(exefs)  ->  Version, or ValueError for a build not listed.
        uv run recomp/versions.py [EXEFS]   prints the version of a dump.
+       uv run recomp/versions.py --gen-dir EXEFS   prints the generated-C dir for the dump (build/generated-180).
+       uv run recomp/versions.py --patches EXEFS   prints the patch table for the dump.
 """
 
+import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -89,7 +92,29 @@ def modules(exefs: Path) -> list[str]:
     return [m for m in ORDER if (Path(exefs) / m).is_file()]
 
 
+def gen_dir_for(v: Version) -> Path:
+    """The generated-C dir for a version (1.0.0 keeps build/generated, later versions add their number)."""
+    return ROOT / "build/generated" if v.number == 100 else ROOT / f"build/generated-{v.number}"
+
+
+def default_gen(exefs: Path) -> Path:
+    """The generated-C dir for the dump in exefs (from its build id)."""
+    return gen_dir_for(detect(exefs))
+
+
 if __name__ == "__main__":
-    exefs = Path(sys.argv[1] if len(sys.argv) > 1 else "game/exefs")
-    v = detect(exefs)
-    print(f"Mario Kart World {v.name} (version {v.number}), modules {', '.join(modules(exefs))}, patches {v.patches.name}")
+    ap = argparse.ArgumentParser(description="Name the game version of a dump.")
+    ap.add_argument("exefs", nargs="?", type=Path, default=Path("game/exefs"))
+    ap.add_argument("--gen-dir", action="store_true", help="print only the generated-C dir for the dump")
+    ap.add_argument("--patches", action="store_true", help="print only the patch table for the dump")
+    ap.add_argument("--number", action="store_true", help="print only the RtGame.version number for the dump")
+    args = ap.parse_args()
+    v = detect(args.exefs)
+    if args.gen_dir:
+        print(gen_dir_for(v))
+    elif args.patches:
+        print(v.patches)
+    elif args.number:
+        print(v.number)
+    else:
+        print(f"Mario Kart World {v.name} (version {v.number}), modules {', '.join(modules(args.exefs))}, patches {v.patches.name}")

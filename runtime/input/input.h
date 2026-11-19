@@ -39,9 +39,10 @@ int input_key_of_usb(int usage);
 // it closes (nothing until every button and stick direction is released). Independent of input_block.
 void input_menu(int open);
 // The gamepad alone, for the menu: Switch button bits and the left stick (up +y). 0 without a connected gamepad.
-// Minus+Plus combo and the neutral pad while the menu is open (input_map.c, window-system free): *held is the caller's memory
-// of the combo, sticks are lx, ly, rx, ry. Returns 1 in the poll where the combo goes down (toggle the menu once).
-int input_menu_gate(int *held, int menu_open, uint64_t *buttons, int32_t sticks[4]);
+// Minus+Plus combo (or the Guide button when MKW_MENU_SHORTCUT=guide) and the neutral pad while the menu is open
+// (input_map.c, window-system free): *held is the caller's memory of the combo, guide the Guide button held,
+// sticks are lx, ly, rx, ry. Returns 1 in the poll where the shortcut goes down (toggle the menu once).
+int input_menu_gate(int *held, int menu_open, uint64_t *buttons, int32_t sticks[4], int guide);
 int input_overlay_gate(int *held, uint64_t *buttons);   // L3+R3: 1 in the poll both go down
 int input_script_inject(const char *line);   // MKW_CTL: "<ticks from now> <button> [hold]", 1 when queued
 void input_script_phase(const char *node);   // seqwatch.c: a phase started (script lines "<node>+<ticks> ...")
@@ -83,14 +84,16 @@ int input_cursor_released(void);   // Esc or a non-client activation released th
 
 // Battery of the player's gamepad (index 0-7; input_power.c). state INPUT_POWER_*; percent 0-100, -1 when the gamepad
 // gives none; coarse: percent is a band's (a Switch 2 controller over Bluetooth gives a voltage: 10 low, 50 medium,
-// 90 high). Returns state. Any thread.
+// 90 high; an Xbox pad on Linux's xone driver a sysfs level: 10 low, 50 medium, 90 high). Returns state. Any thread.
 enum { INPUT_POWER_NONE, INPUT_POWER_UNKNOWN, INPUT_POWER_BATTERY, INPUT_POWER_CHARGING, INPUT_POWER_CHARGED,
        INPUT_POWER_WIRED };
 typedef struct { int state, percent, coarse; char name[64]; } InputPower;
 int input_pad_power(int player, InputPower *out);
 // The same from what SDL says of a gamepad (SDL_GetGamepadPowerInfo's state and percent, its joystick id): the start
-// screen, which reads the gamepads without input.c. Keeps out->name.
-int input_power_from_sdl(int sdl_state, int percent, uint32_t sdl_id, InputPower *out);
+// screen, which reads the gamepads without input.c. index is the pad's order (its player, or its SDL gamepad index
+// on the start screen): on Linux, when SDL reports UNKNOWN, an xone Xbox pad's sysfs level band fills it in.
+// Keeps out->name.
+int input_power_from_sdl(int sdl_state, int percent, uint32_t sdl_id, int index, InputPower *out);
 // The battery as the player reads it, in the menu language: "80 %", "Charging, 80 %", "Low"... (out holds 64 bytes).
 const char *input_power_text(const InputPower *p, char *out, int out_size);
 // input_power.c's watch (started with the gamepads): a notice when a player's battery runs low, once per discharge.

@@ -544,7 +544,6 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
         spec = s.vs != vs || s.fs != fs;
     }
     s.feedback = (uint8_t)((fbl & 0xff ? 1 : 0) | (fbl & 0x100 ? 2 : 0));
-    s.alpha_ref = s.fs && s.color.alpha_func && s.color.alpha_func != NVN_ALPHA_FUNC_ALWAYS ? ex->alpha_ref : 0;
     s.prim = (uint8_t)prim;
     s.depth_minus_w = (uint8_t)(nvn_depth_minus_w() != 0);
     s.y_flip = 1;

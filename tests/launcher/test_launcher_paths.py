@@ -15,6 +15,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+import probe_build  # tests/launcher: the hang guard of the Windows probe builds
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -79,8 +80,8 @@ def paths_probe(tmp_path_factory: pytest.TempPathFactory) -> Path:
     output = folder / ("probe.exe" if os.name == "nt" else "probe")
     sources = [ROOT / p for p in ("tests/launcher/t_launcher_paths.c", "runtime/core/base/cfg.c",
                                  "runtime/core/base/sysinfo_log.c", "runtime/core/boot/gamelib.c")]
-    subprocess.run([cc, *flags, *(f"-I{p}" for p in [*includes, folder]), *(str(p) for p in sources),
-                    "-o", str(output)], check=True, timeout=60)
+    probe_build.build([cc, *flags, *(f"-I{p}" for p in [*includes, folder]), *(str(p) for p in sources),
+                       "-o", str(output)])
     return output
 
 

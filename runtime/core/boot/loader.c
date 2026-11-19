@@ -364,7 +364,8 @@ static Res resolve(Mod *m, uint32_t si, int jump) {
         r = (Res){hostfn_register_observer(name, f, guest), RES_OBSERVER};
         mark_used(1, name);
     } else if ((f = hostfn_override(name))) {
-        r = (Res){hostfn_register(name, f), RES_OVERRIDE};
+        // the game's own definition kept as its original: a plugin's override calls it (call_original, rt_original)
+        r = (Res){guest ? hostfn_register_observer(name, f, guest) : hostfn_register(name, f), RES_OVERRIDE};
         mark_used(0, name);
     } else if (guest) {
         r = (Res){guest, RES_GUEST};

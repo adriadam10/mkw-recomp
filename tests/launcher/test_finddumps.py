@@ -9,6 +9,9 @@ Usage: uv run pytest tests
 import struct
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/prepare"))
@@ -66,3 +69,50 @@ def test_installation_hidden_and_deep_folders_left_out(tmp_path: Path) -> None:
     nup(tmp_path / "a/b/c/d/e/MKW.nup", [(MKW, 0)])  # five folders below the root, past DEPTH
     nup(tmp_path / "a/b/c/MKW.nup", [(MKW, 0)])
     assert found([tmp_path], game) == {("nup", "1.0.0", "MKW.nup")}
+
+
+def test_result_cap_inside_one_directory(tmp_path: Path) -> None:
+    for i in range(finddumps.MAX_FOUND + 4):
+        (tmp_path / f"{i}.nx").write_bytes(b"NXAR")
+    rows = []
+    count = finddumps.search([tmp_path], None, 10, lambda *row: rows.append(row))
+    assert count == len(rows) == finddumps.MAX_FOUND
+
+
+def test_deadline_inside_one_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    for i in range(5):
+        (tmp_path / f"{i}.nx").write_bytes(b"NXAR")
+    scandir = finddumps.os.scandir
+    scan = scandir(tmp_path)
+    consumed = 0
+    closed = False
+
+    class TimedScan:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            nonlocal closed
+            scan.close()
+            closed = True
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            nonlocal consumed
+            entry = next(scan)
+            consumed += 1  # one simulated second per entry fetched
+            return entry
+
+    monkeypatch.setattr(finddumps, "os", SimpleNamespace(
+        path=finddumps.os.path, scandir=lambda _: TimedScan(),
+    ))
+    monkeypatch.setattr(finddumps, "time", SimpleNamespace(monotonic=lambda: consumed))
+    rows = []
+    try:
+        count = finddumps.search([tmp_path], None, 2, lambda *row: rows.append(row))
+    finally:
+        scan.close()
+    assert count == len(rows) == consumed == 2
+    assert closed

@@ -8,3 +8,4 @@ use in [../README.md](../README.md)). The texts an update reworded keep here the
 | `ca.tsv` | Catalan |
 | `gl.tsv` | Galician |
 | `eu.tsv` | Basque |
+| `tr.tsv` | Turkish (over the British English) |

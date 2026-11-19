@@ -4,7 +4,8 @@ Why: mods ship in the emulators' layout (romfs/ and/or exefs/ with <build id>.ip
 GameBanana has them: zip, rar or 7z, with those folders at the root, under one folder, deeper, or under
 atmosphere/contents/<title id>/. The port reads a mod from <game>/mods/<name>/ with a manifest.tsv over its romfs/
 (runtime/sdk/fs/romfs.c) and a mod.json the Mods page shows. This copies the mod in as it comes, checks the exefs
-patches name this game's build id, and writes both files.
+patches name this game's build id, and writes both files. A mod's plugin/ (native libraries, runtime/plugin) is copied
+as it is: the runtime loads it when the mod is on.
 
 Usage: import.py --game EXEDIR --romfs ROMFS [--exefs DIR] [--build-id HEX] (--zip FILE | --folder DIR)
                  [--name NAME] [--variant PATH]
@@ -14,7 +15,7 @@ Usage: import.py --game EXEDIR --romfs ROMFS [--exefs DIR] [--build-id HEX] (--z
   --folder: an extracted mod folder
   --variant: when the archive holds several mods (options), the one to take, as "error variants" listed it
   Prints "done <name>" with the mod's file counts, or "error <code> <detail>"; exit 0 done, 1 failed,
-  2 bad command line. Codes: layout (no romfs/ or exefs/ inside), variants (several; the detail lists them,
+  2 bad command line. Codes: layout (no romfs/, exefs/ or plugin/ inside), variants (several; the detail lists them,
   tab-separated), name (nothing usable), io (a copy or hash failed), big (over the unpacking limits),
   unpack (a rar or 7z with no tar that reads it). An exefs .ips that names another build id is kept and
   listed as incompatible.
@@ -95,19 +96,24 @@ def unpack(archive, dst):
 
 
 def mod_roots(top):
-    """The folders under top that hold romfs/ or exefs/ (any letter case), shallowest first; macOS' __MACOSX and
-    dot folders skipped. One per mod: an archive with options (several romfs/) gives several."""
+    """The folders under top that hold romfs/, exefs/ or plugin/ (any letter case), shallowest first; macOS' __MACOSX
+    and dot folders skipped. One per mod: an archive with options (several romfs/) gives several."""
     roots = []
     for here, dirs, _ in os.walk(top):
         dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d != "__MACOSX")
-        if {d.lower() for d in dirs} & {"romfs", "exefs"}:
+        if {d.lower() for d in dirs} & set(PARTS):
             roots.append(here)
             dirs[:] = []   # a mod's own romfs/ may hold folders named like these: do not look inside
     return roots
 
 
+# a mod's parts: romfs/ overlays the game's files, exefs/ patches its code, plugin/ holds native libraries the runtime
+# loads with the mod on (runtime/plugin/mkw_plugin.h)
+PARTS = ("romfs", "exefs", "plugin")
+
+
 def part_dir(root, part):
-    """root's romfs/ or exefs/ whatever its letter case, or None."""
+    """root's romfs/, exefs/ or plugin/ whatever its letter case, or None."""
     for d in os.listdir(root):
         if d.lower() == part and os.path.isdir(os.path.join(root, d)):
             return os.path.join(root, d)
@@ -128,6 +134,9 @@ def clean_name(name):
 
 
 def main():
+    # SDL reads these pipes as UTF-8; Windows Python otherwise uses the active code page, even with -I.
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8", errors=sys.stderr.errors)
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--game", required=True)
     ap.add_argument("--romfs", required=True)
@@ -172,7 +181,7 @@ def main():
         if args.variant:
             roots = [r for r in roots if os.path.relpath(r, top).replace(os.sep, "/") == args.variant]
         if not roots:
-            return fail("layout", "no romfs/ or exefs/ inside")
+            return fail("layout", "no romfs/, exefs/ or plugin/ inside")
         if len(roots) > 1:
             return fail("variants", "\t".join(os.path.relpath(r, top).replace(os.sep, "/") for r in roots))
         src = roots[0]
@@ -180,18 +189,18 @@ def main():
         rel = os.path.relpath(src, top).replace(os.sep, "/")
         last = rel.split("/")[-1]
         default = stem if rel == "." or last.lower() in ("contents", "0400c3f00006e000") else last
-        if part_dir(src, "romfs") and not os.path.isdir(os.path.join(src, "romfs")) or \
-                part_dir(src, "exefs") and not os.path.isdir(os.path.join(src, "exefs")):
-            # RomFS/ExeFS spelled otherwise: copy under the names the port reads
+        if any(part_dir(src, p) and not os.path.isdir(os.path.join(src, p)) for p in PARTS):
+            # RomFS/ExeFS/Plugin spelled otherwise: copy under the names the port reads
             fixed = os.path.join(tmp, ".case")
             shutil.copytree(src, fixed, symlinks=False)
-            for part in ("romfs", "exefs"):
+            for part in PARTS:
                 d = part_dir(fixed, part)
                 if d and os.path.basename(d) != part:
                     os.rename(d, os.path.join(fixed, part))
             src = fixed
         has_romfs = os.path.isdir(os.path.join(src, "romfs"))
         has_exefs = os.path.isdir(os.path.join(src, "exefs"))
+        has_plugin = os.path.isdir(os.path.join(src, "plugin"))
 
         name = clean_name(args.name) if args.name else clean_name(default)
         if not name:
@@ -258,7 +267,7 @@ def main():
         # stands in when the mod keeps its own folder name
         title = name if (args.name or default != name) else (shipped.get("title") or name)
         meta = {"name": name, "title": title, "has_romfs": has_romfs,
-                "romfs_files": n_romfs, "has_exefs": has_exefs, "exefs_builds": builds,
+                "romfs_files": n_romfs, "has_exefs": has_exefs, "has_plugin": has_plugin, "exefs_builds": builds,
                 "exefs_match": matching if has_exefs else True, "switches": switches,
                 "warnings": sorted(warnings)}
         if shipped.get("patches"):

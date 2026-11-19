@@ -17,6 +17,7 @@
 #include "nvn_api.h"
 #include "vk.h"
 #include "platform/platform.h"
+#include "plugin.h"
 #include "presence.h"
 #include "version.h"
 
@@ -378,6 +379,7 @@ void rt_boot(void) {
     if (!rt_config()->shot) vk_pipeline_async_enable();   // a --shot image must not depend on build timing
     // Shaders and pipelines recorded in earlier runs are made ready while the modules load; the guest waits for them.
     PlatThread *warm = plat_thread_new(prewarm_main, NULL, "prewarm");
+    plugins_load();   // the enabled mods' native plugins: their overrides by name go in before the loader binds
     ldr_load(rt_config()->exefs);
     rt_patches_init();
     seqwatch_init();
@@ -386,7 +388,9 @@ void rt_boot(void) {
     cb_addr[0] = hostfn_register("<rtld loader_ready>", cb_loader_ready);
     cb_addr[1] = hostfn_register("<rtld module_inits>", cb_module_inits);
     cb_addr[2] = hostfn_register("<rtld module_finis>", cb_module_finis);
+    plugins_game_loaded();   // their overrides by address go in before the dispatch table is built
     hostfn_seal();
+    plugins_started();
     uint64_t held = plat_now_ms();
     if (warm) plat_thread_join(warm);
     else vk_pipeline_prewarm();

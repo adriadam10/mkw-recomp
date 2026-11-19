@@ -20,14 +20,33 @@ def backup(profile: Path, dest: Path, name: str) -> str:
         raise FileNotFoundError(f"noprofile {profile}")
     dest.mkdir(parents=True, exist_ok=True)
     safe = re.sub(r"[^\w.-]+", "_", name).strip("._") or "player"
-    out = dest / f"{safe}-{time.strftime('%Y%m%d-%H%M%S')}.zip"
-    tmp = out.with_suffix(".part")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
-        for p in sorted(profile.rglob("*")):
-            if p.is_file():
-                z.write(p, p.relative_to(profile))
-    tmp.replace(out)  # a backup is whole or absent, never half written
-    return str(out)
+    stem = f"{safe}-{time.strftime('%Y%m%d-%H%M%S')}"
+    number = 0
+    while True:
+        out = dest / f"{stem}{f'-{number}' if number else ''}.zip"
+        number += 1
+        if out.exists():
+            continue
+        tmp = out.with_suffix(".part")
+        try:
+            stream = tmp.open("xb")  # reserve the name across processes; stale partials stay untouched
+        except FileExistsError:
+            continue
+        # Another backup may have published after our exists() but before we reserved its old partial name.
+        if out.exists():
+            stream.close()
+            tmp.unlink()
+            continue
+        try:
+            with stream, zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as z:
+                for p in sorted(profile.rglob("*")):
+                    if p.is_file():
+                        z.write(p, p.relative_to(profile))
+            tmp.replace(out)  # a backup is whole or absent, never half written
+        except BaseException:
+            tmp.unlink(missing_ok=True)
+            raise
+        return str(out)
 
 
 def main() -> None:

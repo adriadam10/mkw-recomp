@@ -17,6 +17,7 @@ default, or `MKW_GAME=<dir>`, with `exefs/` and `romfs/` inside) and write to `b
 | [romfs/](romfs/README.md) | RomFS overlays: the game's internal resolutions |
 | [prepare/](prepare/README.md) | Builds the game on the player's machine from their copy (started by the start screen) |
 | [mod/](mod/README.md) | Mod import for the start screen's Mods page (started by it the same way) |
+| [plugin/](plugin/README.md) | The native plugin API's test and its example plugin |
 | [run/](run/README.md) | Game runs (live with a control channel, to the race, under perf) and diagnostics: stacks, memory |
 | [test/](test/README.md) | Runtime tests without the game: frame captures replayed serially and in chunks |
 | [shaders/](shaders/README.md) | Extraction of the GPU programs, SM86 opcode census and translation to SPIR-V |

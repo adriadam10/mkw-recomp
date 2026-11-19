@@ -109,7 +109,7 @@ Más allá de la consola, todas opcionales y desactivadas (o al valor de la cons
   el USB necesita un paso único con el controlador, más abajo.
 - **Hacks**: turbo (mantener o alternar F2), saltar vídeos, desbloquearlo todo, la misma aleatoriedad cada vez,
   directo a contrarreloj o a modo libre.
-- **Idiomas**: los menús en 20 idiomas; el propio juego también en catalán, gallego y euskera.
+- **Idiomas**: los menús en 20 idiomas; el propio juego también en catalán, gallego, euskera y turco.
 - **Ficheros del juego**: elegir la carpeta de instalación; un volcado en carpetas o en un único archivo `.nup` o
   `.nx`, usado donde está; actualizaciones desde la pantalla de inicio.
 - **Superposición de rendimiento** (FPS, o CPU, GPU y memoria al completo) e información del sistema en un clic para
@@ -138,7 +138,7 @@ pestañas:
   o buscados, con el autor, la licencia, las capturas y la descripción de cada uno. **Instalar** descarga el archivo
   de GameBanana, solo cuando lo pides.
 - **Instalados**: tus mods, cada uno con su interruptor; **Importar zip / Importar carpeta** toma un mod que ya tengas
-  (`.zip`, `.rar` o `.7z`, con `romfs/` y/o `exefs/` en cualquier parte, también con la estructura
+  (`.zip`, `.rar` o `.7z`, con `romfs/`, `exefs/` y/o `plugin/` en cualquier parte, también con la estructura
   `atmosphere/contents/`).
 
 Los mods que sustituyen ficheros del juego (`romfs/`: skins, texturas, textos, circuitos) se aplican en el siguiente
@@ -147,6 +147,13 @@ integran en el código del juego: activar o desactivar uno lo recompila antes de
 cambian el mismo archivo se combinan fichero a fichero, y la página pregunta cuál gana donde los dos cambian el mismo
 fichero. La página avisa de los mods que sustituyen los ajustes gráficos o los shaders del juego, que el port gestiona
 a su manera.
+
+Un mod con carpeta `plugin/` lleva un plugin nativo (`.dll` en Windows, `.so` en Linux) que el juego carga al arrancar
+mientras el mod está activado. Ejecuta su propio programa en tu ordenador, así que la página lo avisa: actívalo solo si
+confías en su origen. Para quien hace mods, la API es una sola cabecera,
+[`runtime/plugin/mkw_plugin.h`](runtime/plugin/mkw_plugin.h), explicada en la página
+[Writing a plugin](https://github.com/adriadam10/mkw-recomp/wiki/Writing-a-plugin) de la wiki. Más sobre instalar y
+ordenar mods: la página [Mods](https://github.com/adriadam10/mkw-recomp/wiki/Mods) de la wiki.
 
 Los mods los hacen otras personas y este proyecto no los prueba: uno puede colgar el juego o dañar tu partida
 guardada. Lee la página de un mod antes de instalarlo, guarda una copia de tu partida y comunica los problemas de un
