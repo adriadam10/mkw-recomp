@@ -128,15 +128,19 @@ static uint8_t *prepared_read(const uint8_t key[32], int kind, uint64_t *size) {
 }
 
 // MKW_HDR_TONEMAP=psychov: the game's final tone curve programs as tools/shaders/renodx.py rewrote them (RenoDX's
-// PsychoV35 in their HDR mode), from <spirv>/renodx; NULL for the game's own. Read once: the pipelines keep the
-// programs they were built with, so it takes effect after a restart.
+// PsychoV35 in their HDR mode), from <spirv>-renodx (beside spirv/, so its shaders.pack stays current); NULL for the
+// game's own. Read once: the pipelines keep the programs they were built with, so it takes effect after a restart.
+static char tonemap_path[PATH_CAP + 16];
+static void tonemap_init(void *param) {
+    (void)param;
+    if (strcmp(cfg_value("MKW_HDR_TONEMAP"), "psychov")) return;
+    snprintf(tonemap_path, sizeof tonemap_path, "%s-renodx", prepared_dir);
+    rt_log("gfx_shader: HDR tone mapper PsychoV35 (%s)", tonemap_path);
+}
 static const char *tonemap_dir(void) {
-    static int v = -1;
-    if (v < 0) {
-        v = !strcmp(cfg_value("MKW_HDR_TONEMAP"), "psychov");
-        if (v) rt_log("gfx_shader: HDR tone mapper PsychoV35 (%s/renodx)", prepared_dir);
-    }
-    return v ? "renodx" : NULL;
+    static PlatOnce once = PLAT_ONCE_INIT;
+    plat_once(&once, tonemap_init, NULL);
+    return tonemap_path[0] ? tonemap_path : NULL;
 }
 
 // The display's headroom for those programs: peak over paper white as the game is told them (gfx_hdr_headroom), 0
@@ -181,18 +185,18 @@ static uint8_t *prepared_spv(const uint8_t key[32], uint64_t *size, int log) {
     if (tm) {
         char hex[65], p[PATH_CAP + 96];
         gfx_shader_key_hex(key, hex);
-        snprintf(p, sizeof p, "%s/%s/%s.spv", prepared_dir, tm, hex);
+        snprintf(p, sizeof p, "%s/%s.spv", tm, hex);
         uint8_t *spv = read_file(p, size);
         if (spv && *size % 4 == 0) {
             float h = rdx_headroom();
             int ok = rdx_patch((uint32_t *)spv, *size / 4, RDX_HEADROOM_ID, h);
             const char *split = cfg_get("MKW_RDX_SPLIT");
             if (split && *split) rdx_patch((uint32_t *)spv, *size / 4, RDX_SPLIT_ID, (float)atof(split));
-            if (log) rt_log("gfx_shader: %s from %s, headroom %.2f%s", hex, tm, h, ok ? "" : " (no constant to set)");
+            if (log) rt_log("gfx_shader: %s from RenoDX, headroom %.2f%s", hex, h, ok ? "" : " (no constant to set)");
             return spv;
         }
         free(spv);
-        snprintf(p, sizeof p, "%s/%s/%s.none", prepared_dir, tm, hex);
+        snprintf(p, sizeof p, "%s/%s.none", tm, hex);
         if (log && plat_file_exists(p)) rt_log("gfx_shader: %s is a tone curve renodx.py could not edit: the game's", hex);
     }
     return prepared_read(key, 0, size);

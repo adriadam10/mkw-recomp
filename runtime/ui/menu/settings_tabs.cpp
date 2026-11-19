@@ -205,8 +205,8 @@ static void hdr_rows(void) {
         if (have < 0) {
             char p[1200];
             const char *sp = cfg_get("MKW_SPIRV");
-            if (sp && *sp) snprintf(p, sizeof p, "%s/renodx", sp);
-            else snprintf(p, sizeof p, "%s/spirv/renodx", cfg_game_dir());
+            if (sp && *sp) snprintf(p, sizeof p, "%s-renodx", sp);   // gfx_shader.c tonemap_dir
+            else snprintf(p, sizeof p, "%s/spirv-renodx", cfg_game_dir());
             have = plat_dir_exists(p);
         }
         if (!have) opt_disable_next(UI_MENU_HDR_TONEMAP_MISSING);

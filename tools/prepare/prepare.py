@@ -110,6 +110,8 @@ from shaderstep import (  # noqa: F401  (spec_command: tests/launcher/test_setup
     shaders,
     shipped,
     spec_command,
+    tonemap,
+    tonemap_key,
     translator_key,
 )
 import update  # (ca_file)
@@ -405,6 +407,9 @@ def main() -> None:
             # translator skipped it and left the new libraries to the first start)
             "warm": f"{build.game_id()} {version.name} {translator_key()} pairs{PAIRS_VERSION} pack{PACK_VERSION}",
         }
+        # not a step of its own (the start screen shows STEPS): renodx.py's programs, done before warm under their own
+        # key, so a change to renodx.py does not redo the shaders step for everyone
+        keys["tonemap"] = tonemap_key(keys["shaders"])
         migrate_keys(state, keys, {
             "romfs": f"{args.romfs} {romfs_src}",
             "generate": f"{build.game_id()} {exefs_src} {version.name} {code_key(GENERATOR)}",
@@ -462,6 +467,9 @@ def main() -> None:
             # swap run spent 106 s in it at the player's first start (18/11/2026)
             if args.next and step == "cleanup":
                 continue
+            if step == "warm" and state["done"].get("tonemap") != keys["tonemap"] and tonemap(game, dest, glslc):
+                state["done"]["tonemap"] = keys["tonemap"]
+                save_state(dest, state)
             # The start screen sets up again when its version differs (launcher.cpp): an update by hand (a new
             # AppImage or zip over the old) kept the old steps (#50: 0.1.8 played with 0.1.7's shaders). Kept once the
             # game is built, before the optional warm-up: a warm-up that keeps failing (#50's hang) must not repeat

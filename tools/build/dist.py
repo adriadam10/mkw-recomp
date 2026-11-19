@@ -2,7 +2,8 @@
 player's machine. Nothing of the game goes in; the start screen's setup adds it.
 
 Why: the player has no Python, compiler or glslc. setup/ carries a portable CPython (python-build-standalone) with numpy,
-lz4 and fontTools, zig as the C compiler, glslc from conda-forge (Google's own shaderc builds are not downloadable), and the
+lz4 and fontTools, zig as the C compiler, glslc from conda-forge (Google's own shaderc builds are not downloadable; with it
+glslang, SPIRV-Tools and SPIRV-Cross, which tools/shaders/renodx.py uses for the HDR tone mapper), and the
 sources the setup runs (recomp/, sm86/, tools/, the runtime headers the game code includes). NVIDIA's SM86 spec does
 not go in: the setup builds it (sm86/spec/spec.py). Every download is pinned by sha256, as tools/build/windeps.py; a
 mismatch stops.
@@ -65,6 +66,8 @@ PINS = {
                     "390b9e94b29b53366673e5460b433c9daa34788f5cdabf8b30bf40cf086c60dd"),
         "spirv-tools": (CONDA + "linux-64/spirv-tools-2026.4-h7148c6a_2.conda",
                         "e8791349946b2c98ffa5cc67cf1525931e066aef8a01800d6f7c151444a3f052"),
+        "spirv-cross": (CONDA + "linux-64/spirv-cross-1.4.363.0-h4dbf13b_0.conda",
+                        "42b6f89f33064353081a9b9a87860b5ea6f9004485f7ce46e9ef851865f77d43"),
         "libstdcxx": (CONDA + "linux-64/libstdcxx-16.2.0-h934c35e_7.conda",
                       "fa7018298629fc429971fffd6ecba3d27a7b02e4e890d6a93ea01ffebe8cb745"),
         "libgcc": (CONDA + "linux-64/libgcc-16.2.0-ha9f2e26_7.conda",
@@ -115,6 +118,8 @@ PINS = {
                     "048f538b07594cc717a14517191a81cb1d3825fdde9c573d132c158b26d15806"),
         "spirv-tools": (CONDA + "win-64/spirv-tools-2026.4-h49e36cd_2.conda",
                         "933e40fe9ca887a63ef742260f0ed801cda317354806504d864764a4ed9749e1"),
+        "spirv-cross": (CONDA + "win-64/spirv-cross-1.4.363.0-h477610d_0.conda",
+                        "213c6a76ce3723060a0fae7b3534d667f205f43e1b988488269973a7a02ad355"),
         "vc14_runtime": (CONDA + "win-64/vc14_runtime-14.51.36247-habf1de7_42.conda",
                          "8dfbfd68ebf53249d11e528cbb80ad5a2460b0c5b4636eed82ee0d3950827a3d"),
     },
@@ -126,7 +131,7 @@ PINS = {
 SOURCES = ["recomp", "sm86", "tools/build/build.py", "tools/build/icon.py", "tools/prepare", "tools/mod", "tools/romfs/resolution.py",
            "tools/i18n/catalog.py", "tools/i18n/game_texts.py", "tools/i18n/game_fonts.py", "i18n/game",
            "tools/shaders/extract.py", "tools/shaders/translate.py", "tools/shaders/shaderc_lib.py",
-           "tools/shaders/pipeline_pairs.py", "tools/shaders/pack.py",
+           "tools/shaders/pipeline_pairs.py", "tools/shaders/pack.py", "tools/shaders/renodx.py",
            "runtime/cpu",
            "runtime/core/boot/gamelib.h",
            "tools/github/signatures.toml"]  # fmt: skip  (the known errors tools/prepare/lastrun.py names)
@@ -280,7 +285,7 @@ def main() -> None:
         shutil.copy2(cl, setup / "clang" / cl.name)
     glslc = setup / "glslc"
     shutil.rmtree(glslc, ignore_errors=True)
-    for name in ("shaderc", "glslang", "spirv-tools", "libstdcxx", "libgcc", "vc14_runtime"):
+    for name in ("shaderc", "glslang", "spirv-tools", "spirv-cross", "libstdcxx", "libgcc", "vc14_runtime"):
         if name in got:
             unpack_conda(got[name], glslc)
     if args.target == "windows":

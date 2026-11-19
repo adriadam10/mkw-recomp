@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """HDR tone mapping after RenoDX (MKW_HDR_TONEMAP, gfx_shader.c): replacement SPIR-V for the programs that hold the
-game's final tone curve, written to <spirv>/renodx/<key>.spv; the runtime loads them in place of <spirv>/<key>.spv
-and gives them the display's headroom (specialization constant RDX_HEADROOM_ID, rdx_patch in gfx_shader.c).
+game's final tone curve, written to <spirv>-renodx/<key>.spv (beside spirv/, never in it: a write in spirv/ makes its
+shaders.pack stale); the runtime loads them in place of <spirv>/<key>.spv and gives them the display's headroom
+(specialization constant RDX_HEADROOM_ID, gfx_rdx_patch in gfx_rdx.c).
 
 How MKW draws HDR (frame dumps of 18/11/2026, title screen and free roam, HDR10, peak 1200, paper white 480):
   - the scene is linear Display-P3 (the PQ program's matrix is P3 to BT.2020 times the nits of 1.0);
@@ -17,14 +18,17 @@ expansion puts it, highlights rolled off to the display's peak over paper white 
 times c[5].w as the game's own. The other modes (SDR) stay as they are. PsychoV35 works in BT.709 (the input
 converted from P3) and gives P3, fitted under the peak in BT.2020.
 
-PsychoV35: github.com/clshortfuse/renodx src/games/zelda-oot-oz/scene_tonemap.slangi and
-src/shaders/tonemap/psychov/test35.hlsl (Copyright (c) 2025 Carlos Lopez Jr., MIT), at the mod's defaults, through
-the reduced MIT form of Longshot's gpu/vk/eden/shader_recompiler/ir_opt/psychov35.h; this GLSL checked against
-RenoDX's path to 1.5e-6 (relative) on 2000 random inputs, 18/11/2026.
+PsychoV35: RenoDX, github.com/clshortfuse/renodx (Copyright (c) 2025 Carlos Lopez Jr., MIT), its
+src/shaders/tonemap/psychov/test35.hlsl as src/games/zelda-oot-oz/scene_tonemap.slangi calls it, at that mod's
+defaults; written here in GLSL and checked against RenoDX's path to 1.5e-6 (relative) on 2000 random inputs,
+18/11/2026.
 
 Programs are found by their constants, decompiled with spirv-cross, edited as GLSL, compiled with glslangValidator
-and checked with spirv-val (all from the Vulkan SDK); one that does not take the edit stays the game's. Usage:
-    python tools/shaders/renodx.py --spirv "<game>/spirv" [--tools C:/VulkanSDK/<ver>/Bin] [--keep-glsl] [--clean]
+and checked with spirv-val. The setup runs it after the shaders step, under its own key (tools/prepare/shaderstep.py
+tonemap: a change here redoes only this, seconds, not the translation), with the tools the package carries beside
+glslc (conda-forge's SPIRV-Cross, glslang, SPIRV-Tools; tools/build/dist.py); a Vulkan SDK's Bin works too. A
+program that does not take the edit stays the game's. Usage:
+    python tools/shaders/renodx.py --spirv "<game>/spirv" [--out <folder>] [--tools <folder>] [--keep-glsl] [--clean]
 """
 import argparse
 import glob
@@ -230,7 +234,7 @@ def tool(dirs, name):
             return p
     p = shutil.which(name)
     if not p:
-        sys.exit("renodx.py: %s not found (the Vulkan SDK's Bin: --tools)" % name)
+        sys.exit("renodx.py: %s not found (the package's setup/glslc, or a Vulkan SDK's Bin: --tools)" % name)
     return p
 
 
@@ -247,13 +251,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--spirv", required=True, help="the game's spirv folder")
     ap.add_argument("--tools", action="append", default=[], help="folder of spirv-cross, glslangValidator, spirv-val")
+    ap.add_argument("--out", help="where the programs go (default <spirv>-renodx, where the runtime reads them)")
     ap.add_argument("--clean", action="store_true", help="remove the generated folder and stop")
     ap.add_argument("--keep-glsl", action="store_true", help="also write the edited GLSL beside the SPIR-V")
     a = ap.parse_args()
     dirs = a.tools + ([os.path.join(os.environ["VULKAN_SDK"], "Bin")] if os.environ.get("VULKAN_SDK") else [])
-    out = os.path.join(a.spirv, "renodx")
-    for d in (out, os.path.join(a.spirv, "renodx_grade")):   # (renodx_grade: an earlier form's folder)
-        shutil.rmtree(d, ignore_errors=True)
+    out = a.out or os.path.normpath(a.spirv) + "-renodx"
+    shutil.rmtree(out, ignore_errors=True)
     if a.clean:
         return
     cross, glslang, val = tool(dirs, "spirv-cross"), tool(dirs, "glslangValidator"), tool(dirs, "spirv-val")

@@ -110,6 +110,34 @@ def spec_command(game: Path, work: Path, cc: list[str], crt: Path | None) -> lis
             str(work / "nvidia"), "--cc", json.dumps(cc), *(["--crt", str(crt)] if crt else [])]  # fmt: skip
 
 
+def tonemap_key(shaders_key: str) -> str:
+    """The HDR tone mapper's programs' own key (prepare.py "tonemap"): the shaders step's, whose SPIR-V they are made
+    from, and renodx.py's own hash. Apart from the shaders key so that a change to renodx.py redoes only renodx.py
+    (seconds), not the translation of every program for every player."""
+    h = hashlib.sha256()
+    for f in shipped([ROOT / "tools/shaders/renodx.py"]):
+        h.update(f.read_bytes())
+    return f"{shaders_key} renodx {h.hexdigest()[:16]}"
+
+
+def tonemap(game: Path, dest: Path, glslc: str) -> bool:
+    """<dest>/spirv-renodx: RenoDX's tone mapping for the HDR mode (MKW_HDR_TONEMAP, gfx_shader.c), from the translated
+    programs (dest's spirv/, or the played one's when an update set up beside it skipped the shaders), with the
+    spirv-cross, glslangValidator and spirv-val the package carries beside glslc. Beside spirv/, never in it: a write in
+    spirv/ would make its shaders.pack stale. Optional: a failure leaves the game's own programs, and the setup goes
+    on; False then, so the next setup tries again."""
+    spirv = dest / "spirv" if (dest / "spirv").is_dir() else game / "spirv"
+    if not spirv.is_dir():
+        return False
+    try:
+        run([sys.executable, str(ROOT / "tools/shaders/renodx.py"), "--spirv", str(spirv),
+             "--out", str(dest / "spirv-renodx"), "--tools", str(Path(glslc).parent)], env=tool_env(glslc))  # fmt: skip
+    except Failed as e:
+        print(f"tonemap: renodx.py: {e} (the HDR tone mapper stays the game's)", file=sys.stderr)
+        return False
+    return True
+
+
 def shaders(
     exefs: Path,
     romfs: Path,
