@@ -158,24 +158,9 @@ static float rdx_headroom(void) {
     return headroom_v;
 }
 
-// Sets a specialization constant renodx.py declares (constant_id id) to v in the module's words: its default value,
-// as no pipeline gives that id. 1 when found. RDX_SPLIT_ID: MKW_RDX_SPLIT=<pixels>, the picture left of it keeps the
-// game's curve, to compare the two in one frame.
+// The constants renodx.py declares (gfx_rdx_patch, gfx_rdx.c). RDX_SPLIT_ID: MKW_RDX_SPLIT=<pixels>, the picture left
+// of it keeps the game's curve, to compare the two in one frame.
 enum { RDX_HEADROOM_ID = 30000, RDX_SPLIT_ID = 30001 };
-static int rdx_patch(uint32_t *w, uint64_t n, uint32_t id, float v) {
-    uint32_t target = 0;
-    for (uint64_t i = 5; i < n;) {
-        uint32_t op = w[i] & 0xffff, len = w[i] >> 16;
-        if (!len || i + len > n) return 0;
-        if (op == 71 && len == 4 && w[i + 2] == 1 && w[i + 3] == id) target = w[i + 1];   // OpDecorate SpecId
-        if (op == 50 && len == 4 && target && w[i + 2] == target) {   // OpSpecConstant %float %id value
-            memcpy(&w[i + 3], &v, 4);
-            return 1;
-        }
-        i += len;
-    }
-    return 0;
-}
 
 // A program's SPIR-V as the runtime uses it: the RenoDX one with its constants set when the tone mapper is on and
 // renodx.py made one (the same bindings and interface as the game's: it edits only the end), else the prepared one.
@@ -189,9 +174,9 @@ static uint8_t *prepared_spv(const uint8_t key[32], uint64_t *size, int log) {
         uint8_t *spv = read_file(p, size);
         if (spv && *size % 4 == 0) {
             float h = rdx_headroom();
-            int ok = rdx_patch((uint32_t *)spv, *size / 4, RDX_HEADROOM_ID, h);
+            int ok = gfx_rdx_patch((uint32_t *)spv, *size / 4, RDX_HEADROOM_ID, h);
             const char *split = cfg_get("MKW_RDX_SPLIT");
-            if (split && *split) rdx_patch((uint32_t *)spv, *size / 4, RDX_SPLIT_ID, (float)atof(split));
+            if (split && *split) gfx_rdx_patch((uint32_t *)spv, *size / 4, RDX_SPLIT_ID, (float)atof(split));
             if (log) rt_log("gfx_shader: %s from RenoDX, headroom %.2f%s", hex, h, ok ? "" : " (no constant to set)");
             return spv;
         }

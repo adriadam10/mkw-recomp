@@ -30,6 +30,7 @@ glslc (conda-forge's SPIRV-Cross, glslang, SPIRV-Tools; tools/build/dist.py); a 
 program that does not take the edit stays the game's. Usage:
     python tools/shaders/renodx.py --spirv "<game>/spirv" [--out <folder>] [--tools <folder>] [--keep-glsl] [--clean]
 """
+
 import argparse
 import glob
 import os
@@ -40,7 +41,7 @@ import subprocess
 import sys
 import tempfile
 
-RDX_HEADROOM_ID = 30000   # gfx_shader.c RDX_HEADROOM_ID: peak over paper white
+RDX_HEADROOM_ID = 30000  # gfx_shader.c RDX_HEADROOM_ID: peak over paper white (set by gfx_rdx.c)
 
 RDX = r"""
 // ---- RenoDX PsychoV35 for the game's HDR tone curve (tools/shaders/renodx.py; RenoDX MIT)
@@ -137,8 +138,11 @@ def rewrite(glsl):
         raise Skip("no HDR mode test")
     ubo = mode[1]
     # the shoulder: exp2(fma(X, A, B)) for the three exposed channels X (a float, or a uint's bits), one A and B
-    sh = re.findall(r"exp2\(fma\((_\d+|uintBitsToFloat\(_\d+\)), (_\d+|uintBitsToFloat\([^()]*\)), "
-                    r"(_\d+|uintBitsToFloat\([^()]*\))\)\)", glsl)
+    sh = re.findall(
+        r"exp2\(fma\((_\d+|uintBitsToFloat\(_\d+\)), (_\d+|uintBitsToFloat\([^()]*\)), "
+        r"(_\d+|uintBitsToFloat\([^()]*\))\)\)",
+        glsl,
+    )
     groups = {}
     for x, a, b in sh:
         groups.setdefault((a, b), set()).add(x)
@@ -166,7 +170,7 @@ def rewrite(glsl):
     while depth:
         depth += {"{": 1, "}": -1}.get(glsl[i], 0)
         i += 1
-    block = glsl[m6.end():i]
+    block = glsl[m6.end() : i]
     assigns = {}
     for v, rhs in re.findall(r"^\s*(?:precise )?(?:float |uint |int |bool )?(_\d+) = (.*);$", glsl, re.M):
         assigns.setdefault(v, []).append(rhs)
@@ -219,11 +223,11 @@ def rewrite(glsl):
     lines = glsl.split("\n")
     last = max(i for i, l in enumerate(lines) if re.match(r"^    " + o + r"\.[xyz] = ", l))
     f = lambda c: "uintBitsToFloat(%s._m0[%s)" % (ubo, c)
-    lines[last + 1:last + 1] = [
+    lines[last + 1 : last + 1] = [
         "    if (%s == 6.0 && gl_FragCoord.x >= RDX_SPLIT)   // RenoDX: the HDR mode's tone curve" % mode[0],
         "    {",
-        "        vec3 _rdx = rdx_tone(vec3(%s, %s, %s), %s, %s, %s);" % (chan["x"], chan["y"], chan["z"],
-                                                                     f("6].x"), f("6].z"), f("5].w")),
+        "        vec3 _rdx = rdx_tone(vec3(%s, %s, %s), %s, %s, %s);"
+        % (chan["x"], chan["y"], chan["z"], f("6].x"), f("6].z"), f("5].w")),
         "        %s.x = _rdx.x;" % o,
         "        %s.y = _rdx.y;" % o,
         "        %s.z = _rdx.z;" % o,
@@ -250,8 +254,13 @@ def candidate(path):
     d = open(path, "rb").read()
     ws = set(struct.unpack("<%dI" % (len(d) // 4), d[: len(d) // 4 * 4]))
     bits = lambda v: struct.unpack("<I", struct.pack("<f", v))[0]
-    need = [6.0, -1.44269502162933349609375, 0.586600005626678466796875, 0.715200006961822509765625,
-            0.2125999927520751953125]
+    need = [
+        6.0,
+        -1.44269502162933349609375,
+        0.586600005626678466796875,
+        0.715200006961822509765625,
+        0.2125999927520751953125,
+    ]
     return all(bits(v) in ws for v in need)
 
 
@@ -284,14 +293,17 @@ def main():
                 text = rewrite(r.stdout)
             except Skip as e:
                 skipped.append((key, str(e)))
-                if "no HDR mode test" not in str(e):   # (the runtime logs these as left the game's)
+                if "no HDR mode test" not in str(e):  # (the runtime logs these as left the game's)
                     open(os.path.join(out, key + ".none"), "w").close()
                 continue
             src = os.path.join(tmp, key + ".frag")
             open(src, "w", newline="\n").write(text)
             dst = os.path.join(out, key + ".spv")
-            c = subprocess.run([glslang, "-V", "--target-env", "vulkan1.3", "-S", "frag", "-o", dst, src],
-                               capture_output=True, text=True)
+            c = subprocess.run(
+                [glslang, "-V", "--target-env", "vulkan1.3", "-S", "frag", "-o", dst, src],
+                capture_output=True,
+                text=True,
+            )
             if c.returncode == 0:
                 c = subprocess.run([val, "--target-env", "vulkan1.3", dst], capture_output=True, text=True)
             if c.returncode:
