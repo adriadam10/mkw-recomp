@@ -2552,6 +2552,11 @@ msgctxt "UI_TOOLS_CHECKING"
 msgid "Checking for a new version..."
 msgstr "正在检查新版本..."
 
+#. The manual update check found no newer version.
+msgctxt "UI_TOOLS_UPDATE_CURRENT"
+msgid "You're up to date."
+msgstr ""
+
 #. Tools page row: %s is the version before the last update.
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_TOOLS_UNDO_ROW"

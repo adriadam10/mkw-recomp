@@ -4,7 +4,7 @@
 // restarts with it: its first start only swaps the prepared files in (tools/prepare/nextsetup.py).
 #pragma once
 
-enum UpdatePhase { UPDATE_IDLE, UPDATE_CHECKING, UPDATE_OFFER, UPDATE_FETCHING, UPDATE_READY, UPDATE_FAILED,
+enum UpdatePhase { UPDATE_IDLE, UPDATE_CHECKING, UPDATE_CURRENT, UPDATE_OFFER, UPDATE_FETCHING, UPDATE_READY, UPDATE_FAILED,
                    UPDATE_PREPARING, UPDATE_PREPARED };
 
 typedef struct {
@@ -17,9 +17,9 @@ typedef struct {
     int step;                 // UPDATE_PREPARING: prepare.py's step (setup_step_index), -1 none yet
 } UpdateState;
 
-// at start: nothing unless MKW_UPDATE_CHECK and a packaged install; a release already downloaded is set up again
-// beside (prepare.py --next resumes, or finds it done)
-void update_check_start(const char *exe_dir);
+// At start, respect MKW_UPDATE_CHECK. An explicit check reports the result on the Tools page.
+// A release already downloaded is set up again beside the version being played.
+void update_check_start(const char *exe_dir, bool manual);
 void update_fetch_start(const char *exe_dir);   // the offered release, once UPDATE_OFFER (or again after its failure)
 UpdateState update_state(void);                 // a copy, any time
 // UPDATE_PREPARED: the new files in place of the old ones (renamed to *.old, removed at the next start). 1: done, start
