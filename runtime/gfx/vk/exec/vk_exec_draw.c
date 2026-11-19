@@ -488,6 +488,63 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
         }
         return vk_exec_frame.skip[VK_SKIP_OFF]++, 0;
     }
+    // MKW_SHADOW_DRAWS (default 1; auto, 0: none, "ab"): draws into the cascaded shadow map (D16, 3
+    // layers, no colour target) skipped, which its clear leaves empty: no shadows. mp4_pdraws (Steam Deck, 4 players):
+    // 22 % of the ~11,000 draws of a frame went there, 17 % with 2. "auto": skipped when the previous frame drew the
+    // shadow map in MKW_SHADOW_AUTO_RUNS (default 3) or more runs (one per player's view: 3-4 player split screen).
+    // Each frame's runs (stretches of shadow-map draws between other draws) and distinct shadow maps are counted, and
+    // logged every 600 frames with MKW_TRACE=perf: mp2_sa/mp4_sa (Steam Deck) exactly 2 runs and 2 maps a race frame
+    // with 2 players, 4 and 4 with 4.
+    static int shadow_mode = -1, auto_runs = 3;
+    if (shadow_mode < 0) {
+        const char *e = cfg_get("MKW_SHADOW_DRAWS");
+        shadow_mode = e && !strcmp(e, "auto") ? 3 : rt_knob("SHADOW_DRAWS", "1");
+        const char *r = cfg_get("MKW_SHADOW_AUTO_RUNS");
+        if (r && atoi(r) > 0) auto_runs = atoi(r);
+        if (shadow_mode != 1)
+            rt_log("vk_exec: draws into the shadow map %s (MKW_SHADOW_DRAWS)",
+                   shadow_mode == 3 ? "skipped with 3 or more views (auto)" : shadow_mode == 2 ? "skipped in the A blocks" : "skipped");
+    }
+    int is_shadow = 0;
+    if (ex->rt.depth && ex->rt.depth->d.format == 0x32 && ex->rt.depth->d.depth == 3) {
+        int ncol = 0;
+        for (int i = 0; i < ex->rt.n && i < 8; i++) ncol |= ex->rt.color[i] != NULL;
+        is_shadow = !ncol;
+    }
+    static uint64_t sh_frame, sh_hist[10], sh_frames;
+    static int sh_runs, sh_was, sh_nmaps, sh_prev_maps;
+    static const void *sh_maps[8];
+    static int sh_many, sh_few;   // auto: 3+ views seen (sticky), and frames since with 1 to auto_runs-1 runs
+    if (vk_exec_presented != sh_frame) {   // a new frame: the last one's counts decide this one
+        if (sh_frame) {
+            sh_prev_maps = sh_nmaps;
+            // A frame with fewer runs (a camera cut, a frame that does not redraw the map) must not draw the shadows
+            // for one frame between frames without them: a flicker. Back to drawing them only after 60 frames in a
+            // row with 1 or 2 runs; frames without any leave it as it is.
+            if (sh_runs >= auto_runs) sh_many = 1, sh_few = 0;
+            else if (sh_runs > 0 && sh_many && ++sh_few >= 60) sh_many = 0;
+            sh_hist[sh_runs < 9 ? sh_runs : 9]++;
+            if (++sh_frames % 600 == 0 && (rt_trace & RT_TRACE_PERF)) {
+                rt_log("vk_exec: shadow map runs per frame over 600 frames: 0:%llu 1:%llu 2:%llu 3:%llu 4:%llu 5:%llu 6:%llu "
+                       "7:%llu 8:%llu 9+:%llu; last frame %d distinct maps (MKW_SHADOW_DRAWS)",
+                       (unsigned long long)sh_hist[0], (unsigned long long)sh_hist[1], (unsigned long long)sh_hist[2],
+                       (unsigned long long)sh_hist[3], (unsigned long long)sh_hist[4], (unsigned long long)sh_hist[5],
+                       (unsigned long long)sh_hist[6], (unsigned long long)sh_hist[7], (unsigned long long)sh_hist[8],
+                       (unsigned long long)sh_hist[9], sh_prev_maps);
+                memset(sh_hist, 0, sizeof sh_hist);
+            }
+        }
+        sh_frame = vk_exec_presented, sh_runs = 0, sh_nmaps = 0, sh_was = 0;
+    }
+    if (is_shadow) {
+        if (!sh_was) sh_runs++;
+        int k = 0;
+        while (k < sh_nmaps && sh_maps[k] != (const void *)ex->rt.depth) k++;
+        if (k == sh_nmaps && sh_nmaps < 8) sh_maps[sh_nmaps++] = ex->rt.depth;
+    }
+    sh_was = is_shadow;
+    if (is_shadow && shadow_mode != 1 && !(shadow_mode == 2 && rt_ab()) && !(shadow_mode == 3 && !sh_many))
+        return vk_exec_frame.skip[VK_SKIP_OFF]++, 0;
     cb_res(ex);
     dummies_init();
     if (ex->pass_noatt) {   // no attachment: the pass covers this draw's viewport or scissor, reopened when it needs more

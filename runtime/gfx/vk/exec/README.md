@@ -8,7 +8,7 @@ and dispatches, descriptors, and their parallel recording.
 | `vk_exec.h`, `vk_exec.c`, `vk_exec_internal.h` | Replay of a submit: state, passes and barriers, and the operation loop; the internal header is what it shares with `vk_exec_rt.c` and `vk_exec_clear.c` |
 | `vk_exec_rt.c` | Each submit's render targets, their views (freed with the submit) and which targets the last frames drew |
 | `vk_exec_clear.c` | Colour and depth-stencil clears, as an image clear or inside a pass; layers cleared ahead (`MKW_DEPTH_CLEAR_ALL`) |
-| `vk_exec_draw.c`, `vk_draw_internal.h` | Draws: program to shaders, feedback loops and the setup of each draw (pass, pipeline, state); the header is what the `vk_exec_*` parts of the draw replay share |
+| `vk_exec_draw.c`, `vk_draw_internal.h` | Draws: program to shaders, feedback loops and the setup of each draw (pass, pipeline, state); shadow-map draws left out with 3-4 split-screen views (`MKW_SHADOW_DRAWS=auto`); the header is what the `vk_exec_*` parts of the draw replay share |
 | `vk_exec_ops.c` | Draw, dispatch and bind operations (`vk_exec_op_draw`, `vk_exec_bind_state`) |
 | `vk_exec_xbind.c` | `MKW_BIND_XF=check\|use` (a measurement for the draw cache): a draw's descriptors kept across frames by their inputs; `check` counts hits, `use` gives the ceiling of the saving |
 | `vk_exec_bind.c` | Descriptor sets of each draw or dispatch, with their memos and skipping of repeats (`MKW_BIND_SKIP`) |
