@@ -626,7 +626,11 @@ msgid "PsychoV35"
 msgstr ""
 
 msgctxt "UI_MENU_HDR_TONEMAP_MISSING"
-msgid "Needs tools/shaders/renodx.py run once on the game's spirv folder."
+msgid "Its programs are made by the setup. Set the game up again (an update does it) to add them."
+msgstr ""
+
+msgctxt "UI_MENU_HDR_NEEDS_PSYCHOV"
+msgid "Only with the PsychoV35 tone mapper. Vanilla uses the display's own values, as the console."
 msgstr ""
 
 msgctxt "UI_MENU_HDR_PEAK"

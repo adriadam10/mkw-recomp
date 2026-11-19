@@ -107,11 +107,12 @@ static const CfgMeta metas[] = {
     {"PICTURE_FIT", "keep", "keep|stretch", LIVE}, {"HDR", "auto", "auto|off", LIVE},   // auto: HDR when the display is (hdr6c, 12/11/2026)
     // RenoDX tone mapping (gfx_shader.c, tools/shaders/renodx.py): the game's own curve by default, as the console
     {"HDR_TONEMAP", "vanilla", "vanilla|psychov", RESTART},
-    // the peak and paper white told to the game (gfx_hdr.c); auto: the system's, as the console
+    // the peak and paper white told to the game (gfx_hdr.c), only with HDR_TONEMAP psychov; auto: the system's
     {"HDR_PEAK", "auto", NULL, LIVE},   // "auto" or 100..10000 nits
     {"HDR_WHITE", "auto", NULL, LIVE},   // "auto" or 40..1000 nits
     // the system's peak/paper white nits of the last HDR10 swapchain: the RenoDX programs are loaded before the window
-    // exists (pipeline prebuild), so their headroom comes from here (gfx_hdr_headroom); not a menu row
+    // exists (pipeline prebuild), so their headroom comes from here (gfx_hdr_headroom); written only with HDR_TONEMAP
+    // psychov; not a menu row
     {"HDR_SYSTEM", "", NULL, LIVE},
     {"DEVICE_PROFILE", "auto", "auto|desktop|deck", RESTART},
     {"RESOLUTION", "original", "original|540|720|900|1080|1440|2160", RESTART},

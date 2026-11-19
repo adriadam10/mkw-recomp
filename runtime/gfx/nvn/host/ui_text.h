@@ -44,6 +44,7 @@ typedef enum {
     UI_MENU_HDR, UI_MENU_HDR_DESC,   // values: UI_MENU_FPS_AUTO, UI_MENU_PERF_OFF
     UI_MENU_HDR_TONEMAP, UI_MENU_HDR_TONEMAP_DESC, UI_MENU_HDR_TONEMAP_VANILLA, UI_MENU_HDR_TONEMAP_PSYCHOV,
     UI_MENU_HDR_TONEMAP_MISSING,   // under it when renodx.py has not run
+    UI_MENU_HDR_NEEDS_PSYCHOV,     // under peak and paper white while the tone mapper is the game's
     UI_MENU_HDR_PEAK, UI_MENU_HDR_PEAK_DESC, UI_MENU_HDR_WHITE, UI_MENU_HDR_WHITE_DESC,
     UI_MENU_HDR_NITS,   // a value of the two rows above: "%s nits"
     UI_MENU_SHARPNESS, UI_MENU_SHARPNESS_DESC,

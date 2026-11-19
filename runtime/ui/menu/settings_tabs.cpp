@@ -194,7 +194,8 @@ static void tab_screen(float scale) {
 }
 
 // The HDR rows after HDR: the tone mapper (gfx_shader.c; its programs come from tools/shaders/renodx.py, so without
-// them the row is greyed out) and the peak and paper white the game is told (gfx_hdr.c), all only while HDR is on.
+// them the row is greyed out) and the peak and paper white the game is told (gfx_hdr.c), all only while HDR is on, and
+// the two values only with PsychoV35 (with the game's curve the console's system values hold).
 static void hdr_rows(void) {
     uint16_t peak, white;
     const bool on = gfx_hdr_output(&peak, &white) != 0;
@@ -218,9 +219,12 @@ static void hdr_rows(void) {
     snprintf(fmt, sizeof fmt, menu_text(UI_MENU_HDR_NITS), "%d");
     unsigned sp = 1000, sw = 203;
     sscanf(cfg_value("MKW_HDR_SYSTEM"), "%u/%u", &sp, &sw);
+    const bool psychov = !strcmp(cfg_value("MKW_HDR_TONEMAP"), "psychov");
     if (!on) opt_disable_next(UI_MENU_HDR_DESC);
+    else if (!psychov) opt_disable_next(UI_MENU_HDR_NEEDS_PSYCHOV);
     opt_slider_auto("MKW_HDR_PEAK", UI_MENU_HDR_PEAK, 100, 10000, UI_MENU_HDR_PEAK_DESC, fmt, menu_text(UI_MENU_FPS_AUTO), (int)sp);
     if (!on) opt_disable_next(UI_MENU_HDR_DESC);
+    else if (!psychov) opt_disable_next(UI_MENU_HDR_NEEDS_PSYCHOV);
     opt_slider_auto("MKW_HDR_WHITE", UI_MENU_HDR_WHITE, 40, 1000, UI_MENU_HDR_WHITE_DESC, fmt, menu_text(UI_MENU_FPS_AUTO), (int)sw);
 }
 
