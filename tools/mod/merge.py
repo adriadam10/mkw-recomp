@@ -160,11 +160,13 @@ def main():
         except ValueError:
             return fail("io", "choices.json is not JSON")
     choices = {(p.get("archive"), p.get("inner")): p for p in picks if isinstance(p, dict)}
-    # freshness: same mods, same choices, nothing newer than the outputs
+    # An unchanged mod list can still need a rebuild when the player switches the linked game files.
+    romfs_source = os.path.normcase(os.path.realpath(args.romfs))
+    # freshness: same source, same mods, same choices, nothing newer than the outputs
     state_path = os.path.join(merged, "state.json")
     manifest_path = os.path.join(mromfs, "manifest.tsv")
+    current = {"version": 2, "mods": enabled, "choices": picks, "romfs": romfs_source}
     try:
-        current = {"version": 2, "mods": enabled, "choices": picks}
         fresh = os.path.isfile(manifest_path)
         fresh = fresh and json.load(open(state_path, encoding="utf-8")) == current
         if fresh:
@@ -188,7 +190,7 @@ def main():
     shutil.rmtree(merged, ignore_errors=True)
     os.makedirs(mromfs, exist_ok=True)
     if not enabled:
-        json.dump({"version": 2, "mods": [], "choices": picks}, open(state_path, "w"), indent=2)
+        json.dump(current, open(state_path, "w"), indent=2)
         print("done empty", flush=True)
         return 0
     # enabled mods' archives, in load order
@@ -295,7 +297,7 @@ def main():
         json.dump([{"archive": a, "inner": i, "mods": m, "winner": w, "resolved": r}
                    for a, i, m, w, r in conflicts], f, indent=2)
     with open(state_path, "w", encoding="utf-8") as f:
-        json.dump({"version": 2, "mods": enabled, "choices": picks}, f, indent=2)
+        json.dump(current, f, indent=2)
     for a, i, m, w, _ in conflicts:
         try:
             print(f"conflict {a} {i} {','.join(m)} {w}", flush=True)
