@@ -1,4 +1,5 @@
-// MKW_GPU_CLOCKS (auto|peak|standard|off|ab; default auto: peak on a discrete AMD GPU on Linux, off elsewhere): the
+// MKW_GPU_CLOCKS (auto|peak|standard|off|ab; default auto: peak on a discrete AMD GPU on Linux, standard on the Steam
+// Deck, off elsewhere): the
 // clocks of an AMD GPU held at a stable pstate for the whole run, through the kernel's context op
 // AMDGPU_CTX_OP_SET_STABLE_PSTATE on a context of our own (libdrm_amdgpu, loaded at run time; the op the profilers
 // use, no root needed). The kernel drops it when the process ends.
@@ -20,6 +21,11 @@
 // with MKW_FPS=60 and its inverted twin over 40 s of race: +1.9 ms a frame with the peak held (scene balanced), the
 // GPU 2.2-3.1 ms faster and the recording CPU 1.1-1.4 ms slower (gc-ab3, gc-ab3i, 17/11/2026); at the game's own
 // pace the race stayed at 15 fps either way (gc-ab1). "ab" holds the peak pstate in the B blocks only (MKW_AB).
+// The Steam Deck (Van Gogh, RADV names it VANGOGH: LCD and OLED) is the exception, at the standard pstate: amdgpu's
+// automatic choice kept its GPU at 200-1040 MHz in split screen, the standard pstate holds 1100 MHz (of 1600, the peak,
+// which costs the CPU its clock within the 15 W). 2 players handheld at MKW_FPS=60, game 1.8.0 at 720 lines, separate
+// runs in turn (auto, standard, auto, standard; 19/11/2026): 38.5 / 38.4 against 36.4 / 36.2 ms a frame (means),
+// 37.8 / 37.1 against 35.5 / 35.0 (medians). A SteamOS per-game GPU clock (a manual level) is left alone, as above.
 //
 // Only from amdgpu's automatic level: the kernel counts a manual or high level (sysfs power_dpm_force_performance_level,
 // set by LACT, CoreCtrl or SteamOS's GPU clock slider) as no stable pstate, and when our context ends it puts back
@@ -100,8 +106,8 @@ static void apply(int want) {
     S.set = want;
 }
 
-static int mode_from_cfg(const char *e, int discrete) {
-    if (!e || !*e || !strcmp(e, "auto")) return discrete ? PSTATE_PEAK : PSTATE_NONE;
+static int mode_from_cfg(const char *e, int discrete, int deck) {
+    if (!e || !*e || !strcmp(e, "auto")) return discrete ? PSTATE_PEAK : deck ? PSTATE_STANDARD : PSTATE_NONE;
     if (!strcmp(e, "peak") || !strcmp(e, "1")) return PSTATE_PEAK;
     if (!strcmp(e, "standard")) return PSTATE_STANDARD;
     if (!strcmp(e, "ab")) return -1;
@@ -146,7 +152,8 @@ void vk_pstate_init(VkPhysicalDevice phys) {
     if (p.vendorID != 0x1002) return;
     const char *e = cfg_get("MKW_GPU_CLOCKS");
     int discrete = p.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-    S.mode = mode_from_cfg(e, discrete);
+    int deck = strstr(p.deviceName, "VANGOGH") != NULL;   // the Steam Deck's APU, as RADV names it
+    S.mode = mode_from_cfg(e, discrete, deck);
     if (S.mode == PSTATE_NONE) {
         rt_log("vk: GPU clocks chosen by amdgpu (MKW_GPU_CLOCKS=%s%s)", e && *e ? e : "auto",
                discrete ? "" : ": off on an integrated GPU, whose CPU loses power to it");
