@@ -64,6 +64,17 @@ def test_promote_drops_an_unfinished_or_other_version(tmp_path: Path) -> None:
     assert (tmp_path / "mkwgame.so").read_bytes() == b"old lib" and not out.exists()
 
 
+def test_promote_requires_a_boolean_ready_marker(tmp_path: Path) -> None:
+    played(tmp_path)
+    out = nextsetup.seed(tmp_path)
+    (out / "mkwgame.so").write_bytes(b"unfinished lib")
+    state = {"version": 1, "done": {}, "port": "0.1.13", "ready": "false"}
+    (out / "setup-state.json").write_text(json.dumps(state), encoding="utf-8")
+
+    assert not nextsetup.promote(tmp_path, "0.1.13")
+    assert (tmp_path / "mkwgame.so").read_bytes() == b"old lib"
+
+
 def test_warm_caches_are_copies_and_move_in(tmp_path: Path) -> None:
     # the prewarm appends to the keys: a link would change the played version's file
     played(tmp_path)
@@ -89,7 +100,7 @@ def test_promotion_restores_outputs_after_a_failed_or_interrupted_rename(
     (out / "mkwgame.so").write_bytes(b"new lib")
     (out / "mkwgame.id").write_bytes(b"new id")
     (out / "pipeline-keys.bin").write_bytes(b"new keys")
-    (out / nextsetup.STATE).write_text(json.dumps({"port": "0.1.13", "ready": True}))
+    (out / nextsetup.STATE).write_text(json.dumps({"version": 1, "done": {}, "port": "0.1.13", "ready": True}))
     rename = Path.rename
 
     def fail_at_keys(src: Path, dst: Path) -> Path:
@@ -122,7 +133,7 @@ def test_failed_rollback_preserves_both_versions_until_retry(tmp_path: Path, mon
     played(tmp_path)
     out = nextsetup.seed(tmp_path)
     (out / "mkwgame.so").write_bytes(b"new lib")
-    (out / nextsetup.STATE).write_text(json.dumps({"port": "0.1.13", "ready": True}))
+    (out / nextsetup.STATE).write_text(json.dumps({"version": 1, "done": {}, "port": "0.1.13", "ready": True}))
     rename = Path.rename
     live = tmp_path / "mkwgame.so"
     old = tmp_path / "mkwgame.so.old"

@@ -59,15 +59,27 @@ def seed(game: Path) -> Path:
     return out
 
 
+def read_state(path: Path) -> dict:
+    """Read a setup record, or return an empty dict when it cannot supply step keys."""
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+    except OSError, ValueError:
+        return {}
+    if not isinstance(state, dict):
+        return {}
+    done = state.get("done")
+    if not isinstance(done, dict) or not all(isinstance(key, str) for key in done.values()):
+        return {}
+    return state
+
+
 def load(game: Path, state: dict) -> dict:
     """The state an update in setup-next/ resumes from: its own when an earlier --next run left one, else a copy of the
     played version's (its finished steps are this one's starting point)."""
-    p = next_dir(game) / STATE
-    try:
-        s = json.loads(p.read_text())
-    except OSError, ValueError:
-        return json.loads(json.dumps(state))
-    return s if s.get("version") == state.get("version", s.get("version")) else json.loads(json.dumps(state))
+    s = read_state(next_dir(game) / STATE)
+    if s and s.get("version") == state.get("version", s.get("version")):
+        return s
+    return json.loads(json.dumps(state))
 
 
 def restore(game: Path, out: Path, names: list[str]) -> None:
@@ -103,11 +115,8 @@ def promote(game: Path, port: str) -> bool:
     if not out.is_dir():
         return False
     recover(game)
-    try:
-        s = json.loads((out / STATE).read_text())
-    except OSError, ValueError:
-        s = {}
-    if not s.get("ready") or (port and s.get("port") != port):
+    s = read_state(out / STATE)
+    if s.get("ready") is not True or (port and s.get("port") != port):
         print(f"setup: {out} is not a finished setup of {port or 'this version'}: removed", file=sys.stderr)
         shutil.rmtree(out, ignore_errors=True)
         return False

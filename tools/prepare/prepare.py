@@ -252,11 +252,7 @@ def clear_work(work: Path) -> None:
 
 
 def load_state(game: Path) -> dict:
-    p = game / "setup-state.json"
-    try:
-        s = json.loads(p.read_text())
-    except OSError, ValueError:
-        return {"done": {}}
+    s = nextsetup.read_state(game / nextsetup.STATE)
     return s if s.get("version") == PREP_VERSION else {"done": {}}
 
 

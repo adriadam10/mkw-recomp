@@ -42,6 +42,27 @@ def run_prepare(*args: str) -> subprocess.CompletedProcess:
                           capture_output=True, text=True, timeout=60)  # fmt: skip
 
 
+@pytest.mark.parametrize("state", [[], {"done": None}, {"done": {"exefs": 42}}])
+@pytest.mark.parametrize("location", ["live", "resume", "promote"])
+def test_malformed_setup_state(tmp_path: Path, state, location: str) -> None:
+    live = tmp_path / "mkwgame.dll"
+    live.write_bytes(b"played library")
+    staged = tmp_path / "setup-next"
+    staged.mkdir()
+    (staged / live.name).write_bytes(b"staged library")
+    if isinstance(state, dict):
+        state = dict(state, version=prepare.PREP_VERSION, ready=True, port="0.1.16")
+    folder = tmp_path if location == "live" else staged
+    (folder / "setup-state.json").write_text(json.dumps(state), encoding="utf-8")
+
+    args = ["--game", str(tmp_path), "--port", "0.1.16"]
+    if location == "resume":
+        args.append("--next")
+    p = run_prepare(*args)
+    assert live.read_bytes() == b"played library"
+    assert p.returncode == 2 and p.stdout.strip() == "error source no earlier setup in this folder", p.stdout + p.stderr
+
+
 @pytest.mark.parametrize("external", [False, True])
 def test_resume_without_source(tmp_path: Path, external: bool) -> None:
     game = tmp_path / ODD / "game"
