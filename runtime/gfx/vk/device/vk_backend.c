@@ -795,6 +795,11 @@ static void vk_be_write_texels(const tex_t *t, const view_t *v, const NVNcopyReg
     vk_write_texels(t, v, r, src, row, img);
 }
 static void vk_be_guest_written(uint64_t addr, uint64_t size) { vk_sync_start(); vk_guest_written(addr, size); }
+static void vk_be_host_rewrote(uint64_t addr, uint64_t size) {
+    vk_sync_start();
+    vk_guest_written(addr, size);
+    vk_texture_host_rewrote(addr);
+}
 // A CPU read of GPU-written mirrored storage (memcpy, pool invalidate). With the replay queued it waits for the newest
 // submission recorded to write the textures there, not for the whole queue: the write-back copy then runs after their
 // renders, and clears gpu_dirty only for content that is on the queue. Submissions not replayed yet render after the
@@ -851,6 +856,7 @@ const GfxBackend gfx_vulkan_backend = {
     .read_texels = vk_be_read_texels,
     .write_texels = vk_be_write_texels,
     .guest_written = vk_be_guest_written,
+    .host_rewrote = vk_be_host_rewrote,
     .guest_read = vk_be_guest_read,
     .cpu_synced = vk_be_cpu_synced,
 };

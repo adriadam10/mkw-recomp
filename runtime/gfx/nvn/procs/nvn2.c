@@ -446,7 +446,7 @@ NVN_API(nvnDeviceGenerateDebugDomainId) {
 // cameras (main+0xd32270: 384x216 RGBA8 sRGB, three per camera, from nn::chat::Get*CameraImageHandle). The game calls
 // these driver exports by name, not through GetProcAddress, and aborts when Initialize fails (main+0xd32338). No chat
 // is ever started (ov_chat.c), so each image is a texture of the camera's size with no storage, never sampled. The
-// handle carries that size (ov_chat.c: width << 16 | height).
+// handle carries that size (ov_chat.c: width << 16 | height), unless a plugin made the image (below).
 typedef struct { uint32_t magic, format, perm, handle; } nimage_t;
 void nvnp_nvnTextureInitialize(Cpu *c);   // nvn_api_obj.c
 #define NIMAGE_MAGIC 0x474d494eu   // "NIMG"
@@ -463,8 +463,95 @@ static void nimg_init(Cpu *c) {
     ret_x(c, 1);
 }
 static void nimg_fini(Cpu *c) { ((nimage_t *)arg_p(c, 0))->magic = 0; }
+// ---------- Images a plugin fills (MkwPluginApi.native_image_create, plugin API 3): pixel memory of the runtime's,
+// RGBA8 rows, which the plugin writes and the game shows through a native image handle the plugin hands it (its
+// override of nn::chat::Get*CameraImageHandle, say). Each image is a CPU-visible pool of its own, created at the
+// first texture over it (the game thread, the device up), and a pitch-linear texture over that pool: a write the
+// plugin reports (native_image_touch) makes the back end read the pixels again, as for the game's own pool writes.
+enum { PIMG_MAX = 64 };
+#define PIMG_HANDLE 0x80000000u   // ov_chat.c's handles are width << 16 | height, below this bit
+typedef struct {
+    int ready, w, h;
+    uint32_t stride;
+    uint8_t *mem;
+    uint64_t size;
+    pool_t pool;   // magic set once initialized
+} pimage_t;
+static pimage_t pimg[PIMG_MAX];
+static volatile int32_t npimg;
+// The pixels live in guest memory of the runtime's own (mem_runtime_alloc: above the game's heap, write-watched),
+// carved out of 2 MiB regions: the back end tracks writes and resolves pools only below RT_ADDRESS_LIMIT, so memory
+// from plat_mem_alloc (above it on Windows) was never seen to change and the textures kept their first upload.
+static PlatMutex pimg_lock = PLAT_MUTEX_INIT;
+static uint64_t pimg_next, pimg_end;
+
+static uint8_t *pimg_alloc(uint64_t size) {
+    plat_mutex_lock(&pimg_lock);
+    if (pimg_end - pimg_next < size) {
+        uint64_t n = (size + 0x1fffff) & ~0x1fffffull, a = mem_runtime_alloc(n, "plugin native images");
+        if (a) pimg_next = a, pimg_end = a + n;
+    }
+    uint8_t *m = NULL;
+    if (pimg_end - pimg_next >= size) m = (uint8_t *)(uintptr_t)pimg_next, pimg_next += size;
+    plat_mutex_unlock(&pimg_lock);
+    return m;
+}
+void nvnp_nvnMemoryPoolInitialize(Cpu *c);   // nvn_api_core.c
+
+static pimage_t *pimg_of(uint32_t handle) {
+    if (!(handle & PIMG_HANDLE)) return NULL;
+    uint32_t i = handle & ~PIMG_HANDLE;
+    return i < PIMG_MAX && __atomic_load_n(&pimg[i].ready, __ATOMIC_ACQUIRE) ? &pimg[i] : NULL;
+}
+
+uint32_t nvn2_native_image_create(int w, int h, void **pixels, int *row_bytes) {
+    if (w < 1 || h < 1 || w > 4096 || h > 4096) return 0;
+    int32_t i = plat_inc32(&npimg) - 1;
+    if (i >= PIMG_MAX) {
+        rt_log("nvn2: native_image_create: more than %d images", PIMG_MAX);
+        return 0;
+    }
+    pimage_t *o = &pimg[i];
+    o->w = w, o->h = h;
+    o->stride = ((uint32_t)w * 4 + 255) & ~255u;   // NVN's linear stride alignment, 32, rounded up for any device
+    o->size = ((uint64_t)o->stride * (uint64_t)h + 0xffff) & ~0xffffull;
+    if (!(o->mem = pimg_alloc(o->size))) {
+        rt_log("nvn2: native_image_create: no memory for %dx%d", w, h);
+        return 0;
+    }
+    memset(o->mem, 0, (size_t)o->size);
+    __atomic_store_n(&o->ready, 1, __ATOMIC_RELEASE);
+    if (pixels) *pixels = o->mem;
+    if (row_bytes) *row_bytes = (int)o->stride;
+    rt_log("nvn2: native image %d: %dx%d, %u bytes a row (plugin)", (int)i, w, h, o->stride);
+    return PIMG_HANDLE | (uint32_t)i;
+}
+
+int nvn2_native_image_touch(uint32_t handle) {
+    pimage_t *o = pimg_of(handle);
+    if (!o) return 0;
+    uint64_t n = (uint64_t)o->stride * (uint64_t)o->h;
+    if (gfx_backend()->host_rewrote) gfx_backend()->host_rewrote((uint64_t)(uintptr_t)o->mem, n);
+    else nvn_guest_written((uint64_t)(uintptr_t)o->mem, n);
+    return 1;
+}
+
+// The image's pool, made on the game thread at its first texture: CPU cached, GPU cached, the runtime's memory.
+static int pimg_pool(Cpu *c, pimage_t *o) {
+    if (o->pool.magic == NVN_POOL_MAGIC) return 1;
+    pool_builder_t b = {.mem = o->mem, .size = o->size,
+                        .flags = NVN_MEMORY_POOL_FLAGS_CPU_CACHED | NVN_MEMORY_POOL_FLAGS_GPU_CACHED};
+    uint64_t x0 = c->x[0], x1 = c->x[1];
+    c->x[0] = (uint64_t)(uintptr_t)&o->pool, c->x[1] = (uint64_t)(uintptr_t)&b;
+    nvnp_nvnMemoryPoolInitialize(c);
+    int ok = (int)c->x[0] && o->pool.magic == NVN_POOL_MAGIC;
+    c->x[0] = x0, c->x[1] = x1;
+    if (!ok) rt_log("nvn2: native image pool of %#llx bytes refused", (unsigned long long)o->size);
+    return ok;
+}
+
 // NVNboolean nvnTextureInitializeFromNativeImage(NVNtexture *, NVNnativeImage *): the front's own texture initialize
-// with a builder of that size and format and no storage.
+// with a builder of that size and format: over a plugin's image (above) its pool, pitch linear; otherwise no storage.
 static void nimg_texture(Cpu *c) {
     const nimage_t *n = arg_p(c, 1);
     if (n->magic != NIMAGE_MAGIC) rt_fatal("nvn2: TextureInitializeFromNativeImage with an uninitialized native image");
@@ -476,6 +563,16 @@ static void nimg_texture(Cpu *c) {
     b.d.height = n->handle & 0xffff ? n->handle & 0xffff : 1;
     b.d.depth = b.d.levels = 1;
     b.d.format = (int)n->format;
+    pimage_t *p = pimg_of(n->handle);
+    if (p && pimg_pool(c, p)) {
+        b.d.width = (uint32_t)p->w, b.d.height = (uint32_t)p->h;
+        b.d.flags = NVN_TEXTURE_FLAGS_LINEAR;
+        b.d.stride = p->stride;
+        b.pool = &p->pool;
+        b.off = 0;
+    } else if (p) {
+        b.d.width = (uint32_t)p->w, b.d.height = (uint32_t)p->h;   // no pool: a texture of its size, as before
+    }
     uint64_t x1 = c->x[1];
     c->x[1] = (uint64_t)(uintptr_t)&b;
     nvnp_nvnTextureInitialize(c);   // ret_x: 1

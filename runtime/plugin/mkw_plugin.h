@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-#define MKW_PLUGIN_API_VERSION 2
+#define MKW_PLUGIN_API_VERSION 3
 
 // The start of the runtime's guest CPU state; ABI-stable for every API version (the runtime checks it at build time).
 // Arguments in x[0..7], the result in x[0], the return address in x[30].
@@ -129,6 +129,18 @@ typedef struct MkwPluginApi {
     // runs: it must not block (the game's picture waits for it). title: UTF-8, copied. Only from mkw_plugin_init;
     // 1 done, 0 refused. The same function can serve as the start screen's options page (mkw_mod_page).
     int (*settings_tab)(const char *title, void (*draw)(const struct MkwPage *page));
+
+    // ---- version 3: images the plugin fills and the game shows (any thread)
+    // An image of width x height pixels, RGBA8 (the format the game's texture asks for, sRGB or not), in memory of the
+    // runtime's: *pixels gets its first row and *row_bytes the distance between rows (at least width * 4). Returns
+    // its nn::gs::NativeImageHandle, 0 when refused (size outside 1..4096, too many images, no memory): hand it to the
+    // game where it asks for a native image handle (an override of the call that gives one), and the texture the game
+    // makes from it (nvnTextureInitializeFromNativeImage) samples these pixels. Images live until the process ends.
+    uint32_t (*native_image_create)(int width, int height, void **pixels, int *row_bytes);
+    // After writing an image's pixels: the GPU reads them again before the game's next use of the texture. Write
+    // only an image the game is not showing (triple buffer as the game's own native images do, with their syncs).
+    // 1 done, 0 not one of native_image_create's handles.
+    int (*native_image_touch)(uint32_t handle);
 } MkwPluginApi;
 
 // Exported by the plugin. api_version is the runtime's (api->version); size tells which fields exist. Return 0 to stay
