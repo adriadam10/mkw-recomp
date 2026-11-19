@@ -426,7 +426,7 @@ void steam_rpt_start(void) {
     if (!is_app_id(app)) { fail("steam_appid = %s is not a Steam App ID (a number)", app); return; }
     if (auto_saved)
         rt_log("steam: steam_appid = auto, started without Steam: App ID %s, the one Steam passed last time "
-               "(guests' controllers need mkw started from that game in Steam, docs/remote-play.md)", app);
+               "(guests' controllers need mkw started from that game in Steam, docs/guides/remote-play.md)", app);
     char started[32];   // a number set while Steam started mkw as another game: the overlay is that game's
     if (plat_getenv("SteamAppId", started, sizeof started) && is_app_id(started) && strcmp(started, app))
         rt_log("steam: Steam started mkw as App ID %s, but steam_appid = %s: set steam_appid = auto to follow the game",

@@ -422,13 +422,13 @@ static void tab_controls(float scale) {
 }
 
 // Steam Remote Play Together (steam/steam_rpt.h): invite through the Steam overlay or copy a guest link. Greyed out with
-// the reason when Steam is not running for the game. The App ID row above them sets steam_appid (docs/remote-play.md).
+// the reason when Steam is not running for the game. The App ID row above them sets steam_appid (docs/guides/remote-play.md).
 static void rows_remote_play(void) {
     static char value[64];
     static uint64_t link_until;   // "Copied" or "did not work" beside Copy guest link until then
     static int link_ok;
     opt_group(UI_MENU_GROUP_RPT);
-    // the App ID: off, the game Steam started, RetroArch (docs/remote-play.md's example), the numbers typed in the row
+    // the App ID: off, the game Steam started, RetroArch (docs/guides/remote-play.md's example), the numbers typed in the row
     // under it (steam_appids, oldest first) and a number from mkw.ini the list lacks
     {
         enum { SAVED = STEAM_RPT_SAVED };

@@ -1,4 +1,4 @@
-"""Put Steam's runtime library next to mkw, for Steam Remote Play Together (runtime/steam/, docs/remote-play.md).
+"""Put Steam's runtime library next to mkw, for Steam Remote Play Together (runtime/steam/, docs/guides/remote-play.md).
 
 Why: the runtime loads libsteam_api.so / steam_api64.dll at run time from its own folder and links nothing of Valve's,
 so neither the build nor the release carries it. This takes it from the Steamworks.NET 2025.165.0 standalone archive,

@@ -14,7 +14,7 @@ its issue, #N), `### Tested` (what was run from the packages before publishing) 
   free): `steam_appid` in `mkw.ini`, or Settings > General, where an App ID can be typed and is kept in a list.
   Picking local multiplayer with too few controllers asks whether the other players connect controllers or join over
   Steam. Steam's library is not in the release: `tools/build/steamlib.py` puts it next to mkw. Set-up and the App
-  IDs tried: [docs/remote-play.md](docs/remote-play.md).
+  IDs tried: [docs/guides/remote-play.md](docs/guides/remote-play.md).
 
 ## 0.1.13
 

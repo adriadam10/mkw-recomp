@@ -2,7 +2,7 @@
 
 Steam Remote Play Together: friends join local multiplayer over Steam, which streams the window and the sound; each
 guest's controller or keyboard becomes a player. Off unless `steam_appid` is set in `mkw.ini` (or `MKW_STEAM_APPID`; `auto` takes the App ID Steam passes to the game it starts, and the menu's General tab has a row for it);
-set-up in [docs/remote-play.md](../../docs/remote-play.md).
+set-up in [docs/guides/remote-play.md](../../docs/guides/remote-play.md).
 
 | File | What it is |
 |---|---|

@@ -556,7 +556,7 @@ static void portable_paths(RtConfig *c) {
 // build/mkw with --launcher. --play, MKW_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
 // MKW_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
 // gone).
-// Steam launch options `"...\\mkw.exe" %command%` on a Steam game (docs/remote-play.md: RetroArch's, the App ID of
+// Steam launch options `"...\\mkw.exe" %command%` on a Steam game (docs/guides/remote-play.md: RetroArch's, the App ID of
 // Remote Play Together) start mkw as that game, with its overlay and Steam Input, and append the game's own program:
 // with SteamAppId set (Steam started us), an argument that is not an option and names an existing file is that
 // program, and is skipped.
