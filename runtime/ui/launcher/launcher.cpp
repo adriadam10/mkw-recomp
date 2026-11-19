@@ -2029,14 +2029,17 @@ static int steam_console(void) { return cfg_steam_console(); }
 static int last_run_fatal(void) {
     char p[PLAT_PATH_MAX * 2];
     snprintf(p, sizeof p, "%s/logs/mkw.log", cfg_game_dir());
-    FILE *f = fopen(p, "rb");
+    PlatFile *f = plat_file_open(p);
     if (!f) return 0;
     static char tail[65536];
-    fseek(f, 0, SEEK_END);
-    long n = ftell(f), from = n > (long)sizeof tail - 1 ? n - (long)sizeof tail + 1 : 0;
-    fseek(f, from, SEEK_SET);
-    size_t got = fread(tail, 1, sizeof tail - 1, f);
-    fclose(f);
+    PlatFileId id;
+    int64_t got = 0;
+    if (plat_file_id(f, &id)) {
+        uint64_t from = id.size > sizeof tail - 1 ? id.size - (sizeof tail - 1) : 0;
+        got = plat_file_pread(f, tail, sizeof tail - 1, from);
+    }
+    plat_file_close(f);
+    if (got <= 0) return 0;
     tail[got] = 0;
     return strstr(tail, "FATAL") != nullptr || strstr(tail, "fatal signal") != nullptr;
 }
