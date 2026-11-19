@@ -273,6 +273,11 @@ static int list_cb(const char *name, int kind, uint64_t, void *) {
         }
         json_switches(json, m);
     }
+    if (!m->has_plugin) {   // a mod copied in by hand, without the import's mod.json, still shows its plugin
+        char plugin[PLAT_PATH_MAX * 2 + 32];
+        snprintf(plugin, sizeof plugin, "%s/mods/%s/plugin", cfg_game_dir(), name);
+        m->has_plugin = plat_dir_exists(plugin);
+    }
     G.n++;
     return 1;
 }

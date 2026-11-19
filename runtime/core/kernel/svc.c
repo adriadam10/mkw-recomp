@@ -11,6 +11,7 @@
 #include "hacks.h"
 #include "host.h"
 #include "kernel.h"
+#include "plugin.h"
 #include "vk.h"
 #include "platform/platform.h"
 
@@ -234,6 +235,7 @@ static void svc_body(Cpu *c, uint32_t imm, uint64_t pc) {
                    // profile saved, logs flushed, exit code 0
         char at[160];
         rt_log("guest ExitProcess at %s; exiting", ldr_describe(pc, at, sizeof at));
+        plugins_exit();
         fs_save_flush();
         vk_pipeline_save();
         prof_write();
