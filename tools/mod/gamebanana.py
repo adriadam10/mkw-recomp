@@ -80,29 +80,35 @@ def _race_create_connection(address, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, sou
             return
         with lock:
             first = not won
-            won.append(sock)
-        if first:
-            results.put(sock)
-        else:
+            if first:
+                won.append(sock)
+                results.put(sock)
+        if not first:
             sock.close()
 
     deadline = None if timeout in (None, socket._GLOBAL_DEFAULT_TIMEOUT) else time.monotonic() + timeout
     started = failed = 0
     last: OSError | None = None
     while failed < len(addrs):
+        remaining = None if deadline is None else deadline - time.monotonic()
+        if remaining is not None and remaining <= 0:
+            with lock:
+                if won:
+                    won[0].close()
+                else:
+                    won.append(None)  # a connection finishing later must close itself
+            raise TimeoutError(f"connecting to {host}:{port} timed out") from last
         if started < len(addrs):
             family, kind, proto, _, addr = addrs[started]
             threading.Thread(target=attempt, args=(family, kind, proto, addr), daemon=True).start()
             started += 1
         wait = 0.25 if started < len(addrs) else None
-        if wait is None and deadline is not None:
-            wait = max(deadline - time.monotonic(), 0)
+        if remaining is not None:
+            wait = min(wait, remaining) if wait is not None else remaining
         try:
             got = results.get(timeout=wait)
         except queue.Empty:
-            if started < len(addrs):
-                continue
-            raise TimeoutError(f"connecting to {host}:{port} timed out") from last
+            continue
         if isinstance(got, OSError):
             failed, last = failed + 1, got
             continue
