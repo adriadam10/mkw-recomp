@@ -157,11 +157,24 @@ void destroy_tex(Tex *e) {
     if (e->released) nreleased--, rel_unlink(e);
     vk_mem_defer_use(e->use);   // MKW_GPU_GUARD: the image and its views
     vk_exec_image_gone(e->pub.image);
-    // A sparse image also waits for its binds: they are queue operations the parts sent do not cover (vk_sparse.c).
-    uint64_t binds = e->sparse ? vk_sparse_destroy(e->pub.image) : 0, prev = 0;
-    if (binds) prev = vk_mem_defer_fence(0), vk_mem_defer_fence(prev > binds ? prev : binds);
+    if (e->pub.image_b) vk_exec_image_gone(e->pub.image_b);
+    // A sparse image also waits for its binds: they are queue operations the parts sent do not cover (vk_sparse.c). Its
+    // private mip tail goes with it, after vkDestroyImage and behind the same fence: freed at the next submission
+    // instead (as it was until 17/11/2026), the VkDeviceMemory went while the image's opaque mip-tail bind still named
+    // it, and the next vkDestroyImage walked the freed memory (RADV: vk_object_base_finish on a stale handle, the
+    // replay thread's stack or the texture's guest address). Both entries take the same fence and sequence, and
+    // vk_mem_upload.c's collect destroys them in order: image first, then its tail. A 64 + 4 split's B image is the
+    // same, with no VMA allocation.
+    VmaAllocation tail = NULL, tail_b = NULL;
+    uint64_t binds = e->sparse ? vk_sparse_destroy(e->pub.image, &tail) : 0;
+    uint64_t binds_b = e->sparse && e->pub.image_b ? vk_sparse_destroy(e->pub.image_b, &tail_b) : 0;
+    uint64_t last = binds > binds_b ? binds : binds_b, prev = 0;
+    if (last || tail || tail_b) prev = vk_mem_defer_fence(0), vk_mem_defer_fence(prev > last ? prev : last);
     vk_defer_image(e->pub.image, e->alloc);
-    if (binds) vk_mem_defer_fence(prev);
+    if (e->pub.image_b) vk_defer_image(e->pub.image_b, NULL);
+    if (tail) vk_defer_call(vk_sparse_tail_free, tail);
+    if (tail_b) vk_defer_call(vk_sparse_tail_free, tail_b);
+    if (last || tail || tail_b) vk_mem_defer_fence(prev);
     vk_mem_defer_use(0);
     free(e);
 }

@@ -271,7 +271,10 @@ void vk_texture_range_gone(uint64_t lo, uint64_t size, VmaAllocation alloc) {
         Tex *e = by_key.vals[i];
         if (e && ((e->key.addr >= lo && e->key.addr - lo < size) || (alloc && e->bound_to == alloc))) list[n++] = e;
     }
-    for (int i = 0; i < n; i++) destroy_tex(list[i]);
+    // Through destroy_idle, like every other destruction: a pool finalized while the submission being recorded still
+    // names one of its textures would otherwise free the image with only the parts already sent (destroy_tex's own
+    // defer) and not the recording submission, whose draws and copies still use it.
+    for (int i = 0; i < n; i++) destroy_idle(list[i]);
     free(list);
     unlock();
 }

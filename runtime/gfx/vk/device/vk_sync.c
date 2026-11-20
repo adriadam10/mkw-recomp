@@ -90,7 +90,11 @@ static int qhead, qn, qcap;
 // whoever takes the queue lock next submits the waiting parts first (vk_queue_lock), so every other queue operation
 // (upload batches, sparse binds, the present, the submission's last part) still comes after them.
 typedef struct {
-    VkCommandBufferSubmitInfo cbi[2 + VK_SPLIT_EXTRA];
+    // The prologue, the part's own buffer, VK_SPLIT_EXTRA chunk buffers and the timestamp tail: vk_sync_split_with's
+    // count is (pro ? 2 : 1) + nextra + (tail ? 1 : 0), one more than 2 + VK_SPLIT_EXTRA with both. One short, the
+    // memcpy below wrote past the array and the tail buffer was read out of the wait/signal fields (sparse images add
+    // that wait; without them the overflow happened to hold the tail itself).
+    VkCommandBufferSubmitInfo cbi[3 + VK_SPLIT_EXTRA];
     VkSemaphoreSubmitInfo wait, sig[2];
     VkSubmitInfo2 si;
     uint64_t fence, at;   // at: when it was deferred (kern_now_ns), for the wait the perf line gives

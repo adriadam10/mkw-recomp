@@ -14,5 +14,5 @@ sparse and precomputed BC7.
 | `vk_tex_slots.c` | Texture and sampler descriptor slots, and the VkSamplers |
 | `vk_tex_texel.c` | ReadTexels / WriteTexels and CPU reads of what the GPU wrote |
 | `vk_astc.c` | ASTC on the GPU: decoded by compute and recompressed to BC7 (`MKW_ASTC_BC7`) |
-| `vk_sparse.c` | MKW's own: sparse textures as Vulkan sparse images, tiles bound at each `MapVirtual`; cube compatibility only for cube targets; private small-mip backing initialized separately from shared tiles and sparse resources released before allocator shutdown |
+| `vk_sparse.c` | MKW's own: sparse textures as Vulkan sparse images, tiles bound at each `MapVirtual`; cube compatibility only for cube targets; a mipmapped array of more than 64 layers is split into 64 + 4 images (both powers of two, so the driver's padding does not apply; the shader selects the second image for layers 64..), and falls back to the base level with all its layers if the pair does not fit; private small-mip backing initialized separately from shared tiles, freed after its image, and sparse resources released before allocator shutdown |
 | `vk_texpre.c` | MKW's own: BC7 of the ASTC textures encoded offline (`MKW_TEXPRE`, off) |

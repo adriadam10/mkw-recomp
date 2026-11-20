@@ -129,16 +129,34 @@ def declarations(b, stage: str, shape: tuple[int, int, int, int] | None) -> list
         refl["textures"].append({"binding": nb, "type": sampler_type(t), "format": "Unknown", "cbuf_slot": bank,
                                  "handle": idx, "array": 1, "separate": False, "flags": 0})  # fmt: skip
         nb += 1
+        if "Array" in t:
+            # The second image of an array: the runtime's 64 + 4 split keeps every layer and mip (the B image holds
+            # layers 64.. as its own 0..). tex.py selects on layer >= 64; an unsplit array's B is the A's layer 0.
+            head.append(f"layout(binding = {nb}) uniform {t} t{bank}_{idx}b;")
+            refl["textures"].append({"binding": nb, "type": sampler_type(t), "format": "Unknown", "cbuf_slot": bank,
+                                     "handle": idx, "array": 1, "separate": False, "flags": 0x10})  # fmt: skip
+            nb += 1
     for (bank, idx), t in sorted(b.images.items()):
         fmt = "r32ui, " if t.startswith("uimage") else ""
         head.append(f"layout({fmt}binding = {nb}) uniform {t} i{bank}_{idx};")
         refl["images"].append({"binding": nb, "type": sampler_type(t), "format": "R32Uint" if fmt else "Unknown", "cbuf_slot": bank,
                                "handle": idx, "array": 1, "separate": False, "flags": 4})  # fmt: skip
         nb += 1
+        if "Array" in t:
+            head.append(f"layout({fmt}binding = {nb}) uniform {t} i{bank}_{idx}b;")
+            refl["images"].append({"binding": nb, "type": sampler_type(t), "format": "R32Uint" if fmt else "Unknown",
+                                   "cbuf_slot": bank, "handle": idx, "array": 1, "separate": False, "flags": 0x14})  # fmt: skip
+            nb += 1
     for bank, idx in sorted(b.txq_tex):
         n = {"sampler1D": 1, "sampler2D": 2, "sampler3D": 3, "samplerCube": 2, "sampler2DArray": 3,
              "samplerCubeArray": 3, "sampler1DArray": 2}.get(b.textures[(bank, idx)].replace("Shadow", ""), 2)  # fmt: skip
         sz = f"textureSize(t{bank}_{idx}, l)"
+        if "Array" in b.textures[(bank, idx)]:
+            # The array is the A's layers plus the B's (the split), so the game's textureSize sees 68.
+            if "1DArray" in b.textures[(bank, idx)]:
+                sz = f"(textureSize(t{bank}_{idx}, l) + textureSize(t{bank}_{idx}b, l))"
+            else:
+                sz = f"(textureSize(t{bank}_{idx}, l) + ivec3(0, 0, textureSize(t{bank}_{idx}b, l).z))"
         v = sz if n == 3 else f"ivec3({sz}, 1)" if n == 2 else f"ivec3({sz}, 1, 1)"
         head.append(f"ivec3 txqsz_{bank}_{idx}(int l) {{ return {v}; }}")
     # Specialization constants of the fixed-address constant words (Builder.const); "spec" lists each k's [bank, byte].

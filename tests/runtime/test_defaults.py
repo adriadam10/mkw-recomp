@@ -23,6 +23,9 @@ GPUS = [
     ("Iris Xe, 16 GB (#174)", 0, 7765, 15531),
     ("GTX 750 Ti 2 GB (#215)", 1, 1999, 8000),
     ("GTX 1050 Ti 4 GB (our Windows PC)", 1, 4035, 16300),
+    ("RTX 2060 6 GB", 1, 6144, 16000),
+    ("RX 580 8 GB (7,168 MiB heap)", 1, 7168, 32038),
+    ("RX 580 8 GB (7,885 MiB heap)", 1, 7885, 32038),
     ("RTX 2070 SUPER 8 GB (#28)", 1, 7989, 40922),
     ("RTX 4070 SUPER 12 GB (#31)", 1, 12011, 32000),
     ("RX 9070 XT 16 GB (#43)", 1, 16304, 48000),
@@ -69,10 +72,15 @@ def test_caps_follow_the_gpu(defaults: Path, name: str, discrete: int, vram: int
     assert sparse >= (768 if not discrete or vram >= 3072 else 256), name
     assert limit >= 4096, name  # 3072 makes the race black (sp-v0)
     if discrete:
-        assert sparse <= max(768, vram // 4), name  # the rest of the VRAM holds render targets and mirrors
-        assert 0 < pool <= 8, name  # half the VRAM, capped at 8 blocks (2 GiB): issue #43's 31 were 92% of the budget
-        if vram >= 7900:
+        if vram >= 7000:
+            # five fourteenths: the six 8192x8192x68 arrays bind ~2.16 GiB, more than the old quarter allowed; the rest
+            # of the VRAM holds render targets and mirrors
+            assert sparse <= max(768, vram * 5 // 14), name
             assert sparse >= 1472, name  # what the title binds uncapped (run-sp3): nothing left non-resident
+        else:
+            # a quarter: nothing measured on 4-6 GB, and the 4 GB GTX 1050 Ti already runs out of VRAM late in a race
+            assert sparse <= max(768, vram // 4), name
+        assert 0 < pool <= 8, name  # half the VRAM, capped at 8 blocks (2 GiB): issue #43's 31 were 92% of the budget
     else:
         assert sparse == 768, name  # 1024 hung the 660M with MKW_ASTC_BC1 (run-race41)
         assert pool == 0, name  # the pool is a discrete-GPU path (vk_tex_image.c)

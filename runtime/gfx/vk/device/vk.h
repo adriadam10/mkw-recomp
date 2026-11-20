@@ -314,15 +314,22 @@ int vk_mem_resolve(uint64_t addr, uint64_t size, VkMemSpan *out);   // 1 when al
 int vk_mem_virt_phys(uint64_t addr, uint64_t *phys);   // virtual pool page at addr: 1 and the GPU address it maps to
 
 // Sparse textures as Vulkan sparse images (vk_sparse.c). create: 1 and *img for a sparse texture of a virtual pool
-// whose format has standard sparse blocks (MKW_SPARSE_IMAGES=0 off); its tiles follow every MapVirtual (remap). order:
-// queue lock held, before each graphics-queue submission: the changed bindings (binds), behind every earlier submission,
-// and the wait and signal of that submission on the sparse order timeline.
+// whose format has standard sparse blocks (MKW_SPARSE_IMAGES=0 off), -1 when a large one does not fit the sparse
+// address space (no non-sparse fallback: the caller shows a zero stand-in), 0 when it is not a sparse texture; *levels
+// and *layers are the image's level and layer counts (1 level when the full chain did not fit; all 68 layers stay, see
+// vk_sparse_create). Its tiles follow every MapVirtual (remap). order: queue lock held, before each graphics-queue
+// submission: the changed bindings (binds), behind every earlier submission, and the wait and signal of that
+// submission on the sparse order timeline.
 void vk_texture_report(uint64_t addr);   // MKW_CTL "tex ADDR": textures over addr (vk_texture.c)
 typedef struct { uint32_t first; VkImageAspectFlags aspect; VkDeviceSize zero_bytes; } VkSparseTail;
 int vk_sparse_create(const VkImageCreateInfo *ci, const nvn_texdesc *d, uint64_t addr, uint64_t size, VkImage *img,
-                     VkSparseTail *tail);
+                     VkSparseTail *tail, uint32_t *levels, uint32_t *layers);
 void vk_sparse_shutdown(void);   // after textures, retired work and device idle; before the VMA allocator
-uint64_t vk_sparse_destroy(VkImage img);   // the submission its binds are done by (0: none)
+// The submission the image's binds are done by (0: none), and its private mip tail's allocation, which the caller defers
+// behind that fence and frees after the image (destroy_tex): the tail's memory must outlive the image's opaque mip-tail
+// bind, or the next vkDestroyImage walks a VkDeviceMemory that is already gone.
+uint64_t vk_sparse_destroy(VkImage img, VmaAllocation *tail);
+void vk_sparse_tail_free(void *alloc);   // vk_defer_call target: vmaFreeMemory of a tail from vk_sparse_destroy
 int vk_sparse_is(VkImage img);   // 1: img is a sparse image made by vk_sparse_create
 void vk_sparse_remap(uint64_t addr, uint64_t size);
 // A copy or a pass wrote the region (w == 0: the whole level) of img: counted when img is sparse.
@@ -419,12 +426,15 @@ void vk_mem_shutdown(void);                        // before vk_shutdown: waits 
 // until the next call that may drop textures (release, pool fini); copy what outlives that.
 typedef struct {
     VkImage image;
+    VkImage image_b;               // a 64 + 4 split: layers 64.. in a second sparse image
     VkFormat format;               // after the fallbacks of tex_vk_format (ASTC -> RGBA8, RGB -> RGBA)
     VkImageType type;
     VkImageViewType view_type;     // view of the whole image
     VkImageAspectFlags aspect;
     VkImageUsageFlags usage;
     uint32_t width, height, depth, levels, layers, samples;
+    uint32_t levels_b, layers_b;   // image_b's levels and layers (0: not split)
+    uint32_t split_layer;          // image_b's first array layer (64); 0: not split
     uint64_t addr;                 // storage GPU address
     uint8_t alpha_one;             // X format: sample alpha as 1 through the view swizzle
     uint8_t chan[4];               // TexVkFormat.chan: component order of a stand-in format, applied by the view swizzle
