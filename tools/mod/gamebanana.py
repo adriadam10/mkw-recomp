@@ -272,7 +272,10 @@ def images(cache: Path, urls: list[str]) -> int:
                 req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
                 with urllib.request.urlopen(req, timeout=20) as r:
                     data = r.read(4 << 20)   # a preview is tens of KB; 4 MB at most
-                path.write_bytes(data)
+                with tempfile.NamedTemporaryFile(dir=out, delete_on_close=False) as tmp:
+                    tmp.close()
+                    Path(tmp.name).write_bytes(data)
+                    Path(tmp.name).replace(path)
             except OSError:
                 continue   # a picture that does not come is just not shown
         say("image", url, path)

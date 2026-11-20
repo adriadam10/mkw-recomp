@@ -73,3 +73,29 @@ def test_failed_cache_replace_preserves_old_entry(
     assert capsys.readouterr().out == "error\tnet\tcache entry is locked\n"
     assert key.read_bytes() == previous
     assert {p.name for p in key.parent.iterdir()} == {key.name, "requests"}
+
+
+def test_image_cache_recovers_from_failed_write(tmp_path, monkeypatch, capsys):
+    url = "https://images.gamebanana.com/img/synthetic.png"
+    calls = []
+
+    def fetch(*args, **kwargs):
+        calls.append(1)
+        return io.BytesIO(b"complete image")
+
+    monkeypatch.setattr(gamebanana, "throttle", lambda _: None)
+    monkeypatch.setattr(gamebanana.urllib.request, "urlopen", fetch)
+    write = Path.write_bytes
+
+    def fail_once(path, data):
+        monkeypatch.setattr(Path, "write_bytes", write)
+        write(path, data[:3])
+        raise OSError("interrupted write")
+
+    monkeypatch.setattr(Path, "write_bytes", fail_once)
+    assert gamebanana.images(tmp_path, [url]) == 0
+    assert capsys.readouterr().out == ""
+    assert gamebanana.images(tmp_path, [url]) == 0
+    assert len(calls) == 2
+    cached = list((tmp_path / "img").glob("*.png"))
+    assert len(cached) == 1 and cached[0].read_bytes() == b"complete image"
