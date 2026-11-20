@@ -16,8 +16,12 @@ where it is the only target and ninja comes from PATH or else MSYS2 UCRT64 (C:/m
 Objects go to build/obj-win. The window, input, keyboard and menu are SDL3 on both systems; platform/win32.c replaces
 platform/linux.c.
 
+--pgo (profile-guided game code, tools/build/pgo.py): "gen" instruments the generated C (objects in build/obj-pgogen;
+build/mkw writes build/pgo/raw/mkw-<pid>.profraw when it exits), a .profdata file compiles it at -O2 with that profile
+(objects in build/obj-pgo). The runtime stays as it is.
+
 Usage: uv run tools/build/build.py [--target linux|windows] [--gen DIR] [--exefs DIR] [--romfs DIR]
-       [--jobs N] [--frame-pointers] [--dry-run]
+       [--jobs N] [--frame-pointers] [--pgo gen|FILE.profdata] [--dry-run]
 Heavy (all cores, several GB): our runs go through tools/run/job.sh. --gen defaults to the dump's version
 (recomp/versions.py: build/generated, build/generated-180).
 """
@@ -190,6 +194,49 @@ def game_id() -> str:
         # refused the release's mkwgame.dll of the same headers as "built for another version" (16/11/2026)
         h.update(p.read_bytes().replace(b"\r\n", b"\n"))
     return h.hexdigest()[:16]
+
+
+def profile_runtime() -> Path:
+    """clang's profile runtime (libclang_rt.profile.a): MKW_PROFILE_RT, else clang's resource directory, else
+    build/toolchain/compiler-rt/lib (extracted from the distribution's compiler-rt package without installing it)."""
+    cands = [Path(os.environ["MKW_PROFILE_RT"])] if os.environ.get("MKW_PROFILE_RT") else []
+    rd = subprocess.run(["clang", "-print-resource-dir"], capture_output=True, text=True, check=False).stdout.strip()
+    if rd:
+        cands += sorted(Path(rd).glob("lib/*/libclang_rt.profile*.a"))
+    cands.append(ROOT / "build/toolchain/compiler-rt/lib/libclang_rt.profile.a")
+    for c in cands:
+        if c.is_file():
+            return c
+    sys.exit("--pgo gen: no libclang_rt.profile.a (install compiler-rt, or set MKW_PROFILE_RT to it)")
+
+
+def pgo_flags(pgo: str, target: "Target") -> list[str]:
+    """--pgo: the game code's flags (GEN_FLAGS, in place, so game_id() follows) and the link flags it needs.
+    gen: instrumented (-fprofile-instr-generate), each run writing build/pgo/raw/mkw-<pid>.profraw at exit (plat_exit
+    calls __llvm_profile_write_file: it ends with _exit, which skips the atexit handler that would). The driver puts
+    its own runtime path on the link line, absent without compiler-rt installed, so only the compiles carry the flag
+    and the link names the runtime itself. A profile: -O2 with it (totk-pc-recomp docs/pgo.md: -O2 and a trained
+    profile, 11-12 % a frame there), from a copy named after its digest, so a new profile changes the flags and Ninja
+    rebuilds every chunk (a function whose code changed loses its counts silently: the warnings say so, and are off)."""
+    if target is not LINUX:
+        sys.exit("--pgo: Linux builds only for now")
+    if pgo == "gen":
+        raw = ROOT / "build/pgo/raw"
+        raw.mkdir(parents=True, exist_ok=True)
+        GEN_FLAGS.append(f"-fprofile-instr-generate={raw}/mkw-%p.profraw")
+        return ["-u", "__llvm_profile_runtime", str(profile_runtime())]
+    src = Path(pgo)
+    if not src.is_file():
+        sys.exit(f"--pgo: {src} not found")
+    data = src.read_bytes()
+    dst = ROOT / "build/pgo" / f"use-{hashlib.sha256(data).hexdigest()[:16]}.profdata"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if not dst.exists():
+        dst.write_bytes(data)
+    GEN_FLAGS[0] = "-O2"
+    GEN_FLAGS.extend([f"-fprofile-instr-use={dst}", "-Wno-profile-instr-unprofiled", "-Wno-profile-instr-out-of-date",
+                      "-Wno-backend-plugin"])  # fmt: skip
+    return []
 
 
 def module_glue(gen: Path, exefs: Path, library: bool) -> str:
@@ -423,6 +470,7 @@ def main() -> None:
         action="store_true",
         help="runtime with frame pointers: perf call graphs (-g) of where threads block, e.g. -e cs",
     )
+    ap.add_argument("--pgo", help="gen: game code instrumented for a profile; FILE.profdata: compiled with it (-O2)")
     args = ap.parse_args()
     if args.gen is None and not args.runtime_only:
         try:
@@ -444,11 +492,15 @@ def main() -> None:
     if args.cpu == "noavx2" and args.arch != "x86_64":
         ap.error("--cpu noavx2 is x86_64 only")
     set_arch(args.arch, args.cpu == "noavx2")
+    pgo_ld = pgo_flags(args.pgo, target) if args.pgo else []
+    if args.pgo and not args.out:  # its own objects: the plain -O1 ones stay for the next plain build
+        args.out = ROOT / ("build/obj-pgogen" if args.pgo == "gen" else "build/obj-pgo")
     if args.sysroot and target is WINDOWS:
         ap.error("--sysroot is for Linux")
     # zstd and xxhash.h of the sysroot sit in its usr/local (tools/build/sysroot.py), whose include clang already reads
     sys_flags = [f"--target={ARCH}-linux-gnu", f"--sysroot={args.sysroot.resolve()}"] if args.sysroot else []
     sys_ld = [*sys_flags, f"-L{args.sysroot.resolve()}/usr/local/lib"] if args.sysroot else []
+    sys_ld += pgo_ld
     cross = ARCH != HOST_ARCH and target is LINUX  # another CPU's build: its own dist and object folders
     nov = "-noavx2" if args.cpu == "noavx2" else ""
     dist = ROOT / "build/dist" / (args.target + (f"-{ARCH}" if cross else "") + nov) if args.dist else None

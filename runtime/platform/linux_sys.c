@@ -171,7 +171,12 @@ int plat_stderr_path(char *out, size_t cap) {
 
 // ---- process
 
+// A game code build with --pgo gen (tools/build/build.py) carries clang's profile runtime: its counts are written here,
+// since the process ends without the atexit handler that would write them. Absent (NULL) in every other build.
+extern int __llvm_profile_write_file(void) __attribute__((weak));
+
 void plat_exit(int code) {
+    if (__llvm_profile_write_file) __llvm_profile_write_file();
     fflush(stdout);
     fflush(stderr);
     _exit(code);
