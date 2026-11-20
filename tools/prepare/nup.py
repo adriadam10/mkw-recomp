@@ -60,15 +60,21 @@ class Nup:
             head = f.read(12)
             if head[:4] != MAGIC:
                 raise ValueError(f"{path}: not a NUP package")
+            if len(head) < 12:
+                raise ValueError(f"{path}: NUP header is cut short")
             toc = struct.unpack_from("<I", head, 8)[0]
             f.seek(toc)
             th = f.read(0x30)
             if th[:4] != b"TOC\x01":
                 raise ValueError(f"{path}: no table of contents")
+            if len(th) < 0x30:
+                raise ValueError(f"{path}: table of contents is cut short")
             nt = struct.unpack_from("<I", th, 4)[0]
             self._nd, nf, pool, pool_size = struct.unpack_from("<QQQQ", th, 8)
             f.seek(toc)
             self._t = f.read(pool + pool_size)
+            if len(self._t) < pool + pool_size:
+                raise ValueError(f"{path}: table of contents is cut short")
         self._pool = pool
         self._dirs = 0x30 + nt * 0x40
         self._files = self._dirs + self._nd * 24
