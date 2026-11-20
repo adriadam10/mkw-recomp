@@ -55,3 +55,35 @@ def test_all_dead_fails_at_once(monkeypatch) -> None:
     with pytest.raises(OSError):
         gamebanana._race_create_connection(("example.invalid", 80), 20)
     assert time.monotonic() - start < 5   # not the 20 s timeout
+
+
+def test_timeout_covers_stagger_and_closes_late_connections(monkeypatch) -> None:
+    release = threading.Event()
+    sockets = []
+
+    class SlowSocket:
+        def __init__(self, *args):
+            self.closed = threading.Event()
+            sockets.append(self)
+
+        def settimeout(self, timeout):
+            pass
+
+        def connect(self, address):
+            release.wait(5)
+
+        def close(self):
+            self.closed.set()
+
+    addr = (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("127.0.0.1", 1))
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *_, **__: [addr] * 4)
+    monkeypatch.setattr(socket, "socket", SlowSocket)
+    start = time.monotonic()
+    try:
+        with pytest.raises(TimeoutError):
+            gamebanana._race_create_connection(("example.invalid", 80), 0.05)
+        elapsed = time.monotonic() - start
+    finally:
+        release.set()
+    assert all(s.closed.wait(2) for s in sockets)
+    assert elapsed < 0.5  # the old stagger alone took 0.75 s for four addresses
