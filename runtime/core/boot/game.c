@@ -13,6 +13,7 @@
 // need no patch: both words are written before each call. MKW_FPS: auto (the game's own choice while it holds 30 fps,
 // fps_auto.c's 3 or 4 below that in a race; auto_want), 60, 30, 20, 15, or game (the game's own choice, 1-2: the
 // console's, for A/B).
+#include <stdio.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,6 +70,8 @@ int frame_logic_hz(void) {
 // Game speed, for tools/run/summary.py: game seconds per real second over each window, and how often the interval
 // changed. Below 1 the game runs in slow motion.
 static struct { uint64_t t0; uint32_t clock0; unsigned frames, changes; int interval; } sp;
+static double sp_ms_sum;   // MKW_FPS=auto: the game's measure of the window's frames (auto_interval), for the line below
+static unsigned sp_ms_n;
 
 static void speed_note(int interval) {
     uint64_t now = kern_now_ns(), at = rt_main_addr(rt_version()->game_clock);
@@ -82,9 +85,12 @@ static void speed_note(int interval) {
     if (interval != sp.interval) sp.changes++, sp.interval = interval;
     if (now - sp.t0 < SPEED_WINDOW_NS) return;
     double real = (double)(now - sp.t0) / 1e9;
-    rt_log("game: speed %.2fx over %.1f s (%u frames, %u interval changes, MKW_FPS %s)",
-           (double)(clock - sp.clock0) / frame_logic_hz() / real, real, sp.frames, sp.changes, cfg_value("MKW_FPS"));
+    char meas[48] = "";
+    if (sp_ms_n) snprintf(meas, sizeof meas, ", measured %.1f ms", sp_ms_sum / sp_ms_n);
+    rt_log("game: speed %.2fx over %.1f s (%u frames, %u interval changes, MKW_FPS %s%s)",
+           (double)(clock - sp.clock0) / frame_logic_hz() / real, real, sp.frames, sp.changes, cfg_value("MKW_FPS"), meas);
     sp.t0 = now, sp.clock0 = clock, sp.frames = sp.changes = 0;
+    sp_ms_sum = 0, sp_ms_n = 0;
 }
 
 static _Atomic int last_interval = 1;
@@ -140,12 +146,21 @@ static int auto_interval(uint64_t obj) {
     static uint64_t last;   // when the last frame began: the real period, which the game's measure can fall short of
     int n = frame_logic_hz();   // its ticks: back to 60 in time trial starts it over
     if (!ready || a.hz != n) fps_auto_reset(&a), a.hz = n, ready = 1;
+    static int in_race;   // a race scene begins: a probe blocked in the last one may be tried again
+    int race = race_scene_on();
+    if (race && !in_race) fps_auto_race_start(&a);
+    in_race = race;
     uint64_t now = kern_now_ns();
     double ms = (double)*(const int64_t *)(uintptr_t)(obj + FRAME_MEASURED) * RT_TICK_NS / 1e6;
     double real = last ? (now - last) / 1e6 / turbo_speed() : 0;
     last = now;
-    int prev = a.iv, iv = fps_auto_step(&a, ms, real);
-    if (iv != prev) rt_log("game: auto interval %d -> %d (frame %.1f ms, real %.1f ms)", prev, iv, ms, real);
+    sp_ms_sum += ms, sp_ms_n++;
+    int prev = a.iv;
+    unsigned probes = a.probes;
+    int iv = fps_auto_step(&a, ms, real);
+    if (iv != prev)
+        rt_log("game: auto interval %d -> %d (frame %.1f ms, real %.1f ms%s)", prev, iv, ms, real,
+               a.probes != probes ? ", a probe" : "");
     return iv;
 }
 
