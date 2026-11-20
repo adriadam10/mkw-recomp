@@ -58,7 +58,7 @@ class Cc1:
         out = args[args.index("-o") + 1] if "-o" in args[:-1] else ""
         # the probe's paths, each where the chunk's go: the output (ours or zig's temporary), the input and its name
         # (-main-file-name)
-        if args[1] != "-cc1" or args.count(str(self.src)) != 1 or PROBE not in Path(out).name:
+        if len(args) < 2 or args[1] != "-cc1" or args.count(str(self.src)) != 1 or PROBE not in Path(out).name:
             raise RuntimeError("zig's -cc1 line does not name the probe's input once and an output of it")
         self.lines[tuple(flags)], self.outs[tuple(flags)] = args[1:], out
 

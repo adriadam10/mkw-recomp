@@ -530,6 +530,19 @@ def test_nup_cut_table_is_reported(tmp_path: Path, cut: int) -> None:
         nup.Nup(package).files("romfs")
 
 
+def test_fastcc_falls_back_when_probe_line_is_incomplete(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import fastcc
+
+    clang = tmp_path / "clang" / ("clang.exe" if os.name == "nt" else "clang")
+    clang.parent.mkdir()
+    clang.touch()
+    monkeypatch.delenv("MKW_SETUP_CC", raising=False)
+    monkeypatch.setattr(fastcc, "version", lambda _: "clang version 22.1.8")
+    monkeypatch.setattr(fastcc.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(
+        returncode=0, stderr='"-cc1"\n'))
+    assert fastcc.setup([str(tmp_path / "zig"), "cc"], tmp_path, tmp_path, [["-O1"]]) is None
+
+
 def test_nup_pack_reads_back(tmp_path: Path) -> None:
     # a loose dump packed into one .nup (nup.py pack) reads back the same through the module the setup uses
     sys.path.insert(0, str(ROOT / "tools/prepare"))
