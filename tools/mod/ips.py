@@ -51,6 +51,8 @@ def parse_ips(data: bytes) -> list[tuple[int, bytes]]:
             out.append((off, data[pos:pos + size]))
             pos += size
         else:   # RLE: a 2-byte count and the byte
+            if pos + 3 > len(data):   # a cut download: struct.error would end the import with a traceback
+                raise PatchFailed("IPS ends early")
             n = struct.unpack_from(">H", data, pos)[0]
             out.append((off, data[pos + 2:pos + 3] * n))
             pos += 3
@@ -68,7 +70,10 @@ def parse_pchtxt(text: str) -> tuple[str, list[tuple[int, bytes]]]:
         if line.startswith("@nsobid-"):
             bid = line[8:].strip().lower()
         elif line.startswith("@flag offset_shift"):
-            shift = int(line.split()[-1], 0)
+            try:
+                shift = int(line.split()[-1], 0)
+            except ValueError:   # import.py refuses a PatchFailed with a reason; a bare ValueError was a traceback
+                raise PatchFailed(f"pchtxt line not understood: {line}") from None
         elif line in ("@enabled", "@disabled"):
             on = line == "@enabled"
         elif line == "@stop":
