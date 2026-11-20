@@ -26,6 +26,8 @@ SIGNATURES = Path(__file__).resolve().parents[1] / "github/signatures.toml"
 TAIL = 16 << 20  # bytes read from the end of the log: a log stops at 64 MiB, the error is at its end
 CLEAN = ("gfx: window closed; exiting", "guest ExitProcess at")  # runtime/gfx/nvn/host/gfx_present.c, core/kernel/svc.c
 CRASH = re.compile(r"FATAL|device lost|DEVICE_LOST|vk: device fault|fatal signal", re.I)
+HANG = "vk: the GPU has not finished submission"  # runtime/gfx/vk/device/vk_sync.c: the watchdog, after 5 s without progress
+SLOW = "it was slow, not hung"  # the same file, logged once such a wait ends: the hang was a long submission
 
 
 def vkey(tag: str) -> tuple[int, ...]:
@@ -41,7 +43,10 @@ def read_tail(path: Path) -> str:
 
 
 def verdict(log: str, version: str, sigs: list[dict]) -> str:
-    if any(c in log for c in CLEAN):
+    # A hang the player then closed the window on is not a clean end (#382, #206): the last hang counts when no
+    # "slow, not hung" line follows it.
+    hung = log.rfind(HANG) > log.rfind(SLOW)
+    if not hung and any(c in log for c in CLEAN):
         return "clean"
     low = log.lower()
     for s in sigs:
@@ -50,7 +55,7 @@ def verdict(log: str, version: str, sigs: list[dict]) -> str:
             if fixed and vkey(fixed) > vkey(version):
                 return f"fixed {s['issue']} {fixed}"
             return f"known {s['issue']}"
-    return "crash" if CRASH.search(log) else ""
+    return "crash" if hung or CRASH.search(log) else ""
 
 
 def main() -> None:
