@@ -982,6 +982,60 @@ BROWSER = {
 for _ctx, _langs in BROWSER.items():
     T.setdefault(_ctx, {}).update(_langs)
 
+# The NSFW-mods choice of the GameBanana tab (02/2027)
+NSFW = {
+    "UI_GB_RATED": {
+        "ca": "Contingut: %s", "de": "Inhaltsbewertung: %s", "fr": "Contenu : %s",
+        "es": "Contenido: %s", "es-419": "Contenido: %s",
+        "it": "Contenuto: %s", "pt": "Conteúdo: %s",
+        "pt-BR": "Conteúdo: %s", "nl": "Contentwaardering: %s",
+        "ru": "Рейтинг контента: %s", "ja": "コンテンツレーティング: %s",
+        "ko": "콘텐츠 등급: %s", "zh-Hans": "内容分级：%s",
+        "zh-Hant": "內容分級：%s", "gl": "Contido: %s",
+        "eu": "Edukia: %s", "pl": "Ocena treści: %s",
+        "tr": "İçerik derecesi: %s", "uk": "Рейтинг контенту: %s",
+        "th": "เรตติ้งเนื้อหา: %s",
+    },
+    "UI_GB_MATURE": {
+        "ca": "Mods NSFW", "de": "NSFW-Mods", "fr": "Mods NSFW",
+        "es": "Mods NSFW", "es-419": "Mods NSFW",
+        "it": "Mod NSFW", "pt": "Mods NSFW",
+        "pt-BR": "Mods NSFW", "nl": "NSFW-mods",
+        "ru": "NSFW-моды", "ja": "NSFW MOD",
+        "ko": "NSFW 모드", "zh-Hans": "NSFW 模组",
+        "zh-Hant": "NSFW 模組", "gl": "Mods NSFW",
+        "eu": "NSFW modak", "pl": "Mody NSFW",
+        "tr": "NSFW modlar", "uk": "NSFW-моди",
+        "th": "ม็อด NSFW",
+    },
+    "UI_GB_MATURE_OBFUSCATE": {
+        "ca": "Difuminar", "de": "Verschleiern", "fr": "Flouter",
+        "es": "Difuminar", "es-419": "Difuminar",
+        "it": "Sfocare", "pt": "Desfocar",
+        "pt-BR": "Desfocar", "nl": "Vervagen",
+        "ru": "Размыть", "ja": "ぼかす",
+        "ko": "가리기", "zh-Hans": "打码",
+        "zh-Hant": "打碼", "gl": "Difuminar",
+        "eu": "Lausotu", "pl": "Zamazać",
+        "tr": "Sansürle", "uk": "Розмити",
+        "th": "เซ็นเซอร์",
+    },
+    "UI_GB_MATURE_SHOW": {
+        "ca": "Mostra", "de": "Zeigen", "fr": "Afficher",
+        "es": "Mostrar", "es-419": "Mostrar",
+        "it": "Mostra", "pt": "Mostrar",
+        "pt-BR": "Mostrar", "nl": "Tonen",
+        "ru": "Показать", "ja": "表示",
+        "ko": "표시", "zh-Hans": "显示",
+        "zh-Hant": "顯示", "gl": "Mostrar",
+        "eu": "Erakutsi", "pl": "Pokaż",
+        "tr": "Göster", "uk": "Показати",
+        "th": "แสดง",
+    },
+}
+for _ctx, _langs in NSFW.items():
+    T.setdefault(_ctx, {}).update(_langs)
+
 # The start screen's notice about how the last game ended (ui/launcher/launcher_lastrun.cpp, 14/11/2026).
 LASTRUN = {
     "UI_LAUNCH_LASTRUN_KNOWN": {

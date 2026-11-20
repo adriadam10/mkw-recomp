@@ -2251,6 +2251,23 @@ msgctxt "UI_GB_ERROR"
 msgid "GameBanana did not answer: %s"
 msgstr "GameBanana 没有响应：%s"
 
+#. %s: the content ratings GameBanana marks the mod with (e.g. Sexual Themes).
+msgctxt "UI_GB_RATED"
+msgid "Content rating: %s"
+msgstr "内容分级：%s"
+
+msgctxt "UI_GB_MATURE"
+msgid "NSFW mods"
+msgstr "NSFW 模组"
+
+msgctxt "UI_GB_MATURE_OBFUSCATE"
+msgid "Obfuscate"
+msgstr "打码"
+
+msgctxt "UI_GB_MATURE_SHOW"
+msgid "Show"
+msgstr "显示"
+
 #. Under an installed mod that replaces the game's graphics settings archive (general_format).
 msgctxt "UI_MOD_WARN_GRAPHICS"
 msgid ""

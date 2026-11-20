@@ -32,8 +32,8 @@ enum { JOB_NONE, JOB_LIST, JOB_INFO, JOB_DOWNLOAD };
 enum { MAX_ROWS = 40, MAX_FILES = 16, MAX_SHOTS = 6, MAX_PICS = 160, INFO_CACHE = 24 };
 
 struct Row {
-    int id, likes, views;
-    char name[128], author[64], category[48], url[128], thumb[200];
+    int id, likes, views, rated;
+    char name[128], author[64], category[48], url[128], thumb[200], vis[16];
 };
 struct File {
     int id, size, clean;
@@ -41,17 +41,18 @@ struct File {
 };
 struct Info {
     int id;
-    char name[128], author[64], license[160], url[128], version[32], text[4096];
+    char name[128], author[64], license[160], url[128], version[32], text[4096], vis[16], ratings[128];
     File files[MAX_FILES];
     int nfiles;
     char shots[MAX_SHOTS][200], full[MAX_SHOTS][200];   // 530 pixels wide, and the original for the enlarged view
     int nshots;
 };
 
-// A preview picture: wanted (0), asked for (1), on disk (2), shown (3, tex), failed (4).
+// A preview picture: wanted (0), asked for (1), on disk (2), shown (3, tex), failed (4). Blur pixelates it at
+// decode: hidden rows show the mod blurred, never sharp.
 struct Pic {
     char url[200], path[PLAT_PATH_MAX];
-    int state, w, h;
+    int state, w, h, blur;
     SDL_Texture *tex;
 };
 static struct {
@@ -91,11 +92,18 @@ static void unescape(char *s) {   // gamebanana.py writes a text's line breaks a
     *w = 0;
 }
 
+// Whether a rated row or page stays blurred (MKW_GB_MATURE): obfuscate blurs every rated mod's pictures,
+// show blurs nothing.
+static int gb_hidden_row(const char *vis, int rated) {
+    if (!strcmp(cfg_value("MKW_GB_MATURE"), "show")) return 0;
+    return rated || (vis && !strcmp(vis, "hide"));
+}
+
 // one tab-separated event line of gamebanana.py (the thread, under lock)
 static void on_line(char *line) {
-    char *f[9] = {};
+    char *f[12] = {};
     int n = 0;
-    for (char *p = line; n < 9;) {
+    for (char *p = line; n < 12;) {
         f[n++] = p;
         char *t = strchr(p, '\t');
         if (!t) break;
@@ -104,11 +112,13 @@ static void on_line(char *line) {
     if (!strcmp(f[0], "mod") && n >= 8 && G.nrows < MAX_ROWS) {
         Row &r = G.rows[G.nrows++];
         r.id = atoi(f[1]), r.likes = atoi(f[4]), r.views = atoi(f[5]);
+        r.rated = n >= 11 ? atoi(f[10]) : 0;
         snprintf(r.name, sizeof r.name, "%s", f[2]);
         snprintf(r.author, sizeof r.author, "%s", f[3]);
         snprintf(r.category, sizeof r.category, "%s", f[6]);
         snprintf(r.url, sizeof r.url, "%s", f[7]);
         snprintf(r.thumb, sizeof r.thumb, "%s", n >= 9 ? f[8] : "");
+        snprintf(r.vis, sizeof r.vis, "%s", n >= 10 ? f[9] : "show");
     } else if (!strcmp(f[0], "page") && n >= 3) {
         G.page = atoi(f[1]), G.total = atoi(f[2]);
     } else if (!strcmp(f[0], "info") && n >= 7) {
@@ -118,6 +128,8 @@ static void on_line(char *line) {
         snprintf(G.info.license, sizeof G.info.license, "%s", f[4]);
         snprintf(G.info.url, sizeof G.info.url, "%s", f[5]);
         snprintf(G.info.version, sizeof G.info.version, "%s", f[6]);
+        snprintf(G.info.vis, sizeof G.info.vis, "%s", n >= 8 ? f[7] : "show");
+        snprintf(G.info.ratings, sizeof G.info.ratings, "%s", n >= 9 ? f[8] : "");
     } else if (!strcmp(f[0], "text") && n >= 2) {
         snprintf(G.info.text, sizeof G.info.text, "%s", f[1]);
         unescape(G.info.text);
@@ -240,8 +252,9 @@ static int SDLCALL pic_reader(void *) {
     return 0;
 }
 
-// The picture of url (UI thread): its texture once loaded, else nullptr and it is asked for.
-static SDL_Texture *pic(const char *url, int *w, int *h) {
+// The picture of url (UI thread): its texture once loaded, else nullptr and it is asked for. Blur pixelates
+// it at decode (a blurred thumb is only ever shown blurred).
+static SDL_Texture *pic(const char *url, int *w, int *h, int blur) {
     if (!url[0]) return nullptr;
     SDL_LockMutex(G.lock);
     Pic *p = nullptr;
@@ -252,15 +265,29 @@ static SDL_Texture *pic(const char *url, int *w, int *h) {
         *p = Pic{};
         snprintf(p->url, sizeof p->url, "%s", url);
     }
+    if (p) p->blur = blur;
     SDL_UnlockMutex(G.lock);
     if (!p || !p->tex) return nullptr;
     *w = p->w, *h = p->h;
     return p->tex;
 }
 
-// Once a frame (UI thread): pictures on disk become textures; the wanted ones go to a new batch.
-static void pic_tick(const char *exe_dir, SDL_Renderer *ren) {
+// The decoded textures follow the NSFW-mods choice: a toggle drops them and requeues the files, so what is
+// on disk decodes again with the blur the next frames ask for.
+static void pics_redecode(void) {
+    SDL_LockMutex(G.lock);
     for (int i = 0; i < P.n; i++) {
+        Pic *p = &P.pics[i];
+        if (p->tex) SDL_DestroyTexture(p->tex), p->tex = nullptr;
+        p->blur = 0;
+        p->state = 0;
+        p->w = p->h = 0;
+    }
+    SDL_UnlockMutex(G.lock);
+}
+
+// Once a frame (UI thread): pictures on disk become textures; the wanted ones go to a new batch.
+static void pic_tick(const char *exe_dir, SDL_Renderer *ren) {    for (int i = 0; i < P.n; i++) {
         Pic *p = &P.pics[i];
         if (p->state != 2) continue;
         p->state = 4;
@@ -270,8 +297,29 @@ static void pic_tick(const char *exe_dir, SDL_Renderer *ren) {
         unsigned char *px = data ? stbi_load_from_memory(data, (int)n, &w, &h, &comp, 4) : nullptr;
         free(data);
         if (!px) continue;
+        if (p->blur && (w > 16 || h > 16)) {   // a thumbnail of the thumbnail, drawn large: reads blurred
+            int sw = w >= h ? 16 : (w * 16 + h - 1) / h, sh = h > w ? 16 : (h * 16 + w - 1) / w;
+            if (sw < 1) sw = 1;
+            if (sh < 1) sh = 1;
+            unsigned char *small = (unsigned char *)calloc((size_t)sw * sh, 4);
+            if (small) {
+                for (int y = 0; y < sh; y++)
+                    for (int x = 0; x < sw; x++) {
+                        int x0 = x * w / sw, x1 = (x + 1) * w / sw, y0 = y * h / sh, y1 = (y + 1) * h / sh;
+                        unsigned sum[4] = {};
+                        for (int sy = y0; sy < y1; sy++)
+                            for (int sx = x0; sx < x1; sx++)
+                                for (int c = 0; c < 4; c++) sum[c] += px[(sy * w + sx) * 4 + c];
+                        int count = (x1 - x0) * (y1 - y0);
+                        for (int c = 0; c < 4; c++) small[(y * sw + x) * 4 + c] = (unsigned char)(sum[c] / count);
+                    }
+                stbi_image_free(px);
+                px = small, w = sw, h = sh;
+            }
+        }
         SDL_Surface *s = SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_RGBA32, px, w * 4);
         p->tex = s && ren ? SDL_CreateTextureFromSurface(ren, s) : nullptr;
+        if (p->tex && p->blur) SDL_SetTextureScaleMode(p->tex, SDL_SCALEMODE_LINEAR);
         SDL_DestroySurface(s);
         stbi_image_free(px);
         if (p->tex) p->state = 3, p->w = w, p->h = h;
@@ -333,9 +381,9 @@ static void info_keep(const Info &in) {
 }
 
 // a picture scaled to fit a w x h box, or a blank of that size until it comes; true when clicked
-static bool picture(const char *url, float w, float h) {
+static bool picture(const char *url, float w, float h, int blur) {
     int pw = 0, ph = 0;
-    SDL_Texture *t = pic(url, &pw, &ph);
+    SDL_Texture *t = pic(url, &pw, &ph, blur);
     if (!t) {
         ImGui::Dummy(ImVec2(w, h));
         return false;
@@ -370,8 +418,8 @@ static void zoom_draw(void) {
     float bw = ImGui::GetFrameHeight() * 1.6f;   // the side and close buttons
     float w = vp->Size.x - bw * 3, h = vp->Size.y * 0.90f;
     int pw = 0, ph = 0;
-    SDL_Texture *t = pic(Z.full[Z.at], &pw, &ph);
-    if (!t) t = pic(Z.small[Z.at], &pw, &ph);   // the small one until the original has come
+    SDL_Texture *t = pic(Z.full[Z.at], &pw, &ph, 0);
+    if (!t) t = pic(Z.small[Z.at], &pw, &ph, 0);   // the small one until the original has come
     if (t) {
         float s = w / pw < h / ph ? w / pw : h / ph;
         ImGui::SetCursorPos(ImVec2((vp->Size.x - pw * s) / 2, (vp->Size.y - ph * s) / 2));
@@ -429,6 +477,26 @@ int mods_browse_draw(const char *exe_dir, SDL_Renderer *ren) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", menu_text(UI_GB_NOTE));
     ImGui::PopTextWrapPos();
+    {   // NSFW mods (MKW_GB_MATURE): obfuscate blurs every rated mod, show blurs nothing.
+        static const char *const modes[] = {"obfuscate", "show"};
+        static const UiTextId labels[] = {UI_GB_MATURE_OBFUSCATE, UI_GB_MATURE_SHOW};
+        const char *cur = cfg_value("MKW_GB_MATURE");
+        int at = 0;
+        for (int i = 0; i < 2; i++)
+            if (!strcmp(cur, modes[i])) at = i;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.28f);
+        if (ImGui::BeginCombo("##gbmature", menu_text(labels[at]))) {
+            for (int i = 0; i < 2; i++)
+                if (ImGui::Selectable(menu_text(labels[i]), at == i) && at != i) {
+                    cfg_set("MKW_GB_MATURE", modes[i]);
+                    cfg_save();
+                    pics_redecode();
+                }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", menu_text(UI_GB_MATURE));
+    }
     ImGui::Spacing();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.45f);
     bool go = ImGui::InputTextWithHint("##gbq", menu_text(UI_GB_SEARCH), g_query, sizeof g_query,
@@ -481,12 +549,13 @@ int mods_browse_draw(const char *exe_dir, SDL_Renderer *ren) {
     float rh = ImGui::GetTextLineHeight() * 2.4f;
     for (int i = 0; i < nrows; i++) {
         ImGui::PushID(i);
-        char label[220];
+        int hidden = gb_hidden_row(rows[i].vis, rows[i].rated);   // blurred thumbnails, shown titles
+        char label[400];
         snprintf(label, sizeof label, "%s\n%s  ·  %s", rows[i].name, rows[i].author, rows[i].category);
         ImVec2 at = ImGui::GetCursorPos();
         bool hit = ImGui::Selectable("##row", g_selected == i, 0, ImVec2(0, rh));
         ImGui::SetCursorPos(at);
-        picture(rows[i].thumb, rh * 1.66f, rh);
+        picture(rows[i].thumb, rh * 1.66f, rh, hidden);
         ImGui::SameLine();
         ImGui::TextUnformatted(label);
         ImGui::SetCursorPos(ImVec2(at.x, at.y + rh + ImGui::GetStyle().ItemSpacing.y));
@@ -510,6 +579,7 @@ int mods_browse_draw(const char *exe_dir, SDL_Renderer *ren) {
     if (job == JOB_INFO && running && !info.id) {
         ImGui::TextDisabled("%s", menu_text(UI_GB_LOADING));
     } else if (info.id && g_selected != -1) {
+        int hidden = gb_hidden_row(info.vis, info.ratings[0] != 0);   // its pictures stay blurred, the rest shows
         ImGui::TextUnformatted(info.name);
         if (job == JOB_INFO && running) {
             ImGui::SameLine();
@@ -520,12 +590,16 @@ int mods_browse_draw(const char *exe_dir, SDL_Renderer *ren) {
         ImGui::TextDisabled("%s", line);
         snprintf(line, sizeof line, menu_text(UI_GB_LICENSE), info.license);
         ImGui::TextDisabled("%s", line);
+        if (info.ratings[0]) {
+            snprintf(line, sizeof line, menu_text(UI_GB_RATED), info.ratings);
+            ImGui::TextDisabled("%s", line);
+        }
         if (ImGui::SmallButton(menu_text(UI_GB_OPEN))) SDL_OpenURL(info.url);
         // the author's screenshots, from GameBanana as the page is shown
         float sw = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2) / 3;
         for (int i = 0; i < info.nshots && i < 3; i++) {
             if (i) ImGui::SameLine();
-            if (picture(info.shots[i], sw, sw * 0.6f)) zoom_open(info, i);
+            if (picture(info.shots[i], sw, sw * 0.6f, hidden) && !hidden) zoom_open(info, i);
             if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         }
         ImGui::Separator();

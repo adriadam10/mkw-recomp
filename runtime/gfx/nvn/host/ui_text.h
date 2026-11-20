@@ -218,10 +218,11 @@ typedef enum {
     UI_MOD_ERR_LAYOUT, UI_MOD_ERR_NAME, UI_MOD_ERR_IO, UI_MOD_ERR_NOPORT, UI_MOD_ERR_NOGAME,
     UI_MOD_VARIANTS, UI_MOD_ERR_BIG, UI_MOD_ERR_UNPACK,
     // the GameBanana tab (ui/launcher/mods_browse.cpp): BY "%s" (author), LICENSE "%s", INSTALL "%s" (file name),
-    // CONFIRM "%s ... %s" (file, author), PAGE "%d ... %d", ERROR "%s" (what failed)
+    // CONFIRM "%s ... %s" (file, author), PAGE "%d ... %d", ERROR "%s" (what failed), RATED "%s" (content ratings)
     UI_MOD_TAB_INSTALLED, UI_MOD_TAB_FIND, UI_GB_NOTE, UI_GB_SEARCH, UI_GB_SORT_DOWNLOADS, UI_GB_SORT_NEW,
     UI_GB_SORT_LIKES, UI_GB_LOADING, UI_GB_NONE, UI_GB_BY, UI_GB_LICENSE, UI_GB_OPEN, UI_GB_INSTALL, UI_GB_CONFIRM,
-    UI_GB_UNSAFE, UI_GB_PAGE, UI_GB_ERROR, UI_MOD_WARN_GRAPHICS, UI_MOD_WARN_SHADERS, UI_MOD_PLUGIN, UI_MOD_CODE_REBUILD, UI_MOD_RISK, UI_MOD_RISK_ACK,
+    UI_GB_UNSAFE, UI_GB_PAGE, UI_GB_ERROR, UI_GB_RATED, UI_GB_MATURE, UI_GB_MATURE_OBFUSCATE,
+    UI_GB_MATURE_SHOW, UI_MOD_WARN_GRAPHICS, UI_MOD_WARN_SHADERS, UI_MOD_PLUGIN, UI_MOD_CODE_REBUILD, UI_MOD_RISK, UI_MOD_RISK_ACK,
     // the update (ui/launcher/launcher_update.cpp): UPDATE "... %s ... %d MB" (tag, size), FETCHING "... %s" (tag),
     // FAILED "... %s" (why), UPDATED "... %s" (tag); the Menu tab's switch
     UI_LAUNCH_UPDATE_FETCHING, UI_LAUNCH_UPDATE_FAILED, UI_LAUNCH_UPDATED,
