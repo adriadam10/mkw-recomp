@@ -90,6 +90,8 @@ def unpack(archive, dst):
         return "layout", "unsafe names"
     if subprocess.run([tar, "-xf", archive, "-C", dst], capture_output=True).returncode:
         return "unpack", "tar could not unpack it"
+    if any(p.is_symlink() for p in Path(dst).rglob("*")):
+        return "layout", "the archive holds links"
     if sum(p.stat().st_size for p in Path(dst).rglob("*") if p.is_file() and not p.is_symlink()) > MAX_BYTES:
         return "big", "over the size limit"
     return None
