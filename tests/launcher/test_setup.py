@@ -827,6 +827,9 @@ def test_lastrun_reads_how_the_last_game_ended() -> None:
     assert lastrun.verdict(hang + closed, "0.1.11", sigs) == "crash"
     assert lastrun.verdict(hang + slow + closed, "0.1.11", sigs) == "clean"
     assert lastrun.verdict(slow + hang + closed, "0.1.11", sigs) == "crash"
+    assert lastrun.verdict(closed + "[host] FATAL: SIGSEGV during shutdown\n", "0.1.11", sigs) == "crash"
+    assert lastrun.verdict(closed + "vk: device fault: Instruction pointer invalid\n", "0.1.11", sigs) == "known 22"
+    assert lastrun.verdict("[host] FATAL: earlier\n" + closed, "0.1.11", sigs) == "clean"
     assert (ROOT / "tools/github/signatures.toml").is_file()
 
 

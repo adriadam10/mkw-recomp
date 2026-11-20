@@ -46,7 +46,9 @@ def verdict(log: str, version: str, sigs: list[dict]) -> str:
     # A hang the player then closed the window on is not a clean end (#382, #206): the last hang counts when no
     # "slow, not hung" line follows it.
     hung = log.rfind(HANG) > log.rfind(SLOW)
-    if not hung and any(c in log for c in CLEAN):
+    closed = max(log.rfind(c) for c in CLEAN)
+    # Shutdown still runs plugin and save cleanup after the close line; that work can fail.
+    if not hung and closed >= 0 and not CRASH.search(log, closed):
         return "clean"
     low = log.lower()
     for s in sigs:
