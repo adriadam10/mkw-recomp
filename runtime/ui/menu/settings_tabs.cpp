@@ -680,7 +680,7 @@ void settings_tabs(float scale, float bottom) {
                                                                           : menu_text(kTabNames[k]),
                      k);   // the id stays per language
             // the testing and shortcut tabs in the dim colour: the ones most players need come first and stand out
-            bool quiet = k >= TAB_ADVANCED && k != g_tab;
+            bool quiet = k >= TAB_ADVANCED && k < TAB_MOD && k != g_tab;
             if (quiet) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
             bool open = ImGui::BeginTabItem(label, nullptr, g_tab_request == k ? ImGuiTabItemFlags_SetSelected : 0);
             if (quiet) ImGui::PopStyleColor();

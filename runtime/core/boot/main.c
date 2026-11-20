@@ -550,10 +550,6 @@ static void portable_paths(RtConfig *c) {
     }
 }
 
-// The start screen (ui/launcher/launcher.cpp) comes first in the player's build (no linked game code) on a plain start, and in
-// build/mkw with --launcher. --play, MKW_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
-// MKW_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
-// gone).
 // name is one of the comma-separated entries of list (spaces around an entry ignored, as plugins_load reads it)
 static int mods_list_has(const char *list, const char *name) {
     size_t n = strlen(name);
@@ -568,6 +564,10 @@ static int mods_list_has(const char *list, const char *name) {
     return 0;
 }
 
+// The start screen (ui/launcher/launcher.cpp) comes first in the player's build (no linked game code) on a plain start, and in
+// build/mkw with --launcher. --play, MKW_NO_LAUNCHER=1 or any other mode skip it; Play runs the process again with
+// MKW_LAUNCHED=1, so the game claims its address space in a fresh process (and on Windows the window's libraries are
+// gone).
 static int want_launcher(int argc, char **argv) {
     const char *done = getenv("MKW_LAUNCHED"), *off = getenv("MKW_NO_LAUNCHER");
     if ((done && *done) || (off && !strcmp(off, "1"))) return 0;
