@@ -27,6 +27,9 @@ outcome = plan[min(n, len(plan) - 1)]
 if outcome == "ice":
     sys.stderr.write("Stack dump:\\n0. Program arguments: clang\\nPLEASE submit a bug report\\nFILES TO THE BUG REPORT:\\n")
     sys.exit(1)
+if outcome == "cache":
+    sys.stderr.write("error: unable to build: checking cache failed: manifest_create Unexpected\\n")
+    sys.exit(1)
 if outcome == "error":
     sys.stderr.write("main_0001.c:1:1: error: unknown type name 'uint6'\\n")
     sys.exit(1)
@@ -55,6 +58,16 @@ def test_crash_retried_once(tmp_path: Path, capsys: pytest.CaptureFixture[str], 
     assert stamp.is_file() == ok
     if plan.startswith("ice"):
         assert "Program arguments" in capsys.readouterr().err  # the crash's head, which the 300-character tail lost
+
+
+def test_zig_cache_failure_says_what_to_do(tmp_path: Path) -> None:
+    """#406: zig's own "checking cache failed" (its cache folder on a drive it cannot use) told the
+    player nothing; the message names the cause and the way out, and the compile is not retried."""
+    err, n, stamp = compile_with(tmp_path, "cache")
+    assert n == 1
+    assert not stamp.is_file()
+    assert "cache folder" in err
+    assert "ZIG_GLOBAL_CACHE_DIR" in err
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="a shell script stands in for the compiler")

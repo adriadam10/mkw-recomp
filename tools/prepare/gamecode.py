@@ -183,6 +183,10 @@ def compile_one(
         if damaged(src):
             raise DamagedSource(f"compiling the game code failed: {src.name} has NUL bytes (a damaged write)")
         print(f"compile: {src.name} failed:\n{r.stderr.strip()[:3000]}", file=sys.stderr)
+        if "checking cache failed" in r.stderr:  # #406: zig cannot use its cache folder
+            return (f"{src.name}: the compiler could not use its cache folder (setup-work/zig-cache in the game folder), "
+                    "as on a network share or a drive a compatibility layer maps. Move the game folder to a local "
+                    "drive, or set ZIG_GLOBAL_CACHE_DIR to a folder on one.")
         return f"{src.name}: {r.stderr.strip()[-300:]}"
     stamp.write_text(key)
     return ""
