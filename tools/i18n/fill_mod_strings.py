@@ -1129,6 +1129,18 @@ for _ctx, _langs in LASTRUN.items():
     T.setdefault(_ctx, {}).update(_langs)
 
 
+# The manual update check's "no newer version" line (11/2026)
+T.setdefault("UI_TOOLS_UPDATE_CURRENT", {}).update({
+    "ca": "Tens l'última versió.", "de": "Du bist auf dem neuesten Stand.", "fr": "Vous êtes à jour.",
+    "es": "Estás al día.", "es-419": "Estás al día.", "it": "Sei aggiornato.",
+    "pt": "Estás atualizado.", "pt-BR": "Você está atualizado.", "nl": "Je bent up-to-date.",
+    "ru": "У вас последняя версия.", "ja": "最新の状態です。", "ko": "최신 버전입니다.",
+    "zh-Hans": "已是最新版本。", "zh-Hant": "已是最新版本。", "gl": "Tes a última versión.",
+    "eu": "Azken bertsioa duzu.", "pl": "Masz najnowszą wersję.", "tr": "Güncelsiniz.",
+    "uk": "У вас остання версія.", "th": "คุณใช้เวอร์ชันล่าสุดแล้ว",
+})
+
+
 def main():
     # catalog.py's own reader and writer: a long English id is wrapped over several lines in the .po, which a
     # one-line pattern missed (four of the GameBanana tab's texts on 13/11/2026)
