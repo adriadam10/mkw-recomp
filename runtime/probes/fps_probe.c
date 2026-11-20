@@ -130,6 +130,64 @@ int probe_fps(void) {
     iv = feed(&a, 200.0, 5.0, 300, &changes);   // 60 s
     expect("45 ms, then 200 ms frames for 60 s", iv, 4, changes, 1);
 
+    // #655 (BC-250, RADV, 0.1.15): the CPU's clock follows its load, so a slower interval makes every frame slower. The
+    // race held 30 fps with MKW_FPS=30 (28.4 at worst over 8 minutes, the big submission recorded in 17 ms), but auto,
+    // once a heavy stretch took it to 4, stayed at 15 fps for minutes: there the same submission took 28.6 ms, and
+    // no measure fitted 20 fps to come down. Modelled: 30 ms of work at full clock; the clock goes from 1 at 85 % busy
+    // down to 0.5 at 60 % (linear between), following the load within ~10 frames. At interval 2 that is 30 ms (30
+    // fps), at 3 ~37 ms, at 4 ~46 ms: neither of the two fits the interval below it. After 4 s of 70 ms work it should
+    // come back to 30 fps and stay there most of the time.
+    for (int with_held = 1; with_held >= 0; with_held--) {
+        fps_auto_reset(&a);
+        changes = 0;
+        double clk = 1.0;
+        int at2 = 0, frames = 0;
+        for (int f = 0; f < 4800; f++) {   // 30 s at 2 (if it holds), 4 s heavy, then ~60 s
+            double base = f >= 1800 && f < 2040 ? 70.0 : 30.0;
+            if (!with_held && f < 1800) base = 70.0;   // never held 30 fps or 20 before: no trials
+            double cost = base / clk, period = a.iv * 1000.0 / 60, real = cost > period ? cost : period;
+            double u = cost / real, want = u >= 0.85 ? 1.0 : u <= 0.6 ? 0.5 : 0.5 + 0.5 * (u - 0.6) / 0.25;
+            clk += (want - clk) * 0.1;
+            int prev = a.iv;
+            if (fps_auto_step(&a, cost, real) != prev && f >= 2040) changes++;
+            if (f >= 2640) frames++, at2 += a.iv == 2;   // from 10 s after the heavy stretch
+        }
+        int pct = frames ? at2 * 100 / frames : 0;
+        if (with_held) {
+            printf("     fps: clock following the load: interval 2 in %d %% of the frames from 10 s after the heavy "
+                   "stretch\n", pct);
+            expect("clock following the load (#655)", a.iv, 2, changes + (pct < 75) * 99, 12);
+        } else {   // 70 ms work throughout: 4 is right, and with no faster interval ever held, no trials
+            changes = 0;
+            for (int f = 0; f < 3600; f++) {
+                double cost = 70.0 / clk, period = a.iv * 1000.0 / 60, real = cost > period ? cost : period;
+                double u = cost / real, want = u >= 0.85 ? 1.0 : u <= 0.6 ? 0.5 : 0.5 + 0.5 * (u - 0.6) / 0.25;
+                clk += (want - clk) * 0.1;
+                int prev = a.iv;
+                if (fps_auto_step(&a, 70.0, real) != prev) changes++;
+            }
+            expect("70 ms work, clock following the load", a.iv, 4, changes, 0);
+        }
+    }
+
+    // What the trials cost where the faster interval no longer holds (no clock effect): 30 s of 28 ms frames, then 45
+    // ms for good. Each trial of 2 is 1 s the machine cannot hold; after 10 s at 3, then 20, 40 and 60: in 2 minutes
+    // three of them, under 5 % of the frames at 2.
+    fps_auto_reset(&a);
+    changes = 0;
+    feed(&a, 28.0, 1.0, 900, &changes);
+    changes = 0;
+    int at2b = 0, n45 = 0;
+    for (int f = 0; f < 2400; f++) {   // 120 s of 45 ms frames (at 20 fps)
+        int prev = a.iv;
+        double m = 45.0 + (f & 1 ? 1.0 : -1.0);
+        if (fps_auto_step(&a, m, real_of(m, prev)) != prev) changes++;
+        n45++, at2b += a.iv == 2;
+    }
+    int pct2 = at2b * 100 / n45;
+    printf("     fps: 45 ms frames after 30 fps held: interval 2 (trials) in %d %% of the frames\n", pct2);
+    expect("45 ms frames after 30 fps held, 120 s", a.iv, 3, changes + (pct2 >= 5) * 99, 7);
+
     // MKW_LOGIC_HZ=120: the interval counts 120 Hz ticks, up to 8 (15 fps); lhz120c topped out at 30 fps with 4
     static const struct { const char *what; double ms; int want; } at120[] = {
         {"120 Hz, 7 ms frames", 7.0, 1},   {"120 Hz, 15 ms frames", 15.0, 2}, {"120 Hz, 36 ms frames", 36.0, 5},
