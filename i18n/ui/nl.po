@@ -31,11 +31,6 @@ msgctxt "UI_MENU_TAB_SCREEN"
 msgid "Screen"
 msgstr "Scherm"
 
-#. The settings tab with the game's and the menu's language, LAN play and the update check.
-msgctxt "UI_MENU_TAB_GENERAL"
-msgid "General"
-msgstr "Algemeen"
-
 msgctxt "UI_MENU_TAB_SOUND"
 msgid "Sound"
 msgstr "Geluid"
@@ -44,6 +39,11 @@ msgctxt "UI_MENU_TAB_CONTROLS"
 msgid "Controls"
 msgstr "Besturing"
 
+#. The settings tab with the game's and the menu's language, LAN play and the update check.
+msgctxt "UI_MENU_TAB_GENERAL"
+msgid "General"
+msgstr "Algemeen"
+
 msgctxt "UI_MENU_TAB_ADVANCED"
 msgid "Advanced"
 msgstr "Geavanceerd"
@@ -51,222 +51,6 @@ msgstr "Geavanceerd"
 msgctxt "UI_MENU_TAB_GRAPHICS"
 msgid "Graphics"
 msgstr "Beeld"
-
-msgctxt "UI_MENU_TAB_HACKS"
-msgid "Hacks"
-msgstr "Hacks"
-
-msgctxt "UI_MENU_HACKS_WARNING"
-msgid ""
-"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
-"change how the game behaves."
-msgstr ""
-"Experimenteel: snelkoppelingen die de console niet heeft, om sneller te spelen en te testen. Ze "
-"kunnen het gedrag van het spel veranderen."
-
-msgctxt "UI_MENU_TURBO"
-msgid "Turbo"
-msgstr "Turbo"
-
-msgctxt "UI_MENU_TURBO_DESC"
-msgid ""
-"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
-"most 60 frames a second."
-msgstr ""
-"Het hele spel gaat sneller: menu's, filmpjes, laadtijden en races. Houd F2 ingedrukt of druk "
-"erop. Het scherm toont maximaal 60 beelden per seconde."
-
-msgctxt "UI_MENU_TURBO_HOLD"
-msgid "Hold F2"
-msgstr "F2 ingedrukt houden"
-
-msgctxt "UI_MENU_TURBO_TOGGLE"
-msgid "F2 on/off"
-msgstr "F2 aan/uit"
-
-msgctxt "UI_MENU_TURBO_SPEED"
-msgid "Turbo speed"
-msgstr "Turbosnelheid"
-
-msgctxt "UI_MENU_TURBO_SPEED_DESC"
-msgid "How many times faster. A slow PC may not reach it."
-msgstr "Hoeveel keer sneller. Een trage pc haalt dat misschien niet."
-
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "Filmpjes overslaan"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "Slaat de intro's van bekers en banen over zodra ze beginnen."
-
-msgctxt "UI_MENU_SEED"
-msgid "Same randomness every time"
-msgstr "Elke keer hetzelfde toeval"
-
-msgctxt "UI_MENU_SEED_DESC"
-msgid ""
-"The game draws the same random numbers in every session: the same title course, the same items. "
-"For testing."
-msgstr ""
-"Het spel trekt in elke sessie dezelfde willekeurige getallen: dezelfde titelbaan, dezelfde "
-"voorwerpen. Om te testen."
-
-msgctxt "UI_MENU_FREEZE_KEYS"
-msgid "Freeze keys"
-msgstr "Pauzetoetsen"
-
-msgctxt "UI_MENU_FREEZE_KEYS_DESC"
-msgid ""
-"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
-"look at a moment closely."
-msgstr ""
-"F3 zet het spel stil op het beeld op het scherm en laat het weer doorgaan; F4 gaat één beeld "
-"verder. Om een moment van dichtbij te bekijken."
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Alles vrijspelen"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Alle personages en outfits, voertuigen en stickers, de Speciale beker en Spiegel. Het komt in je "
-"spelgegevens als het spel opslaat: uitzetten vergrendelt ze niet opnieuw."
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Meteen naar"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Doorloopt bij het starten zelf de menu's. Tijdrace: Mario, standaardkart en de baan die het spel "
-"voorstelt (altijd dezelfde met «Elke keer hetzelfde toeval»), zonder tegenstanders. Rondrijden: "
-"de open wereld. De controller werkt nog steeds."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Tijdrace"
-
-msgctxt "UI_MENU_QUICK_RACE_GP"
-msgid "Grand Prix"
-msgstr ""
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Rondrijden"
-
-msgctxt "UI_MENU_CLASSIC_GP"
-msgid "Classic Grand Prix"
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_GP_DESC"
-msgid ""
-"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
-"Changes take several seconds and affect races started afterward."
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_VS"
-msgid "Classic VS races"
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_VS_DESC"
-msgid ""
-"VS races after the first take place on the next course instead of the road to it, whatever the "
-"course rule. Changes take several seconds and affect races started afterward."
-msgstr ""
-
-msgctxt "UI_MENU_ANISO"
-msgid "Texture filtering"
-msgstr "Texturefilter"
-
-msgctxt "UI_MENU_ANISO_DESC"
-msgid ""
-"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
-"each texture asks for. Impact on frame rate: low."
-msgstr ""
-"Scherpte van texturen die ver weg of onder een lage hoek te zien zijn, zoals de weg voor je. Spel "
-"gebruikt wat elke textuur vraagt. Invloed op de framerate: laag."
-
-msgctxt "UI_MENU_ANISO_GAME"
-msgid "Game"
-msgstr "Spel"
-
-msgctxt "UI_MENU_TEX_QUALITY"
-msgid "Texture quality"
-msgstr "Texturekwaliteit"
-
-msgctxt "UI_MENU_TEX_QUALITY_DESC"
-msgid ""
-"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
-"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
-msgstr ""
-"Detail van de eigen texturen van het spel. Half en Kwart slaan de fijnste niveaus over: minder "
-"geheugenverkeer op de grafische kaart, vager oppervlak van dichtbij. Invloed op de framerate: "
-"laag."
-
-msgctxt "UI_MENU_TEX_QUALITY_FULL"
-msgid "Full"
-msgstr "Volledig"
-
-msgctxt "UI_MENU_TEX_QUALITY_HALF"
-msgid "Half"
-msgstr "Half"
-
-msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
-msgid "Quarter"
-msgstr "Kwart"
-
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "Detailafstand"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr ""
-"Hoe ver objecten hun gedetailleerde modellen houden voordat ze door simpelere worden vervangen. "
-"Console is die van de Switch 2. Invloed op de framerate: laag."
-
-msgctxt "UI_MENU_DETAIL_LOW"
-msgid "Low"
-msgstr "Laag"
-
-msgctxt "UI_MENU_DETAIL_MEDIUM"
-msgid "Medium"
-msgstr "Gemiddeld"
-
-msgctxt "UI_MENU_DETAIL_CONSOLE"
-msgid "Console"
-msgstr "Console"
-
-msgctxt "UI_MENU_DETAIL_HIGH"
-msgid "High"
-msgstr "Hoog"
-
-msgctxt "UI_MENU_DETAIL_ULTRA"
-msgid "Very high"
-msgstr "Zeer hoog"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "Schaduwkwaliteit"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr ""
-"Grootte van de kaart waarmee het spel schaduwen tekent. Kleiner is lichter voor de grafische "
-"kaart, met vagere schaduwranden. Console is 3072 in tv-modus en 2048 in handheldmodus. Invloed op "
-"de framerate: laag."
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -325,24 +109,6 @@ msgctxt "UI_MENU_WINDOW_SIZE_DESC"
 msgid "Size of the game window when not fullscreen."
 msgstr "Grootte van het spelvenster als het niet op volledig scherm staat."
 
-msgctxt "UI_MENU_QUALITY"
-msgid "Quality"
-msgstr "Kwaliteit"
-
-msgctxt "UI_MENU_QUALITY_DESC"
-msgid ""
-"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
-"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
-"resolution is what changes the frame rate most."
-msgstr ""
-"Stelt de regels hieronder in één keer in. Console lijkt op de Switch 2; Laag en Gemiddeld zijn "
-"lichter voor de grafische kaart, Hoog en Zeer hoog scherper. Een regel aanpassen maakt het "
-"Aangepast. De interne resolutie verandert de framerate het meest."
-
-msgctxt "UI_MENU_QUALITY_CUSTOM"
-msgid "Custom"
-msgstr "Aangepast"
-
 msgctxt "UI_MENU_RESOLUTION"
 msgid "Internal resolution"
 msgstr "Interne resolutie"
@@ -396,6 +162,24 @@ msgstr "16:9-gebied"
 msgctxt "UI_MENU_HUD_POSITION_EDGES"
 msgid "Screen edges"
 msgstr "Schermranden"
+
+msgctxt "UI_MENU_QUALITY"
+msgid "Quality"
+msgstr "Kwaliteit"
+
+msgctxt "UI_MENU_QUALITY_DESC"
+msgid ""
+"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
+"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
+"resolution is what changes the frame rate most."
+msgstr ""
+"Stelt de regels hieronder in één keer in. Console lijkt op de Switch 2; Laag en Gemiddeld zijn "
+"lichter voor de grafische kaart, Hoog en Zeer hoog scherper. Een regel aanpassen maakt het "
+"Aangepast. De interne resolutie verandert de framerate het meest."
+
+msgctxt "UI_MENU_QUALITY_CUSTOM"
+msgid "Custom"
+msgstr "Aangepast"
 
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
@@ -656,6 +440,222 @@ msgctxt "UI_MENU_AUTOSET_UNDO_DESC"
 msgid "Puts back the rows Best settings for this PC changed."
 msgstr "Zet de rijen terug die „De beste instellingen voor deze pc” heeft gewijzigd."
 
+msgctxt "UI_MENU_ANISO"
+msgid "Texture filtering"
+msgstr "Texturefilter"
+
+msgctxt "UI_MENU_ANISO_DESC"
+msgid ""
+"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
+"each texture asks for. Impact on frame rate: low."
+msgstr ""
+"Scherpte van texturen die ver weg of onder een lage hoek te zien zijn, zoals de weg voor je. Spel "
+"gebruikt wat elke textuur vraagt. Invloed op de framerate: laag."
+
+msgctxt "UI_MENU_ANISO_GAME"
+msgid "Game"
+msgstr "Spel"
+
+msgctxt "UI_MENU_TEX_QUALITY"
+msgid "Texture quality"
+msgstr "Texturekwaliteit"
+
+msgctxt "UI_MENU_TEX_QUALITY_DESC"
+msgid ""
+"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
+"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
+msgstr ""
+"Detail van de eigen texturen van het spel. Half en Kwart slaan de fijnste niveaus over: minder "
+"geheugenverkeer op de grafische kaart, vager oppervlak van dichtbij. Invloed op de framerate: "
+"laag."
+
+msgctxt "UI_MENU_TEX_QUALITY_FULL"
+msgid "Full"
+msgstr "Volledig"
+
+msgctxt "UI_MENU_TEX_QUALITY_HALF"
+msgid "Half"
+msgstr "Half"
+
+msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
+msgid "Quarter"
+msgstr "Kwart"
+
+msgctxt "UI_MENU_DETAIL"
+msgid "Detail distance"
+msgstr "Detailafstand"
+
+msgctxt "UI_MENU_DETAIL_DESC"
+msgid ""
+"How far objects keep their detailed models before switching to simpler ones. Console is the "
+"Switch 2's. Impact on frame rate: low."
+msgstr ""
+"Hoe ver objecten hun gedetailleerde modellen houden voordat ze door simpelere worden vervangen. "
+"Console is die van de Switch 2. Invloed op de framerate: laag."
+
+msgctxt "UI_MENU_DETAIL_LOW"
+msgid "Low"
+msgstr "Laag"
+
+msgctxt "UI_MENU_DETAIL_MEDIUM"
+msgid "Medium"
+msgstr "Gemiddeld"
+
+msgctxt "UI_MENU_DETAIL_CONSOLE"
+msgid "Console"
+msgstr "Console"
+
+msgctxt "UI_MENU_DETAIL_HIGH"
+msgid "High"
+msgstr "Hoog"
+
+msgctxt "UI_MENU_DETAIL_ULTRA"
+msgid "Very high"
+msgstr "Zeer hoog"
+
+msgctxt "UI_MENU_SHADOW"
+msgid "Shadow quality"
+msgstr "Schaduwkwaliteit"
+
+msgctxt "UI_MENU_SHADOW_DESC"
+msgid ""
+"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
+"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
+msgstr ""
+"Grootte van de kaart waarmee het spel schaduwen tekent. Kleiner is lichter voor de grafische "
+"kaart, met vagere schaduwranden. Console is 3072 in tv-modus en 2048 in handheldmodus. Invloed op "
+"de framerate: laag."
+
+msgctxt "UI_MENU_TAB_HACKS"
+msgid "Hacks"
+msgstr "Hacks"
+
+msgctxt "UI_MENU_HACKS_WARNING"
+msgid ""
+"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
+"change how the game behaves."
+msgstr ""
+"Experimenteel: snelkoppelingen die de console niet heeft, om sneller te spelen en te testen. Ze "
+"kunnen het gedrag van het spel veranderen."
+
+msgctxt "UI_MENU_TURBO"
+msgid "Turbo"
+msgstr "Turbo"
+
+msgctxt "UI_MENU_TURBO_DESC"
+msgid ""
+"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
+"most 60 frames a second."
+msgstr ""
+"Het hele spel gaat sneller: menu's, filmpjes, laadtijden en races. Houd F2 ingedrukt of druk "
+"erop. Het scherm toont maximaal 60 beelden per seconde."
+
+msgctxt "UI_MENU_TURBO_HOLD"
+msgid "Hold F2"
+msgstr "F2 ingedrukt houden"
+
+msgctxt "UI_MENU_TURBO_TOGGLE"
+msgid "F2 on/off"
+msgstr "F2 aan/uit"
+
+msgctxt "UI_MENU_TURBO_SPEED"
+msgid "Turbo speed"
+msgstr "Turbosnelheid"
+
+msgctxt "UI_MENU_TURBO_SPEED_DESC"
+msgid "How many times faster. A slow PC may not reach it."
+msgstr "Hoeveel keer sneller. Een trage pc haalt dat misschien niet."
+
+msgctxt "UI_MENU_SKIP_MOVIES"
+msgid "Skip movies"
+msgstr "Filmpjes overslaan"
+
+msgctxt "UI_MENU_SKIP_MOVIES_DESC"
+msgid "Skips the cup and course openings as soon as they start."
+msgstr "Slaat de intro's van bekers en banen over zodra ze beginnen."
+
+msgctxt "UI_MENU_SEED"
+msgid "Same randomness every time"
+msgstr "Elke keer hetzelfde toeval"
+
+msgctxt "UI_MENU_SEED_DESC"
+msgid ""
+"The game draws the same random numbers in every session: the same title course, the same items. "
+"For testing."
+msgstr ""
+"Het spel trekt in elke sessie dezelfde willekeurige getallen: dezelfde titelbaan, dezelfde "
+"voorwerpen. Om te testen."
+
+msgctxt "UI_MENU_UNLOCK_ALL"
+msgid "Unlock everything"
+msgstr "Alles vrijspelen"
+
+msgctxt "UI_MENU_UNLOCK_ALL_DESC"
+msgid ""
+"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
+"when the game saves: turning it off does not lock them again."
+msgstr ""
+"Alle personages en outfits, voertuigen en stickers, de Speciale beker en Spiegel. Het komt in je "
+"spelgegevens als het spel opslaat: uitzetten vergrendelt ze niet opnieuw."
+
+msgctxt "UI_MENU_QUICK_RACE"
+msgid "Straight to"
+msgstr "Meteen naar"
+
+msgctxt "UI_MENU_QUICK_RACE_DESC"
+msgid ""
+"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
+"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
+"world. The controller still works."
+msgstr ""
+"Doorloopt bij het starten zelf de menu's. Tijdrace: Mario, standaardkart en de baan die het spel "
+"voorstelt (altijd dezelfde met «Elke keer hetzelfde toeval»), zonder tegenstanders. Rondrijden: "
+"de open wereld. De controller werkt nog steeds."
+
+msgctxt "UI_MENU_QUICK_RACE_TT"
+msgid "Time trial"
+msgstr "Tijdrace"
+
+msgctxt "UI_MENU_QUICK_RACE_GP"
+msgid "Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_QUICK_RACE_FREE"
+msgid "Free roam"
+msgstr "Rondrijden"
+
+msgctxt "UI_MENU_FREEZE_KEYS"
+msgid "Freeze keys"
+msgstr "Pauzetoetsen"
+
+msgctxt "UI_MENU_FREEZE_KEYS_DESC"
+msgid ""
+"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
+"look at a moment closely."
+msgstr ""
+"F3 zet het spel stil op het beeld op het scherm en laat het weer doorgaan; F4 gaat één beeld "
+"verder. Om een moment van dichtbij te bekijken."
+
+msgctxt "UI_MENU_CLASSIC_GP"
+msgid "Classic Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_GP_DESC"
+msgid ""
+"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
+"Changes take several seconds and affect races started afterward."
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS"
+msgid "Classic VS races"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS_DESC"
+msgid ""
+"VS races after the first take place on the next course instead of the road to it, whatever the "
+"course rule. Changes take several seconds and affect races started afterward."
+msgstr ""
+
 msgctxt "UI_MENU_GAME_LANG"
 msgid "Game language"
 msgstr "Spelertaal"
@@ -716,6 +716,14 @@ msgctxt "UI_MENU_SPEAKERS"
 msgid "Speakers"
 msgstr "Luidsprekers"
 
+msgctxt "UI_MENU_SPEAKERS_DESC"
+msgid ""
+"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
+"more, and stereo otherwise. Applies at the next start."
+msgstr ""
+"Automatisch geeft de 5.1-surroundmix van het spel als de geluidsuitvoer van het systeem 6 of meer "
+"kanalen heeft, anders stereo. Werkt bij de volgende start."
+
 msgctxt "UI_MENU_SPEAKERS_STEREO"
 msgid "Stereo"
 msgstr "Stereo"
@@ -731,14 +739,6 @@ msgstr "Dempen op de achtergrond"
 msgctxt "UI_MENU_BACKGROUND_MUTE_DESC"
 msgid "No sound while the game window is not in front."
 msgstr "Geen geluid zolang het spelvenster niet op de voorgrond staat."
-
-msgctxt "UI_MENU_SPEAKERS_DESC"
-msgid ""
-"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
-"more, and stereo otherwise. Applies at the next start."
-msgstr ""
-"Automatisch geeft de 5.1-surroundmix van het spel als de geluidsuitvoer van het systeem 6 of meer "
-"kanalen heeft, anders stereo. Werkt bij de volgende start."
 
 msgctxt "UI_MENU_MOTION"
 msgid "Motion controls"
@@ -811,6 +811,17 @@ msgctxt "UI_MENU_MOUSE_SENS_DESC"
 msgid "How fast the mouse turns the camera."
 msgstr "Hoe snel de muis de camera draait."
 
+msgctxt "UI_MENU_STICK_DEADZONE"
+msgid "Stick dead zone"
+msgstr "Dode zone van de stick"
+
+msgctxt "UI_MENU_STICK_DEADZONE_DESC"
+msgid ""
+"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
+msgstr ""
+"Hoe ver een stick moet kantelen voordat hij telt. Verhoog dit als de kart beweegt met de stick in "
+"rust."
+
 msgctxt "UI_MENU_SWITCH2"
 msgid "Switch 2 controllers (Bluetooth)"
 msgstr "Switch 2-controllers (Bluetooth)"
@@ -832,17 +843,6 @@ msgid ""
 "The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
 "Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
 msgstr ""
-
-msgctxt "UI_MENU_STICK_DEADZONE"
-msgid "Stick dead zone"
-msgstr "Dode zone van de stick"
-
-msgctxt "UI_MENU_STICK_DEADZONE_DESC"
-msgid ""
-"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
-msgstr ""
-"Hoe ver een stick moet kantelen voordat hij telt. Verhoog dit als de kart beweegt met de stick in "
-"rust."
 
 msgctxt "UI_MENU_BUTTON_ICONS"
 msgid "Button icons"
@@ -1967,6 +1967,16 @@ msgctxt "UI_LAUNCH_FILES_FOLDER"
 msgid "Game folder"
 msgstr "Spelmap"
 
+msgctxt "UI_LAUNCH_FILES_HELP"
+msgid ""
+"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
+"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
+"game code on this computer and translates the shaders."
+msgstr ""
+"Het spel wordt niet met de port meegeleverd: je hebt je eigen kopie van Mario Kart World "
+"1.0.0/1.8.0 nodig, gedumpt van je console (de mappen exefs en romfs). De installatie controleert "
+"de versie, bouwt de spelcode op deze computer en vertaalt de shaders."
+
 msgctxt "UI_LAUNCH_PICK_GAME_DIR"
 msgid "Choose game folder"
 msgstr "Spelmap kiezen"
@@ -1996,16 +2006,6 @@ msgid ""
 msgstr ""
 "Deze spelmap kon niet worden geselecteerd. Kies op Windows een map zonder regeleinden waarvan het "
 "volledige pad hoogstens %d UTF-16-eenheden is, zodat er ruimte blijft voor de spelbestanden."
-
-msgctxt "UI_LAUNCH_FILES_HELP"
-msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
-msgstr ""
-"Het spel wordt niet met de port meegeleverd: je hebt je eigen kopie van Mario Kart World "
-"1.0.0/1.8.0 nodig, gedumpt van je console (de mappen exefs en romfs). De installatie controleert "
-"de versie, bouwt de spelcode op deze computer en vertaalt de shaders."
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -2396,20 +2396,14 @@ msgstr ""
 "kwaliteit) gelden erbovenop, dus deze mod doet mogelijk minder dan op een console, ziet er "
 "slechter uit of werkt niet goed"
 
-#. Above every mod install and import.
-msgctxt "UI_MOD_RISK"
+#. Under an installed mod that ships shaders (Shader/ files).
+msgctxt "UI_MOD_WARN_SHADERS"
 msgid ""
-"Mods are made by other people and are not tested by this project. A mod can crash the game or "
-"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
-"its author."
+"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
+"show, or may break the picture"
 msgstr ""
-"Mods zijn gemaakt door anderen en worden door dit project niet getest. Een mod kan het spel laten "
-"crashen of je savegame beschadigen: lees eerst de pagina, bewaar een kopie van je savegame en "
-"meld problemen met een mod bij de auteur."
-
-msgctxt "UI_MOD_RISK_ACK"
-msgid "I understand"
-msgstr "Ik begrijp het"
+"Vervangt shaders: de port vertaalt de shaders van het spel tijdens de installatie, dus deze mod "
+"wordt mogelijk niet getoond of verstoort het beeld"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
 msgctxt "UI_MOD_PLUGIN"
@@ -2424,14 +2418,20 @@ msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "code: in- of uitschakelen bouwt de spelcode opnieuw op voor je speelt (een paar minuten)"
 
-#. Under an installed mod that ships shaders (Shader/ files).
-msgctxt "UI_MOD_WARN_SHADERS"
+#. Above every mod install and import.
+msgctxt "UI_MOD_RISK"
 msgid ""
-"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
-"show, or may break the picture"
+"Mods are made by other people and are not tested by this project. A mod can crash the game or "
+"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
+"its author."
 msgstr ""
-"Vervangt shaders: de port vertaalt de shaders van het spel tijdens de installatie, dus deze mod "
-"wordt mogelijk niet getoond of verstoort het beeld"
+"Mods zijn gemaakt door anderen en worden door dit project niet getest. Een mod kan het spel laten "
+"crashen of je savegame beschadigen: lees eerst de pagina, bewaar een kopie van je savegame en "
+"meld problemen met een mod bij de auteur."
+
+msgctxt "UI_MOD_RISK_ACK"
+msgid "I understand"
+msgstr "Ik begrijp het"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_UPDATE_FETCHING"
@@ -2465,6 +2465,16 @@ msgctxt "UI_LAUNCH_UPDATE_NOW"
 msgid "Update"
 msgstr "Bijwerken"
 
+#. Opens the release's notes on GitHub.
+msgctxt "UI_LAUNCH_WHATS_NEW"
+msgid "What's new"
+msgstr "Wat is er nieuw"
+
+#. After a failed download.
+msgctxt "UI_LAUNCH_RETRY"
+msgid "Try again"
+msgstr "Opnieuw proberen"
+
 msgctxt "UI_LAUNCH_UPDATE_PREPARING"
 msgid "Setting up %s in the background. You can keep playing meanwhile."
 msgstr "%s wordt op de achtergrond ingesteld. Je kunt ondertussen blijven spelen."
@@ -2480,16 +2490,6 @@ msgstr "Hiermee herstarten"
 msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
 msgid "It could not be set up in advance (%s): it will be set up when it starts."
 msgstr "Kon niet vooraf worden ingesteld (%s): dit gebeurt bij het starten."
-
-#. Opens the release's notes on GitHub.
-msgctxt "UI_LAUNCH_WHATS_NEW"
-msgid "What's new"
-msgstr "Wat is er nieuw"
-
-#. After a failed download.
-msgctxt "UI_LAUNCH_RETRY"
-msgid "Try again"
-msgstr "Opnieuw proberen"
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.
@@ -2962,3 +2962,164 @@ msgstr ""
 "grafische kaart (AMD, Intel of NVIDIA; op NVIDIA 510 of nieuwer). Sommige oudere grafische "
 "kaarten kunnen het helemaal niet krijgen. De installatie kan nu al: het spel start zodra het "
 "stuurprogramma is bijgewerkt."
+
+#. A product name: keep it as Steam shows it in your language.
+msgctxt "UI_MENU_GROUP_RPT"
+msgid "Steam Remote Play Together"
+msgstr "Steam Remote Play Together"
+
+msgctxt "UI_MENU_RPT_INVITE"
+msgid "Invite friends"
+msgstr "Vrienden uitnodigen"
+
+msgctxt "UI_MENU_RPT_INVITE_DESC"
+msgid ""
+"Opens Remote Play Together in the Steam overlay. Friends who join see and hear the game; each "
+"one's controller, or keyboard, becomes the next free player."
+msgstr ""
+"Opent Remote Play Together in de Steam-overlay. Vrienden die meedoen zien en horen het spel; "
+"ieders controller of toetsenbord wordt de volgende vrije speler."
+
+msgctxt "UI_MENU_RPT_LINK"
+msgid "Copy guest link"
+msgstr "Gastlink kopiëren"
+
+msgctxt "UI_MENU_RPT_LINK_DESC"
+msgid ""
+"Copies a link that lets anyone join from a browser or the Steam Link app, without being your "
+"Steam friend."
+msgstr ""
+"Kopieert een link waarmee iedereen kan meedoen via een browser of de Steam Link-app, zonder je "
+"Steam-vriend te zijn."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CONNECTED"
+msgid "%d connected"
+msgstr "%d verbonden"
+
+msgctxt "UI_MENU_RPT_NO_OVERLAY"
+msgid "no Steam overlay"
+msgstr "geen Steam-overlay"
+
+msgctxt "UI_MENU_RPT_WAITING"
+msgid "waiting for Steam"
+msgstr "wachten op Steam"
+
+#. steam_appid and mkw.ini are a setting and a file name: keep them.
+msgctxt "UI_MENU_RPT_NEED_APPID"
+msgid "Needs steam_appid in mkw.ini"
+msgstr "Vereist steam_appid in mkw.ini"
+
+msgctxt "UI_MENU_RPT_AT_START"
+msgid "Starts with the game"
+msgstr "Start met het spel"
+
+msgctxt "UI_MENU_RPT_FAILED"
+msgid "Steam is not available: see the log"
+msgstr "Steam is niet beschikbaar: zie het logboek"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_JOINED"
+msgid "%s joined Remote Play Together"
+msgstr "%s doet mee met Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_LEFT"
+msgid "%s left Remote Play Together"
+msgstr "%s heeft Remote Play Together verlaten"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_PAD"
+msgid "A Remote Play guest's controller is player %d"
+msgstr "De controller van een Remote Play-gast is speler %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_KEYBOARD"
+msgid "%s plays on the keyboard as player %d"
+msgstr "%s speelt op het toetsenbord als speler %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FULL"
+msgid "%s: no free player for the keyboard"
+msgstr "%s: geen vrije speler voor het toetsenbord"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FAILED"
+msgid "Remote Play Together is off: %s"
+msgstr "Remote Play Together staat uit: %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_INVITE"
+msgid ""
+"%d players need a controller each: %d connected. Steam's invite list is open: once your friends' "
+"controllers are in, pick the mode again."
+msgstr ""
+"%d spelers hebben elk een controller nodig: %d verbonden. De uitnodigingslijst van Steam is open: "
+"zodra de controllers van je vrienden er zijn, kies je de modus opnieuw."
+
+msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
+msgid ""
+"The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
+msgstr ""
+"De Steam-overlay ging niet open: start het spel vanuit Steam of stuur een gastlink (menu > Spel)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CHOICE"
+msgid "Local multiplayer for %d players: %d controllers connected. How do the other players join?"
+msgstr ""
+"Lokale multiplayer voor %d spelers: %d controllers verbonden. Hoe doen de andere spelers mee?"
+
+msgctxt "UI_MENU_RPT_CHOICE_LOCAL"
+msgid "Local players (connect more controllers)"
+msgstr "Lokale spelers (meer controllers verbinden)"
+
+msgctxt "UI_MENU_RPT_CHOICE_STEAM"
+msgid "Steam Remote Play Together (invite friends)"
+msgstr "Steam Remote Play Together (vrienden uitnodigen)"
+
+msgctxt "UI_MENU_RPT_APPID"
+msgid "Steam App ID"
+msgstr "Steam-app-ID"
+
+msgctxt "UI_MENU_RPT_APPID_DESC"
+msgid ""
+"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
+"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in mkw.ini. Takes effect at the next start."
+msgstr ""
+"Het Steam-spel waarals mkw draait voor Remote Play Together. Automatisch: het spel waarvan de "
+"startopties mkw starten (\"C:\\...\\mkw.exe\" %command%), dus elk eigen Steam-spel met Remote "
+"Play Together werkt. Een ander nummer: steam_appid in mkw.ini. Geldt vanaf de volgende start."
+
+msgctxt "UI_MENU_RPT_APPID_OFF"
+msgid "Off"
+msgstr "Uit"
+
+msgctxt "UI_MENU_RPT_APPID_AUTO"
+msgid "Automatic (the game Steam started)"
+msgstr "Automatisch (het spel dat Steam startte)"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_APPID_CUSTOM"
+msgid "%s (mkw.ini)"
+msgstr "%s (mkw.ini)"
+
+msgctxt "UI_MENU_RPT_APPID_ADD"
+msgid "Enter a Steam App ID"
+msgstr "Steam-app-ID invoeren"
+
+msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
+msgid ""
+"Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
+"keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
+"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
+"it in its list (steam_appids in mkw.ini). Backspace deletes a digit."
+msgstr ""
+"Typ met de cijfertoetsen de app-ID van een eigen Steam-spel met Remote Play Together (het nummer "
+"in het winkeladres van het spel, store.steampowered.com/app/<number>/) en druk op Enter of A. "
+"Vanaf de volgende start draait mkw als dat spel, en de rij Steam-app-ID hierboven houdt het in "
+"zijn lijst (steam_appids in mkw.ini). Backspace wist een cijfer."
+
+msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
+msgid "type the number"
+msgstr "typ het nummer"

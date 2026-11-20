@@ -383,6 +383,33 @@ int plat_open_folder(const char *path) {
 void *plat_lib_open(const char *name) { return dlopen(name, RTLD_NOW | RTLD_LOCAL); }
 void *plat_lib_sym(void *lib, const char *name) { return lib ? dlsym(lib, name) : NULL; }
 
+// The faults linux_mem.c handles and the preemption signals linux.c uses (SIGRTMIN and above): every standard and
+// real-time signal, so whichever a library takes is given back.
+struct PlatHandlers { struct sigaction sa[NSIG]; uint8_t ok[NSIG]; };
+
+PlatHandlers *plat_handlers_save(void) {
+    PlatHandlers *h = calloc(1, sizeof *h);
+    if (!h) return NULL;
+    for (int s = 1; s < NSIG; s++) h->ok[s] = s != SIGKILL && s != SIGSTOP && !sigaction(s, NULL, &h->sa[s]);
+    return h;
+}
+
+int plat_handlers_restore(PlatHandlers *h) {
+    if (!h) return 0;
+    int n = 0;
+    for (int s = 1; s < NSIG; s++) {
+        struct sigaction now;
+        if (!h->ok[s] || sigaction(s, NULL, &now)) continue;
+        int same = (now.sa_flags & SA_SIGINFO) == (h->sa[s].sa_flags & SA_SIGINFO) &&
+                   ((now.sa_flags & SA_SIGINFO) ? now.sa_sigaction == h->sa[s].sa_sigaction
+                                                : now.sa_handler == h->sa[s].sa_handler);
+        if (same) continue;
+        if (!sigaction(s, &h->sa[s], NULL)) n++;
+    }
+    free(h);
+    return n;
+}
+
 // ---- machine load: /proc/stat and /proc/self/stat for the CPU, hwmon for the temperature, the amdgpu sysfs files of
 // the render device for the GPU.
 

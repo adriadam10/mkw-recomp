@@ -31,11 +31,6 @@ msgctxt "UI_MENU_TAB_SCREEN"
 msgid "Screen"
 msgstr "Екран"
 
-#. The settings tab with the game's and the menu's language, LAN play and the update check.
-msgctxt "UI_MENU_TAB_GENERAL"
-msgid "General"
-msgstr "Загальні"
-
 msgctxt "UI_MENU_TAB_SOUND"
 msgid "Sound"
 msgstr "Звук"
@@ -44,6 +39,11 @@ msgctxt "UI_MENU_TAB_CONTROLS"
 msgid "Controls"
 msgstr "Керування"
 
+#. The settings tab with the game's and the menu's language, LAN play and the update check.
+msgctxt "UI_MENU_TAB_GENERAL"
+msgid "General"
+msgstr "Загальні"
+
 msgctxt "UI_MENU_TAB_ADVANCED"
 msgid "Advanced"
 msgstr "Додатково"
@@ -51,220 +51,6 @@ msgstr "Додатково"
 msgctxt "UI_MENU_TAB_GRAPHICS"
 msgid "Graphics"
 msgstr "Графіка"
-
-msgctxt "UI_MENU_TAB_HACKS"
-msgid "Hacks"
-msgstr "Хаки"
-
-msgctxt "UI_MENU_HACKS_WARNING"
-msgid ""
-"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
-"change how the game behaves."
-msgstr ""
-"Експериментально: скорочення, яких немає на консолі, щоб грати й тестувати швидше. Вони можуть "
-"змінити поведінку гри."
-
-msgctxt "UI_MENU_TURBO"
-msgid "Turbo"
-msgstr "Турбо"
-
-msgctxt "UI_MENU_TURBO_DESC"
-msgid ""
-"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
-"most 60 frames a second."
-msgstr ""
-"Уся гра працює швидше: меню, відео, завантаження та перегони. Утримуй або натисни F2. Екран "
-"показує щонайбільше 60 кадрів на секунду."
-
-msgctxt "UI_MENU_TURBO_HOLD"
-msgid "Hold F2"
-msgstr "Утримуй F2"
-
-msgctxt "UI_MENU_TURBO_TOGGLE"
-msgid "F2 on/off"
-msgstr "F2 вкл./викл."
-
-msgctxt "UI_MENU_TURBO_SPEED"
-msgid "Turbo speed"
-msgstr "Швидкість турбо"
-
-msgctxt "UI_MENU_TURBO_SPEED_DESC"
-msgid "How many times faster. A slow PC may not reach it."
-msgstr "У скільки разів швидше. Повільний ПК може її не досягти."
-
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "Пропускати відео"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "Пропускає вступи кубків і трас одразу, щойно вони починаються."
-
-msgctxt "UI_MENU_SEED"
-msgid "Same randomness every time"
-msgstr "Завжди однакова випадковість"
-
-msgctxt "UI_MENU_SEED_DESC"
-msgid ""
-"The game draws the same random numbers in every session: the same title course, the same items. "
-"For testing."
-msgstr ""
-"Гра витягує однакові випадкові числа в кожному сеансі: та сама траса на титульному екрані, ті "
-"самі предмети. Для тестування."
-
-msgctxt "UI_MENU_FREEZE_KEYS"
-msgid "Freeze keys"
-msgstr "Клавіші зупинки"
-
-msgctxt "UI_MENU_FREEZE_KEYS_DESC"
-msgid ""
-"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
-"look at a moment closely."
-msgstr ""
-"F3 зупиняє гру на кадрі, що на екрані, і запускає знову; F4 зсуває її на один кадр. Щоб уважно "
-"роздивитися момент."
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "Розблокувати все"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"Усі гонщики й костюми, транспорт і наліпки, Особливий кубок і Дзеркало. Потрапляє у твій "
-"збережений прогрес, коли гра зберігається: вимкнення не блокує їх знову."
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "Одразу до"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"Сама проходить меню під час запуску. Заїзд на час: Маріо, стандартний карт і траса, яку пропонує "
-"гра (завжди та сама з «Завжди однакова випадковість»), без суперників. Вільна їзда: відкритий "
-"світ. Контролер усе одно працює."
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "Заїзд на час"
-
-msgctxt "UI_MENU_QUICK_RACE_GP"
-msgid "Grand Prix"
-msgstr ""
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "Вільна їзда"
-
-msgctxt "UI_MENU_CLASSIC_GP"
-msgid "Classic Grand Prix"
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_GP_DESC"
-msgid ""
-"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
-"Changes take several seconds and affect races started afterward."
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_VS"
-msgid "Classic VS races"
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_VS_DESC"
-msgid ""
-"VS races after the first take place on the next course instead of the road to it, whatever the "
-"course rule. Changes take several seconds and affect races started afterward."
-msgstr ""
-
-msgctxt "UI_MENU_ANISO"
-msgid "Texture filtering"
-msgstr "Фільтрація текстур"
-
-msgctxt "UI_MENU_ANISO_DESC"
-msgid ""
-"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
-"each texture asks for. Impact on frame rate: low."
-msgstr ""
-"Чіткість текстур, що видно здалеку або під малим кутом, як-от дорога попереду. Гра використовує "
-"те, чого просить кожна текстура. Вплив на частоту кадрів: низький."
-
-msgctxt "UI_MENU_ANISO_GAME"
-msgid "Game"
-msgstr "Гра"
-
-msgctxt "UI_MENU_TEX_QUALITY"
-msgid "Texture quality"
-msgstr "Якість текстур"
-
-msgctxt "UI_MENU_TEX_QUALITY_DESC"
-msgid ""
-"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
-"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
-msgstr ""
-"Деталізація власних текстур гри. Половина й Чверть пропускають їхні найдрібніші рівні: менше "
-"навантаження на пам'ять відеокарти, розмитіші поверхні зблизька. Вплив на частоту кадрів: низький."
-
-msgctxt "UI_MENU_TEX_QUALITY_FULL"
-msgid "Full"
-msgstr "Повна"
-
-msgctxt "UI_MENU_TEX_QUALITY_HALF"
-msgid "Half"
-msgstr "Половина"
-
-msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
-msgid "Quarter"
-msgstr "Чверть"
-
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "Дальність деталей"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr ""
-"Як далеко об'єкти зберігають докладні моделі, перш ніж їх замінять простішими. Консоль — значення "
-"Switch 2. Вплив на частоту кадрів: низький."
-
-msgctxt "UI_MENU_DETAIL_LOW"
-msgid "Low"
-msgstr "Низька"
-
-msgctxt "UI_MENU_DETAIL_MEDIUM"
-msgid "Medium"
-msgstr "Середня"
-
-msgctxt "UI_MENU_DETAIL_CONSOLE"
-msgid "Console"
-msgstr "Консоль"
-
-msgctxt "UI_MENU_DETAIL_HIGH"
-msgid "High"
-msgstr "Висока"
-
-msgctxt "UI_MENU_DETAIL_ULTRA"
-msgid "Very high"
-msgstr "Дуже висока"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "Якість тіней"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr ""
-"Розмір карти, з якої гра малює тіні. Менша легша для відеокарти, але краї тіней розмитіші. На "
-"консолі це 3072 у док-станції та 2048 у портативному режимі. Вплив на частоту кадрів: низький."
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -323,24 +109,6 @@ msgctxt "UI_MENU_WINDOW_SIZE_DESC"
 msgid "Size of the game window when not fullscreen."
 msgstr "Розмір вікна гри, коли не на повному екрані."
 
-msgctxt "UI_MENU_QUALITY"
-msgid "Quality"
-msgstr "Якість"
-
-msgctxt "UI_MENU_QUALITY_DESC"
-msgid ""
-"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
-"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
-"resolution is what changes the frame rate most."
-msgstr ""
-"Налаштовує рядки нижче одразу. Консоль виглядає як Switch 2; Низька й Середня легші для "
-"відеокарти, Висока й Дуже висока чіткіші. Зміна рядка перемикає на Власну. Найбільше на частоту "
-"кадрів впливає внутрішня роздільність."
-
-msgctxt "UI_MENU_QUALITY_CUSTOM"
-msgid "Custom"
-msgstr "Власна"
-
 msgctxt "UI_MENU_RESOLUTION"
 msgid "Internal resolution"
 msgstr "Внутрішня роздільність"
@@ -392,6 +160,24 @@ msgstr "Область 16:9"
 msgctxt "UI_MENU_HUD_POSITION_EDGES"
 msgid "Screen edges"
 msgstr "Краї екрана"
+
+msgctxt "UI_MENU_QUALITY"
+msgid "Quality"
+msgstr "Якість"
+
+msgctxt "UI_MENU_QUALITY_DESC"
+msgid ""
+"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
+"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
+"resolution is what changes the frame rate most."
+msgstr ""
+"Налаштовує рядки нижче одразу. Консоль виглядає як Switch 2; Низька й Середня легші для "
+"відеокарти, Висока й Дуже висока чіткіші. Зміна рядка перемикає на Власну. Найбільше на частоту "
+"кадрів впливає внутрішня роздільність."
+
+msgctxt "UI_MENU_QUALITY_CUSTOM"
+msgid "Custom"
+msgstr "Власна"
 
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
@@ -650,6 +436,220 @@ msgctxt "UI_MENU_AUTOSET_UNDO_DESC"
 msgid "Puts back the rows Best settings for this PC changed."
 msgstr "Повертає рядки, змінені «Найкращими налаштуваннями для цього ПК»."
 
+msgctxt "UI_MENU_ANISO"
+msgid "Texture filtering"
+msgstr "Фільтрація текстур"
+
+msgctxt "UI_MENU_ANISO_DESC"
+msgid ""
+"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
+"each texture asks for. Impact on frame rate: low."
+msgstr ""
+"Чіткість текстур, що видно здалеку або під малим кутом, як-от дорога попереду. Гра використовує "
+"те, чого просить кожна текстура. Вплив на частоту кадрів: низький."
+
+msgctxt "UI_MENU_ANISO_GAME"
+msgid "Game"
+msgstr "Гра"
+
+msgctxt "UI_MENU_TEX_QUALITY"
+msgid "Texture quality"
+msgstr "Якість текстур"
+
+msgctxt "UI_MENU_TEX_QUALITY_DESC"
+msgid ""
+"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
+"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
+msgstr ""
+"Деталізація власних текстур гри. Половина й Чверть пропускають їхні найдрібніші рівні: менше "
+"навантаження на пам'ять відеокарти, розмитіші поверхні зблизька. Вплив на частоту кадрів: низький."
+
+msgctxt "UI_MENU_TEX_QUALITY_FULL"
+msgid "Full"
+msgstr "Повна"
+
+msgctxt "UI_MENU_TEX_QUALITY_HALF"
+msgid "Half"
+msgstr "Половина"
+
+msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
+msgid "Quarter"
+msgstr "Чверть"
+
+msgctxt "UI_MENU_DETAIL"
+msgid "Detail distance"
+msgstr "Дальність деталей"
+
+msgctxt "UI_MENU_DETAIL_DESC"
+msgid ""
+"How far objects keep their detailed models before switching to simpler ones. Console is the "
+"Switch 2's. Impact on frame rate: low."
+msgstr ""
+"Як далеко об'єкти зберігають докладні моделі, перш ніж їх замінять простішими. Консоль — значення "
+"Switch 2. Вплив на частоту кадрів: низький."
+
+msgctxt "UI_MENU_DETAIL_LOW"
+msgid "Low"
+msgstr "Низька"
+
+msgctxt "UI_MENU_DETAIL_MEDIUM"
+msgid "Medium"
+msgstr "Середня"
+
+msgctxt "UI_MENU_DETAIL_CONSOLE"
+msgid "Console"
+msgstr "Консоль"
+
+msgctxt "UI_MENU_DETAIL_HIGH"
+msgid "High"
+msgstr "Висока"
+
+msgctxt "UI_MENU_DETAIL_ULTRA"
+msgid "Very high"
+msgstr "Дуже висока"
+
+msgctxt "UI_MENU_SHADOW"
+msgid "Shadow quality"
+msgstr "Якість тіней"
+
+msgctxt "UI_MENU_SHADOW_DESC"
+msgid ""
+"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
+"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
+msgstr ""
+"Розмір карти, з якої гра малює тіні. Менша легша для відеокарти, але краї тіней розмитіші. На "
+"консолі це 3072 у док-станції та 2048 у портативному режимі. Вплив на частоту кадрів: низький."
+
+msgctxt "UI_MENU_TAB_HACKS"
+msgid "Hacks"
+msgstr "Хаки"
+
+msgctxt "UI_MENU_HACKS_WARNING"
+msgid ""
+"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
+"change how the game behaves."
+msgstr ""
+"Експериментально: скорочення, яких немає на консолі, щоб грати й тестувати швидше. Вони можуть "
+"змінити поведінку гри."
+
+msgctxt "UI_MENU_TURBO"
+msgid "Turbo"
+msgstr "Турбо"
+
+msgctxt "UI_MENU_TURBO_DESC"
+msgid ""
+"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
+"most 60 frames a second."
+msgstr ""
+"Уся гра працює швидше: меню, відео, завантаження та перегони. Утримуй або натисни F2. Екран "
+"показує щонайбільше 60 кадрів на секунду."
+
+msgctxt "UI_MENU_TURBO_HOLD"
+msgid "Hold F2"
+msgstr "Утримуй F2"
+
+msgctxt "UI_MENU_TURBO_TOGGLE"
+msgid "F2 on/off"
+msgstr "F2 вкл./викл."
+
+msgctxt "UI_MENU_TURBO_SPEED"
+msgid "Turbo speed"
+msgstr "Швидкість турбо"
+
+msgctxt "UI_MENU_TURBO_SPEED_DESC"
+msgid "How many times faster. A slow PC may not reach it."
+msgstr "У скільки разів швидше. Повільний ПК може її не досягти."
+
+msgctxt "UI_MENU_SKIP_MOVIES"
+msgid "Skip movies"
+msgstr "Пропускати відео"
+
+msgctxt "UI_MENU_SKIP_MOVIES_DESC"
+msgid "Skips the cup and course openings as soon as they start."
+msgstr "Пропускає вступи кубків і трас одразу, щойно вони починаються."
+
+msgctxt "UI_MENU_SEED"
+msgid "Same randomness every time"
+msgstr "Завжди однакова випадковість"
+
+msgctxt "UI_MENU_SEED_DESC"
+msgid ""
+"The game draws the same random numbers in every session: the same title course, the same items. "
+"For testing."
+msgstr ""
+"Гра витягує однакові випадкові числа в кожному сеансі: та сама траса на титульному екрані, ті "
+"самі предмети. Для тестування."
+
+msgctxt "UI_MENU_UNLOCK_ALL"
+msgid "Unlock everything"
+msgstr "Розблокувати все"
+
+msgctxt "UI_MENU_UNLOCK_ALL_DESC"
+msgid ""
+"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
+"when the game saves: turning it off does not lock them again."
+msgstr ""
+"Усі гонщики й костюми, транспорт і наліпки, Особливий кубок і Дзеркало. Потрапляє у твій "
+"збережений прогрес, коли гра зберігається: вимкнення не блокує їх знову."
+
+msgctxt "UI_MENU_QUICK_RACE"
+msgid "Straight to"
+msgstr "Одразу до"
+
+msgctxt "UI_MENU_QUICK_RACE_DESC"
+msgid ""
+"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
+"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
+"world. The controller still works."
+msgstr ""
+"Сама проходить меню під час запуску. Заїзд на час: Маріо, стандартний карт і траса, яку пропонує "
+"гра (завжди та сама з «Завжди однакова випадковість»), без суперників. Вільна їзда: відкритий "
+"світ. Контролер усе одно працює."
+
+msgctxt "UI_MENU_QUICK_RACE_TT"
+msgid "Time trial"
+msgstr "Заїзд на час"
+
+msgctxt "UI_MENU_QUICK_RACE_GP"
+msgid "Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_QUICK_RACE_FREE"
+msgid "Free roam"
+msgstr "Вільна їзда"
+
+msgctxt "UI_MENU_FREEZE_KEYS"
+msgid "Freeze keys"
+msgstr "Клавіші зупинки"
+
+msgctxt "UI_MENU_FREEZE_KEYS_DESC"
+msgid ""
+"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
+"look at a moment closely."
+msgstr ""
+"F3 зупиняє гру на кадрі, що на екрані, і запускає знову; F4 зсуває її на один кадр. Щоб уважно "
+"роздивитися момент."
+
+msgctxt "UI_MENU_CLASSIC_GP"
+msgid "Classic Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_GP_DESC"
+msgid ""
+"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
+"Changes take several seconds and affect races started afterward."
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS"
+msgid "Classic VS races"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS_DESC"
+msgid ""
+"VS races after the first take place on the next course instead of the road to it, whatever the "
+"course rule. Changes take several seconds and affect races started afterward."
+msgstr ""
+
 msgctxt "UI_MENU_GAME_LANG"
 msgid "Game language"
 msgstr "Мова гри"
@@ -710,6 +710,14 @@ msgctxt "UI_MENU_SPEAKERS"
 msgid "Speakers"
 msgstr "Динаміки"
 
+msgctxt "UI_MENU_SPEAKERS_DESC"
+msgid ""
+"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
+"more, and stereo otherwise. Applies at the next start."
+msgstr ""
+"Автоматично дає об'ємне мікшування 5.1 гри, коли звуковий вихід системи має 6 каналів або більше, "
+"і стерео в іншому разі. Застосовується під час наступного запуску."
+
 msgctxt "UI_MENU_SPEAKERS_STEREO"
 msgid "Stereo"
 msgstr "Стерео"
@@ -725,14 +733,6 @@ msgstr "Без звуку у фоні"
 msgctxt "UI_MENU_BACKGROUND_MUTE_DESC"
 msgid "No sound while the game window is not in front."
 msgstr "Немає звуку, поки вікно гри не на передньому плані."
-
-msgctxt "UI_MENU_SPEAKERS_DESC"
-msgid ""
-"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
-"more, and stereo otherwise. Applies at the next start."
-msgstr ""
-"Автоматично дає об'ємне мікшування 5.1 гри, коли звуковий вихід системи має 6 каналів або більше, "
-"і стерео в іншому разі. Застосовується під час наступного запуску."
 
 msgctxt "UI_MENU_MOTION"
 msgid "Motion controls"
@@ -805,6 +805,17 @@ msgctxt "UI_MENU_MOUSE_SENS_DESC"
 msgid "How fast the mouse turns the camera."
 msgstr "Як швидко миша повертає камеру."
 
+msgctxt "UI_MENU_STICK_DEADZONE"
+msgid "Stick dead zone"
+msgstr "Мертва зона стіка"
+
+msgctxt "UI_MENU_STICK_DEADZONE_DESC"
+msgid ""
+"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
+msgstr ""
+"Наскільки треба відхилити стік, щоб він спрацював. Збільште, якщо карт рухається з відпущеним "
+"стіком."
+
 msgctxt "UI_MENU_SWITCH2"
 msgid "Switch 2 controllers (Bluetooth)"
 msgstr "Контролери Switch 2 (Bluetooth)"
@@ -826,17 +837,6 @@ msgid ""
 "The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
 "Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
 msgstr ""
-
-msgctxt "UI_MENU_STICK_DEADZONE"
-msgid "Stick dead zone"
-msgstr "Мертва зона стіка"
-
-msgctxt "UI_MENU_STICK_DEADZONE_DESC"
-msgid ""
-"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
-msgstr ""
-"Наскільки треба відхилити стік, щоб він спрацював. Збільште, якщо карт рухається з відпущеним "
-"стіком."
 
 msgctxt "UI_MENU_BUTTON_ICONS"
 msgid "Button icons"
@@ -1958,6 +1958,16 @@ msgctxt "UI_LAUNCH_FILES_FOLDER"
 msgid "Game folder"
 msgstr "Тека гри"
 
+msgctxt "UI_LAUNCH_FILES_HELP"
+msgid ""
+"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
+"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
+"game code on this computer and translates the shaders."
+msgstr ""
+"Гра не входить до порту: потрібна твоя власна копія Mario Kart World 1.0.0/1.8.0, знята з твоєї "
+"консолі (теки exefs і romfs). Налаштування перевіряє її версію, збирає код гри на цьому "
+"комп'ютері та перекладає шейдери."
+
 msgctxt "UI_LAUNCH_PICK_GAME_DIR"
 msgid "Choose game folder"
 msgstr "Вибрати теку гри"
@@ -1987,16 +1997,6 @@ msgid ""
 msgstr ""
 "Не вдалося вибрати цю теку гри. У Windows виберіть теку без розривів рядка, повний шлях до якої "
 "не довший за %d одиниць UTF-16, щоб лишилося місце для файлів гри."
-
-msgctxt "UI_LAUNCH_FILES_HELP"
-msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
-msgstr ""
-"Гра не входить до порту: потрібна твоя власна копія Mario Kart World 1.0.0/1.8.0, знята з твоєї "
-"консолі (теки exefs і romfs). Налаштування перевіряє її версію, збирає код гри на цьому "
-"комп'ютері та перекладає шейдери."
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -2385,20 +2385,14 @@ msgstr ""
 "застосовуються поверх, тому цей мод може працювати гірше, ніж на консолі, виглядати гірше або "
 "працювати неправильно"
 
-#. Above every mod install and import.
-msgctxt "UI_MOD_RISK"
+#. Under an installed mod that ships shaders (Shader/ files).
+msgctxt "UI_MOD_WARN_SHADERS"
 msgid ""
-"Mods are made by other people and are not tested by this project. A mod can crash the game or "
-"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
-"its author."
+"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
+"show, or may break the picture"
 msgstr ""
-"Моди створюють інші люди, і проєкт їх не тестує. Мод може призвести до вильоту гри або пошкодити "
-"збереження: спершу прочитайте його сторінку, зробіть копію збереження та повідомляйте про "
-"проблеми моду його авторові."
-
-msgctxt "UI_MOD_RISK_ACK"
-msgid "I understand"
-msgstr "Зрозуміло"
+"Замінює шейдери: порт перекладає шейдери гри під час підготовки, тому цей мод може не "
+"відображатися або зіпсувати картинку"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
 msgctxt "UI_MOD_PLUGIN"
@@ -2413,14 +2407,20 @@ msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "код: увімкнення чи вимкнення заново збирає код гри перед запуском (кілька хвилин)"
 
-#. Under an installed mod that ships shaders (Shader/ files).
-msgctxt "UI_MOD_WARN_SHADERS"
+#. Above every mod install and import.
+msgctxt "UI_MOD_RISK"
 msgid ""
-"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
-"show, or may break the picture"
+"Mods are made by other people and are not tested by this project. A mod can crash the game or "
+"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
+"its author."
 msgstr ""
-"Замінює шейдери: порт перекладає шейдери гри під час підготовки, тому цей мод може не "
-"відображатися або зіпсувати картинку"
+"Моди створюють інші люди, і проєкт їх не тестує. Мод може призвести до вильоту гри або пошкодити "
+"збереження: спершу прочитайте його сторінку, зробіть копію збереження та повідомляйте про "
+"проблеми моду його авторові."
+
+msgctxt "UI_MOD_RISK_ACK"
+msgid "I understand"
+msgstr "Зрозуміло"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_UPDATE_FETCHING"
@@ -2454,6 +2454,16 @@ msgctxt "UI_LAUNCH_UPDATE_NOW"
 msgid "Update"
 msgstr "Оновити"
 
+#. Opens the release's notes on GitHub.
+msgctxt "UI_LAUNCH_WHATS_NEW"
+msgid "What's new"
+msgstr "Що нового"
+
+#. After a failed download.
+msgctxt "UI_LAUNCH_RETRY"
+msgid "Try again"
+msgstr "Спробувати ще раз"
+
 msgctxt "UI_LAUNCH_UPDATE_PREPARING"
 msgid "Setting up %s in the background. You can keep playing meanwhile."
 msgstr "%s налаштовується у фоні. Тим часом можна грати далі."
@@ -2469,16 +2479,6 @@ msgstr "Перезапустити з нею"
 msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
 msgid "It could not be set up in advance (%s): it will be set up when it starts."
 msgstr "Не вдалося підготувати заздалегідь (%s): підготовка відбудеться під час запуску."
-
-#. Opens the release's notes on GitHub.
-msgctxt "UI_LAUNCH_WHATS_NEW"
-msgid "What's new"
-msgstr "Що нового"
-
-#. After a failed download.
-msgctxt "UI_LAUNCH_RETRY"
-msgid "Try again"
-msgstr "Спробувати ще раз"
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.
@@ -2949,3 +2949,163 @@ msgstr ""
 "Грі потрібен Vulkan 1.3: встановіть найновіший драйвер від виробника вашої відеокарти (AMD, Intel "
 "або NVIDIA; для NVIDIA — 510 або новіший). Деякі старі відеокарти не підтримують його взагалі. "
 "Налаштування можна виконати вже зараз: гра запуститься, щойно драйвер буде оновлено."
+
+#. A product name: keep it as Steam shows it in your language.
+msgctxt "UI_MENU_GROUP_RPT"
+msgid "Steam Remote Play Together"
+msgstr "Steam Remote Play Together"
+
+msgctxt "UI_MENU_RPT_INVITE"
+msgid "Invite friends"
+msgstr "Запросити друзів"
+
+msgctxt "UI_MENU_RPT_INVITE_DESC"
+msgid ""
+"Opens Remote Play Together in the Steam overlay. Friends who join see and hear the game; each "
+"one's controller, or keyboard, becomes the next free player."
+msgstr ""
+"Відкриває Remote Play Together в оверлеї Steam. Друзі, що приєдналися, бачать і чують гру; "
+"контролер або клавіатура кожного стає наступним вільним гравцем."
+
+msgctxt "UI_MENU_RPT_LINK"
+msgid "Copy guest link"
+msgstr "Копіювати гостьове посилання"
+
+msgctxt "UI_MENU_RPT_LINK_DESC"
+msgid ""
+"Copies a link that lets anyone join from a browser or the Steam Link app, without being your "
+"Steam friend."
+msgstr ""
+"Копіює посилання, за яким будь-хто може приєднатися з браузера або застосунку Steam Link, навіть "
+"не будучи вашим другом у Steam."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CONNECTED"
+msgid "%d connected"
+msgstr "під'єднано: %d"
+
+msgctxt "UI_MENU_RPT_NO_OVERLAY"
+msgid "no Steam overlay"
+msgstr "немає оверлею Steam"
+
+msgctxt "UI_MENU_RPT_WAITING"
+msgid "waiting for Steam"
+msgstr "очікування Steam"
+
+#. steam_appid and mkw.ini are a setting and a file name: keep them.
+msgctxt "UI_MENU_RPT_NEED_APPID"
+msgid "Needs steam_appid in mkw.ini"
+msgstr "Потрібен steam_appid у mkw.ini"
+
+msgctxt "UI_MENU_RPT_AT_START"
+msgid "Starts with the game"
+msgstr "Запускається разом із грою"
+
+msgctxt "UI_MENU_RPT_FAILED"
+msgid "Steam is not available: see the log"
+msgstr "Steam недоступний: див. журнал"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_JOINED"
+msgid "%s joined Remote Play Together"
+msgstr "%s приєднується до Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_LEFT"
+msgid "%s left Remote Play Together"
+msgstr "%s виходить з Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_PAD"
+msgid "A Remote Play guest's controller is player %d"
+msgstr "Контролер гостя Remote Play — гравець %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_KEYBOARD"
+msgid "%s plays on the keyboard as player %d"
+msgstr "%s грає на клавіатурі як гравець %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FULL"
+msgid "%s: no free player for the keyboard"
+msgstr "%s: немає вільного гравця для клавіатури"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FAILED"
+msgid "Remote Play Together is off: %s"
+msgstr "Remote Play Together вимкнено: %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_INVITE"
+msgid ""
+"%d players need a controller each: %d connected. Steam's invite list is open: once your friends' "
+"controllers are in, pick the mode again."
+msgstr ""
+"%d гравцям потрібно по контролеру: під'єднано %d. Список запрошень Steam відкрито: коли "
+"контролери друзів під'єднаються, виберіть режим знову."
+
+msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
+msgid ""
+"The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
+msgstr ""
+"Оверлей Steam не відкрився: запустіть гру зі Steam або надішліть гостьове посилання (меню > Гра)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CHOICE"
+msgid "Local multiplayer for %d players: %d controllers connected. How do the other players join?"
+msgstr "Локальна гра на %d гравців: під'єднано контролерів: %d. Як приєднаються інші гравці?"
+
+msgctxt "UI_MENU_RPT_CHOICE_LOCAL"
+msgid "Local players (connect more controllers)"
+msgstr "Локальні гравці (під'єднати ще контролери)"
+
+msgctxt "UI_MENU_RPT_CHOICE_STEAM"
+msgid "Steam Remote Play Together (invite friends)"
+msgstr "Steam Remote Play Together (запросити друзів)"
+
+msgctxt "UI_MENU_RPT_APPID"
+msgid "Steam App ID"
+msgstr "ID застосунку Steam"
+
+msgctxt "UI_MENU_RPT_APPID_DESC"
+msgid ""
+"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
+"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in mkw.ini. Takes effect at the next start."
+msgstr ""
+"Гра Steam, від імені якої mkw працює для Remote Play Together. Автоматично: гра, параметри "
+"запуску якої запускають mkw (\"C:\\...\\mkw.exe\" %command%), тож підходить будь-яка ваша гра "
+"Steam з Remote Play Together. Інший номер: steam_appid у mkw.ini. Діє з наступного запуску."
+
+msgctxt "UI_MENU_RPT_APPID_OFF"
+msgid "Off"
+msgstr "Вимк."
+
+msgctxt "UI_MENU_RPT_APPID_AUTO"
+msgid "Automatic (the game Steam started)"
+msgstr "Автоматично (гра, запущена Steam)"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_APPID_CUSTOM"
+msgid "%s (mkw.ini)"
+msgstr "%s (mkw.ini)"
+
+msgctxt "UI_MENU_RPT_APPID_ADD"
+msgid "Enter a Steam App ID"
+msgstr "Ввести ID застосунку Steam"
+
+msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
+msgid ""
+"Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
+"keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
+"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
+"it in its list (steam_appids in mkw.ini). Backspace deletes a digit."
+msgstr ""
+"Введіть цифровими клавішами ID застосунку вашої гри Steam з Remote Play Together (це число в "
+"адресі гри в крамниці, store.steampowered.com/app/<number>/) і натисніть Enter або A. З "
+"наступного запуску mkw працює від імені цієї гри, а рядок ID застосунку Steam вище зберігає її у "
+"своєму списку (steam_appids у mkw.ini). Backspace стирає цифру."
+
+msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
+msgid "type the number"
+msgstr "введіть число"

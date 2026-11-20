@@ -20,6 +20,7 @@ extern "C" {
 #include "input.h"
 #include "input_map.h"
 #include "platform/platform.h"
+#include "steam_rpt.h"
 #include "sysinfo.h"
 #include "ui/menu/menu.h"
 #include "ui_text.h"
@@ -430,6 +431,89 @@ static void tab_controls(float scale) {
     binds_after_page();
 }
 
+// Steam Remote Play Together (steam/steam_rpt.h): invite through the Steam overlay or copy a guest link. Greyed out with
+// the reason when Steam is not running for the game. The App ID row above them sets steam_appid (docs/guides/remote-play.md).
+static void rows_remote_play(void) {
+    static char value[64];
+    static uint64_t link_until;   // "Copied" or "did not work" beside Copy guest link until then
+    static int link_ok;
+    opt_group(UI_MENU_GROUP_RPT);
+    // the App ID: off, the game Steam started, RetroArch (docs/guides/remote-play.md's example), the numbers typed in the row
+    // under it (steam_appids, oldest first) and a number from mkw.ini the list lacks
+    {
+        enum { SAVED = STEAM_RPT_SAVED };
+        static char ids[SAVED + 1][16], names_buf[SAVED + 1][64];
+        const char *vals[SAVED + 4] = {"", "auto", "1118310"}, *names[SAVED + 4] = {
+            menu_text(UI_MENU_RPT_APPID_OFF), menu_text(UI_MENU_RPT_APPID_AUTO), "RetroArch (1118310)"};
+        int n = 3, k = 0;
+        auto add = [&](const char *id) {
+            for (int i = 0; i < n; i++)
+                if (!strcmp(vals[i], id)) return;
+            snprintf(ids[k], sizeof ids[k], "%s", id);
+            snprintf(names_buf[k], sizeof names_buf[k], menu_text(UI_MENU_RPT_APPID_CUSTOM), ids[k]);
+            vals[n] = ids[k];
+            names[n++] = names_buf[k++];
+        };
+        char saved[SAVED][16];
+        int n_saved = steam_rpt_saved_ids(cfg_get("MKW_STEAM_APPIDS"), saved, SAVED);
+        for (int i = 0; i < n_saved; i++) add(saved[i]);
+        const char *v = cfg_get("MKW_STEAM_APPID");
+        if (v && *v && strlen(v) < 16) add(v);   // a number only mkw.ini has
+        opt_choice_list("MKW_STEAM_APPID", UI_MENU_RPT_APPID, vals, names, n, UI_MENU_RPT_APPID_DESC);
+
+        // a typed number: the App ID from the next start, and the newest in steam_appids
+        static char typed[11];   // App IDs are 32-bit: 10 digits at most
+        if (opt_digits("##rpt_appid_add", UI_MENU_RPT_APPID_ADD, UI_MENU_RPT_APPID_ADD_DESC, typed, sizeof typed,
+                       menu_text(UI_MENU_RPT_APPID_ADD_HINT))) {
+            const char *id = typed + strspn(typed, "0");   // "0985890" is 985890; "0" is no App ID
+            if (*id) {
+                char out[SAVED * 12 + 16];
+                steam_rpt_saved_add(cfg_get("MKW_STEAM_APPIDS"), id, out, sizeof out);
+                if (*out) cfg_set("MKW_STEAM_APPIDS", out);
+                cfg_set("MKW_STEAM_APPID", id);
+                opt_save_soon();
+                rt_log("menu: Steam App ID %s typed: in use from the next start (steam_appids = %s)", id, out);
+            }
+            typed[0] = 0;
+        }
+    }
+    int st = steam_rpt_state();
+    UiTextId why = st == STEAM_RPT_OFF ? UI_MENU_RPT_NEED_APPID : st == STEAM_RPT_IDLE ? UI_MENU_RPT_AT_START
+                                                                                        : UI_MENU_RPT_FAILED;
+    const char *invite_value = "";
+    if (st == STEAM_RPT_READY && steam_rpt_invite_failed()) invite_value = menu_text(UI_MENU_RPT_NO_OVERLAY);
+    else if (st == STEAM_RPT_READY && steam_rpt_guests()) {
+        snprintf(value, sizeof value, menu_text(UI_MENU_RPT_CONNECTED), steam_rpt_guests());
+        invite_value = value;
+    }
+    if (st != STEAM_RPT_READY) opt_disable_next(why);
+    if (opt_button("##rpt_invite", UI_MENU_RPT_INVITE, UI_MENU_RPT_INVITE_DESC, invite_value) && st == STEAM_RPT_READY)
+        steam_rpt_invite();
+
+    // the link comes in a Steam callback a moment after the request; it is copied here, on the menu's thread
+    static char link[1024];
+    int got = steam_rpt_take_link(link, sizeof link);
+    if (got) {
+        link_ok = got > 0 && plat_clipboard_set(link);
+        link_until = plat_now_ns() + 3000000000ull;
+    }
+    static uint64_t wait_until;   // "waiting for Steam" until the link comes, 10 s at most
+    if (got) wait_until = 0;
+    if (wait_until && plat_now_ns() > wait_until) {
+        wait_until = 0;
+        link_ok = 0;
+        link_until = plat_now_ns() + 3000000000ull;
+    }
+    const char *link_value = wait_until ? menu_text(UI_MENU_RPT_WAITING)
+                           : plat_now_ns() < link_until ? menu_text(link_ok ? UI_MENU_COPY_INFO_DONE : UI_MENU_ACTION_FAILED)
+                                                        : "";
+    if (st != STEAM_RPT_READY) opt_disable_next(why);
+    if (opt_button("##rpt_link", UI_MENU_RPT_LINK, UI_MENU_RPT_LINK_DESC, link_value) && st == STEAM_RPT_READY) {
+        steam_rpt_request_link();
+        wait_until = plat_now_ns() + 10000000000ull;
+    }
+}
+
 // The languages, LAN play and the update check: the Game and Menu tabs of before, two rows each.
 static void tab_general(float scale) {
     opt_begin("##general", scale);
@@ -449,6 +533,7 @@ static void tab_general(float scale) {
     static const UiTextId start[] = {UI_MENU_AUTO, UI_MENU_START_ALWAYS, UI_MENU_START_SKIP};
     opt_choice("MKW_START_SCREEN", UI_MENU_START_SCREEN, start, 3, UI_MENU_START_SCREEN_DESC);   // launcher.cpp console_start
     opt_toggle("MKW_DISCORD", UI_MENU_DISCORD, UI_MENU_DISCORD_DESC);   // core/presence/presence.c
+    rows_remote_play();   // its own group: last, so no row of the tab falls under its heading
     opt_end();
 }
 

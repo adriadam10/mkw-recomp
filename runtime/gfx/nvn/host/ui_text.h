@@ -272,7 +272,28 @@ typedef enum {
     // HELP what to install (HELP_WIN on Windows, where Mesa and the Linux releases mean nothing)
     UI_LAUNCH_GPU_NONE, UI_LAUNCH_GPU_OLD, UI_LAUNCH_GPU_EXT, UI_LAUNCH_GPU_QUEUE, UI_LAUNCH_GPU_SKIPPED,
     UI_LAUNCH_GPU_SOFTWARE, UI_LAUNCH_GPU_NO_DRIVER, UI_LAUNCH_GPU_HELP, UI_LAUNCH_GPU_HELP_WIN,
-    UI_MENU_LAST_ID = UI_LAUNCH_GPU_HELP_WIN,
+    // Steam Remote Play Together (steam/steam_rpt.c), the General tab's group: the buttons; CONNECTED "%d connected" (the
+    // guests) beside Invite; the notes of a greyed-out group (no App ID, the start screen, Steam not available)
+    UI_MENU_GROUP_RPT, UI_MENU_RPT_INVITE, UI_MENU_RPT_INVITE_DESC, UI_MENU_RPT_LINK, UI_MENU_RPT_LINK_DESC,
+    UI_MENU_RPT_CONNECTED, UI_MENU_RPT_NO_OVERLAY, UI_MENU_RPT_WAITING,
+    UI_MENU_RPT_NEED_APPID, UI_MENU_RPT_AT_START, UI_MENU_RPT_FAILED,
+    // notices: JOINED / LEFT "%s" (the guest's name); PAD "%d" (the player); KEYBOARD "%s ... %d"; FULL "%s";
+    // FAILED "%s" (Steam's reason, in English)
+    UI_NOTICE_RPT_JOINED, UI_NOTICE_RPT_LEFT, UI_NOTICE_RPT_PAD, UI_NOTICE_RPT_KEYBOARD, UI_NOTICE_RPT_FULL,
+    UI_NOTICE_RPT_FAILED,
+    // local multiplayer with too few controllers and Steam ready: INVITE "%d ... %d" (players, controllers) as
+    // UI_NOTICE_PADS_MISSING, saying the invite list opened; NO_OVERLAY when the overlay could not open
+    UI_NOTICE_RPT_INVITE, UI_NOTICE_RPT_NO_OVERLAY,
+    // local multiplayer with too few controllers and Steam ready (steam_invite = ask, menu_choice): the question
+    // CHOICE "%d ... %d" (players, controllers) and its two buttons
+    UI_MENU_RPT_CHOICE, UI_MENU_RPT_CHOICE_LOCAL, UI_MENU_RPT_CHOICE_STEAM,
+    // the General tab's App ID row (steam_appid): its values off and auto (the game Steam started); CUSTOM "%s" (a number
+    // from mkw.ini that the list lacks)
+    UI_MENU_RPT_APPID, UI_MENU_RPT_APPID_DESC, UI_MENU_RPT_APPID_OFF, UI_MENU_RPT_APPID_AUTO, UI_MENU_RPT_APPID_CUSTOM,
+    // the row under it that takes a typed App ID (opt_digits; steam_appids keeps them for the list): label, description,
+    // and the hint shown while nothing is typed
+    UI_MENU_RPT_APPID_ADD, UI_MENU_RPT_APPID_ADD_DESC, UI_MENU_RPT_APPID_ADD_HINT,
+    UI_MENU_LAST_ID = UI_MENU_RPT_APPID_ADD_HINT,
     UI_TEXT_COUNT
 } UiTextId;
 

@@ -1,0 +1,58 @@
+// Steam Remote Play Together (steam_rpt.c): Steam streams the game's window and sound to friends, and each guest's
+// controller or keyboard becomes a player of local multiplayer. Off unless MKW_STEAM_APPID (steam_appid in mkw.ini)
+// names the Steam App ID to run as (auto: the one Steam passes to a game it starts); Steam's library is loaded at run time from mkw's folder (steam_flat.h), so nothing
+// changes for a player without it. docs/guides/remote-play.md has the set-up.
+#pragma once
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+enum {
+    STEAM_RPT_OFF,       // no App ID set
+    STEAM_RPT_IDLE,      // an App ID is set but this process does not run the game (the start screen)
+    STEAM_RPT_FAILED,    // Steam could not be used: steam_rpt_reason says why
+    STEAM_RPT_READY,     // running as the App ID: guests can join
+};
+
+// Main thread, once, before the game boots (main.c): before any Vulkan device, so the Steam overlay can attach, and
+// before the first gamepad scan, so SDL lists Steam's virtual gamepads. Starts the "steam" thread when Steam is ready.
+void steam_rpt_start(void);
+
+// Any thread.
+int steam_rpt_state(void);
+const char *steam_rpt_reason(void);   // STEAM_RPT_FAILED: why, in English, for the log and the menu; "" otherwise
+const char *steam_rpt_app_id(void);   // the App ID set (auto: Steam's, "auto" while Steam gave none), "" when none
+// The App IDs typed in the menu (steam_appids, comma-separated, oldest first): steam_rpt_saved_ids puts at most max
+// of them in ids and returns how many; steam_rpt_saved_add makes id the newest (moved there if listed, the oldest
+// dropped past STEAM_RPT_SAVED; RetroArch's 1118310 not listed, the menu has it already) and writes the new list in out.
+enum { STEAM_RPT_SAVED = 16 };
+int steam_rpt_saved_ids(const char *list, char ids[][16], int max);
+void steam_rpt_saved_add(const char *list, const char *id, char *out, size_t cap);
+int steam_rpt_guests(void);           // guests connected now
+
+// The menu's buttons (any thread; the steam thread carries them out). invite: the Steam overlay's Remote Play Together
+// friends list. link: a guest link anyone can open (browser, Steam Link), which steam_rpt_take_link hands out once.
+void steam_rpt_invite(void);
+void steam_rpt_request_link(void);
+// 1 with the new link in out (once per request), 0 while none came, -1 when Steam refused the request.
+int steam_rpt_take_link(char *out, size_t cap);
+// 1 after steam_rpt_invite found no overlay to show (cleared by the next request).
+int steam_rpt_invite_failed(void);
+
+// Local multiplayer (sdk/ov/ov_input.c, the controller applet): the game asks for need players and have of them have a
+// controller. With Steam ready, need >= 2 and too few controllers, MKW_STEAM_INVITE (steam_invite in mkw.ini) = ask
+// (default) asks the player (menu_choice) whether the others join as local players or through Remote Play Together;
+// Remote Play opens the overlay's invite list, and each answer shows a notice saying what to do next. auto opens the
+// invite list without asking (at most every 3 s) while no guest has joined or controllers are missing, always on every
+// such request, off never. Returns 1 when it asked or showed its notice (the caller shows none of its own). Any thread.
+int steam_rpt_multiplayer(int need, int have);
+
+// Steam Input's virtual gamepad (Valve's USB vendor id and the virtual pad's product id, as SDL's
+// SDL_IsJoystickSteamVirtualGamepad tests them on Linux and Windows): what a guest's controller is on the host.
+enum { STEAM_VENDOR_ID = 0x28DE, STEAM_VIRTUAL_PAD_ID = 0x11FF };
+
+#ifdef __cplusplus
+}
+#endif

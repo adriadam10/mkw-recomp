@@ -83,19 +83,24 @@ static SDL_Scancode key_sc(int key) {
     return SDL_SCANCODE_UNKNOWN;
 }
 
-// The key id of a scancode (the inverse of key_sc, built on first use), 0 for none.
+// The key id of a scancode (the inverse of key_sc, built on first use), 0 for none. The window thread and the steam
+// thread (input_key_of_usb) both read it: two first calls at once build the same table, and the flag is published
+// after it.
 static int key_of_sc(SDL_Scancode sc) {
     static uint8_t map[SDL_SCANCODE_COUNT];
     static int built;
-    if (!built) {
+    if (!__atomic_load_n(&built, __ATOMIC_ACQUIRE)) {
         for (int k = 1; k < KEY_COUNT; k++) {
             SDL_Scancode s = key_sc(k);
-            if (s != SDL_SCANCODE_UNKNOWN) map[s] = (uint8_t)k;
+            if (s != SDL_SCANCODE_UNKNOWN) __atomic_store_n(&map[s], (uint8_t)k, __ATOMIC_RELAXED);
         }
-        built = 1;
+        __atomic_store_n(&built, 1, __ATOMIC_RELEASE);
     }
-    return sc > 0 && sc < SDL_SCANCODE_COUNT ? map[sc] : 0;
+    return sc > 0 && sc < SDL_SCANCODE_COUNT ? __atomic_load_n(&map[sc], __ATOMIC_RELAXED) : 0;
 }
+
+// SDL scancodes are the USB HID keyboard usages (SDL_scancode.h), as Steam Remote Play's are (isteamremoteplay.h).
+int input_key_of_usb(int usage) { return usage > 0 && usage < SDL_SCANCODE_COUNT ? key_of_sc((SDL_Scancode)usage) : 0; }
 
 static int mouse_key(uint8_t button) {
     switch (button) {

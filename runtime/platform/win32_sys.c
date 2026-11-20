@@ -646,3 +646,7 @@ void *plat_lib_open(const char *name) {
 
 void *plat_lib_sym(void *lib, const char *name) { return lib ? (void *)GetProcAddress((HMODULE)lib, name) : NULL; }
 
+// platform.h: the vectored handlers (win32_mem.c) run before any unhandled-exception filter a library sets.
+PlatHandlers *plat_handlers_save(void) { return NULL; }
+int plat_handlers_restore(PlatHandlers *h) { (void)h; return 0; }
+

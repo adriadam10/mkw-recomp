@@ -1,0 +1,163 @@
+# Steam Remote Play Together
+
+Play local multiplayer (split screen, up to 8 players) with friends who are not in the room. Steam streams the game's
+window and sound to them, and their controllers or keyboards become players 2, 3 and so on. They need only Steam, or
+the Steam Link app, or a browser with a guest link: not the game.
+
+It is off by default and changes nothing until you set it up.
+
+## What you need
+
+- Steam installed, running and signed in on the PC that runs the game (the host). On Linux, Steam from Valve or your
+  distribution: the Flatpak and Snap versions run in a sandbox the game cannot reach.
+- A **Steam App ID** that your account owns (free games count once they are in your library) and that supports Remote
+  Play Together. Steam treats mkw as that game while it runs, so your friends see its name. Use an App ID you own or are
+  allowed to use. RetroArch (`1118310`) is free and supports Remote Play Together.
+- Steam's runtime library next to `mkw` / `mkw.exe`: `libsteam_api.so` on Linux, `steam_api64.dll` on Windows,
+  Steamworks SDK 1.62 or newer. **The release does not include it**: [Get Steam's library](#get-steams-library) says
+  where to download it and where to put it.
+
+## Get Steam's library
+
+The game's releases do not carry Valve's library, so download it once and put it in the game's folder. Without it the
+menu's Remote Play Together rows stay greyed out and `logs/mkw.log` says
+`steam: Remote Play Together is off: Steam's library is missing`.
+
+**Where it goes**
+
+| System | File | Folder |
+|---|---|---|
+| Windows | `steam_api64.dll` | the folder of `mkw.exe` (where you unpacked the zip) |
+| Linux, AppImage | `libsteam_api.so` | `~/.local/share/mkw-recomp`, where the AppImage runs its copy of `mkw` |
+| Linux, built from source | `libsteam_api.so` | the folder of `mkw` (`build/dist/linux`) |
+
+**Where to get it**, any one of these:
+
+1. **Steamworks.NET's archive, no account needed.** Download
+   [`Steamworks.NET-Standalone_2025.165.0.zip`](https://github.com/rlabrecque/Steamworks.NET/releases/download/2025.165.0/Steamworks.NET-Standalone_2025.165.0.zip)
+   from the [Steamworks.NET 2025.165.0 release](https://github.com/rlabrecque/Steamworks.NET/releases/tag/2025.165.0),
+   open it and take `Windows-x64/steam_api64.dll` (Windows) or `OSX-Linux-x64/libsteam_api.so` (Linux). These are
+   Valve's files of Steamworks SDK 1.65. To check your copy: `steam_api64.dll` has the SHA-256
+   `e6d9bafb9a41e42fba7b21553db49f8719027af3f0deb23ff86cfc44d60e776d`, `libsteam_api.so`
+   `eb2dd015b84177cf4f4326fe578aab375fd8931bbbd719c7492420d9777007fe` (Windows: `certutil -hashfile steam_api64.dll
+   SHA256`; Linux: `sha256sum libsteam_api.so`).
+2. **The script, if you build from source.** `uv run tools/build/steamlib.py` (Linux) or
+   `uv run tools/build/steamlib.py --target windows` downloads the same archive, checks both SHA-256 and puts the file
+   in `build/dist/<target>`; `--dest DIR` puts it in another folder (`--dest ~/.local/share/mkw-recomp` for the
+   AppImage).
+3. **Valve's Steamworks SDK.** With a Steamworks account, download the SDK from
+   [partner.steamgames.com](https://partner.steamgames.com/) and take `redistributable_bin/win64/steam_api64.dll` or
+   `redistributable_bin/linux64/libsteam_api.so` (SDK 1.62 or newer).
+
+A file older than SDK 1.62 is refused: the log names what it lacks (`... is older than Steamworks SDK 1.62`).
+
+## Set up
+
+1. **The library.** Put `steam_api64.dll` (Windows) or `libsteam_api.so` (Linux) in the game's folder, as
+   [Get Steam's library](#get-steams-library) says.
+
+2. **The App ID.** In `mkw.ini` next to `mkw`:
+
+   ```ini
+   [steam]
+   steam_appid = 1118310
+   ```
+
+   or set the environment variable `MKW_STEAM_APPID=1118310`. The menu has the same choice (General > Steam
+   Remote Play Together > Steam App ID; it takes effect at the next start).
+
+   **Your own App ID in the menu.** Under that row, select **Enter a Steam App ID**, type the number with the
+   keyboard's number keys (Backspace deletes a digit) and press Enter or A. mkw runs as that game from the next start,
+   and the Steam App ID row keeps the number in its list, so you can switch back to it later. The list is
+   `steam_appids` in `mkw.ini` (comma-separated, 16 at most: the oldest goes first); delete a number there to take it
+   off the list.
+
+   **Another Steam game.** Any game you own whose store page lists Remote Play Together can stand in for
+   RetroArch. Put mkw in that game's launch options (step 3) and set `steam_appid = auto` (in the menu:
+   Automatic): mkw then runs as whichever game Steam started it from. mkw remembers the last one in
+   `cache/steam-appid`, so a later start from its own folder (`mkw.exe`) runs as that game too, as a fixed number
+   would; your friends' controllers still need the start from Steam (step 3). A number works too (the App ID is the number
+   in the game's store address, `store.steampowered.com/app/<number>/`), but it must be the game whose launch
+   options you used: otherwise the log says `steam: Steam started mkw as App ID ..., but steam_appid = ...`.
+   Steam shows your friends the name of that game, and only games with Remote Play Together let them join.
+
+   **The game's controller settings in Steam matter too.** Steam hands controllers to mkw as it would to that game,
+   so a game that uses Steam Input in its own way can leave a player without one. Tried on Windows (November 2026):
+
+   | App ID | Your controller | Your friend's controller |
+   |---|---|---|
+   | 1118310 (RetroArch) | works | works |
+   | 985890 (Streets of Rage 4) | works | works |
+   | 1361510 (TMNT: Shredder's Revenge), Steam Input on | none: Steam lists no controller at all | none |
+   | 1361510, Steam Input off (Properties > Controller) | works | listed, but no button reaches mkw |
+
+   To check another one, look in `logs/mkw.log` after a friend has joined for `input: ... Steam virtual ...` and
+   `input: gamepad ... for player 2 (... a Remote Play guest's)`, then make sure player 2 moves in a race. The log
+   lists every controller SDL sees (`input: SDL lists N joysticks`) each time the list changes.
+
+3. **Start the game from Steam, as the App ID's game** (needed for your friends' controllers). Started from its
+   folder, mkw runs as the App ID and invitations work, but Steam does not hand the guests' controllers to it: Steam
+   gives them to a game through its overlay, and only loads that into games it starts. A Non-Steam Game shortcut does
+   not work either: Steam then runs mkw as the shortcut, which has no Remote Play Together. Instead, let Steam start mkw
+   in place of the App ID's own program:
+   - install the App ID's game in Steam (RetroArch, free);
+   - right-click it > Properties > General > Launch options, and enter the path of `mkw.exe` in quotes followed by
+     `%command%`, for example `"C:\Users\you\Downloads\mkw-recomp\mkw.exe" %command%`;
+   - press Play on it. Steam starts `mkw.exe` with the game's program as its last argument, which mkw leaves out (the
+     log says `boot: started by Steam's %command%`). Empty the launch options to get the real game back.
+
+The log says `steam: running as App ID ...; Remote Play Together ready`. When something is missing, a notice at the
+top of the picture says why, and the log has the line `steam: Remote Play Together is off: ...`.
+
+## Play
+
+Menu (F1) > General > **Steam Remote Play Together**:
+
+- **Invite friends**: the Steam overlay's Remote Play Together list. Beside it: how many guests are connected.
+- **Copy guest link**: a link to send to anyone. They open it in a browser or the Steam Link app, no Steam friendship
+  or account needed. The link is also written to the log.
+
+**Picking local multiplayer** (2, 3 or 4 players) with fewer controllers than players asks how the other players
+join:
+
+- **Local players (connect more controllers)**: a notice says how many controllers are missing. Connect them, then
+  pick the mode again.
+- **Steam Remote Play Together (invite friends)**: Steam's invite list opens. Once your friends have joined and pressed
+  a button on their controller, pick the mode again.
+
+B or Esc closes the question without choosing. Either way the game goes back to its menu first, as it does without
+Steam: the game does not wait inside its controller screen, because the picture (and with it the overlay and your
+friends' stream) would freeze meanwhile. With a controller for every player, the game starts at once, with no
+question. `steam_invite` in `mkw.ini` changes this: `ask` (the default) as above; `auto` opens the invite list without
+asking while no friend has joined yet or controllers are missing; `always` opens it every time; `off` never asks nor
+opens it.
+
+When a guest joins, a notice says so. Their controller becomes the next free player (a notice says which). A guest
+without a controller gets a player at the first key they press, and plays with the same keys as you (WASD, Space,
+Shift...; Settings > Controls). While every guest has a controller, guests' keys give no player, so a guest with both
+gets only one. Then choose the number of players in the game as usual: the game needs one controller
+per player.
+
+## Good to know
+
+- Steam does not say whose a virtual controller is. Controllers appear in the order guests connect them. A keyboard
+  becomes a player only while there are more guests than guest controllers and keyboard players, and not in a guest's first 5 seconds
+  (their controller can take that long to appear). With one guest on a controller and another on a keyboard only,
+  the first key pressed by either guest after 5 seconds takes the keyboard player. A controller you plug in yourself while a guest is
+  connected counts as a guest's.
+- Your own controller through Steam Input (Steam shows it as a "Steam Virtual Gamepad") stays player 1 and never
+  becomes a second player.
+- Guests cannot open the menu: Esc, F1, F10 and F11 stay yours. Their mouse does nothing.
+- On Linux under Wayland, if guests see "Steam not launched with -pipewire", start Steam with `steam -pipewire` (or
+  `-pipewire-dmabuf` when guests get a black picture).
+- The App ID is read at start: changing it needs a restart of the game.
+- A device loss with "instruction pointer invalid" in the log on NVIDIA cards is the port's known issue #22, with or
+  without Steam; `skip_programs` in `mkw.ini` helps find its cause (CHANGELOG, 0.1.10).
+
+## Tested
+
+Against Valve's SDK 1.65 library and a mock of Steam built from Valve's headers, with SDL virtual gamepads standing in
+for the guests' controllers (13/11/2026): start-up, every symbol bound (Linux and Windows libraries), guests joining and
+leaving, a guest's controller as player 2 with the host's Steam Input twin left out, a guest keyboard as player 3, the
+guest link, a missing overlay, and each failure (no library, no Steam, wrong App ID). Picking local multiplayer with too few controllers opens the invite list (13/11/2026, against the mock).
+A real session with friends over Steam has not been run yet.

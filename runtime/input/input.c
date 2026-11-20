@@ -22,7 +22,9 @@
 #include "input_wsys.h"
 #include "switch2.h"
 #include "nvn_api.h"
+#include "steam_rpt.h"
 #include "ui/menu/menu.h"
+#include "ui_text.h"
 #include "vk.h"
 #include "platform/platform.h"
 #ifdef __linux__
@@ -145,12 +147,98 @@ static void stick(int16_t x, int16_t y, float d, int32_t out[2]) {
 // 1's is `pad`. A player keeps the slot while the gamepad stays connected. Under lock.
 static SDL_Gamepad *extra[INPUT_MAX_PLAYERS];   // [0] unused
 static int extra_rumble[INPUT_MAX_PLAYERS], extra_east_a[INPUT_MAX_PLAYERS];
+// A guest's gamepad (input_guest_pads): a Steam virtual gamepad not called the host's, or any other gamepad opened while
+// a Remote Play guest is connected. Under lock.
+static uint8_t extra_guest[INPUT_MAX_PLAYERS];
+// Players 2-8 fed by a remote keyboard (input_remote_*: a Remote Play Together guest's keys) instead of a gamepad, and
+// the keys each one holds. Under lock.
+static uint8_t remote_on[INPUT_MAX_PLAYERS];
+static uint8_t remote_keys[INPUT_MAX_PLAYERS][KEY_COUNT];
 
 static int pad_is_open(SDL_JoystickID id) {
     if (pad && SDL_GetGamepadID(pad) == id) return 1;
     for (int p = 1; p < INPUT_MAX_PLAYERS; p++)
         if (extra[p] && SDL_GetGamepadID(extra[p]) == id) return 1;
     return 0;
+}
+
+// Remote Play Together (steam/steam_rpt.c): a guest's controller reaches the host as a Steam virtual gamepad, which SDL
+// lists once steam_rpt_start allowed them. Steam does not say whose a virtual gamepad is, but the ones there while no
+// guest is connected are the host's own controllers through Steam Input, often next to the same controller seen
+// directly: they are left out while a gamepad is seen directly, and are the local players when none is (a game started
+// from Steam with Steam Input on lists every controller only as a virtual gamepad).
+// A virtual gamepad is only called the host's after VIRTUAL_SETTLE_MS without a guest: Steam may list a guest's
+// controller a moment before its session callback reaches steam_rpt.c, and a pad called the host's stays so. Under lock.
+enum { VIRTUAL_MAX = 16, VIRTUAL_SETTLE_MS = 2000 };
+static struct { SDL_JoystickID id; uint64_t seen_ms; int host; } virt_pads[VIRTUAL_MAX];   // host: -1 not yet known
+static int n_virt_pads;
+
+// The device's own vendor and product, from its GUID: for a Steam virtual gamepad, SDL_GetGamepadVendorForID and
+// SDL_GetGamepadProductForID give those of the controller behind it, read from Steam's SteamVirtualGamepadInfo file
+// (SDL 3.4 SDL_joystick.c, SDL_GetJoystickVendorForID), and its name is Steam's ("#controller_xboxone" in a user's
+// Windows log, a guest's controller that the vendor test took for an ordinary pad).
+static void raw_ids(SDL_JoystickID id, Uint16 *vendor, Uint16 *product) {
+    SDL_GetJoystickGUIDInfo(SDL_GetJoystickGUIDForID(id), vendor, product, NULL, NULL);
+}
+
+static int steam_virtual(SDL_JoystickID id) {
+    Uint16 v = 0, p = 0;
+    raw_ids(id, &v, &p);
+    return v == STEAM_VENDOR_ID && p == STEAM_VIRTUAL_PAD_ID;
+}
+
+// Logs SDL's joysticks each time the list changes, and once the environment Steam sets for them: a run where a
+// controller is missing then says whether SDL saw it, as what, and which variable hid it.
+static void log_joysticks(void) {
+    static int env_logged;
+    static uint64_t seen = ~0ull;
+    if (!env_logged) {
+        env_logged = 1;
+        static const char *const vars[] = {"SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD", "SDL_GAMECONTROLLER_IGNORE_DEVICES",
+                                           "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT", "SteamVirtualGamepadInfo",
+                                           "EnableConfiguratorSupport"};
+        for (size_t i = 0; i < sizeof vars / sizeof vars[0]; i++) {
+            char v[512];
+            rt_log("input: %s=%s", vars[i], plat_getenv(vars[i], v, sizeof v) ? v : "(unset)");
+        }
+    }
+    int n = 0;
+    SDL_JoystickID *ids = SDL_GetJoysticks(&n);
+    uint64_t h = 1469598103934665603ull ^ (uint64_t)n;
+    for (int i = 0; ids && i < n; i++) h = (h ^ ids[i]) * 1099511628211ull;
+    if (h != seen) {
+        seen = h;
+        rt_log("input: SDL lists %d joysticks", n);
+        for (int i = 0; ids && i < n; i++) {
+            Uint16 v = 0, p = 0;
+            raw_ids(ids[i], &v, &p);
+            const char *name = SDL_GetJoystickNameForID(ids[i]), *path = SDL_GetJoystickPathForID(ids[i]);
+            rt_log("input:   %u \"%s\" device %04x:%04x, reported %04x:%04x, %s%s, path %s", (unsigned)ids[i],
+                   name ? name : "?", v, p, SDL_GetJoystickVendorForID(ids[i]), SDL_GetJoystickProductForID(ids[i]),
+                   SDL_IsGamepad(ids[i]) ? "gamepad" : "not a gamepad", steam_virtual(ids[i]) ? ", Steam virtual" : "",
+                   path ? path : "?");
+        }
+    }
+    SDL_free(ids);
+}
+
+// 1 for a host's virtual gamepad, 0 for a guest's, -1 while it is too early to tell (the pad waits for a later scan).
+static int host_pad(SDL_JoystickID id, int guests) {
+    uint64_t now = plat_now_ms();
+    int i = 0;
+    while (i < n_virt_pads && virt_pads[i].id != id) i++;
+    if (i == n_virt_pads) {
+        if (n_virt_pads == VIRTUAL_MAX) {   // forget the oldest decided entry: its pad is long gone or long open
+            memmove(&virt_pads[0], &virt_pads[1], sizeof virt_pads[0] * (VIRTUAL_MAX - 1));
+            i = --n_virt_pads;
+        }
+        virt_pads[n_virt_pads++] = (typeof(virt_pads[0])){id, now, -1};
+    }
+    if (virt_pads[i].host < 0) {
+        if (guests) virt_pads[i].host = 0;
+        else if (now - virt_pads[i].seen_ms >= VIRTUAL_SETTLE_MS) virt_pads[i].host = 1;
+    }
+    return virt_pads[i].host;
 }
 
 static void pad_adopt(void);
@@ -169,22 +257,45 @@ static void scan_pads(void) {
             SDL_CloseGamepad(extra[p]); extra[p] = NULL; sensor_pad[p] = 0; sensor_ok[p] = 0;
             rt_log("input: gamepad of player %d disconnected", p + 1);
         }
+    log_joysticks();
     input_wheel_map();
     int n = 0;
     SDL_JoystickID *ids = SDL_GetGamepads(&n);
+    int steam = steam_rpt_state() == STEAM_RPT_READY, guests = steam ? steam_rpt_guests() : 0, direct = 0;
+    for (int i = 0; steam && ids && i < n; i++) direct += !steam_virtual(ids[i]);
     for (int i = 0; ids && i < n; i++) {
         if (pad_is_open(ids[i])) continue;
+        int virt = steam && steam_virtual(ids[i]);
+        int whose = virt ? host_pad(ids[i], guests) : 0;
+        if (whose < 0) continue;                      // not known yet: the next scan, a second later, decides
+        // A host's virtual gamepad next to directly seen ones may be one of them again: it is left out. With none seen
+        // directly (Steam Input wraps every controller, as in a game started from Steam), each is a controller of its
+        // own and a local player like any other.
+        int host_only = whose == 1;
+        if (host_only && direct) continue;
         int p = 0;
-        while (p < INPUT_MAX_PLAYERS && (p ? extra[p] != NULL : pad != NULL)) p++;
+        while (p < INPUT_MAX_PLAYERS && (p ? extra[p] != NULL || remote_on[p] : pad != NULL)) p++;
         if (p == INPUT_MAX_PLAYERS) break;
+        int guest_pad = virt ? !host_only : guests > 0;
         SDL_Gamepad *g = SDL_OpenGamepad(ids[i]);
-        if (!g) continue;
+        if (!g) {
+            static SDL_JoystickID failed;   // logged once per gamepad: the scan tries again every second
+            if (failed != ids[i]) rt_log("input: cannot open gamepad %u (%s)", (unsigned)ids[i], SDL_GetError());
+            failed = ids[i];
+            continue;
+        }
         if (!p) { pad = g; pad_adopt(); continue; }
         extra[p] = g;
+        extra_guest[p] = guest_pad;
         extra_rumble[p] = SDL_GetBooleanProperty(SDL_GetGamepadProperties(g), SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false);
         extra_east_a[p] = SDL_GetGamepadButtonLabel(g, SDL_GAMEPAD_BUTTON_EAST) == SDL_GAMEPAD_BUTTON_LABEL_A;
-        rt_log("input: gamepad \"%s\" for player %d (%s)", SDL_GetGamepadName(g), p + 1,
-               extra_rumble[p] ? "rumble" : "no rumble");
+        rt_log("input: gamepad \"%s\" for player %d (%s%s)", SDL_GetGamepadName(g), p + 1,
+               extra_rumble[p] ? "rumble" : "no rumble", virt && guest_pad ? ", a Remote Play guest's" : virt ? ", the host's through Steam Input" : "");
+        if (virt && guest_pad) {
+            char text[160];
+            snprintf(text, sizeof text, menu_text(UI_NOTICE_RPT_PAD), p + 1);
+            menu_notice(text, 5);
+        }
     }
     SDL_free(ids);
 }
@@ -450,24 +561,35 @@ uint32_t input_player_mask(void) {
     if (!state) start();
     for (int p = 1; state == 1 && p < INPUT_MAX_PLAYERS; p++)
         if (extra[p] && SDL_GamepadConnected(extra[p])) m |= 1u << p;
+    for (int p = 1; p < INPUT_MAX_PLAYERS; p++)
+        if (remote_on[p]) m |= 1u << p;
     plat_mutex_unlock(&lock);
     return m;
 }
 
-// Players 2-8: their gamepad and the script's lines for them. The text entry and the menu block them as they block
-// player 1, and only player 1's release ends that block.
+// Players 2-8: their gamepad or remote keyboard and the script's lines for them. The text entry and the menu block them
+// as they block player 1, and only player 1's release ends that block.
 void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry) {
     if (player <= 0) { input_poll(buttons, lx, ly, rx, ry); return; }
     uint64_t b = 0;
     int32_t sl[2] = {0, 0}, sr[2] = {0, 0};
     plat_mutex_lock(&lock);
     if (!state) start();
+    if (state > 0 && player < INPUT_MAX_PLAYERS) binds_refresh();
     if (state == 1 && player < INPUT_MAX_PLAYERS) {
-        binds_refresh();
         pads_update();
         SDL_Gamepad *g = extra[player];
         if (g && SDL_GamepadConnected(g))
             gamepad_read(g, input_pad_layout_pick(cfg_value("MKW_PAD_LAYOUT"), extra_east_a[player]), &b, sl, sr);
+    }
+    if (state > 0 && player < INPUT_MAX_PLAYERS && remote_on[player]) {   // the host's key table, without the mouse
+        const uint8_t *down = remote_keys[player];
+        b |= input_map_buttons(down);
+        int32_t k[2];
+        input_map_stick(down, 0, k);
+        pick(&sl[0], &sl[1], k[0], k[1]);
+        input_map_stick(down, 1, k);
+        pick(&sr[0], &sr[1], k[0], k[1]);
     }
     plat_mutex_unlock(&lock);
     script_apply(&b, sl, sr, player);
@@ -475,6 +597,47 @@ void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, 
     stick_bits(&b, sr[0], sr[1], B_SR_LEFT);
     if (g_block || g_menu) b = 0, sl[0] = sl[1] = sr[0] = sr[1] = 0;
     *buttons = b; *lx = sl[0]; *ly = sl[1]; *rx = sr[0]; *ry = sr[1];
+}
+
+int input_guest_pads(void) {
+    int n = 0;
+    plat_mutex_lock(&lock);
+    for (int p = 1; p < INPUT_MAX_PLAYERS; p++) n += extra[p] && extra_guest[p] && SDL_GamepadConnected(extra[p]);
+    plat_mutex_unlock(&lock);
+    return n;
+}
+
+int input_remote_attach(void) {
+    int p = 1;
+    plat_mutex_lock(&lock);
+    if (!state) start();
+    while (p < INPUT_MAX_PLAYERS && (extra[p] || remote_on[p])) p++;
+    if (p < INPUT_MAX_PLAYERS) {
+        remote_on[p] = 1;
+        memset(remote_keys[p], 0, sizeof remote_keys[p]);
+    }
+    plat_mutex_unlock(&lock);
+    if (p == INPUT_MAX_PLAYERS) return -1;
+    rt_log("input: remote keyboard for player %d", p + 1);
+    return p;
+}
+
+void input_remote_detach(int player) {
+    if (player <= 0 || player >= INPUT_MAX_PLAYERS) return;
+    plat_mutex_lock(&lock);
+    int was = remote_on[player];
+    remote_on[player] = 0;
+    memset(remote_keys[player], 0, sizeof remote_keys[player]);
+    plat_mutex_unlock(&lock);
+    if (was) rt_log("input: remote keyboard of player %d gone", player + 1);
+}
+
+void input_remote_key(int player, int key, int down) {
+    if (player <= 0 || player >= INPUT_MAX_PLAYERS || key <= KEY_NONE || key >= KEY_COUNT) return;
+    if (key >= KEY_MOUSE_L && key <= KEY_MOUSE_X2) return;   // keys only: a guest's mouse drives nothing here
+    plat_mutex_lock(&lock);
+    if (remote_on[player]) remote_keys[player][key] = down != 0;
+    plat_mutex_unlock(&lock);
 }
 
 int input_pad_read(uint64_t *buttons, int32_t *lx, int32_t *ly) {

@@ -31,11 +31,6 @@ msgctxt "UI_MENU_TAB_SCREEN"
 msgid "Screen"
 msgstr "画面"
 
-#. The settings tab with the game's and the menu's language, LAN play and the update check.
-msgctxt "UI_MENU_TAB_GENERAL"
-msgid "General"
-msgstr "常规"
-
 msgctxt "UI_MENU_TAB_SOUND"
 msgid "Sound"
 msgstr "声音"
@@ -44,6 +39,11 @@ msgctxt "UI_MENU_TAB_CONTROLS"
 msgid "Controls"
 msgstr "操作"
 
+#. The settings tab with the game's and the menu's language, LAN play and the update check.
+msgctxt "UI_MENU_TAB_GENERAL"
+msgid "General"
+msgstr "常规"
+
 msgctxt "UI_MENU_TAB_ADVANCED"
 msgid "Advanced"
 msgstr "高级"
@@ -51,199 +51,6 @@ msgstr "高级"
 msgctxt "UI_MENU_TAB_GRAPHICS"
 msgid "Graphics"
 msgstr "图形"
-
-msgctxt "UI_MENU_TAB_HACKS"
-msgid "Hacks"
-msgstr "实验"
-
-msgctxt "UI_MENU_HACKS_WARNING"
-msgid ""
-"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
-"change how the game behaves."
-msgstr "实验功能：主机上没有的捷径，用于更快地游玩和测试。可能会改变游戏的运行方式。"
-
-msgctxt "UI_MENU_TURBO"
-msgid "Turbo"
-msgstr "加速"
-
-msgctxt "UI_MENU_TURBO_DESC"
-msgid ""
-"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
-"most 60 frames a second."
-msgstr "整个游戏都会加快：菜单、影片、读取和比赛。按住或按下 F2。画面最多每秒显示 60 帧。"
-
-msgctxt "UI_MENU_TURBO_HOLD"
-msgid "Hold F2"
-msgstr "按住 F2"
-
-msgctxt "UI_MENU_TURBO_TOGGLE"
-msgid "F2 on/off"
-msgstr "F2 开/关"
-
-msgctxt "UI_MENU_TURBO_SPEED"
-msgid "Turbo speed"
-msgstr "加速倍率"
-
-msgctxt "UI_MENU_TURBO_SPEED_DESC"
-msgid "How many times faster. A slow PC may not reach it."
-msgstr "加快的倍数。配置较低的电脑可能达不到。"
-
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "跳过影片"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "杯赛和赛道的开场影片一开始就跳过。"
-
-msgctxt "UI_MENU_SEED"
-msgid "Same randomness every time"
-msgstr "每次相同的随机"
-
-msgctxt "UI_MENU_SEED_DESC"
-msgid ""
-"The game draws the same random numbers in every session: the same title course, the same items. "
-"For testing."
-msgstr "游戏每次都使用相同的随机数：标题画面的赛道和道具都相同。用于测试。"
-
-msgctxt "UI_MENU_FREEZE_KEYS"
-msgid "Freeze keys"
-msgstr "暂停键"
-
-msgctxt "UI_MENU_FREEZE_KEYS_DESC"
-msgid ""
-"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
-"look at a moment closely."
-msgstr "F3 在当前帧暂停游戏并可再次继续；F4 前进一帧。用于仔细查看某一瞬间。"
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "全部解锁"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr "解锁所有角色和服装、载具、贴纸、特别杯以及镜像。游戏存档时会写入存档，关闭后也不会再次锁定。"
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "直接进入"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr "启动时自动完成菜单操作。计时赛：马力欧、标准型卡丁车、游戏推荐的赛道（开启「每次相同的随机」时始终相同），无对手。自由行驶：开放世界。手柄仍可正常使用。"
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "计时赛"
-
-msgctxt "UI_MENU_QUICK_RACE_GP"
-msgid "Grand Prix"
-msgstr ""
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "自由行驶"
-
-msgctxt "UI_MENU_CLASSIC_GP"
-msgid "Classic Grand Prix"
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_GP_DESC"
-msgid ""
-"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
-"Changes take several seconds and affect races started afterward."
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_VS"
-msgid "Classic VS races"
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_VS_DESC"
-msgid ""
-"VS races after the first take place on the next course instead of the road to it, whatever the "
-"course rule. Changes take several seconds and affect races started afterward."
-msgstr ""
-
-msgctxt "UI_MENU_ANISO"
-msgid "Texture filtering"
-msgstr "纹理过滤"
-
-msgctxt "UI_MENU_ANISO_DESC"
-msgid ""
-"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
-"each texture asks for. Impact on frame rate: low."
-msgstr "远处或斜视角度的纹理（如前方的道路）的清晰度。游戏使用各纹理自身要求的值。对帧率的影响：小。"
-
-msgctxt "UI_MENU_ANISO_GAME"
-msgid "Game"
-msgstr "游戏"
-
-msgctxt "UI_MENU_TEX_QUALITY"
-msgid "Texture quality"
-msgstr "纹理质量"
-
-msgctxt "UI_MENU_TEX_QUALITY_DESC"
-msgid ""
-"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
-"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
-msgstr "游戏自带纹理的细节程度。「一半」和「四分之一」会跳过最精细的层级：显卡的内存传输更少，但近看表面会更模糊。对帧率的影响：小。"
-
-msgctxt "UI_MENU_TEX_QUALITY_FULL"
-msgid "Full"
-msgstr "全部"
-
-msgctxt "UI_MENU_TEX_QUALITY_HALF"
-msgid "Half"
-msgstr "一半"
-
-msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
-msgid "Quarter"
-msgstr "四分之一"
-
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "细节距离"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr "物体在多远的距离内保持精细模型，超过后会切换为更简单的模型。「主机」为 Switch 2 的设定。对帧率的影响：小。"
-
-msgctxt "UI_MENU_DETAIL_LOW"
-msgid "Low"
-msgstr "低"
-
-msgctxt "UI_MENU_DETAIL_MEDIUM"
-msgid "Medium"
-msgstr "中"
-
-msgctxt "UI_MENU_DETAIL_CONSOLE"
-msgid "Console"
-msgstr "主机"
-
-msgctxt "UI_MENU_DETAIL_HIGH"
-msgid "High"
-msgstr "高"
-
-msgctxt "UI_MENU_DETAIL_ULTRA"
-msgid "Very high"
-msgstr "极高"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "阴影质量"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr "绘制阴影所用贴图的大小。越小对显卡越轻松，但阴影边缘越模糊。主机在底座模式下为 3072，掌机模式下为 2048。对帧率的影响：小。"
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -302,21 +109,6 @@ msgctxt "UI_MENU_WINDOW_SIZE_DESC"
 msgid "Size of the game window when not fullscreen."
 msgstr "非全屏时的游戏窗口大小。"
 
-msgctxt "UI_MENU_QUALITY"
-msgid "Quality"
-msgstr "画质"
-
-msgctxt "UI_MENU_QUALITY_DESC"
-msgid ""
-"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
-"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
-"resolution is what changes the frame rate most."
-msgstr "一次性设定下面各项。「主机」的画面与 Switch 2 相同；「低」和「中」对显卡更轻松，「高」和「极高」更清晰。修改任一项会变为「自定义」。对帧率影响最大的是内部分辨率。"
-
-msgctxt "UI_MENU_QUALITY_CUSTOM"
-msgid "Custom"
-msgstr "自定义"
-
 msgctxt "UI_MENU_RESOLUTION"
 msgid "Internal resolution"
 msgstr "内部分辨率"
@@ -362,6 +154,21 @@ msgstr "16:9 区域"
 msgctxt "UI_MENU_HUD_POSITION_EDGES"
 msgid "Screen edges"
 msgstr "屏幕边缘"
+
+msgctxt "UI_MENU_QUALITY"
+msgid "Quality"
+msgstr "画质"
+
+msgctxt "UI_MENU_QUALITY_DESC"
+msgid ""
+"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
+"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
+"resolution is what changes the frame rate most."
+msgstr "一次性设定下面各项。「主机」的画面与 Switch 2 相同；「低」和「中」对显卡更轻松，「高」和「极高」更清晰。修改任一项会变为「自定义」。对帧率影响最大的是内部分辨率。"
+
+msgctxt "UI_MENU_QUALITY_CUSTOM"
+msgid "Custom"
+msgstr "自定义"
 
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
@@ -596,6 +403,199 @@ msgctxt "UI_MENU_AUTOSET_UNDO_DESC"
 msgid "Puts back the rows Best settings for this PC changed."
 msgstr "还原「此电脑的最佳设置」改动过的选项。"
 
+msgctxt "UI_MENU_ANISO"
+msgid "Texture filtering"
+msgstr "纹理过滤"
+
+msgctxt "UI_MENU_ANISO_DESC"
+msgid ""
+"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
+"each texture asks for. Impact on frame rate: low."
+msgstr "远处或斜视角度的纹理（如前方的道路）的清晰度。游戏使用各纹理自身要求的值。对帧率的影响：小。"
+
+msgctxt "UI_MENU_ANISO_GAME"
+msgid "Game"
+msgstr "游戏"
+
+msgctxt "UI_MENU_TEX_QUALITY"
+msgid "Texture quality"
+msgstr "纹理质量"
+
+msgctxt "UI_MENU_TEX_QUALITY_DESC"
+msgid ""
+"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
+"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
+msgstr "游戏自带纹理的细节程度。「一半」和「四分之一」会跳过最精细的层级：显卡的内存传输更少，但近看表面会更模糊。对帧率的影响：小。"
+
+msgctxt "UI_MENU_TEX_QUALITY_FULL"
+msgid "Full"
+msgstr "全部"
+
+msgctxt "UI_MENU_TEX_QUALITY_HALF"
+msgid "Half"
+msgstr "一半"
+
+msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
+msgid "Quarter"
+msgstr "四分之一"
+
+msgctxt "UI_MENU_DETAIL"
+msgid "Detail distance"
+msgstr "细节距离"
+
+msgctxt "UI_MENU_DETAIL_DESC"
+msgid ""
+"How far objects keep their detailed models before switching to simpler ones. Console is the "
+"Switch 2's. Impact on frame rate: low."
+msgstr "物体在多远的距离内保持精细模型，超过后会切换为更简单的模型。「主机」为 Switch 2 的设定。对帧率的影响：小。"
+
+msgctxt "UI_MENU_DETAIL_LOW"
+msgid "Low"
+msgstr "低"
+
+msgctxt "UI_MENU_DETAIL_MEDIUM"
+msgid "Medium"
+msgstr "中"
+
+msgctxt "UI_MENU_DETAIL_CONSOLE"
+msgid "Console"
+msgstr "主机"
+
+msgctxt "UI_MENU_DETAIL_HIGH"
+msgid "High"
+msgstr "高"
+
+msgctxt "UI_MENU_DETAIL_ULTRA"
+msgid "Very high"
+msgstr "极高"
+
+msgctxt "UI_MENU_SHADOW"
+msgid "Shadow quality"
+msgstr "阴影质量"
+
+msgctxt "UI_MENU_SHADOW_DESC"
+msgid ""
+"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
+"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
+msgstr "绘制阴影所用贴图的大小。越小对显卡越轻松，但阴影边缘越模糊。主机在底座模式下为 3072，掌机模式下为 2048。对帧率的影响：小。"
+
+msgctxt "UI_MENU_TAB_HACKS"
+msgid "Hacks"
+msgstr "实验"
+
+msgctxt "UI_MENU_HACKS_WARNING"
+msgid ""
+"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
+"change how the game behaves."
+msgstr "实验功能：主机上没有的捷径，用于更快地游玩和测试。可能会改变游戏的运行方式。"
+
+msgctxt "UI_MENU_TURBO"
+msgid "Turbo"
+msgstr "加速"
+
+msgctxt "UI_MENU_TURBO_DESC"
+msgid ""
+"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
+"most 60 frames a second."
+msgstr "整个游戏都会加快：菜单、影片、读取和比赛。按住或按下 F2。画面最多每秒显示 60 帧。"
+
+msgctxt "UI_MENU_TURBO_HOLD"
+msgid "Hold F2"
+msgstr "按住 F2"
+
+msgctxt "UI_MENU_TURBO_TOGGLE"
+msgid "F2 on/off"
+msgstr "F2 开/关"
+
+msgctxt "UI_MENU_TURBO_SPEED"
+msgid "Turbo speed"
+msgstr "加速倍率"
+
+msgctxt "UI_MENU_TURBO_SPEED_DESC"
+msgid "How many times faster. A slow PC may not reach it."
+msgstr "加快的倍数。配置较低的电脑可能达不到。"
+
+msgctxt "UI_MENU_SKIP_MOVIES"
+msgid "Skip movies"
+msgstr "跳过影片"
+
+msgctxt "UI_MENU_SKIP_MOVIES_DESC"
+msgid "Skips the cup and course openings as soon as they start."
+msgstr "杯赛和赛道的开场影片一开始就跳过。"
+
+msgctxt "UI_MENU_SEED"
+msgid "Same randomness every time"
+msgstr "每次相同的随机"
+
+msgctxt "UI_MENU_SEED_DESC"
+msgid ""
+"The game draws the same random numbers in every session: the same title course, the same items. "
+"For testing."
+msgstr "游戏每次都使用相同的随机数：标题画面的赛道和道具都相同。用于测试。"
+
+msgctxt "UI_MENU_UNLOCK_ALL"
+msgid "Unlock everything"
+msgstr "全部解锁"
+
+msgctxt "UI_MENU_UNLOCK_ALL_DESC"
+msgid ""
+"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
+"when the game saves: turning it off does not lock them again."
+msgstr "解锁所有角色和服装、载具、贴纸、特别杯以及镜像。游戏存档时会写入存档，关闭后也不会再次锁定。"
+
+msgctxt "UI_MENU_QUICK_RACE"
+msgid "Straight to"
+msgstr "直接进入"
+
+msgctxt "UI_MENU_QUICK_RACE_DESC"
+msgid ""
+"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
+"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
+"world. The controller still works."
+msgstr "启动时自动完成菜单操作。计时赛：马力欧、标准型卡丁车、游戏推荐的赛道（开启「每次相同的随机」时始终相同），无对手。自由行驶：开放世界。手柄仍可正常使用。"
+
+msgctxt "UI_MENU_QUICK_RACE_TT"
+msgid "Time trial"
+msgstr "计时赛"
+
+msgctxt "UI_MENU_QUICK_RACE_GP"
+msgid "Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_QUICK_RACE_FREE"
+msgid "Free roam"
+msgstr "自由行驶"
+
+msgctxt "UI_MENU_FREEZE_KEYS"
+msgid "Freeze keys"
+msgstr "暂停键"
+
+msgctxt "UI_MENU_FREEZE_KEYS_DESC"
+msgid ""
+"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
+"look at a moment closely."
+msgstr "F3 在当前帧暂停游戏并可再次继续；F4 前进一帧。用于仔细查看某一瞬间。"
+
+msgctxt "UI_MENU_CLASSIC_GP"
+msgid "Classic Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_GP_DESC"
+msgid ""
+"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
+"Changes take several seconds and affect races started afterward."
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS"
+msgid "Classic VS races"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS_DESC"
+msgid ""
+"VS races after the first take place on the next course instead of the road to it, whatever the "
+"course rule. Changes take several seconds and affect races started afterward."
+msgstr ""
+
 msgctxt "UI_MENU_GAME_LANG"
 msgid "Game language"
 msgstr "游戏语言"
@@ -650,6 +650,12 @@ msgctxt "UI_MENU_SPEAKERS"
 msgid "Speakers"
 msgstr "扬声器"
 
+msgctxt "UI_MENU_SPEAKERS_DESC"
+msgid ""
+"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
+"more, and stereo otherwise. Applies at the next start."
+msgstr "系统音频输出为 6 声道或以上时，「自动」会使用游戏的 5.1 环绕声混音，否则使用立体声。下次启动时生效。"
+
 msgctxt "UI_MENU_SPEAKERS_STEREO"
 msgid "Stereo"
 msgstr "立体声"
@@ -665,12 +671,6 @@ msgstr "后台时静音"
 msgctxt "UI_MENU_BACKGROUND_MUTE_DESC"
 msgid "No sound while the game window is not in front."
 msgstr "游戏窗口不在前台时不发出声音。"
-
-msgctxt "UI_MENU_SPEAKERS_DESC"
-msgid ""
-"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
-"more, and stereo otherwise. Applies at the next start."
-msgstr "系统音频输出为 6 声道或以上时，「自动」会使用游戏的 5.1 环绕声混音，否则使用立体声。下次启动时生效。"
 
 msgctxt "UI_MENU_MOTION"
 msgid "Motion controls"
@@ -742,6 +742,15 @@ msgctxt "UI_MENU_MOUSE_SENS_DESC"
 msgid "How fast the mouse turns the camera."
 msgstr "鼠标转动镜头的速度。"
 
+msgctxt "UI_MENU_STICK_DEADZONE"
+msgid "Stick dead zone"
+msgstr "摇杆死区"
+
+msgctxt "UI_MENU_STICK_DEADZONE_DESC"
+msgid ""
+"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
+msgstr "摇杆需要倾斜多少才算输入。松开摇杆时卡丁车仍在移动的话请调高。"
+
 msgctxt "UI_MENU_SWITCH2"
 msgid "Switch 2 controllers (Bluetooth)"
 msgstr "Switch 2 手柄（蓝牙）"
@@ -761,15 +770,6 @@ msgid ""
 "The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
 "Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
 msgstr ""
-
-msgctxt "UI_MENU_STICK_DEADZONE"
-msgid "Stick dead zone"
-msgstr "摇杆死区"
-
-msgctxt "UI_MENU_STICK_DEADZONE_DESC"
-msgid ""
-"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
-msgstr "摇杆需要倾斜多少才算输入。松开摇杆时卡丁车仍在移动的话请调高。"
 
 msgctxt "UI_MENU_BUTTON_ICONS"
 msgid "Button icons"
@@ -1864,6 +1864,15 @@ msgctxt "UI_LAUNCH_FILES_FOLDER"
 msgid "Game folder"
 msgstr "游戏文件夹"
 
+msgctxt "UI_LAUNCH_FILES_HELP"
+msgid ""
+"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
+"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
+"game code on this computer and translates the shaders."
+msgstr ""
+"本移植版不附带游戏：需要你自己从主机中转储的 Mario Kart World 1.0.0/1.8.0 副本（exefs 和 romfs "
+"文件夹）。设置过程会检查其版本，在这台电脑上构建游戏代码，并转换着色器。"
+
 msgctxt "UI_LAUNCH_PICK_GAME_DIR"
 msgid "Choose game folder"
 msgstr "选择游戏文件夹"
@@ -1887,15 +1896,6 @@ msgid ""
 "This game folder could not be selected. On Windows, choose a folder without line breaks whose "
 "full path is at most %d UTF-16 units to leave room for the game's files."
 msgstr "无法选择此游戏文件夹。在 Windows 上，请选择不含换行符、完整路径不超过 %d 个 UTF-16 单元的文件夹，以便为游戏文件留出空间。"
-
-msgctxt "UI_LAUNCH_FILES_HELP"
-msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
-msgstr ""
-"本移植版不附带游戏：需要你自己从主机中转储的 Mario Kart World 1.0.0/1.8.0 副本（exefs 和 romfs "
-"文件夹）。设置过程会检查其版本，在这台电脑上构建游戏代码，并转换着色器。"
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -2275,17 +2275,12 @@ msgid ""
 "this mod may do less than on a console, look worse or misbehave"
 msgstr "更改游戏的图形设置：移植版自己的设置（分辨率、画质）会叠加在其上，因此此模组的效果可能不如主机版，画面可能更差或出现异常"
 
-#. Above every mod install and import.
-msgctxt "UI_MOD_RISK"
+#. Under an installed mod that ships shaders (Shader/ files).
+msgctxt "UI_MOD_WARN_SHADERS"
 msgid ""
-"Mods are made by other people and are not tested by this project. A mod can crash the game or "
-"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
-"its author."
-msgstr "模组由其他人制作，本项目未对其进行测试。模组可能导致游戏崩溃或损坏存档：请先阅读其页面，备份你的存档，并将模组的问题反馈给其作者。"
-
-msgctxt "UI_MOD_RISK_ACK"
-msgid "I understand"
-msgstr "我明白了"
+"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
+"show, or may break the picture"
+msgstr "替换着色器：移植版在设置过程中转换游戏的着色器，因此此模组可能无法显示，或导致画面异常"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
 msgctxt "UI_MOD_PLUGIN"
@@ -2298,12 +2293,17 @@ msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "代码：开启或关闭会在游玩前重新构建游戏代码（需几分钟）"
 
-#. Under an installed mod that ships shaders (Shader/ files).
-msgctxt "UI_MOD_WARN_SHADERS"
+#. Above every mod install and import.
+msgctxt "UI_MOD_RISK"
 msgid ""
-"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
-"show, or may break the picture"
-msgstr "替换着色器：移植版在设置过程中转换游戏的着色器，因此此模组可能无法显示，或导致画面异常"
+"Mods are made by other people and are not tested by this project. A mod can crash the game or "
+"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
+"its author."
+msgstr "模组由其他人制作，本项目未对其进行测试。模组可能导致游戏崩溃或损坏存档：请先阅读其页面，备份你的存档，并将模组的问题反馈给其作者。"
+
+msgctxt "UI_MOD_RISK_ACK"
+msgid "I understand"
+msgstr "我明白了"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_UPDATE_FETCHING"
@@ -2337,6 +2337,16 @@ msgctxt "UI_LAUNCH_UPDATE_NOW"
 msgid "Update"
 msgstr "更新"
 
+#. Opens the release's notes on GitHub.
+msgctxt "UI_LAUNCH_WHATS_NEW"
+msgid "What's new"
+msgstr "新内容"
+
+#. After a failed download.
+msgctxt "UI_LAUNCH_RETRY"
+msgid "Try again"
+msgstr "重试"
+
 msgctxt "UI_LAUNCH_UPDATE_PREPARING"
 msgid "Setting up %s in the background. You can keep playing meanwhile."
 msgstr "正在后台准备 %s。在此期间可以继续游戏。"
@@ -2352,16 +2362,6 @@ msgstr "用它重新启动"
 msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
 msgid "It could not be set up in advance (%s): it will be set up when it starts."
 msgstr "无法提前准备（%s）：将在启动时准备。"
-
-#. Opens the release's notes on GitHub.
-msgctxt "UI_LAUNCH_WHATS_NEW"
-msgid "What's new"
-msgstr "新内容"
-
-#. After a failed download.
-msgctxt "UI_LAUNCH_RETRY"
-msgid "Try again"
-msgstr "重试"
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.
@@ -2818,3 +2818,153 @@ msgid ""
 msgstr ""
 "游戏需要 Vulkan 1.3：请安装显卡厂商（AMD、Intel 或 NVIDIA）的最新驱动（NVIDIA 需 510 "
 "或更新版本）。部分旧显卡完全无法支持。现在就可以进行设置：驱动更新后游戏即可启动。"
+
+#. A product name: keep it as Steam shows it in your language.
+msgctxt "UI_MENU_GROUP_RPT"
+msgid "Steam Remote Play Together"
+msgstr "Steam Remote Play Together"
+
+msgctxt "UI_MENU_RPT_INVITE"
+msgid "Invite friends"
+msgstr "邀请好友"
+
+msgctxt "UI_MENU_RPT_INVITE_DESC"
+msgid ""
+"Opens Remote Play Together in the Steam overlay. Friends who join see and hear the game; each "
+"one's controller, or keyboard, becomes the next free player."
+msgstr "在 Steam 界面中打开 Remote Play Together。加入的好友可以看到并听到游戏；每人的手柄或键盘会成为下一个空闲玩家。"
+
+msgctxt "UI_MENU_RPT_LINK"
+msgid "Copy guest link"
+msgstr "复制访客链接"
+
+msgctxt "UI_MENU_RPT_LINK_DESC"
+msgid ""
+"Copies a link that lets anyone join from a browser or the Steam Link app, without being your "
+"Steam friend."
+msgstr "复制一个链接，任何人都可以通过浏览器或 Steam Link 应用加入，无需是你的 Steam 好友。"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CONNECTED"
+msgid "%d connected"
+msgstr "已连接 %d 人"
+
+msgctxt "UI_MENU_RPT_NO_OVERLAY"
+msgid "no Steam overlay"
+msgstr "没有 Steam 界面"
+
+msgctxt "UI_MENU_RPT_WAITING"
+msgid "waiting for Steam"
+msgstr "正在等待 Steam"
+
+#. steam_appid and mkw.ini are a setting and a file name: keep them.
+msgctxt "UI_MENU_RPT_NEED_APPID"
+msgid "Needs steam_appid in mkw.ini"
+msgstr "需要在 mkw.ini 中设置 steam_appid"
+
+msgctxt "UI_MENU_RPT_AT_START"
+msgid "Starts with the game"
+msgstr "随游戏一起启动"
+
+msgctxt "UI_MENU_RPT_FAILED"
+msgid "Steam is not available: see the log"
+msgstr "Steam 不可用：请查看日志"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_JOINED"
+msgid "%s joined Remote Play Together"
+msgstr "%s 加入了 Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_LEFT"
+msgid "%s left Remote Play Together"
+msgstr "%s 离开了 Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_PAD"
+msgid "A Remote Play guest's controller is player %d"
+msgstr "一位 Remote Play 访客的手柄是玩家 %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_KEYBOARD"
+msgid "%s plays on the keyboard as player %d"
+msgstr "%s 使用键盘作为玩家 %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FULL"
+msgid "%s: no free player for the keyboard"
+msgstr "%s：没有空闲玩家给键盘"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FAILED"
+msgid "Remote Play Together is off: %s"
+msgstr "Remote Play Together 已关闭：%s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_INVITE"
+msgid ""
+"%d players need a controller each: %d connected. Steam's invite list is open: once your friends' "
+"controllers are in, pick the mode again."
+msgstr "%d 名玩家各需要一个手柄：已连接 %d 个。Steam 邀请列表已打开：好友的手柄接入后，请再次选择该模式。"
+
+msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
+msgid ""
+"The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
+msgstr "Steam 界面未能打开：请从 Steam 启动游戏，或发送访客链接（菜单 > 游戏）。"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CHOICE"
+msgid "Local multiplayer for %d players: %d controllers connected. How do the other players join?"
+msgstr "%d 人本地多人游戏：已连接 %d 个控制器。其他玩家如何加入？"
+
+msgctxt "UI_MENU_RPT_CHOICE_LOCAL"
+msgid "Local players (connect more controllers)"
+msgstr "本地玩家（连接更多控制器）"
+
+msgctxt "UI_MENU_RPT_CHOICE_STEAM"
+msgid "Steam Remote Play Together (invite friends)"
+msgstr "Steam 远程同乐（邀请好友）"
+
+msgctxt "UI_MENU_RPT_APPID"
+msgid "Steam App ID"
+msgstr "Steam 应用 ID"
+
+msgctxt "UI_MENU_RPT_APPID_DESC"
+msgid ""
+"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
+"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in mkw.ini. Takes effect at the next start."
+msgstr ""
+"mkw 在远程同乐中所使用的 Steam 游戏。自动：通过启动选项启动 mkw 的游戏 (\"C:\\...\\mkw.exe\" %command%)，因此你拥有的任何支持远程同乐的 "
+"Steam 游戏都可以。其他编号：mkw.ini 中的 steam_appid。下次启动时生效。"
+
+msgctxt "UI_MENU_RPT_APPID_OFF"
+msgid "Off"
+msgstr "关闭"
+
+msgctxt "UI_MENU_RPT_APPID_AUTO"
+msgid "Automatic (the game Steam started)"
+msgstr "自动（Steam 启动的游戏）"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_APPID_CUSTOM"
+msgid "%s (mkw.ini)"
+msgstr "%s（mkw.ini）"
+
+msgctxt "UI_MENU_RPT_APPID_ADD"
+msgid "Enter a Steam App ID"
+msgstr "输入 Steam 应用 ID"
+
+msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
+msgid ""
+"Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
+"keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
+"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
+"it in its list (steam_appids in mkw.ini). Backspace deletes a digit."
+msgstr ""
+"用键盘的数字键输入你拥有且支持远程同乐的 Steam 游戏的应用 ID（即该游戏商店地址中的数字，store.steampowered.com/app/<number>/），然后按 Enter "
+"或 A。下次启动起 mkw 将以该游戏运行，上方的 Steam 应用 ID 一行会把它保留在列表中（mkw.ini 中的 steam_appids）。Backspace 删除一位数字。"
+
+msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
+msgid "type the number"
+msgstr "输入数字"

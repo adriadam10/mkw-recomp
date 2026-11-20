@@ -31,11 +31,6 @@ msgctxt "UI_MENU_TAB_SCREEN"
 msgid "Screen"
 msgstr "หน้าจอ"
 
-#. The settings tab with the game's and the menu's language, LAN play and the update check.
-msgctxt "UI_MENU_TAB_GENERAL"
-msgid "General"
-msgstr "ทั่วไป"
-
 msgctxt "UI_MENU_TAB_SOUND"
 msgid "Sound"
 msgstr "เสียง"
@@ -44,6 +39,11 @@ msgctxt "UI_MENU_TAB_CONTROLS"
 msgid "Controls"
 msgstr "การควบคุม"
 
+#. The settings tab with the game's and the menu's language, LAN play and the update check.
+msgctxt "UI_MENU_TAB_GENERAL"
+msgid "General"
+msgstr "ทั่วไป"
+
 msgctxt "UI_MENU_TAB_ADVANCED"
 msgid "Advanced"
 msgstr "ขั้นสูง"
@@ -51,213 +51,6 @@ msgstr "ขั้นสูง"
 msgctxt "UI_MENU_TAB_GRAPHICS"
 msgid "Graphics"
 msgstr "กราฟิก"
-
-msgctxt "UI_MENU_TAB_HACKS"
-msgid "Hacks"
-msgstr "แฮ็ก"
-
-msgctxt "UI_MENU_HACKS_WARNING"
-msgid ""
-"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
-"change how the game behaves."
-msgstr "ทดลอง: ทางลัดที่เครื่องคอนโซลไม่มี ไว้เล่นและทดสอบให้เร็วขึ้น อาจเปลี่ยนการทำงานของเกม"
-
-msgctxt "UI_MENU_TURBO"
-msgid "Turbo"
-msgstr "เทอร์โบ"
-
-msgctxt "UI_MENU_TURBO_DESC"
-msgid ""
-"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
-"most 60 frames a second."
-msgstr ""
-"ทั้งเกมทำงานเร็วขึ้น: เมนู ภาพยนตร์ การโหลด และการแข่ง กดค้างหรือกด F2 หน้าจอแสดงสูงสุด 60 "
-"เฟรมต่อวินาที"
-
-msgctxt "UI_MENU_TURBO_HOLD"
-msgid "Hold F2"
-msgstr "กดค้าง F2"
-
-msgctxt "UI_MENU_TURBO_TOGGLE"
-msgid "F2 on/off"
-msgstr "F2 เปิด/ปิด"
-
-msgctxt "UI_MENU_TURBO_SPEED"
-msgid "Turbo speed"
-msgstr "ความเร็วเทอร์โบ"
-
-msgctxt "UI_MENU_TURBO_SPEED_DESC"
-msgid "How many times faster. A slow PC may not reach it."
-msgstr "เร็วขึ้นกี่เท่า พีซีที่ช้าอาจไปไม่ถึง"
-
-msgctxt "UI_MENU_SKIP_MOVIES"
-msgid "Skip movies"
-msgstr "ข้ามภาพยนตร์"
-
-msgctxt "UI_MENU_SKIP_MOVIES_DESC"
-msgid "Skips the cup and course openings as soon as they start."
-msgstr "ข้ามฉากเปิดของคัพและสนามทันทีที่เริ่ม"
-
-msgctxt "UI_MENU_SEED"
-msgid "Same randomness every time"
-msgstr "สุ่มเหมือนเดิมทุกครั้ง"
-
-msgctxt "UI_MENU_SEED_DESC"
-msgid ""
-"The game draws the same random numbers in every session: the same title course, the same items. "
-"For testing."
-msgstr "เกมสุ่มตัวเลขชุดเดิมในทุกเซสชัน: สนามหน้าไตเติลเดิม ไอเทมเดิม สำหรับการทดสอบ"
-
-msgctxt "UI_MENU_FREEZE_KEYS"
-msgid "Freeze keys"
-msgstr "ปุ่มหยุดภาพ"
-
-msgctxt "UI_MENU_FREEZE_KEYS_DESC"
-msgid ""
-"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
-"look at a moment closely."
-msgstr "F3 หยุดเกมที่เฟรมบนหน้าจอและเล่นต่อ F4 เดินหน้าทีละหนึ่งเฟรม ไว้ดูช่วงเวลาใกล้ ๆ"
-
-msgctxt "UI_MENU_UNLOCK_ALL"
-msgid "Unlock everything"
-msgstr "ปลดล็อกทั้งหมด"
-
-msgctxt "UI_MENU_UNLOCK_ALL_DESC"
-msgid ""
-"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
-"when the game saves: turning it off does not lock them again."
-msgstr ""
-"ตัวละครและชุดทุกแบบ ยานพาหนะและสติกเกอร์ สเปเชียลคัพ และมิเรอร์ จะถูกบันทึกลงเซฟเมื่อเกมบันทึก: "
-"ปิดตัวเลือกนี้แล้วจะไม่ล็อกกลับ"
-
-msgctxt "UI_MENU_QUICK_RACE"
-msgid "Straight to"
-msgstr "ไปที่"
-
-msgctxt "UI_MENU_QUICK_RACE_DESC"
-msgid ""
-"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
-"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
-"world. The controller still works."
-msgstr ""
-"ผ่านเมนูเองตอนเริ่ม ไทม์ไทรอัล: มาริโอ คาร์ทมาตรฐาน และสนามที่เกมเสนอ (เหมือนเดิมเสมอเมื่อเปิด "
-"«สุ่มเหมือนเดิมทุกครั้ง») ไม่มีคู่แข่ง ท่องโลกอิสระ: โลกเปิด ยังใช้จอยได้ตามปกติ"
-
-msgctxt "UI_MENU_QUICK_RACE_TT"
-msgid "Time trial"
-msgstr "ไทม์ไทรอัล"
-
-msgctxt "UI_MENU_QUICK_RACE_GP"
-msgid "Grand Prix"
-msgstr ""
-
-msgctxt "UI_MENU_QUICK_RACE_FREE"
-msgid "Free roam"
-msgstr "ท่องโลกอิสระ"
-
-msgctxt "UI_MENU_CLASSIC_GP"
-msgid "Classic Grand Prix"
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_GP_DESC"
-msgid ""
-"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
-"Changes take several seconds and affect races started afterward."
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_VS"
-msgid "Classic VS races"
-msgstr ""
-
-msgctxt "UI_MENU_CLASSIC_VS_DESC"
-msgid ""
-"VS races after the first take place on the next course instead of the road to it, whatever the "
-"course rule. Changes take several seconds and affect races started afterward."
-msgstr ""
-
-msgctxt "UI_MENU_ANISO"
-msgid "Texture filtering"
-msgstr "การกรองพื้นผิว"
-
-msgctxt "UI_MENU_ANISO_DESC"
-msgid ""
-"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
-"each texture asks for. Impact on frame rate: low."
-msgstr ""
-"ความคมของพื้นผิวที่อยู่ไกลหรือมองในมุมต่ำ เช่นถนนข้างหน้า เกมใช้ค่าที่พื้นผิวแต่ละอันขอ "
-"ผลต่อเฟรมเรต: น้อย"
-
-msgctxt "UI_MENU_ANISO_GAME"
-msgid "Game"
-msgstr "เกม"
-
-msgctxt "UI_MENU_TEX_QUALITY"
-msgid "Texture quality"
-msgstr "คุณภาพพื้นผิว"
-
-msgctxt "UI_MENU_TEX_QUALITY_DESC"
-msgid ""
-"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
-"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
-msgstr ""
-"ความละเอียดของพื้นผิวในเกม ครึ่งและหนึ่งในสี่ข้ามระดับที่ละเอียดที่สุด: "
-"ใช้แบนด์วิดท์หน่วยความจำการ์ดจอน้อยลง แต่พื้นผิวใกล้ ๆ เบลอลง ผลต่อเฟรมเรต: น้อย"
-
-msgctxt "UI_MENU_TEX_QUALITY_FULL"
-msgid "Full"
-msgstr "เต็ม"
-
-msgctxt "UI_MENU_TEX_QUALITY_HALF"
-msgid "Half"
-msgstr "ครึ่ง"
-
-msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
-msgid "Quarter"
-msgstr "หนึ่งในสี่"
-
-msgctxt "UI_MENU_DETAIL"
-msgid "Detail distance"
-msgstr "ระยะรายละเอียด"
-
-msgctxt "UI_MENU_DETAIL_DESC"
-msgid ""
-"How far objects keep their detailed models before switching to simpler ones. Console is the "
-"Switch 2's. Impact on frame rate: low."
-msgstr ""
-"วัตถุคงโมเดลละเอียดไว้ไกลแค่ไหนก่อนเปลี่ยนเป็นโมเดลที่ง่ายกว่า คอนโซลคือค่าของ Switch 2 "
-"ผลต่อเฟรมเรต: น้อย"
-
-msgctxt "UI_MENU_DETAIL_LOW"
-msgid "Low"
-msgstr "ต่ำ"
-
-msgctxt "UI_MENU_DETAIL_MEDIUM"
-msgid "Medium"
-msgstr "ปานกลาง"
-
-msgctxt "UI_MENU_DETAIL_CONSOLE"
-msgid "Console"
-msgstr "คอนโซล"
-
-msgctxt "UI_MENU_DETAIL_HIGH"
-msgid "High"
-msgstr "สูง"
-
-msgctxt "UI_MENU_DETAIL_ULTRA"
-msgid "Very high"
-msgstr "สูงมาก"
-
-msgctxt "UI_MENU_SHADOW"
-msgid "Shadow quality"
-msgstr "คุณภาพเงา"
-
-msgctxt "UI_MENU_SHADOW_DESC"
-msgid ""
-"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
-"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
-msgstr ""
-"ขนาดแผนที่ที่เกมใช้วาดเงา เล็กลงเบากว่าสำหรับการ์ดจอ แต่ขอบเงาเบลอลง ค่าคอนโซลคือ 3072 "
-"เมื่อเสียบแท่นและ 2048 เมื่อเล่นพกพา ผลต่อเฟรมเรต: น้อย"
 
 msgctxt "UI_MENU_CONTINUE"
 msgid "Continue"
@@ -316,24 +109,6 @@ msgctxt "UI_MENU_WINDOW_SIZE_DESC"
 msgid "Size of the game window when not fullscreen."
 msgstr "ขนาดหน้าต่างเกมเมื่อไม่ได้เล่นเต็มจอ"
 
-msgctxt "UI_MENU_QUALITY"
-msgid "Quality"
-msgstr "คุณภาพ"
-
-msgctxt "UI_MENU_QUALITY_DESC"
-msgid ""
-"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
-"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
-"resolution is what changes the frame rate most."
-msgstr ""
-"ตั้งแถวด้านล่างพร้อมกัน คอนโซลให้ภาพเหมือน Switch 2 ต่ำและปานกลางเบากว่าสำหรับการ์ดจอ "
-"สูงและสูงมากคมกว่า การเปลี่ยนแถวใดแถวหนึ่งจะเป็นกำหนดเอง "
-"ความละเอียดภายในเปลี่ยนเฟรมเรตได้มากที่สุด"
-
-msgctxt "UI_MENU_QUALITY_CUSTOM"
-msgid "Custom"
-msgstr "กำหนดเอง"
-
 msgctxt "UI_MENU_RESOLUTION"
 msgid "Internal resolution"
 msgstr "ความละเอียดภายใน"
@@ -385,6 +160,24 @@ msgstr "พื้นที่ 16:9"
 msgctxt "UI_MENU_HUD_POSITION_EDGES"
 msgid "Screen edges"
 msgstr "ขอบหน้าจอ"
+
+msgctxt "UI_MENU_QUALITY"
+msgid "Quality"
+msgstr "คุณภาพ"
+
+msgctxt "UI_MENU_QUALITY_DESC"
+msgid ""
+"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
+"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
+"resolution is what changes the frame rate most."
+msgstr ""
+"ตั้งแถวด้านล่างพร้อมกัน คอนโซลให้ภาพเหมือน Switch 2 ต่ำและปานกลางเบากว่าสำหรับการ์ดจอ "
+"สูงและสูงมากคมกว่า การเปลี่ยนแถวใดแถวหนึ่งจะเป็นกำหนดเอง "
+"ความละเอียดภายในเปลี่ยนเฟรมเรตได้มากที่สุด"
+
+msgctxt "UI_MENU_QUALITY_CUSTOM"
+msgid "Custom"
+msgstr "กำหนดเอง"
 
 msgctxt "UI_MENU_PRESENT"
 msgid "Presentation"
@@ -639,6 +432,213 @@ msgctxt "UI_MENU_AUTOSET_UNDO_DESC"
 msgid "Puts back the rows Best settings for this PC changed."
 msgstr "คืนค่ารายการที่ «การตั้งค่าที่ดีที่สุดสำหรับพีซีนี้» เปลี่ยนไว้"
 
+msgctxt "UI_MENU_ANISO"
+msgid "Texture filtering"
+msgstr "การกรองพื้นผิว"
+
+msgctxt "UI_MENU_ANISO_DESC"
+msgid ""
+"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
+"each texture asks for. Impact on frame rate: low."
+msgstr ""
+"ความคมของพื้นผิวที่อยู่ไกลหรือมองในมุมต่ำ เช่นถนนข้างหน้า เกมใช้ค่าที่พื้นผิวแต่ละอันขอ "
+"ผลต่อเฟรมเรต: น้อย"
+
+msgctxt "UI_MENU_ANISO_GAME"
+msgid "Game"
+msgstr "เกม"
+
+msgctxt "UI_MENU_TEX_QUALITY"
+msgid "Texture quality"
+msgstr "คุณภาพพื้นผิว"
+
+msgctxt "UI_MENU_TEX_QUALITY_DESC"
+msgid ""
+"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
+"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
+msgstr ""
+"ความละเอียดของพื้นผิวในเกม ครึ่งและหนึ่งในสี่ข้ามระดับที่ละเอียดที่สุด: "
+"ใช้แบนด์วิดท์หน่วยความจำการ์ดจอน้อยลง แต่พื้นผิวใกล้ ๆ เบลอลง ผลต่อเฟรมเรต: น้อย"
+
+msgctxt "UI_MENU_TEX_QUALITY_FULL"
+msgid "Full"
+msgstr "เต็ม"
+
+msgctxt "UI_MENU_TEX_QUALITY_HALF"
+msgid "Half"
+msgstr "ครึ่ง"
+
+msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
+msgid "Quarter"
+msgstr "หนึ่งในสี่"
+
+msgctxt "UI_MENU_DETAIL"
+msgid "Detail distance"
+msgstr "ระยะรายละเอียด"
+
+msgctxt "UI_MENU_DETAIL_DESC"
+msgid ""
+"How far objects keep their detailed models before switching to simpler ones. Console is the "
+"Switch 2's. Impact on frame rate: low."
+msgstr ""
+"วัตถุคงโมเดลละเอียดไว้ไกลแค่ไหนก่อนเปลี่ยนเป็นโมเดลที่ง่ายกว่า คอนโซลคือค่าของ Switch 2 "
+"ผลต่อเฟรมเรต: น้อย"
+
+msgctxt "UI_MENU_DETAIL_LOW"
+msgid "Low"
+msgstr "ต่ำ"
+
+msgctxt "UI_MENU_DETAIL_MEDIUM"
+msgid "Medium"
+msgstr "ปานกลาง"
+
+msgctxt "UI_MENU_DETAIL_CONSOLE"
+msgid "Console"
+msgstr "คอนโซล"
+
+msgctxt "UI_MENU_DETAIL_HIGH"
+msgid "High"
+msgstr "สูง"
+
+msgctxt "UI_MENU_DETAIL_ULTRA"
+msgid "Very high"
+msgstr "สูงมาก"
+
+msgctxt "UI_MENU_SHADOW"
+msgid "Shadow quality"
+msgstr "คุณภาพเงา"
+
+msgctxt "UI_MENU_SHADOW_DESC"
+msgid ""
+"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
+"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
+msgstr ""
+"ขนาดแผนที่ที่เกมใช้วาดเงา เล็กลงเบากว่าสำหรับการ์ดจอ แต่ขอบเงาเบลอลง ค่าคอนโซลคือ 3072 "
+"เมื่อเสียบแท่นและ 2048 เมื่อเล่นพกพา ผลต่อเฟรมเรต: น้อย"
+
+msgctxt "UI_MENU_TAB_HACKS"
+msgid "Hacks"
+msgstr "แฮ็ก"
+
+msgctxt "UI_MENU_HACKS_WARNING"
+msgid ""
+"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
+"change how the game behaves."
+msgstr "ทดลอง: ทางลัดที่เครื่องคอนโซลไม่มี ไว้เล่นและทดสอบให้เร็วขึ้น อาจเปลี่ยนการทำงานของเกม"
+
+msgctxt "UI_MENU_TURBO"
+msgid "Turbo"
+msgstr "เทอร์โบ"
+
+msgctxt "UI_MENU_TURBO_DESC"
+msgid ""
+"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
+"most 60 frames a second."
+msgstr ""
+"ทั้งเกมทำงานเร็วขึ้น: เมนู ภาพยนตร์ การโหลด และการแข่ง กดค้างหรือกด F2 หน้าจอแสดงสูงสุด 60 "
+"เฟรมต่อวินาที"
+
+msgctxt "UI_MENU_TURBO_HOLD"
+msgid "Hold F2"
+msgstr "กดค้าง F2"
+
+msgctxt "UI_MENU_TURBO_TOGGLE"
+msgid "F2 on/off"
+msgstr "F2 เปิด/ปิด"
+
+msgctxt "UI_MENU_TURBO_SPEED"
+msgid "Turbo speed"
+msgstr "ความเร็วเทอร์โบ"
+
+msgctxt "UI_MENU_TURBO_SPEED_DESC"
+msgid "How many times faster. A slow PC may not reach it."
+msgstr "เร็วขึ้นกี่เท่า พีซีที่ช้าอาจไปไม่ถึง"
+
+msgctxt "UI_MENU_SKIP_MOVIES"
+msgid "Skip movies"
+msgstr "ข้ามภาพยนตร์"
+
+msgctxt "UI_MENU_SKIP_MOVIES_DESC"
+msgid "Skips the cup and course openings as soon as they start."
+msgstr "ข้ามฉากเปิดของคัพและสนามทันทีที่เริ่ม"
+
+msgctxt "UI_MENU_SEED"
+msgid "Same randomness every time"
+msgstr "สุ่มเหมือนเดิมทุกครั้ง"
+
+msgctxt "UI_MENU_SEED_DESC"
+msgid ""
+"The game draws the same random numbers in every session: the same title course, the same items. "
+"For testing."
+msgstr "เกมสุ่มตัวเลขชุดเดิมในทุกเซสชัน: สนามหน้าไตเติลเดิม ไอเทมเดิม สำหรับการทดสอบ"
+
+msgctxt "UI_MENU_UNLOCK_ALL"
+msgid "Unlock everything"
+msgstr "ปลดล็อกทั้งหมด"
+
+msgctxt "UI_MENU_UNLOCK_ALL_DESC"
+msgid ""
+"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
+"when the game saves: turning it off does not lock them again."
+msgstr ""
+"ตัวละครและชุดทุกแบบ ยานพาหนะและสติกเกอร์ สเปเชียลคัพ และมิเรอร์ จะถูกบันทึกลงเซฟเมื่อเกมบันทึก: "
+"ปิดตัวเลือกนี้แล้วจะไม่ล็อกกลับ"
+
+msgctxt "UI_MENU_QUICK_RACE"
+msgid "Straight to"
+msgstr "ไปที่"
+
+msgctxt "UI_MENU_QUICK_RACE_DESC"
+msgid ""
+"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
+"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
+"world. The controller still works."
+msgstr ""
+"ผ่านเมนูเองตอนเริ่ม ไทม์ไทรอัล: มาริโอ คาร์ทมาตรฐาน และสนามที่เกมเสนอ (เหมือนเดิมเสมอเมื่อเปิด "
+"«สุ่มเหมือนเดิมทุกครั้ง») ไม่มีคู่แข่ง ท่องโลกอิสระ: โลกเปิด ยังใช้จอยได้ตามปกติ"
+
+msgctxt "UI_MENU_QUICK_RACE_TT"
+msgid "Time trial"
+msgstr "ไทม์ไทรอัล"
+
+msgctxt "UI_MENU_QUICK_RACE_GP"
+msgid "Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_QUICK_RACE_FREE"
+msgid "Free roam"
+msgstr "ท่องโลกอิสระ"
+
+msgctxt "UI_MENU_FREEZE_KEYS"
+msgid "Freeze keys"
+msgstr "ปุ่มหยุดภาพ"
+
+msgctxt "UI_MENU_FREEZE_KEYS_DESC"
+msgid ""
+"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
+"look at a moment closely."
+msgstr "F3 หยุดเกมที่เฟรมบนหน้าจอและเล่นต่อ F4 เดินหน้าทีละหนึ่งเฟรม ไว้ดูช่วงเวลาใกล้ ๆ"
+
+msgctxt "UI_MENU_CLASSIC_GP"
+msgid "Classic Grand Prix"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_GP_DESC"
+msgid ""
+"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
+"Changes take several seconds and affect races started afterward."
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS"
+msgid "Classic VS races"
+msgstr ""
+
+msgctxt "UI_MENU_CLASSIC_VS_DESC"
+msgid ""
+"VS races after the first take place on the next course instead of the road to it, whatever the "
+"course rule. Changes take several seconds and affect races started afterward."
+msgstr ""
+
 msgctxt "UI_MENU_GAME_LANG"
 msgid "Game language"
 msgstr "ภาษาของเกม"
@@ -698,6 +698,14 @@ msgctxt "UI_MENU_SPEAKERS"
 msgid "Speakers"
 msgstr "ลำโพง"
 
+msgctxt "UI_MENU_SPEAKERS_DESC"
+msgid ""
+"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
+"more, and stereo otherwise. Applies at the next start."
+msgstr ""
+"อัตโนมัติจะใช้มิกซ์เซอร์ราวด์ 5.1 ของเกมเมื่อเอาต์พุตเสียงของระบบมี 6 ช่องขึ้นไป "
+"นอกนั้นใช้สเตอริโอ มีผลเมื่อเริ่มครั้งหน้า"
+
 msgctxt "UI_MENU_SPEAKERS_STEREO"
 msgid "Stereo"
 msgstr "สเตอริโอ"
@@ -713,14 +721,6 @@ msgstr "ปิดเสียงเมื่อไม่ได้โฟกัส
 msgctxt "UI_MENU_BACKGROUND_MUTE_DESC"
 msgid "No sound while the game window is not in front."
 msgstr "ไม่มีเสียงเมื่อหน้าต่างเกมไม่ได้อยู่ด้านหน้า"
-
-msgctxt "UI_MENU_SPEAKERS_DESC"
-msgid ""
-"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
-"more, and stereo otherwise. Applies at the next start."
-msgstr ""
-"อัตโนมัติจะใช้มิกซ์เซอร์ราวด์ 5.1 ของเกมเมื่อเอาต์พุตเสียงของระบบมี 6 ช่องขึ้นไป "
-"นอกนั้นใช้สเตอริโอ มีผลเมื่อเริ่มครั้งหน้า"
 
 msgctxt "UI_MENU_MOTION"
 msgid "Motion controls"
@@ -792,6 +792,15 @@ msgctxt "UI_MENU_MOUSE_SENS_DESC"
 msgid "How fast the mouse turns the camera."
 msgstr "เมาส์หมุนกล้องเร็วแค่ไหน"
 
+msgctxt "UI_MENU_STICK_DEADZONE"
+msgid "Stick dead zone"
+msgstr "โซนเดดของสติ๊ก"
+
+msgctxt "UI_MENU_STICK_DEADZONE_DESC"
+msgid ""
+"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
+msgstr "ต้องเอียงสติ๊กแค่ไหนจึงนับ เพิ่มค่านี้ถ้าคาร์ทไถลทั้งที่ปล่อยสติ๊ก"
+
 msgctxt "UI_MENU_SWITCH2"
 msgid "Switch 2 controllers (Bluetooth)"
 msgstr "จอย Switch 2 (Bluetooth)"
@@ -813,15 +822,6 @@ msgid ""
 "The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
 "Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
 msgstr ""
-
-msgctxt "UI_MENU_STICK_DEADZONE"
-msgid "Stick dead zone"
-msgstr "โซนเดดของสติ๊ก"
-
-msgctxt "UI_MENU_STICK_DEADZONE_DESC"
-msgid ""
-"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
-msgstr "ต้องเอียงสติ๊กแค่ไหนจึงนับ เพิ่มค่านี้ถ้าคาร์ทไถลทั้งที่ปล่อยสติ๊ก"
 
 msgctxt "UI_MENU_BUTTON_ICONS"
 msgid "Button icons"
@@ -1932,6 +1932,16 @@ msgctxt "UI_LAUNCH_FILES_FOLDER"
 msgid "Game folder"
 msgstr "โฟลเดอร์เกม"
 
+msgctxt "UI_LAUNCH_FILES_HELP"
+msgid ""
+"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
+"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
+"game code on this computer and translates the shaders."
+msgstr ""
+"เกมไม่ได้มาพร้อมพอร์ต: ต้องใช้สำเนา Mario Kart World 1.0.0 หรือ 1.8.0 ของคุณเอง "
+"ที่ดัมพ์จากคอนโซลของคุณ (โฟลเดอร์ exefs และ romfs) การตั้งค่าจะตรวจเวอร์ชัน "
+"สร้างโค้ดเกมบนคอมพิวเตอร์เครื่องนี้ และแปลเชเดอร์"
+
 msgctxt "UI_LAUNCH_PICK_GAME_DIR"
 msgid "Choose game folder"
 msgstr "เลือกโฟลเดอร์เกม"
@@ -1962,16 +1972,6 @@ msgstr ""
 "ไม่สามารถเลือกโฟลเดอร์เกมนี้ได้ บน Windows "
 "ให้เลือกโฟลเดอร์ที่ไม่มีการขึ้นบรรทัดใหม่และพาธเต็มยาวไม่เกิน %d หน่วย UTF-16 "
 "เพื่อเว้นที่ให้ไฟล์ของเกม"
-
-msgctxt "UI_LAUNCH_FILES_HELP"
-msgid ""
-"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
-"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
-"game code on this computer and translates the shaders."
-msgstr ""
-"เกมไม่ได้มาพร้อมพอร์ต: ต้องใช้สำเนา Mario Kart World 1.0.0 หรือ 1.8.0 ของคุณเอง "
-"ที่ดัมพ์จากคอนโซลของคุณ (โฟลเดอร์ exefs และ romfs) การตั้งค่าจะตรวจเวอร์ชัน "
-"สร้างโค้ดเกมบนคอมพิวเตอร์เครื่องนี้ และแปลเชเดอร์"
 
 msgctxt "UI_LAUNCH_NO_TOOLS"
 msgid "The setup tools are missing: the setup/ folder that comes with the program."
@@ -2358,19 +2358,12 @@ msgstr ""
 "เปลี่ยนการตั้งค่ากราฟิกของเกม: การตั้งค่าของพอร์ตเอง (ความละเอียด คุณภาพ) จะทับอยู่ด้านบน "
 "ม็อดนี้จึงอาจทำได้น้อยกว่าบนคอนโซล ดูแย่ลง หรือทำงานผิดปกติ"
 
-#. Above every mod install and import.
-msgctxt "UI_MOD_RISK"
+#. Under an installed mod that ships shaders (Shader/ files).
+msgctxt "UI_MOD_WARN_SHADERS"
 msgid ""
-"Mods are made by other people and are not tested by this project. A mod can crash the game or "
-"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
-"its author."
-msgstr ""
-"ม็อดสร้างโดยผู้อื่นและโปรเจกต์นี้ไม่ได้ทดสอบ ม็อดอาจทำให้เกมแครชหรือไฟล์เซฟเสียหาย: "
-"อ่านหน้าของม็อดก่อน สำรองไฟล์เซฟไว้ และแจ้งปัญหาของม็อดกับผู้เขียน"
-
-msgctxt "UI_MOD_RISK_ACK"
-msgid "I understand"
-msgstr "เข้าใจแล้ว"
+"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
+"show, or may break the picture"
+msgstr "แทนที่เชเดอร์: พอร์ตแปลเชเดอร์ของเกมระหว่างการตั้งค่า ม็อดนี้จึงอาจไม่แสดงหรือทำให้ภาพเสีย"
 
 #. Under a mod that changes the game's code (its .ips): the game code is built with it.
 msgctxt "UI_MOD_PLUGIN"
@@ -2385,12 +2378,19 @@ msgctxt "UI_MOD_CODE_REBUILD"
 msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
 msgstr "โค้ด: การเปิดหรือปิดจะสร้างโค้ดของเกมใหม่ก่อนเล่น (ไม่กี่นาที)"
 
-#. Under an installed mod that ships shaders (Shader/ files).
-msgctxt "UI_MOD_WARN_SHADERS"
+#. Above every mod install and import.
+msgctxt "UI_MOD_RISK"
 msgid ""
-"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
-"show, or may break the picture"
-msgstr "แทนที่เชเดอร์: พอร์ตแปลเชเดอร์ของเกมระหว่างการตั้งค่า ม็อดนี้จึงอาจไม่แสดงหรือทำให้ภาพเสีย"
+"Mods are made by other people and are not tested by this project. A mod can crash the game or "
+"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
+"its author."
+msgstr ""
+"ม็อดสร้างโดยผู้อื่นและโปรเจกต์นี้ไม่ได้ทดสอบ ม็อดอาจทำให้เกมแครชหรือไฟล์เซฟเสียหาย: "
+"อ่านหน้าของม็อดก่อน สำรองไฟล์เซฟไว้ และแจ้งปัญหาของม็อดกับผู้เขียน"
+
+msgctxt "UI_MOD_RISK_ACK"
+msgid "I understand"
+msgstr "เข้าใจแล้ว"
 
 #. printf format: keep every %... conversion, in the same order.
 msgctxt "UI_LAUNCH_UPDATE_FETCHING"
@@ -2424,6 +2424,16 @@ msgctxt "UI_LAUNCH_UPDATE_NOW"
 msgid "Update"
 msgstr "อัปเดต"
 
+#. Opens the release's notes on GitHub.
+msgctxt "UI_LAUNCH_WHATS_NEW"
+msgid "What's new"
+msgstr "สิ่งใหม่"
+
+#. After a failed download.
+msgctxt "UI_LAUNCH_RETRY"
+msgid "Try again"
+msgstr "ลองอีกครั้ง"
+
 msgctxt "UI_LAUNCH_UPDATE_PREPARING"
 msgid "Setting up %s in the background. You can keep playing meanwhile."
 msgstr "กำลังตั้งค่า %s ในเบื้องหลัง ระหว่างนี้คุณยังเล่นต่อได้"
@@ -2439,16 +2449,6 @@ msgstr "เริ่มใหม่ด้วยเวอร์ชันนี้
 msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
 msgid "It could not be set up in advance (%s): it will be set up when it starts."
 msgstr "ไม่สามารถตั้งค่าล่วงหน้าได้ (%s): จะตั้งค่าเมื่อเริ่มเกม"
-
-#. Opens the release's notes on GitHub.
-msgctxt "UI_LAUNCH_WHATS_NEW"
-msgid "What's new"
-msgstr "สิ่งใหม่"
-
-#. After a failed download.
-msgctxt "UI_LAUNCH_RETRY"
-msgid "Try again"
-msgstr "ลองอีกครั้ง"
 
 #. The game files' state with the game version the setup installed.
 #. printf format: keep every %... conversion, in the same order.
@@ -2912,3 +2912,163 @@ msgstr ""
 "เกมต้องการ Vulkan 1.3: ติดตั้งไดรเวอร์ล่าสุดจากผู้ผลิตการ์ดจอของคุณ (AMD, Intel หรือ NVIDIA; บน "
 "NVIDIA ต้อง 510 ขึ้นไป) การ์ดจอรุ่นเก่าบางรุ่นไม่รองรับเลย การตั้งค่าทำได้ตั้งแต่ตอนนี้ "
 "เกมจะเริ่มเมื่ออัปเดตไดรเวอร์แล้ว"
+
+#. A product name: keep it as Steam shows it in your language.
+msgctxt "UI_MENU_GROUP_RPT"
+msgid "Steam Remote Play Together"
+msgstr "Steam Remote Play Together"
+
+msgctxt "UI_MENU_RPT_INVITE"
+msgid "Invite friends"
+msgstr "เชิญเพื่อน"
+
+msgctxt "UI_MENU_RPT_INVITE_DESC"
+msgid ""
+"Opens Remote Play Together in the Steam overlay. Friends who join see and hear the game; each "
+"one's controller, or keyboard, becomes the next free player."
+msgstr ""
+"เปิด Remote Play Together ในโอเวอร์เลย์ของ Steam เพื่อนที่เข้าร่วมจะเห็นและได้ยินเกม "
+"คอนโทรลเลอร์หรือคีย์บอร์ดของแต่ละคนจะเป็นผู้เล่นที่ว่างถัดไป"
+
+msgctxt "UI_MENU_RPT_LINK"
+msgid "Copy guest link"
+msgstr "คัดลอกลิงก์ผู้เยี่ยมชม"
+
+msgctxt "UI_MENU_RPT_LINK_DESC"
+msgid ""
+"Copies a link that lets anyone join from a browser or the Steam Link app, without being your "
+"Steam friend."
+msgstr ""
+"คัดลอกลิงก์ที่ทุกคนใช้เข้าร่วมได้จากเบราว์เซอร์หรือแอป Steam Link โดยไม่ต้องเป็นเพื่อนใน Steam"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CONNECTED"
+msgid "%d connected"
+msgstr "เชื่อมต่อ %d คน"
+
+msgctxt "UI_MENU_RPT_NO_OVERLAY"
+msgid "no Steam overlay"
+msgstr "ไม่มีโอเวอร์เลย์ Steam"
+
+msgctxt "UI_MENU_RPT_WAITING"
+msgid "waiting for Steam"
+msgstr "กำลังรอ Steam"
+
+#. steam_appid and mkw.ini are a setting and a file name: keep them.
+msgctxt "UI_MENU_RPT_NEED_APPID"
+msgid "Needs steam_appid in mkw.ini"
+msgstr "ต้องตั้ง steam_appid ใน mkw.ini"
+
+msgctxt "UI_MENU_RPT_AT_START"
+msgid "Starts with the game"
+msgstr "เริ่มพร้อมกับเกม"
+
+msgctxt "UI_MENU_RPT_FAILED"
+msgid "Steam is not available: see the log"
+msgstr "ใช้ Steam ไม่ได้: ดูบันทึก"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_JOINED"
+msgid "%s joined Remote Play Together"
+msgstr "%s เข้าร่วม Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_LEFT"
+msgid "%s left Remote Play Together"
+msgstr "%s ออกจาก Remote Play Together"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_PAD"
+msgid "A Remote Play guest's controller is player %d"
+msgstr "คอนโทรลเลอร์ของผู้เยี่ยมชม Remote Play คือผู้เล่น %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_KEYBOARD"
+msgid "%s plays on the keyboard as player %d"
+msgstr "%s เล่นด้วยคีย์บอร์ดเป็นผู้เล่น %d"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FULL"
+msgid "%s: no free player for the keyboard"
+msgstr "%s: ไม่มีผู้เล่นว่างสำหรับคีย์บอร์ด"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_FAILED"
+msgid "Remote Play Together is off: %s"
+msgstr "Remote Play Together ปิดอยู่: %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_RPT_INVITE"
+msgid ""
+"%d players need a controller each: %d connected. Steam's invite list is open: once your friends' "
+"controllers are in, pick the mode again."
+msgstr ""
+"ผู้เล่น %d คนต้องมีคอนโทรลเลอร์คนละตัว: เชื่อมต่อแล้ว %d ตัว รายการเชิญของ Steam เปิดอยู่ "
+"เมื่อคอนโทรลเลอร์ของเพื่อนเข้ามาแล้ว ให้เลือกโหมดอีกครั้ง"
+
+msgctxt "UI_NOTICE_RPT_NO_OVERLAY"
+msgid ""
+"The Steam overlay did not open: start the game from Steam, or send a guest link (menu > Game)."
+msgstr "โอเวอร์เลย์ Steam ไม่เปิด: เริ่มเกมจาก Steam หรือส่งลิงก์ผู้เยี่ยมชม (เมนู > เกม)"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_CHOICE"
+msgid "Local multiplayer for %d players: %d controllers connected. How do the other players join?"
+msgstr ""
+"ผู้เล่นหลายคนในเครื่องสำหรับ %d คน: เชื่อมต่อคอนโทรลเลอร์แล้ว %d ตัว "
+"ผู้เล่นคนอื่นจะเข้าร่วมอย่างไร?"
+
+msgctxt "UI_MENU_RPT_CHOICE_LOCAL"
+msgid "Local players (connect more controllers)"
+msgstr "ผู้เล่นในเครื่อง (เชื่อมต่อคอนโทรลเลอร์เพิ่ม)"
+
+msgctxt "UI_MENU_RPT_CHOICE_STEAM"
+msgid "Steam Remote Play Together (invite friends)"
+msgstr "Steam Remote Play Together (เชิญเพื่อน)"
+
+msgctxt "UI_MENU_RPT_APPID"
+msgid "Steam App ID"
+msgstr "Steam App ID"
+
+msgctxt "UI_MENU_RPT_APPID_DESC"
+msgid ""
+"The Steam game mkw runs as for Remote Play Together. Automatic: the game whose launch options "
+"start mkw (\"C:\\...\\mkw.exe\" %command%), so any Steam game you own with Remote Play Together "
+"works. Another number: steam_appid in mkw.ini. Takes effect at the next start."
+msgstr ""
+"เกม Steam ที่ mkw ทำงานในนามสำหรับ Remote Play Together อัตโนมัติ: เกมที่ตัวเลือกการเปิดใช้เปิด "
+"mkw (\"C:\\...\\mkw.exe\" %command%) จึงใช้ได้กับเกม Steam ใดก็ได้ที่คุณมีซึ่งรองรับ Remote Play "
+"Together หมายเลขอื่น: steam_appid ใน mkw.ini มีผลเมื่อเปิดครั้งถัดไป"
+
+msgctxt "UI_MENU_RPT_APPID_OFF"
+msgid "Off"
+msgstr "ปิด"
+
+msgctxt "UI_MENU_RPT_APPID_AUTO"
+msgid "Automatic (the game Steam started)"
+msgstr "อัตโนมัติ (เกมที่ Steam เปิด)"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_RPT_APPID_CUSTOM"
+msgid "%s (mkw.ini)"
+msgstr "%s (mkw.ini)"
+
+msgctxt "UI_MENU_RPT_APPID_ADD"
+msgid "Enter a Steam App ID"
+msgstr "ป้อน Steam App ID"
+
+msgctxt "UI_MENU_RPT_APPID_ADD_DESC"
+msgid ""
+"Type the App ID of a Steam game you own that has Remote Play Together, with the keyboard's number "
+"keys (it is the number in the game's store address, store.steampowered.com/app/<number>/), then "
+"press Enter or A. mkw runs as that game from the next start, and the Steam App ID row above keeps "
+"it in its list (steam_appids in mkw.ini). Backspace deletes a digit."
+msgstr ""
+"พิมพ์ App ID ของเกม Steam ที่คุณมีซึ่งรองรับ Remote Play Together ด้วยปุ่มตัวเลขบนแป้นพิมพ์ "
+"(คือตัวเลขในที่อยู่ร้านค้าของเกม store.steampowered.com/app/<number>/) แล้วกด Enter หรือ A "
+"ตั้งแต่การเปิดครั้งถัดไป mkw จะทำงานในนามเกมนั้น และแถว Steam App ID ด้านบนจะเก็บไว้ในรายการ "
+"(steam_appids ใน mkw.ini) Backspace ลบตัวเลขหนึ่งตัว"
+
+msgctxt "UI_MENU_RPT_APPID_ADD_HINT"
+msgid "type the number"
+msgstr "พิมพ์ตัวเลข"
