@@ -12,5 +12,6 @@ Each folder holds the tests of one part of the repo, with the C sources they bui
 | [runtime/](runtime/README.md) | Pieces of `runtime/` built alone: audio, controllers, memory caps, settings, menu texts |
 | [widescreen/](widescreen/README.md) | Window aspect, FOV and UI fitting |
 | [github/](github/README.md) | The issue moderation bot |
+| [docs/](docs/README.md) | The pre-commit hook's own checks reading UTF-8 on a legacy code page |
 
 Usage: `uv run pytest tests` (one worker per core through pytest-xdist; `-n 0` runs them in series)

@@ -76,7 +76,7 @@ def check_folders(children: dict[str, set[str]]) -> list[str]:
             if not exempt(folder, children):
                 errors.append(f"{folder or '.'}/: no README.md")
             continue
-        text = (ROOT / folder / "README.md").read_text()
+        text = (ROOT / folder / "README.md").read_text(encoding="utf-8")
         globs = [g for g in BACKTICK.findall(text) if "*" in g]
         missing = sorted(n for n in names if n != "README.md" and not named(n, text, globs))
         if missing:
@@ -102,7 +102,7 @@ def check_links(files: list[str]) -> list[str]:
         # the README's translated bodies link as from the root: their links are checked in the built README.<lang>.md
         if not md.endswith(".md") or md.endswith(".body.md"):
             continue
-        for target in LINK.findall((ROOT / md).read_text()):
+        for target in LINK.findall((ROOT / md).read_text(encoding="utf-8")):
             if re.match(r"[a-z]+:|#", target):
                 continue
             path = (ROOT / md).parent / target.split("#")[0]
@@ -113,7 +113,7 @@ def check_links(files: list[str]) -> list[str]:
 
 def check_readme() -> list[str]:
     """The generated block of the root README, when it has one: the progress bars (progress.py)."""
-    if "[[[cog" not in (ROOT / "README.md").read_text():
+    if "[[[cog" not in (ROOT / "README.md").read_text(encoding="utf-8"):
         return []
     cog, out = Cog(), io.StringIO()
     cog.set_output(stdout=out, stderr=out)
@@ -132,8 +132,8 @@ def check_progress(staged: set[str]) -> list[str]:
     newest = max((r.stat().st_mtime for r in results), default=0)
     if (spirv / "failed.tsv").stat().st_mtime < newest:
         return ["build/spirv/failed.tsv is older than a program result: run `uv run tools/shaders/translate.py`"]
-    ok = sum(1 for r in results if r.read_text().strip() == "ok")
-    recorded = json.loads((ROOT / "tools" / "docs" / "progress.json").read_text())["programs"]["ok"]
+    ok = sum(1 for r in results if r.read_text(encoding="utf-8").strip() == "ok")
+    recorded = json.loads((ROOT / "tools" / "docs" / "progress.json").read_text(encoding="utf-8"))["programs"]["ok"]
     if recorded != ok:
         msg = (
             f"tools/docs/progress.json counts {recorded} programs translated, build/spirv has {ok}: run "
