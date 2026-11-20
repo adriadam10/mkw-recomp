@@ -4,6 +4,7 @@ The setup, the installation selector and the Add to Steam of the start screen.
 
 | File | What it checks |
 |---|---|
+| `test_mod_archive_links.py` | Mod archives with symbolic links are refused before their targets can be copied |
 | `test_beside.py` | `beside.py`: a step's progress held until the main loop reaches it, and its error raised where it is joined |
 | `test_appimage_undo.py` | The launcher's AppImage Undo swap, including each rename failure, rollback failures and a recovery file already on disk |
 | `test_mod_merge_source.py` | The mod merge cache rebuilds on a linked loose RomFS or NUP change and reuses unchanged sources |
