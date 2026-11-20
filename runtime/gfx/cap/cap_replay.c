@@ -80,6 +80,33 @@ static void save_png(const GfxBackend *b, const tex_t *t, const char *path) {
     free(px);
 }
 
+// The pools the replay made (CAP_POOL_INIT, less CAP_POOL_FINI): a MapVirtual request naming another one unmaps its
+// pages. Captures recorded before the recorder dropped such requests (cap_record.c w_pool_fini) kept MapVirtual
+// requests naming physical pools the game had freed, and the replay stopped at "cap: MapVirtual refused" (bridge58,
+// 1.8.0, the third race of a Grand Prix).
+static uintptr_t *live_pools;
+static int nlive, cap_live;
+static int64_t n_dead_maps;
+
+static void live_add(uintptr_t p) {
+    if (nlive == cap_live) {
+        cap_live = cap_live ? cap_live * 2 : 256;
+        if (!(live_pools = realloc(live_pools, sizeof *live_pools * (size_t)cap_live))) rt_fatal("cap: out of memory");
+    }
+    live_pools[nlive++] = p;
+}
+
+static void live_del(uintptr_t p) {
+    for (int i = 0; i < nlive; i++)
+        if (live_pools[i] == p) { live_pools[i] = live_pools[--nlive]; return; }
+}
+
+static int live_has(uintptr_t p) {
+    for (int i = 0; i < nlive; i++)
+        if (live_pools[i] == p) return 1;
+    return 0;
+}
+
 static int usage(void) {
     fprintf(stderr, "usage: mkw --replay DIR [--out DIR] [--tag NAME]\n");
     return 2;
@@ -183,8 +210,9 @@ int cap_replay_main(int argc, char **argv) {
                 uint64_t lo = (uintptr_t)p->mem & ~0xfffull, hi = ((uintptr_t)p->mem + p->size + 0xfff) & ~0xfffull;
                 if (!nvn_gpu_only((uintptr_t)p->mem) && p->size) cap_mem_commit(lo, hi - lo);
                 if (!b->pool_init((pool_t *)(uintptr_t)a)) rt_fatal("cap: pool_init of %#llx refused", (unsigned long long)a);
+                live_add((uintptr_t)a);
             }
-            if (h.type == CAP_POOL_FINI) b->pool_fini((pool_t *)(uintptr_t)a);
+            if (h.type == CAP_POOL_FINI) b->pool_fini((pool_t *)(uintptr_t)a), live_del((uintptr_t)a);
             if (h.type == CAP_PROGREL) b->program_release((const prog_t *)(uintptr_t)a);
             break;
         }
@@ -192,6 +220,15 @@ int cap_replay_main(int argc, char **argv) {
             uint64_t a[2];
             cap_in_read(in, a, sizeof a);
             cap_in_read(in, buf, a[1] * 0x28);
+            for (uint64_t k = 0; k < a[1]; k++) {
+                nvn_mapping_t *r = (nvn_mapping_t *)(void *)(buf + k * sizeof *r);
+                if (r->physical_pool && !live_has((uintptr_t)r->physical_pool)) {
+                    if (!n_dead_maps++)
+                        rt_log("cap: MapVirtual requests naming a pool the capture never made unmap their pages (first: "
+                               "%p; a capture recorded before cap_record.c dropped them)", (const void *)r->physical_pool);
+                    r->physical_pool = NULL;
+                }
+            }
             if (!b->pool_map_virtual((pool_t *)(uintptr_t)a[0], (int)a[1], buf)) rt_fatal("cap: MapVirtual refused");
             break;
         }

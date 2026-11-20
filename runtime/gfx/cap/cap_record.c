@@ -17,6 +17,7 @@
 #include "vk.h"
 
 static const GfxBackend *in;   // the wrapped back end
+_Static_assert(sizeof(nvn_mapping_t) == 0x28, "a MapVirtual request is 0x28 bytes (CAP_MAPV)");
 static PlatMutex lock = PLAT_MUTEX_INIT;
 
 // ---- state since the boot (lock)
@@ -265,6 +266,16 @@ static void w_pool_fini(pool_t *p) {
         if (pools[i] == p) memmove(&pools[i], &pools[i + 1], sizeof *pools * (size_t)(--npools - i)), i--;
     for (int i = 0; i < nmapv; i++)
         if (mapv[i].pool == p) free(mapv[i].req), memmove(&mapv[i], &mapv[i + 1], sizeof *mapv * (size_t)(--nmapv - i)), i--;
+    // The requests that mapped virtual pages to it, as a physical pool, now unmap them: kept as they were, the start
+    // state of a capture taken later named a pool the replay never made (bridge58, the third race of a Grand Prix:
+    // "MapVirtual request 0 names physical pool ... that has no Vulkan memory", then "cap: MapVirtual refused"), or,
+    // with a new pool made at the same address since, mapped those pages to it. Here, not when the state is written,
+    // so a later pool at that address is not taken for this one.
+    for (int i = 0; i < nmapv; i++)
+        for (int k = 0; k < mapv[i].n; k++) {
+            nvn_mapping_t *r = (nvn_mapping_t *)(void *)(mapv[i].req + (size_t)k * sizeof *r);
+            if ((const void *)r->physical_pool == (const void *)p) r->physical_pool = NULL;
+        }
     if (out) {
         uint64_t a = (uintptr_t)p;
         cap_out(out, CAP_POOL_FINI, &a, sizeof a, NULL, 0);
