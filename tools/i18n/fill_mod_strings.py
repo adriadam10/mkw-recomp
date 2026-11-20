@@ -982,7 +982,7 @@ BROWSER = {
 for _ctx, _langs in BROWSER.items():
     T.setdefault(_ctx, {}).update(_langs)
 
-# The NSFW-mods choice of the GameBanana tab (02/2027)
+# The NSFW-mods choice of the GameBanana tab (11/2026)
 NSFW = {
     "UI_GB_RATED": {
         "ca": "Contingut: %s", "de": "Inhaltsbewertung: %s", "fr": "Contenu : %s",
