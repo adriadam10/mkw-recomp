@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def main() -> None:
-    cfg = (ROOT / "runtime/core/base/cfg.c").read_text()
+    cfg = (ROOT / "runtime/core/base/cfg.c").read_text(encoding="utf-8")
     table = cfg[cfg.index("static const CfgMeta metas[]") :]
     table = table[: table.index("};")]
     rows = set(re.findall(r'\{"([A-Z0-9_]+)"', table))
@@ -23,7 +23,7 @@ def main() -> None:
     for path in sorted((ROOT / "runtime").rglob("*.[ch]*")):
         if "third_party" in path.parts:
             continue
-        for n, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+        for n, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             for name in re.findall(r'\bcfg_(?:value|int|double|bool)\("MKW_([A-Z0-9_]+)"\)', line):
                 # cfg_value stops only when the name is unset; a line that checks cfg_get first is safe
                 if name not in rows and f'cfg_get("MKW_{name}")' not in line:
