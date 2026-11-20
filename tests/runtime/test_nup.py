@@ -42,14 +42,20 @@ static inline size_t ZSTD_decompressStream(ZSTD_DCtx *z, ZSTD_outBuffer *o, ZSTD
 
 @pytest.fixture(scope="module")
 def t_nup(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    cc = os.environ.get("CC") or shutil.which("clang") or shutil.which("cc") or shutil.which("gcc")
+    # CC may be a command with arguments ("zig cc"); a compiler found on PATH is one path, spaces and all
+    # ("C:\Program Files\LLVM\bin\clang.EXE" on the Windows runner)
+    found = shutil.which("clang") or shutil.which("cc") or shutil.which("gcc")
+    cc = os.environ["CC"].split() if os.environ.get("CC") else [found] if found else None
     if not cc:
         pytest.skip("no C compiler")
     out = tmp_path_factory.mktemp("t_nup")
     (out / "host.h").write_text(STUB_HOST)
     (out / "zstd.h").write_text(STUB_ZSTD)
     exe = out / ("t_nup.exe" if os.name == "nt" else "t_nup")
-    subprocess.run([*cc.split(), "-std=gnu11", "-O1", "-Wall", "-Wextra", "-Werror", f"-I{out}",
+    # clang on Windows targets MSVC by default, whose CRT marks fopen and strdup deprecated; the runtime builds with
+    # llvm-mingw, where they are not, so -Werror would fail on the CRT's notice, not on the code
+    crt = ["-D_CRT_SECURE_NO_WARNINGS", "-D_CRT_NONSTDC_NO_DEPRECATE"] if os.name == "nt" else []
+    subprocess.run([*cc, "-std=gnu11", "-O1", "-Wall", "-Wextra", "-Werror", *crt, f"-I{out}",
                     f"-I{ROOT / 'runtime'}", f"-I{ROOT / 'runtime/sdk/fs'}", str(ROOT / "tests/runtime/t_nup.c"),
                     str(ROOT / "runtime/sdk/fs/nup.c"), "-o", str(exe)], check=True)  # fmt: skip
     return exe
