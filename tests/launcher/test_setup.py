@@ -95,6 +95,22 @@ def test_resume_without_earlier_setup(tmp_path: Path) -> None:
     assert p.returncode == 2 and "error source" in p.stdout, p.stdout
 
 
+@pytest.mark.parametrize("failure", ["exit", "timeout"])
+def test_warm_failure_does_not_fail_the_setup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], failure: str
+) -> None:
+    # 0.1.13 failed the whole setup when the prewarm's game process exited (#59, #152, #356, #404, #546, #588, #606,
+    # #609); since 0.1.14 the game builds its pipelines as it draws, and the setup finishes
+    def run(argv: list[str], **kwargs: object) -> SimpleNamespace:
+        if failure == "timeout":
+            raise prepare.subprocess.TimeoutExpired(argv, 1)
+        return SimpleNamespace(returncode=70)
+
+    monkeypatch.setattr(prepare.subprocess, "run", run)
+    prepare.warm(tmp_path / "game", tmp_path / "setup-work")  # does not raise
+    assert "left to the game" in capsys.readouterr().err
+
+
 @pytest.mark.skipif(os.name == "nt", reason="creating directory symlinks requires Windows privileges")
 def test_early_setup_log_preserves_alias(tmp_path: Path) -> None:
     target, alias, source = tmp_path / "real", tmp_path / "Game link ñ", tmp_path / "empty dump"
