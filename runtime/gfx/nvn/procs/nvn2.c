@@ -506,19 +506,25 @@ static pimage_t *pimg_of(uint32_t handle) {
 
 uint32_t nvn2_native_image_create(int w, int h, void **pixels, int *row_bytes) {
     if (w < 1 || h < 1 || w > 4096 || h > 4096) return 0;
+    // the memory first, then the slot: a refused request (no memory, too many images) must not use one up
+    if (__atomic_load_n(&npimg, __ATOMIC_RELAXED) >= PIMG_MAX) {
+        rt_log("nvn2: native_image_create: more than %d images", PIMG_MAX);
+        return 0;
+    }
+    uint32_t stride = ((uint32_t)w * 4 + 255) & ~255u;   // NVN's linear stride alignment, 32, rounded up for any device
+    uint64_t size = ((uint64_t)stride * (uint64_t)h + 0xffff) & ~0xffffull;
+    uint8_t *mem = pimg_alloc(size);
+    if (!mem) {
+        rt_log("nvn2: native_image_create: no memory for %dx%d", w, h);
+        return 0;
+    }
     int32_t i = plat_inc32(&npimg) - 1;
-    if (i >= PIMG_MAX) {
+    if (i >= PIMG_MAX) {   // another thread took the last slot meanwhile
         rt_log("nvn2: native_image_create: more than %d images", PIMG_MAX);
         return 0;
     }
     pimage_t *o = &pimg[i];
-    o->w = w, o->h = h;
-    o->stride = ((uint32_t)w * 4 + 255) & ~255u;   // NVN's linear stride alignment, 32, rounded up for any device
-    o->size = ((uint64_t)o->stride * (uint64_t)h + 0xffff) & ~0xffffull;
-    if (!(o->mem = pimg_alloc(o->size))) {
-        rt_log("nvn2: native_image_create: no memory for %dx%d", w, h);
-        return 0;
-    }
+    o->w = w, o->h = h, o->stride = stride, o->size = size, o->mem = mem;
     memset(o->mem, 0, (size_t)o->size);
     __atomic_store_n(&o->ready, 1, __ATOMIC_RELEASE);
     if (pixels) *pixels = o->mem;
