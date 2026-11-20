@@ -25,6 +25,8 @@ int gfx_rdx_patch(uint32_t *w, uint64_t n, uint32_t id, float v);   // a RenoDX 
 int gfx_hdr_output(uint16_t *peak, uint16_t *white);       // 1: the window shows HDR10 (peak, paper white nits)
 void gfx_hdr_to_srgb8(const uint8_t *in, uint8_t *out, size_t px, int a2r);   // 10-bit PQ to sRGB bytes at paper white
 int gfx_window_focused(void);
+void gfx_swapchain_lock(void);     // the present path's swapchain lock (Reflex's calls, vk_reflex_frame.c)
+void gfx_swapchain_unlock(void);
 int gfx_window_lines(void);   // lines of the picture the window will show (monitor in fullscreen); 0 unknown
 int gfx_window_shape(int *w, int *h);   // its width and lines; 0 unknown (w and h then untouched)
 
@@ -68,6 +70,7 @@ void gfx_shader_prewarm(const uint8_t (*iids)[32], size_t n, const GfxShader **o
 struct PlatThread *gfx_shader_preload_start(void);
 void gfx_shader_preload_join(struct PlatThread *t);
 const uint32_t *gfx_shader_spirv(const GfxShader *s, uint64_t *words);
+uint64_t gfx_shader_spirv_fnv(const GfxShader *s);          // FNV-1a 64 of the SPIR-V bytes, kept on the shader
 // The calling thread's reads of SPIR-V are the prewarm's (1) or a use (0, the default): only a use keeps a shader's
 // SPIR-V in memory when gfx_shader_spirv_release, after the prewarm, frees the others'. Returns the bytes freed.
 void gfx_shader_spirv_quiet(int on);

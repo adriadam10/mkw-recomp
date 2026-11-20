@@ -520,6 +520,115 @@ msgstr ""
 "컴퓨터가 허용하는 만큼 최대한 늦게 각 프레임을 시작해서, 누른 입력이 화면에 더 빨리 나타나게 합니다. 20fps나 15fps일 때, 그리고 프레임 생성과 함께 쓸 때 가장 "
 "효과가 큽니다. 화면이 끊기면 끄는 것이 좋습니다."
 
+msgctxt "UI_MENU_FG_ENGINE"
+msgid "Frame generation by"
+msgstr "프레임 생성 방식"
+
+msgctxt "UI_MENU_FG_ENGINE_DESC"
+msgid ""
+"Who makes the frames between the game's own. The port's own works everywhere. NVIDIA DLSS Frame "
+"Generation (RTX 40 and 50) and AMD FSR 3.1 use the scene's depth and motion and need DLSS or FSR "
+"3.1 upscaling on."
+msgstr ""
+"게임 프레임 사이의 프레임을 무엇으로 만들지 정합니다. 포트 자체 방식은 어디서나 작동합니다. NVIDIA DLSS 프레임 생성(RTX 40, 50)과 AMD FSR 3.1은 "
+"장면의 깊이와 움직임을 사용하며, DLSS 또는 FSR 3.1 AI 업스케일링을 켜야 합니다."
+
+msgctxt "UI_MENU_REFLEX"
+msgid "NVIDIA Reflex"
+msgstr "NVIDIA Reflex"
+
+msgctxt "UI_MENU_REFLEX_DESC"
+msgid ""
+"Starts each frame as late as the GPU allows, so what you press reaches the screen sooner. Boost "
+"also keeps the GPU's clocks up. NVIDIA GPUs only."
+msgstr ""
+"GPU가 허용하는 만큼 최대한 늦게 각 프레임을 시작해서, 누른 입력이 화면에 더 빨리 나타나게 합니다. 부스트는 GPU 클럭도 높게 유지합니다. NVIDIA GPU "
+"전용입니다."
+
+msgctxt "UI_MENU_REFLEX_BOOST"
+msgid "On + Boost"
+msgstr "ON + 부스트"
+
+msgctxt "UI_MENU_TEMPORAL"
+msgid "AI upscaling"
+msgstr "AI 업스케일링"
+
+msgctxt "UI_MENU_NOT_AVAILABLE"
+msgid "Not available on this PC: the game's own picture stays."
+msgstr "이 PC에서는 사용할 수 없습니다: 게임 본래 화면이 유지됩니다."
+
+msgctxt "UI_MENU_TEMPORAL_DESC"
+msgid ""
+"Renders the race at a lower resolution and rebuilds it from several frames: NVIDIA DLSS (RTX "
+"GPUs) or AMD FSR 3.1 (any GPU). Sharper and steadier edges than the game's own scaling; the HUD "
+"stays sharp."
+msgstr ""
+"레이스를 더 낮은 해상도로 렌더링하고 여러 프레임으로 다시 구성합니다. NVIDIA DLSS(RTX GPU) 또는 AMD FSR 3.1(모든 GPU). 게임 자체 확대보다 "
+"가장자리가 더 선명하고 안정적이며, HUD는 선명하게 유지됩니다."
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY"
+msgid "Upscaling quality"
+msgstr "업스케일링 품질"
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY_DESC"
+msgid ""
+"The share of the screen's resolution the race renders at: Native (DLAA) 100 %, Quality 67 %, "
+"Balanced 58 %, Performance 50 %, Ultra performance 33 %. Applies at the next start."
+msgstr ""
+"화면 해상도 대비 레이스를 렌더링하는 비율입니다: 네이티브(DLAA) 100 %, 품질 67 %, 균형 58 %, 성능 50 %, 울트라 성능 33 %. 다음 시작 때 "
+"적용됩니다."
+
+msgctxt "UI_MENU_TQ_NATIVE"
+msgid "Native (DLAA)"
+msgstr "네이티브(DLAA)"
+
+msgctxt "UI_MENU_TQ_QUALITY"
+msgid "Quality"
+msgstr "품질"
+
+msgctxt "UI_MENU_TQ_BALANCED"
+msgid "Balanced"
+msgstr "균형"
+
+msgctxt "UI_MENU_TQ_PERFORMANCE"
+msgid "Performance"
+msgstr "성능"
+
+msgctxt "UI_MENU_TQ_ULTRA"
+msgid "Ultra performance"
+msgstr "울트라 성능"
+
+msgctxt "UI_MENU_DLSS_PRESET"
+msgid "DLSS model"
+msgstr "DLSS 모델"
+
+msgctxt "UI_MENU_DLSS_PRESET_DESC"
+msgid ""
+"NVIDIA's model DLSS uses: the default of the DLSS version next to the game, or presets J, K, L, M."
+msgstr "NVIDIA DLSS가 사용하는 모델입니다. 게임 옆에 있는 DLSS 버전의 기본값 또는 프리셋 J, K, L, M."
+
+msgctxt "UI_MENU_DLSS_PRESET_DEFAULT"
+msgid "Default"
+msgstr "기본값"
+
+msgctxt "UI_MENU_CAS"
+msgid "CAS sharpening"
+msgstr "CAS 샤프닝"
+
+msgctxt "UI_MENU_CAS_DESC"
+msgid ""
+"AMD's contrast adaptive sharpening of the race after DLSS or FSR 3.1, before the HUD is drawn. "
+"Needs AI upscaling on."
+msgstr "DLSS 또는 FSR 3.1 후, HUD를 그리기 전에 레이스 화면에 AMD의 대비 적응형 샤프닝을 적용합니다. AI 업스케일링을 켜야 합니다."
+
+msgctxt "UI_MENU_CAS_SHARPNESS"
+msgid "CAS strength"
+msgstr "CAS 강도"
+
+msgctxt "UI_MENU_CAS_SHARPNESS_DESC"
+msgid "How strongly CAS sharpens: 0 is the lightest touch, 100 the strongest."
+msgstr "CAS가 얼마나 강하게 선명하게 할지 정합니다. 0이 가장 약하고 100이 가장 강합니다."
+
 msgctxt "UI_MENU_GRAPHICS"
 msgid "Picture"
 msgstr "화질"

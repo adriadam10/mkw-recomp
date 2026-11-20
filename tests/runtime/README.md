@@ -15,6 +15,7 @@ Pieces of `runtime/` built alone: audio, controllers, memory caps, settings and 
 | `test_mod_settings.py` | A mod's settings per player (`runtime/plugin/mod_settings.c`, built alone with `t_mod_settings.c`): values round-trip, a set replaces only its key and NULL removes it, two mods or two players never share a file, and invalid keys, values and mod names are refused |
 | `test_power.py` | Xbox pads on Linux's xone driver (`runtime/input/linux_power.c`, built alone with `t_power.c`): the sysfs level band reads as High/Medium/Low, never a percent; charging, full, no battery pack (wired) and per-Xbox-pad order; a non-Xbox pad never takes an Xbox level; the laptop battery is ignored |
 | `test_framegen.py` | Frame generation's factor (`runtime/gfx/vk/device/vk_framegen.c`, its selector cut out and built alone with the display stubbed): the 120 fps target (60 x2, 30 x4) on 60-240 Hz and fractional refreshes, the swapchain's room, the uneven-refresh note with and without VRR, movies and turbo, and the existing Automatic and fixed factors |
+| `test_flip_pace.py` | Frame generation's requested step on the vblank clock (`runtime/gfx/vk/device/vk_backend.c`, its pure scheduler cut out and built with a deterministic clock): two-refresh spacing for 60 -> 120 at 240 Hz and FSR 2x at 30 fps on 119.88 Hz, balanced one/two-refresh gaps at 144 Hz, per-picture slot indexes, and late recovery without reusing a mailbox flip |
 
 C sources the tests here build with the compiler at hand and run:
 

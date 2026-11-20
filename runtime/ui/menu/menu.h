@@ -68,6 +68,10 @@ const char *gfx_window_present_mode(void);
 // (gfx/vk/device/vk_framegen.c) a fixed frame generation factor does not split the screen's refreshes evenly at the
 // game's rate now, without MKW_VRR: the menu's note
 int vk_fg_uneven(void);
+// The notes under the upscaler, frame generation engine and Reflex rows for their values now: 0 none, 1 after a
+// restart, 2 not available on this PC (gfx/vk/exec/vk_temporal.c, gfx/vk/device/vk_reflex_frame.c)
+int vk_tmp_menu_state(const char *key);
+int vk_rfx_menu_state(void);
 
 #ifdef __cplusplus
 }

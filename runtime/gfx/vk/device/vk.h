@@ -1,6 +1,29 @@
 // Vulkan-internal header of the graphics layer. Host code only; the guest never sees it.
 #pragma once
 #include <vulkan/vulkan.h>
+
+// VK_NV_compute_occupancy_priority (frame generation's compute, vk_framegen.c) is newer than the release's Linux
+// sysroot headers (VK_HEADER_VERSION 309, tools/build/sysroot.py): its definitions as Khronos' vulkan_core.h 363 has
+// them, so the player's build compiles (PR 462 review: the --dist runtime failed in vk_device.c and vk_framegen.c)
+#ifndef VK_NV_compute_occupancy_priority
+#define VK_NV_compute_occupancy_priority 1
+#define VK_NV_COMPUTE_OCCUPANCY_PRIORITY_EXTENSION_NAME "VK_NV_compute_occupancy_priority"
+#define VK_STRUCTURE_TYPE_COMPUTE_OCCUPANCY_PRIORITY_PARAMETERS_NV ((VkStructureType)1000645000)
+#define VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_OCCUPANCY_PRIORITY_FEATURES_NV ((VkStructureType)1000645001)
+typedef struct VkComputeOccupancyPriorityParametersNV {
+    VkStructureType sType;
+    const void *pNext;
+    float occupancyPriority;
+    float occupancyThrottling;
+} VkComputeOccupancyPriorityParametersNV;
+typedef struct VkPhysicalDeviceComputeOccupancyPriorityFeaturesNV {
+    VkStructureType sType;
+    void *pNext;
+    VkBool32 computeOccupancyPriority;
+} VkPhysicalDeviceComputeOccupancyPriorityFeaturesNV;
+typedef void(VKAPI_PTR *PFN_vkCmdSetComputeOccupancyPriorityNV)(VkCommandBuffer commandBuffer,
+                                                                 const VkComputeOccupancyPriorityParametersNV *pParameters);
+#endif
 #include "vk_destroy_count.h"
 #include <stdint.h>
 #pragma clang diagnostic push
@@ -23,8 +46,13 @@ typedef struct VkCtx {
     VkPhysicalDeviceMemoryProperties mem_props;
     uint32_t gfx_family;                    // graphics + compute + presentation on win32
     uint32_t xfer_family;                   // a transfer-only family when the GPU has one, else gfx_family
+    uint32_t of_family;                     // optional VK_NV_optical_flow family (MKW_FG_NVOF experiment)
     VkQueue gfx_queue;                      // graphics + present
     VkQueue xfer_queue;                     // equals gfx_queue when xfer_shared
+    VkQueue fg_queue;                       // frame generation's (vk_framegen.c): the graphics family's second queue,
+                                            // else gfx_queue; submitted to under vk_queue_lock as well
+    VkQueue of_queue;                       // dedicated optical-flow engine, NULL unless explicitly enabled
+    int has_oflow;
     int xfer_shared;                        // 1: no separate queue; serialise with gfx_queue
     VmaAllocator vma;
     VkSemaphore timeline;                   // one timeline semaphore; values are issued by vk_sync.c
@@ -54,6 +82,11 @@ typedef struct VkCtx {
     // VK_FEEDBACK_RESTART (the pass ends and restarts behind the full barrier).
     int feedback;                           // VK_FEEDBACK_*
     uint32_t min_imported_host_alignment;   // VK_EXT_external_memory_host
+    int has_occupancy;
+    int has_present_wait;                   // VK_KHR_present_wait (gfx_present.c: the display's vblank phase)                      // VK_NV_compute_occupancy_priority (frame generation's compute)
+    int has_present_id;                     // VK_KHR_present_id with presentId: Reflex's markers name the presents
+    uint32_t low_latency2_spec;             // VK_NV_low_latency2's revision when enabled (Reflex, vk_reflex_frame.c), else 0
+    int low_latency2_have;                  // the device has VK_NV_low_latency2 (enabled only with MKW_REFLEX at start)
     int device_index;                       // index in vkEnumeratePhysicalDevices
 } VkCtx;
 enum { VK_FEEDBACK_OFF, VK_FEEDBACK_RESTART, VK_FEEDBACK_LAYOUT };
@@ -107,6 +140,9 @@ void vk_hdr_ui_release(void);   // before the device goes away
 // Queues the oldest present vk_present_blit or vk_present_blit_ahead left waiting; its present id (MKW_LATENCY with
 // present wait), else 0.
 uint64_t vk_present_flip(void);
+// The same with a VkPresentIdKHR (Reflex, vk_reflex_frame.c; the vblank phase's measure), 0 none. Returns the id the
+// present went out with: MKW_LATENCY's own while it measures (vk_latency.c), else present_id.
+uint64_t vk_present_flip_id(uint64_t present_id);
 // ---- MKW_LATENCY (vk_latency.c): controller read to screen
 int vk_lat_on(void);
 uint64_t vk_lat_next_id(void);                                   // the next host present's id, 0 without present wait
@@ -122,6 +158,15 @@ int vk_present_ahead_max(void);       // presents that may wait at once (the swa
 double vk_present_refresh_hz(void);   // the window's monitor, 0 unknown
 // ---- frame generation (vk_framegen.c), the present thread
 #define VK_FG_MAX 4   // frames shown per game frame at most
+extern uint64_t vk_fg_game_frame;   // the game frame the present thread makes frames for (vk_framegen.c)
+// An image of the upscaler that frame generation may read on the present thread, retired by the replay at game frame
+// frame: fn(arg) once no generation can read it (vk_framegen.c)
+void vk_fg_retire(uint64_t frame, void (*fn)(void *), void *arg);
+extern VkFormat vk_fg_src_format, vk_fg_out_format;   // its picture's format, and the format of the frames handed out
+VkQueue vk_fg_queue(void);   // the queue frame generation's frames are written on (their blits go there), 0: the game's
+void vk_present_queue(VkQueue q);
+uint64_t vk_present_game_id(uint64_t frame);
+uint64_t vk_present_flip_time(uint64_t t);   // a flip's call time on the vblank clock, not before t (0: unknown)   // the present id of a game frame's present (0 none): Reflex's, or for the phase   // gfx_present.c: the queue of the blits that follow (0: the game's)
 int vk_fg_wanted(void);   // MKW_FRAMEGEN is not off: the swapchain keeps spare images for it
 // One game frame: copies the crop rectangle {x, y, w, h} of src (GENERAL, all its writes submitted) into a picture of
 // its own and submits the frames made between the last game frame and it. out: what to show, in order (the made

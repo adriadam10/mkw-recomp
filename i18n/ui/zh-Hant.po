@@ -498,6 +498,109 @@ msgid ""
 "Matters most at 20 or 15 fps and with Frame generation. Turn it off if the picture stutters."
 msgstr "在電腦允許的範圍內盡量晚地開始每一幀，讓你按下的操作更快顯示在螢幕上。在 20 或 15 fps 時，以及開啟幀生成時，效果最明顯。畫面卡頓時請關閉此項。"
 
+msgctxt "UI_MENU_FG_ENGINE"
+msgid "Frame generation by"
+msgstr "幀生成方式"
+
+msgctxt "UI_MENU_FG_ENGINE_DESC"
+msgid ""
+"Who makes the frames between the game's own. The port's own works everywhere. NVIDIA DLSS Frame "
+"Generation (RTX 40 and 50) and AMD FSR 3.1 use the scene's depth and motion and need DLSS or FSR "
+"3.1 upscaling on."
+msgstr ""
+"由誰來產生遊戲幀之間的幀。移植版內建的方式在任何裝置上都能用。NVIDIA DLSS 幀生成（RTX 40 和 50）和 AMD FSR 3.1 使用場景的深度與動態資訊，並且需要開啟 DLSS "
+"或 FSR 3.1 AI 超解析度。"
+
+msgctxt "UI_MENU_REFLEX"
+msgid "NVIDIA Reflex"
+msgstr "NVIDIA Reflex"
+
+msgctxt "UI_MENU_REFLEX_DESC"
+msgid ""
+"Starts each frame as late as the GPU allows, so what you press reaches the screen sooner. Boost "
+"also keeps the GPU's clocks up. NVIDIA GPUs only."
+msgstr "在 GPU 允許的範圍內盡量晚地開始每一幀，讓你按下的操作更快顯示在螢幕上。Boost 還會讓 GPU 維持高時脈。僅限 NVIDIA GPU。"
+
+msgctxt "UI_MENU_REFLEX_BOOST"
+msgid "On + Boost"
+msgstr "ON + Boost"
+
+msgctxt "UI_MENU_TEMPORAL"
+msgid "AI upscaling"
+msgstr "AI 超解析度"
+
+msgctxt "UI_MENU_NOT_AVAILABLE"
+msgid "Not available on this PC: the game's own picture stays."
+msgstr "此電腦不支援：保持遊戲原有畫面。"
+
+msgctxt "UI_MENU_TEMPORAL_DESC"
+msgid ""
+"Renders the race at a lower resolution and rebuilds it from several frames: NVIDIA DLSS (RTX "
+"GPUs) or AMD FSR 3.1 (any GPU). Sharper and steadier edges than the game's own scaling; the HUD "
+"stays sharp."
+msgstr "以較低解析度算繪比賽畫面，再用多個幀重建：NVIDIA DLSS（RTX GPU）或 AMD FSR 3.1（任何 GPU）。邊緣比遊戲內建的縮放更銳利、更穩定；HUD 保持清晰。"
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY"
+msgid "Upscaling quality"
+msgstr "超解析度品質"
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY_DESC"
+msgid ""
+"The share of the screen's resolution the race renders at: Native (DLAA) 100 %, Quality 67 %, "
+"Balanced 58 %, Performance 50 %, Ultra performance 33 %. Applies at the next start."
+msgstr "比賽畫面算繪解析度占螢幕解析度的比例：原生（DLAA） 100 %、品質 67 %、平衡 58 %、效能 50 %、超級效能 33 %。下次啟動時生效。"
+
+msgctxt "UI_MENU_TQ_NATIVE"
+msgid "Native (DLAA)"
+msgstr "原生（DLAA）"
+
+msgctxt "UI_MENU_TQ_QUALITY"
+msgid "Quality"
+msgstr "品質"
+
+msgctxt "UI_MENU_TQ_BALANCED"
+msgid "Balanced"
+msgstr "平衡"
+
+msgctxt "UI_MENU_TQ_PERFORMANCE"
+msgid "Performance"
+msgstr "效能"
+
+msgctxt "UI_MENU_TQ_ULTRA"
+msgid "Ultra performance"
+msgstr "超級效能"
+
+msgctxt "UI_MENU_DLSS_PRESET"
+msgid "DLSS model"
+msgstr "DLSS 模型"
+
+msgctxt "UI_MENU_DLSS_PRESET_DESC"
+msgid ""
+"NVIDIA's model DLSS uses: the default of the DLSS version next to the game, or presets J, K, L, M."
+msgstr "NVIDIA DLSS 使用的模型：遊戲旁邊 DLSS 版本的預設模型，或預設集 J、K、L、M。"
+
+msgctxt "UI_MENU_DLSS_PRESET_DEFAULT"
+msgid "Default"
+msgstr "預設"
+
+msgctxt "UI_MENU_CAS"
+msgid "CAS sharpening"
+msgstr "CAS 銳化"
+
+msgctxt "UI_MENU_CAS_DESC"
+msgid ""
+"AMD's contrast adaptive sharpening of the race after DLSS or FSR 3.1, before the HUD is drawn. "
+"Needs AI upscaling on."
+msgstr "在 DLSS 或 FSR 3.1 之後、繪製 HUD 之前，對比賽畫面套用 AMD 的對比自適應銳化。需要開啟 AI 超解析度。"
+
+msgctxt "UI_MENU_CAS_SHARPNESS"
+msgid "CAS strength"
+msgstr "CAS 強度"
+
+msgctxt "UI_MENU_CAS_SHARPNESS_DESC"
+msgid "How strongly CAS sharpens: 0 is the lightest touch, 100 the strongest."
+msgstr "CAS 的銳化強度：0 最輕，100 最強。"
+
 msgctxt "UI_MENU_GRAPHICS"
 msgid "Picture"
 msgstr "畫面"

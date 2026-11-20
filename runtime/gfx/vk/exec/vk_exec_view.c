@@ -12,6 +12,7 @@
 #include "nvn_api.h"
 #include "nvn_hmap.h"
 #include "tex.h"
+#include "vk_temporal.h"
 #include "vk.h"
 #include "vk_draw_internal.h"
 #include "vk_exec.h"
@@ -412,6 +413,7 @@ void tex_info_full(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage, i
         int hv;
         const VkTexImage *img = vk_texture_by_id_locked((int)(h & 0xfffff), &v, &hv);
         if (img) view = get_view(ex, img, &v, hv, r->type, storage, r->format), *image = img->image;
+        if (img && !storage) vk_tmp_sampled(image, &view);   // the screen target at the output's size (vk_temporal.c)
         if (img && storage) vk_texture_storage_bound_locked(img);
         if (img && !storage && ex->nfbl && in_fbl(ex, img->image)) layout = VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT;
         if (!storage && !separate) {

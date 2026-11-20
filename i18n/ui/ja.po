@@ -509,6 +509,113 @@ msgstr ""
 "お使いのパソコンが対応できる限り遅いタイミングで各フレームを開始するため、押した操作が画面に早く反映されます。20 fpsや15 "
 "fpsのとき、またフレーム生成と併用するときに効果が大きくなります。映像がカクつく場合はオフにしてください。"
 
+msgctxt "UI_MENU_FG_ENGINE"
+msgid "Frame generation by"
+msgstr "フレーム生成の方式"
+
+msgctxt "UI_MENU_FG_ENGINE_DESC"
+msgid ""
+"Who makes the frames between the game's own. The port's own works everywhere. NVIDIA DLSS Frame "
+"Generation (RTX 40 and 50) and AMD FSR 3.1 use the scene's depth and motion and need DLSS or FSR "
+"3.1 upscaling on."
+msgstr ""
+"ゲームのフレームの間のフレームを作る方式です。移植版独自の方式はどの環境でも動きます。NVIDIA DLSS フレーム生成（RTX 40・50）と AMD FSR 3.1 "
+"はシーンの深度と動きを使い、DLSS または FSR 3.1 のAIアップスケーリングをONにする必要があります。"
+
+msgctxt "UI_MENU_REFLEX"
+msgid "NVIDIA Reflex"
+msgstr "NVIDIA Reflex"
+
+msgctxt "UI_MENU_REFLEX_DESC"
+msgid ""
+"Starts each frame as late as the GPU allows, so what you press reaches the screen sooner. Boost "
+"also keeps the GPU's clocks up. NVIDIA GPUs only."
+msgstr "GPUが許す限り遅いタイミングで各フレームを開始するため、押した操作が画面に早く反映されます。Boostは GPU のクロックも高く保ちます。NVIDIA GPU専用です。"
+
+msgctxt "UI_MENU_REFLEX_BOOST"
+msgid "On + Boost"
+msgstr "ON + Boost"
+
+msgctxt "UI_MENU_TEMPORAL"
+msgid "AI upscaling"
+msgstr "AIアップスケーリング"
+
+msgctxt "UI_MENU_NOT_AVAILABLE"
+msgid "Not available on this PC: the game's own picture stays."
+msgstr "このPCでは使えません：ゲーム本来の画面のままです。"
+
+msgctxt "UI_MENU_TEMPORAL_DESC"
+msgid ""
+"Renders the race at a lower resolution and rebuilds it from several frames: NVIDIA DLSS (RTX "
+"GPUs) or AMD FSR 3.1 (any GPU). Sharper and steadier edges than the game's own scaling; the HUD "
+"stays sharp."
+msgstr ""
+"レースを低い解像度で描画し、複数のフレームから再構成します。NVIDIA DLSS（RTX GPU）または AMD FSR 3.1（すべての "
+"GPU）。ゲーム自身の拡大よりも輪郭がシャープで安定し、HUDはシャープなままです。"
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY"
+msgid "Upscaling quality"
+msgstr "アップスケーリングの品質"
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY_DESC"
+msgid ""
+"The share of the screen's resolution the race renders at: Native (DLAA) 100 %, Quality 67 %, "
+"Balanced 58 %, Performance 50 %, Ultra performance 33 %. Applies at the next start."
+msgstr ""
+"画面の解像度に対するレースの描画解像度の割合です：ネイティブ（DLAA） 100 %、クオリティ 67 %、バランス 58 %、パフォーマンス 50 %、ウルトラパフォーマンス 33 "
+"%。次回の起動から適用されます。"
+
+msgctxt "UI_MENU_TQ_NATIVE"
+msgid "Native (DLAA)"
+msgstr "ネイティブ（DLAA）"
+
+msgctxt "UI_MENU_TQ_QUALITY"
+msgid "Quality"
+msgstr "クオリティ"
+
+msgctxt "UI_MENU_TQ_BALANCED"
+msgid "Balanced"
+msgstr "バランス"
+
+msgctxt "UI_MENU_TQ_PERFORMANCE"
+msgid "Performance"
+msgstr "パフォーマンス"
+
+msgctxt "UI_MENU_TQ_ULTRA"
+msgid "Ultra performance"
+msgstr "ウルトラパフォーマンス"
+
+msgctxt "UI_MENU_DLSS_PRESET"
+msgid "DLSS model"
+msgstr "DLSSモデル"
+
+msgctxt "UI_MENU_DLSS_PRESET_DESC"
+msgid ""
+"NVIDIA's model DLSS uses: the default of the DLSS version next to the game, or presets J, K, L, M."
+msgstr "NVIDIA DLSS が使うモデルです。ゲームの横にある DLSS バージョンの既定、またはプリセット J、K、L、M。"
+
+msgctxt "UI_MENU_DLSS_PRESET_DEFAULT"
+msgid "Default"
+msgstr "既定"
+
+msgctxt "UI_MENU_CAS"
+msgid "CAS sharpening"
+msgstr "CASシャープ化"
+
+msgctxt "UI_MENU_CAS_DESC"
+msgid ""
+"AMD's contrast adaptive sharpening of the race after DLSS or FSR 3.1, before the HUD is drawn. "
+"Needs AI upscaling on."
+msgstr "DLSS または FSR 3.1 の後、HUDを描く前に、レース映像へ AMD のコントラスト適応シャープニングをかけます。AIアップスケーリングがONのときに使えます。"
+
+msgctxt "UI_MENU_CAS_SHARPNESS"
+msgid "CAS strength"
+msgstr "CASの強さ"
+
+msgctxt "UI_MENU_CAS_SHARPNESS_DESC"
+msgid "How strongly CAS sharpens: 0 is the lightest touch, 100 the strongest."
+msgstr "CASのシャープ化の強さです。0がもっとも弱く、100がもっとも強くなります。"
+
 msgctxt "UI_MENU_GRAPHICS"
 msgid "Picture"
 msgstr "映像"

@@ -43,6 +43,7 @@
 #include "nvn_api.h"
 #include "vk.h"
 #include "vk_exec.h"
+#include "vk_temporal.h"
 #include "platform/platform.h"
 
 #define MAX_CHUNKS VK_SPLIT_EXTRA
@@ -78,7 +79,7 @@ typedef struct {
 
 // A submission left serial: a samples-passed report, reset or a conditional render (ops that must stay in order), under
 // two chunks, counting on at the start.
-enum { WHY_REPORT, WHY_RESET, WHY_COND, WHY_QUEUE, WHY_FEW, WHY_BUSY, WHY_N };
+enum { WHY_REPORT, WHY_RESET, WHY_COND, WHY_QUEUE, WHY_FEW, WHY_BUSY, WHY_TEMPORAL, WHY_N };
 
 static struct {
     int mode, walk_diag, threads, chunk_draws, first_draws, reverse, warm, depth_off;
@@ -731,6 +732,10 @@ int vk_exec_par(VkExec *ex, const uint64_t *handles, int n, int diag) {
     // (diag, which a dump also sets, still keeps them serial: the next step for the title's order fault).
     if (!P.mode || !RT_KNOB_ON(P.mode) || diag || (vk_dump_armed && P.threads) || P.subs <= (uint64_t)P.warm) return 0;
     if (vk_exec_oq_busy()) return P.n_serial[WHY_BUSY]++, 0;
+    // DLSS / FSR 3.1 (vk_temporal.c): the upscaler's hooks keep state from one draw to the next of the frame (the
+    // jitter of the scene's draws, the SMAA blend's output for the upscale dispatch, the picture before the HUD for the
+    // last pass), which chunks recorded out of order on other threads would mix up: serial while it is on.
+    if (vk_tmp_in_order()) return P.n_serial[WHY_TEMPORAL]++, 0;
     uint64_t t0 = kern_now_ns();
     P.handles = handles, P.n = n, P.fence = ex->fence, P.ex = ex, P.sent = 0, P.avail = 0, P.qleft = 0;
     vk_exec_written_share(ex);   // before the head: the chunk threads and this one note at the same fence
@@ -804,7 +809,7 @@ void vk_exec_par_log(void) {
                (double)P.max_rec_ns / 1e6, (double)P.n_draws / (double)nf);
     else if (P.mode && nf)
         rt_log("perf: replay in chunks: %llu submissions (%.1f chunks, %.0f draws each), serial %llu (in-order op) %llu "
-               "(under 2 chunks) %llu (counting on); in-order ops: report %llu reset %llu cond %llu queues %llu; per frame walk %.3f ms, chunks %.3f ms (max %.3f a submission); "
+               "(under 2 chunks) %llu (counting on) %llu (temporal upscaler); in-order ops: report %llu reset %llu cond %llu queues %llu; per frame walk %.3f ms, chunks %.3f ms (max %.3f a submission); "
                "first send %.2f ms after the chunks start (a submission); "
                "uniform snapshot drops before the last chunk %llu, chunks recorded again for them %llu; conditions decided by the walk %llu; "
                "cuts inside a pass %.1f, at a queue switch %.1f a submission (MKW_REPLAY_PAR_INPASS); "
@@ -816,6 +821,7 @@ void vk_exec_par_log(void) {
                (unsigned long long)(P.n_serial[WHY_REPORT] + P.n_serial[WHY_RESET] + P.n_serial[WHY_COND] +
                                     P.n_serial[WHY_QUEUE]),
                (unsigned long long)P.n_serial[WHY_FEW], (unsigned long long)P.n_serial[WHY_BUSY],
+               (unsigned long long)P.n_serial[WHY_TEMPORAL],
                (unsigned long long)P.n_serial[WHY_REPORT], (unsigned long long)P.n_serial[WHY_RESET],
                (unsigned long long)P.n_serial[WHY_COND], (unsigned long long)P.n_serial[WHY_QUEUE], (double)P.walk_ns / 1e6 / (double)nf,
                (double)P.rec_ns / 1e6 / (double)nf, (double)P.max_rec_ns / 1e6,

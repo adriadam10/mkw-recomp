@@ -22,6 +22,7 @@
 
 #include "cfg.h"
 #include "fs.h"
+#include "gfx.h"
 #include "host.h"
 #include "ov.h"
 #include "platform/platform.h"
@@ -30,6 +31,25 @@
 #define ARCHIVE_DIR "System/GymlArchive/general_format.Product_"   // + the version and ".sarc.zs"
 #define MEMBER "Gyml/GamePerformanceGraphicsConfigGParam/30_Extendted.game__GamePerformanceGraphicsConfigGParam.bgyml"
 #define SCENE_SCALE 0.65   // docked; handheld renders all of For3D's lines
+
+// The temporal upscalers (MKW_TEMPORAL, gfx/vk/exec/vk_temporal.c) render the 3D scene at a share of the screen's
+// lines (MKW_TEMPORAL_QUALITY) and take the place of the game's own upscale from the scene to the screen; in thousandths,
+// 0 when they are off or the engine cannot come up on this PC (vk_tmp_engine_usable). The same table as vk_temporal.c's.
+int vk_tmp_engine_usable(void);   // gfx/vk/exec/vk_temporal.c
+static int temporal_permille(void) {
+    if (!strcmp(cfg_value("MKW_TEMPORAL"), "off")) return 0;
+    if (!vk_tmp_engine_usable()) {
+        rt_log("temporal: MKW_TEMPORAL=%s is not available on this PC: the 3D scene keeps the game's own resolution",
+               cfg_value("MKW_TEMPORAL"));
+        return 0;
+    }
+    static const struct { const char *name; int pm; } q[] = {
+        {"native", 1000}, {"quality", 667}, {"balanced", 580}, {"performance", 500}, {"ultra", 333}};
+    const char *v = cfg_value("MKW_TEMPORAL_QUALITY");
+    for (size_t i = 0; i < sizeof q / sizeof *q; i++)
+        if (!strcmp(v, q[i].name)) return q[i].pm;
+    return 667;
+}
 
 // For3D's value that makes the scene LINES high in the mode the game is told it is in.
 static uint32_t lines_3d(int lines) {
@@ -108,7 +128,7 @@ static const char *find_archive(void) {
 
 // The overlay directory for MKW_RESOLUTION (lines, 0: the game's) and the detail distance (lod, 0: the game's), written
 // when missing; NULL when it cannot be made.
-static const char *write_overlay(int lines, float lod) {
+static const char *write_overlay(int lines, uint32_t r3d, float lod) {
     static char dir[PLAT_PATH_MAX * 2];
     char path[PLAT_PATH_MAX * 3], man[PLAT_PATH_MAX * 3];
     const char *exe = cfg_game_dir();
@@ -127,8 +147,10 @@ static const char *write_overlay(int lines, float lod) {
     sha256(z, zn, ssha);
     hex(ssha, shex);
     const char *mode = ov_handheld() ? "-handheld" : "";   // its own For3D, so its own directory
-    if (lod > 0) snprintf(dir, sizeof dir, "%s/cache/graphics-r%d%s-lod%g", exe, lines, mode, (double)lod);
-    else snprintf(dir, sizeof dir, "%s/cache/resolution-%d%s", exe, lines, mode);
+    char t3d[24] = "";
+    if (r3d) snprintf(t3d, sizeof t3d, "-3d%u", (unsigned)r3d);   // the temporal upscalers' own 3D lines
+    if (lod > 0) snprintf(dir, sizeof dir, "%s/cache/graphics-r%d%s%s-lod%g", exe, lines, t3d, mode, (double)lod);
+    else snprintf(dir, sizeof dir, "%s/cache/resolution-%d%s%s", exe, lines, t3d, mode);
     snprintf(man, sizeof man, "%s/manifest.tsv", dir);
     uint64_t mn = 0;
     char *old = (char *)plat_file_read(man, &mn);
@@ -137,7 +159,7 @@ static const char *write_overlay(int lines, float lod) {
     if (fresh) {   // the log still names the mode and the overlay used
         free(z);
         rt_log("resolution: %d lines (3D %u, screen %d, %s), detail distance %g: written before in %s", lines,
-               (unsigned)lines_3d(lines), lines, ov_handheld() ? "handheld" : "docked", (double)lod, dir);
+               (unsigned)(r3d ? r3d : lines_3d(lines)), lines, ov_handheld() ? "handheld" : "docked", (double)lod, dir);
         return dir;
     }
     unsigned long long rn = ZSTD_getFrameContentSize(z, zn);
@@ -149,8 +171,8 @@ static const char *write_overlay(int lines, float lod) {
     int changed = 0;
     if (at && mlen > 16 && !memcmp(s + at, "YB", 2)) {
         uint32_t keys_off = u32(s + at + 4), root = u32(s + at + 12);
-        uint32_t r3d = lines_3d(lines);
-        changed = patch_dict(s + at, mlen, keys_off, root, "", r3d, (uint32_t)(lines > 0 ? lines : 0), lod, 0);
+        uint32_t f3d = r3d ? r3d : lines_3d(lines);
+        changed = patch_dict(s + at, mlen, keys_off, root, "", f3d, (uint32_t)(lines > 0 ? lines : 0), lod, 0);
     }
     if (!changed) { free(s); rt_log("resolution: no resolution fields in %s", MEMBER); return NULL; }
     size_t cap = ZSTD_compressBound(got);
@@ -170,11 +192,12 @@ static const char *write_overlay(int lines, float lod) {
     free(out);
     if (!ok) { rt_log("resolution: cannot write %s", dir); return NULL; }
     rt_log("resolution: %d lines (3D %u, screen %d, %s), detail distance %g: %d fields in %s", lines,
-           (unsigned)lines_3d(lines), lines, ov_handheld() ? "handheld" : "docked", (double)lod, changed, dir);
+           (unsigned)(r3d ? r3d : lines_3d(lines)), lines, ov_handheld() ? "handheld" : "docked", (double)lod, changed, dir);
     return dir;
 }
 
 static int g_lines;   // romfs_resolution_lines
+static int g_scene_pm = 1000;   // romfs_resolution_scene_permille
 
 const char *romfs_resolution_overlay(void) {
     const char *v = cfg_value("MKW_RESOLUTION");
@@ -184,11 +207,31 @@ const char *romfs_resolution_overlay(void) {
     // console's value writes nothing
     float lod = (float)cfg_double("MKW_DETAIL_DISTANCE");
     if (lod == 2.0f) lod = 0;
+    // With a temporal upscaler the screen keeps its lines (the console's 1440 docked, 1080 handheld, when the setting
+    // is original) and the 3D scene renders at the quality's share of them: the game upscales from one to the other,
+    // and the upscaler takes that pass over.
+    uint32_t r3d = 0;
+    int pm = temporal_permille();
+    if (pm) {
+        // the share is of the picture's lines on screen (the window's, or the setting's), the game rendering at most
+        // its screen's: a 1820-line window at quality renders 1213 lines, upscaled to the window (vk_temporal.c)
+        int out = lines;
+        int ww = 0, wh = 0;
+        if (!out && gfx_window_shape(&ww, &wh)) out = wh;
+        if (!lines) lines = ov_handheld() ? 1080 : 1440;
+        if (out < lines) out = lines;
+        r3d = (uint32_t)((out * pm + 500) / 1000);
+        if (r3d > (uint32_t)lines) r3d = (uint32_t)lines;
+    }
     if (!lines && lod <= 0) return NULL;
-    const char *dir = write_overlay(lines, lod);
+    const char *dir = write_overlay(lines, r3d, lod);
+    if (dir && pm) g_scene_pm = pm;
     if (dir && lines) g_lines = lines;
     return dir;
 }
 
 void romfs_resolution_external(void) { g_lines = -1; }
 int romfs_resolution_lines(void) { return g_lines; }
+// The 3D scene's share of the screen's lines this run, in thousandths (1000: the same, the game's own SMAA writes the
+// screen; less: the game's upscale dispatch follows), as the overlay written at start says (vk_temporal.c).
+int romfs_resolution_scene_permille(void) { return g_scene_pm; }

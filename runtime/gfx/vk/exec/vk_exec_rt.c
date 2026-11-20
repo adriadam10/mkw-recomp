@@ -12,6 +12,7 @@
 #include "nvn_api.h"
 #include "nvn_tex.h"
 #include "tex.h"
+#include "vk_temporal.h"
 #include "vk.h"
 #include "vk_exec.h"
 #include "platform/platform.h"
@@ -169,6 +170,7 @@ void resolve_rt(VkExec *ex) {
     for (int i = 0; i < 8; i++) {
         VkExecTarget *t = &ex->color[i];
         resolve_target(i < n ? r->color[i] : NULL, &r->cview[i], i < n && r->has_cview[i], 0, t);
+        vk_tmp_target(t);   // the screen target at the output's size (vk_temporal.c)
         ex->pass_color[i] = t->image ? t->format : VK_FORMAT_UNDEFINED;
         ex->pipe.color_fmt[i] = t->image ? t->nvn_format : 0;
         if (!t->image) continue;

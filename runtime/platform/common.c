@@ -5,6 +5,16 @@
 
 #include "platform.h"
 
+// The present thread used this policy locally. Share it with image acquisition: millisecond Sleep overshoots by
+// several ms with TIMER_1MS=0 on Windows, while a shorter high-resolution guard can still wake after the deadline.
+// Keep twice the platform's expected late wake-up as margin; yield there rather than occupying a core with PAUSE.
+void plat_sleep_until_ns(uint64_t deadline) {
+    const uint64_t guard = 2ull * PLAT_WAIT_LATE_NS;
+    uint64_t now = plat_now_ns();
+    if (deadline > now && deadline - now > guard + guard / 2) plat_wait_ns(deadline - now - guard);
+    while (plat_now_ns() < deadline) plat_yield();
+}
+
 // ---- recursive mutex: owner is the holder's thread id (0 when free); only the holder writes depth.
 
 void plat_rmutex_lock(PlatRMutex *m) {

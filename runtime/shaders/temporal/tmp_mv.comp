@@ -1,0 +1,102 @@
+#version 450
+// Camera motion vectors for the temporal upscalers (gfx/vk/exec/vk_temporal.c): every pixel of the scene's depth is
+// taken back to the previous frame through one matrix, prev = last view-projection * inverse(this view-projection),
+// which the CPU builds in double precision from the game's own camera block (it holds both frames' matrices). The
+// result is the pixel's motion from this frame to the last one, in render pixels, as DLSS and FSR 3.1 read it.
+//
+// The scene is drawn with the port's y flip (vk_exec_cb.c record_fixed: negative viewport height), so image row 0 is
+// NDC y = +1, and with NVN's minus-w depth mode (VK_EXT_depth_clip_control negativeOneToOne): NDC z = 2 * depth - 1.
+// Sky pixels (depth 1) reproject as points at infinity: their w goes to zero, so they get the rotation alone.
+//
+// The player's kart and driver move with the camera, so the camera's motion is wrong for them: moved like the road
+// under them, DLSS smears them and frame generation tears the driver's head and the road around the kart. Near pixels
+// in the kart's part of the screen are tested against the last frame's picture: where the pixel and its neighbours
+// match the last picture at the same place clearly better than at the camera's place, they stay still (motion 0).
+// Without a last picture (the first frame, a size change) a circle around the kart's place stands in.
+// With the last frame's depth (zt.x) the test is by depth instead: a camera-attached surface has, at the same pixel,
+// the depth it has now; a surface fixed in the world has, where the camera's motion takes it, the depth the camera's
+// motion predicts. The colour test failed at the kart's sharp edges, where the jitter moves the picture by a fraction
+// of a pixel every frame: holes in the still area, and FSR 3.1's made frames doubled the kart's outline.
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0) uniform sampler2D depth_tex;
+layout(binding = 1, rg16f) uniform writeonly image2D mv_out;
+layout(binding = 2, r32f) uniform writeonly image2D depth_out;   // the depth as a plain R32F image (FSR 3.1, frame generation)
+layout(binding = 3) uniform sampler2D cur_col;                   // this frame's scene colour (before SMAA)
+layout(binding = 4) uniform sampler2D prev_col;                  // the last frame's
+layout(binding = 5) uniform sampler2D prev_z;                    // the last frame's depth (zt.x)
+layout(push_constant) uniform P {
+    mat4 reproj;     // column-major as GLSL reads it: clip_prev = reproj * clip_this
+    vec2 size;       // render size in pixels
+    vec2 pad;
+    vec4 kart;       // x: radius (0: off), yz: centre in UV, w: depth below which a pixel may be the player's kart
+    vec4 still;      // x: 1 when prev_col is the last frame's at this size, y: top of the kart's area (UV), z: its half
+                     // width, w: how much better the still match must be (the camera's error times this)
+    vec4 zt;         // x: 1 when prev_z is the last frame's depth, y: near, z: far
+} p;
+
+// view distance from a 0..1 depth (NDC z = 2 d - 1, NVN's -1..1 clip space)
+float lin(float d) { return 2.0 * p.zt.y * p.zt.z / max((p.zt.z + p.zt.y) - (2.0 * d - 1.0) * (p.zt.z - p.zt.y), 1e-6); }
+
+float luma(vec3 c) { return dot(min(c, vec3(4.0)), vec3(0.299, 0.587, 0.114)); }
+
+void main() {
+    ivec2 px = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 sz = ivec2(p.size);
+    if (px.x >= sz.x || px.y >= sz.y) return;
+    vec2 uv = (vec2(px) + 0.5) / p.size;
+    float d = texelFetch(depth_tex, px, 0).r;
+    vec2 mv = vec2(0.0);
+    vec4 clip = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, d * 2.0 - 1.0, 1.0);
+    vec4 prev = p.reproj * clip;
+    if (abs(prev.w) > 1e-7) {
+        vec2 ndc = prev.xy / prev.w;
+        vec2 puv = vec2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
+        mv = (puv - uv) * p.size;
+    }
+    if (p.kart.x > 0.0 && d < p.kart.w) {
+        bool kart;
+        if (p.zt.x > 0.5) {
+            kart = false;
+            if (uv.y > p.still.y && abs(uv.x - 0.5) < p.still.z) {
+                // 3x3 taps two pixels apart: each hypothesis' relative depth error, summed
+                float es = 0.0, ew = 0.0;
+                for (int y = -1; y <= 1; y++)
+                    for (int x = -1; x <= 1; x++) {
+                        ivec2 q = clamp(px + ivec2(x, y) * 2, ivec2(0), sz - 1);
+                        vec2 quv = (vec2(q) + 0.5) / p.size;
+                        float dq = texelFetch(depth_tex, q, 0).r, zq = lin(dq);
+                        es += abs(lin(texelFetch(prev_z, q, 0).r) - zq) / zq;
+                        vec4 pq = p.reproj * vec4(quv.x * 2.0 - 1.0, 1.0 - quv.y * 2.0, dq * 2.0 - 1.0, 1.0);
+                        if (abs(pq.w) < 1e-7) { ew += 1.0; continue; }
+                        vec3 n = pq.xyz / pq.w;
+                        vec2 puv = vec2(n.x * 0.5 + 0.5, 0.5 - n.y * 0.5);
+                        float zexp = lin(n.z * 0.5 + 0.5);
+                        ivec2 pp = clamp(ivec2(puv * p.size), ivec2(0), sz - 1);
+                        ew += abs(lin(texelFetch(prev_z, pp, 0).r) - zexp) / zexp;
+                    }
+                // still where its error is clearly the smaller one and the camera's is real (over 2 % of the distance)
+                kart = es < ew * 0.5 && ew > 9.0 * 0.02;
+            }
+        } else if (p.still.x > 0.5) {
+            kart = false;
+            if (uv.y > p.still.y && abs(uv.x - 0.5) < p.still.z) {
+                // 3x3 taps two pixels apart: the error of standing still against the error of the camera's motion
+                float es = 0.0, ec = 0.0;
+                ivec2 cm = ivec2(round(mv));
+                for (int y = -1; y <= 1; y++)
+                    for (int x = -1; x <= 1; x++) {
+                        ivec2 q = clamp(px + ivec2(x, y) * 2, ivec2(0), sz - 1);
+                        float c = luma(texelFetch(cur_col, q, 0).rgb);
+                        es += abs(c - luma(texelFetch(prev_col, q, 0).rgb));
+                        ec += abs(c - luma(texelFetch(prev_col, clamp(q + cm, ivec2(0), sz - 1), 0).rgb));
+                    }
+                kart = es < ec * p.still.w && ec > 0.15;
+            }
+        } else {
+            kart = distance(uv, p.kart.yz) < p.kart.x;
+        }
+        if (kart) mv = vec2(0.0);
+    }
+    imageStore(mv_out, px, vec4(mv, 0.0, 0.0));
+    imageStore(depth_out, px, vec4(d, 0.0, 0.0, 0.0));
+}

@@ -537,6 +537,118 @@ msgstr ""
 "เริ่มแต่ละเฟรมให้ช้าที่สุดเท่าที่คอมพิวเตอร์ของคุณอนุญาต เพื่อให้สิ่งที่คุณกดขึ้นจอเร็วขึ้น "
 "จะได้ผลชัดที่สุดเมื่อ 20 หรือ 15 fps และเมื่อใช้การสร้างเฟรม ปิดไว้หากภาพกระตุก"
 
+msgctxt "UI_MENU_FG_ENGINE"
+msgid "Frame generation by"
+msgstr "สร้างเฟรมโดย"
+
+msgctxt "UI_MENU_FG_ENGINE_DESC"
+msgid ""
+"Who makes the frames between the game's own. The port's own works everywhere. NVIDIA DLSS Frame "
+"Generation (RTX 40 and 50) and AMD FSR 3.1 use the scene's depth and motion and need DLSS or FSR "
+"3.1 upscaling on."
+msgstr ""
+"ผู้สร้างเฟรมระหว่างเฟรมของเกม แบบของพอร์ตเองใช้ได้ทุกที่ NVIDIA DLSS Frame Generation (RTX 40 และ "
+"50) และ AMD FSR 3.1 ใช้ข้อมูลความลึกและการเคลื่อนไหวของฉาก และต้องเปิดการอัปสเกลด้วย AI แบบ DLSS "
+"หรือ FSR 3.1"
+
+msgctxt "UI_MENU_REFLEX"
+msgid "NVIDIA Reflex"
+msgstr "NVIDIA Reflex"
+
+msgctxt "UI_MENU_REFLEX_DESC"
+msgid ""
+"Starts each frame as late as the GPU allows, so what you press reaches the screen sooner. Boost "
+"also keeps the GPU's clocks up. NVIDIA GPUs only."
+msgstr ""
+"เริ่มแต่ละเฟรมให้ช้าที่สุดเท่าที่ GPU อนุญาต เพื่อให้สิ่งที่คุณกดขึ้นจอเร็วขึ้น Boost "
+"ยังรักษาความเร็วสัญญาณนาฬิกาของ GPU ให้สูงไว้ด้วย ใช้ได้กับ GPU ของ NVIDIA เท่านั้น"
+
+msgctxt "UI_MENU_REFLEX_BOOST"
+msgid "On + Boost"
+msgstr "เปิด + Boost"
+
+msgctxt "UI_MENU_TEMPORAL"
+msgid "AI upscaling"
+msgstr "อัปสเกลด้วย AI"
+
+msgctxt "UI_MENU_NOT_AVAILABLE"
+msgid "Not available on this PC: the game's own picture stays."
+msgstr "ใช้ไม่ได้บนพีซีเครื่องนี้: ภาพเดิมของเกมยังคงอยู่"
+
+msgctxt "UI_MENU_TEMPORAL_DESC"
+msgid ""
+"Renders the race at a lower resolution and rebuilds it from several frames: NVIDIA DLSS (RTX "
+"GPUs) or AMD FSR 3.1 (any GPU). Sharper and steadier edges than the game's own scaling; the HUD "
+"stays sharp."
+msgstr ""
+"เรนเดอร์การแข่งที่ความละเอียดต่ำลงแล้วสร้างขึ้นใหม่จากหลายเฟรม: NVIDIA DLSS (GPU RTX) หรือ AMD "
+"FSR 3.1 (GPU ใดก็ได้) ขอบคมและนิ่งกว่าการขยายภาพของเกมเอง และ HUD ยังคมชัด"
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY"
+msgid "Upscaling quality"
+msgstr "คุณภาพการอัปสเกล"
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY_DESC"
+msgid ""
+"The share of the screen's resolution the race renders at: Native (DLAA) 100 %, Quality 67 %, "
+"Balanced 58 %, Performance 50 %, Ultra performance 33 %. Applies at the next start."
+msgstr ""
+"สัดส่วนของความละเอียดหน้าจอที่ใช้เรนเดอร์การแข่ง: เนทีฟ (DLAA) 100 %, คุณภาพ 67 %, สมดุล 58 %, "
+"ประสิทธิภาพ 50 %, ประสิทธิภาพสูงสุด 33 % มีผลเมื่อเริ่มเกมครั้งถัดไป"
+
+msgctxt "UI_MENU_TQ_NATIVE"
+msgid "Native (DLAA)"
+msgstr "เนทีฟ (DLAA)"
+
+msgctxt "UI_MENU_TQ_QUALITY"
+msgid "Quality"
+msgstr "คุณภาพ"
+
+msgctxt "UI_MENU_TQ_BALANCED"
+msgid "Balanced"
+msgstr "สมดุล"
+
+msgctxt "UI_MENU_TQ_PERFORMANCE"
+msgid "Performance"
+msgstr "ประสิทธิภาพ"
+
+msgctxt "UI_MENU_TQ_ULTRA"
+msgid "Ultra performance"
+msgstr "ประสิทธิภาพสูงสุด"
+
+msgctxt "UI_MENU_DLSS_PRESET"
+msgid "DLSS model"
+msgstr "โมเดล DLSS"
+
+msgctxt "UI_MENU_DLSS_PRESET_DESC"
+msgid ""
+"NVIDIA's model DLSS uses: the default of the DLSS version next to the game, or presets J, K, L, M."
+msgstr "โมเดลที่ NVIDIA DLSS ใช้: ค่าเริ่มต้นของ DLSS เวอร์ชันที่อยู่ข้างเกม หรือพรีเซ็ต J, K, L, M"
+
+msgctxt "UI_MENU_DLSS_PRESET_DEFAULT"
+msgid "Default"
+msgstr "ค่าเริ่มต้น"
+
+msgctxt "UI_MENU_CAS"
+msgid "CAS sharpening"
+msgstr "การเพิ่มความคม CAS"
+
+msgctxt "UI_MENU_CAS_DESC"
+msgid ""
+"AMD's contrast adaptive sharpening of the race after DLSS or FSR 3.1, before the HUD is drawn. "
+"Needs AI upscaling on."
+msgstr ""
+"การเพิ่มความคมแบบปรับตามคอนทราสต์ของ AMD ใช้กับภาพการแข่งหลัง DLSS หรือ FSR 3.1 ก่อนวาด HUD "
+"ต้องเปิดการอัปสเกลด้วย AI"
+
+msgctxt "UI_MENU_CAS_SHARPNESS"
+msgid "CAS strength"
+msgstr "ความแรง CAS"
+
+msgctxt "UI_MENU_CAS_SHARPNESS_DESC"
+msgid "How strongly CAS sharpens: 0 is the lightest touch, 100 the strongest."
+msgstr "CAS เพิ่มความคมมากแค่ไหน: 0 เบาที่สุด 100 แรงที่สุด"
+
 msgctxt "UI_MENU_GRAPHICS"
 msgid "Picture"
 msgstr "ภาพ"

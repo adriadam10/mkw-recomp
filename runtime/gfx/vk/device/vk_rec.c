@@ -160,6 +160,15 @@ void rec_drain(void) {
     RS_.drains++, RS_.drain_ns += now_ns() - t0;
 }
 
+int rec_suspend(void) {
+    int saved = rec_live;
+    rec_drain();
+    rec_live = 0;
+    return saved;
+}
+
+void rec_resume(int saved) { rec_live = saved; }
+
 void rec_begin(VkCommandBuffer cb) {
     static int mode = -1;
     if (mode < 0) {
@@ -188,8 +197,7 @@ void rec_begin(VkCommandBuffer cb) {
 
 void rec_end(void) {
     if (!rec_live) return;
-    rec_drain();
-    rec_live = 0;
+    rec_suspend();
 }
 
 void rec_stats_log(void) {

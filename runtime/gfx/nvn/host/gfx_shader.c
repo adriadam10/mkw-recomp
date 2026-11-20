@@ -7,6 +7,7 @@
 // Reflection: every shader that enters the cache goes through gfx_shader_reflect (gfx_shader_refl.c); the gfx.h
 // accessors are at the end of the file.
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -368,6 +369,21 @@ const uint32_t *gfx_shader_spirv(const GfxShader *cs, uint64_t *words) {
     return s->spirv;
 }
 
+// FNV-1a 64 of the SPIR-V bytes, computed on the first call and kept on the shader: vk_temporal.c identifies the game's
+// SMAA and upscale programs by it on every draw. It was a 512-slot table keyed by pointer, and with the boot prewarm's
+// ~4700 shaders (or an unlucky heap layout) its collisions rehashed whole programs on the replay thread: +1 ms a frame
+// in the race (pf-fast/pf-slow sampled profiles, 16/11/2026). Concurrent first calls store the same value.
+uint64_t gfx_shader_spirv_fnv(const GfxShader *s) {
+    uint64_t h = __atomic_load_n(&s->spirv_fnv, __ATOMIC_RELAXED);
+    if (h) return h;
+    h = 0xcbf29ce484222325ull;
+    uint64_t words = 0;
+    const uint8_t *b = (const uint8_t *)gfx_shader_spirv(s, &words);   // read back if the prewarm's release freed it
+    for (uint64_t k = 0; b && k < words * 4; k++) h = (h ^ b[k]) * 0x100000001b3ull;
+    __atomic_store_n(&((GfxShader *)s)->spirv_fnv, h, __ATOMIC_RELAXED);
+    return h;
+}
+
 // Frees the SPIR-V of every prepared shader nothing but the prewarm has read. The caller has joined the prewarm's
 // threads: a quiet read never takes the state, so one running now could read freed memory.
 uint64_t gfx_shader_spirv_release(void) {
@@ -437,10 +453,12 @@ const GfxShader *gfx_shader_variant(const GfxShader *s, const uint32_t *val, con
         free(w);
         return NULL;
     }
-    GfxShader *v = malloc(sizeof *v);
+    GfxShader *v = calloc(1, sizeof *v);
     if (!v) rt_fatal("gfx_shader: out of memory");
-    *v = *s;
-    v->next = NULL, v->spirv = w, v->spirv_state = SPIRV_KEPT, v->variant_of = s;
+    // Another replay worker can memoize the generic program's hash while this
+    // variant is made. Do not read that atomic memo through a whole-struct copy.
+    memcpy(v, s, offsetof(GfxShader, spirv_fnv));
+    v->next = NULL, v->spirv = w, v->spirv_state = SPIRV_KEPT, v->variant_of = s, v->spirv_fnv = 0;   // its own SPIR-V
     size_t n = 32 + (size_t)s->nspec * 5;
     uint8_t *buf = malloc(n);
     if (!buf) rt_fatal("gfx_shader: out of memory");

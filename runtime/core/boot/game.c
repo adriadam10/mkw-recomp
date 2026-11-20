@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "vk_reflex_frame.h"
 #include "cfg.h"
 #include "hacks.h"
 #include "host.h"
@@ -206,10 +207,13 @@ static void host_frame_update(Cpu *c) {
         saved = -1;
         rt_log("game: present interval chosen by the game again (MKW_FPS %s)", fps);
     }
-    uint64_t obj = c->x[0], t0 = kern_now_ns();
+    uint64_t obj = c->x[0];
+    vk_rfx_frame_start(vk_be_next_frame_id());   // NVIDIA Reflex: its sleep, then the simulation starts (vk_reflex_frame.c)
+    uint64_t t0 = kern_now_ns();
     lat_mark("frame update start");
     rt_call(c, rt_main_addr(rt_version()->frame_update), 1, obj);
     lat_mark("frame update end");
+    vk_rfx_frame_end();
     frame_trace(obj, t0);
 }
 

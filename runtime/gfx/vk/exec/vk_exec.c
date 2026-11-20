@@ -24,6 +24,7 @@
 #include "nvn_api.h"
 #include "nvn_tex.h"
 #include "tex.h"
+#include "vk_temporal.h"
 #include "vk.h"
 #include "vk_exec.h"
 #include "platform/platform.h"
@@ -323,6 +324,11 @@ VkRect2D vk_exec_scissor(const VkExec *ex) {
     if (!ex->has_scissor) return (VkRect2D){{0, 0}, {(uint32_t)w, (uint32_t)h}};
     int64_t x0 = ex->scissor.x, y0 = ex->scissor.y;
     int64_t x1 = x0 + ex->scissor.w, y1 = y0 + ex->scissor.h;
+    {   // a pass moved to the output's size (vk_temporal.c): the game's scissor scaled with it
+        float fx = (float)x0, fy = (float)y0, fw = (float)(x1 - x0), fh = (float)(y1 - y0);
+        vk_tmp_scale_rect(ex, &fx, &fy, &fw, &fh);
+        x0 = (int64_t)floorf(fx), y0 = (int64_t)floorf(fy), x1 = (int64_t)ceilf(fx + fw), y1 = (int64_t)ceilf(fy + fh);
+    }
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
     if (x1 > w) x1 = w;

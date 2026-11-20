@@ -389,6 +389,8 @@ int probe_window(void);                                    // gfx_window_probe.c
 int probe_vkmem(void), probe_vkexec(void), probe_astc(void);                 // tex_probe.c, vk_exec_probe.c, astc_probe.c
 int probe_texpre(void);                                    // texpre_probe.c: GPU BC7 against bc7enc on game textures
 int probe_framegen(void);                                  // fg_probe.c: frame generation on two pictures
+int probe_oflow(void);                                     // oflow_probe.c: hardware flow with a known translation
+int probe_fsr_fg(void);                                    // fsr_fg_probe.c: analytical geometry/shading motion
 int probe_gpu_clocks(void);                                // clk_probe.c: the GPU clock after idle gaps (MKW_GPU_CLOCKS)
 
 int vk_texpre_encode(void);                                  // vk_texpre.c: --texpre (BC7 of the recorded ASTC textures)

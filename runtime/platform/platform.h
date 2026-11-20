@@ -119,6 +119,9 @@ static inline uint64_t plat_scaled(PlatScale s, uint64_t t) {
     return t * s.q + (uint64_t)(((unsigned __int128)t * s.f) >> 64);
 }
 void plat_sleep_ns(uint64_t ns);          // returns no earlier than ns later; overshoot well under 1 ms
+// Frame pacing against an absolute plat_now_ns deadline: high-resolution wait, then yield across the timer's wake-up
+// margin. A deadline in the past returns immediately, so a stalled frame does not add another relative sleep.
+void plat_sleep_until_ns(uint64_t deadline);
 // Sleeps about ns on the OS's high-resolution timer without spinning: wakes up to PLAT_WAIT_LATE_NS late, never early.
 void plat_wait_ns(uint64_t ns);
 #ifdef _WIN32

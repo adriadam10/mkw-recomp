@@ -33,6 +33,7 @@ struct GfxShader {
     const struct GfxShader *variant_of;                    // gfx_shader_variant: the generic shader; NULL for one
     struct GfxShader *cs_variant;                          // task/mesh: the compute form (gfx_shader_cs_variant)
     int cs_of_mesh;                                        // this is the compute form of a task or mesh program
+    uint64_t spirv_fnv;   // gfx_shader_spirv_fnv, 0 until first asked for; last: gfx_shader_variant copies up to it
 };
 
 #define PATH_CAP 1024                                      // bytes of a UTF-8 path

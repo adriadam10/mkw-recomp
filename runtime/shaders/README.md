@@ -10,5 +10,6 @@ with `uv run tools/shaders/embed_spv.py runtime/shaders/<folder>/<name>.comp`.
 | [fsr/](fsr/README.md) | AMD FSR 1: scaling and sharpening |
 | `ffx/` | AMD's FidelityFX headers that `fsr/` includes (MIT, `ffx/LICENSE.txt`) |
 | [framegen/](framegen/README.md) | Frame generation |
+| [temporal/](temporal/README.md) | The temporal upscalers' (DLSS, FSR 3.1) camera motion vectors and sharpening |
 | [hdr/](hdr/README.md) | The F1 menu on an HDR10 display |
 | [diag/](diag/README.md) | Diagnostics and probes |

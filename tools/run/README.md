@@ -5,6 +5,7 @@ through `job.sh`.
 
 | Script | What it does | Usage |
 |---|---|---|
+| `windows.py` | Native Windows race/self-test/probe runner: bounded process, captured log and settings manifest, using a separate prepared installation without replacing its executable or changing its ini. Races use the time-trial phase hooks and require an expected outcome | `uv run tools/run/windows.py NAME --exe EXE --install GAME --why "Expected outcome" [--env MKW_KEY=VALUE]`; `--mode selftest` for a game-free check |
 | `job.sh` | Runs a heavy command (a game run, a replay) through the host's job runner when there is one (`JOB_RUNNER`, or `job-runner` on PATH: memory cap and one at a time), else a systemd user unit capped at `JOB_MEM` without swap, else directly | `tools/run/job.sh run\|start NAME CMD...` |
 | `watch.sh` | Follows a run's log and prints FATAL and guard stops, plus the lines matching a pattern if given (each one wakes the agent: only what changes the plan); exits when the run ends (the command of a Monitor) | `tools/run/watch.sh NAME [PATTERN]` |
 | `live.sh` | A run that stays alive to be inspected through its control FIFO (`MKW_CTL`, `runtime/core/base/ctl.c`), with the race runs' settings | `tools/run/live.sh NAME [SECONDS]` |

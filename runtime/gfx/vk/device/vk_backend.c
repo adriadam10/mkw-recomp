@@ -27,6 +27,8 @@
 #include "gfx.h"
 #include "host.h"
 #include "nvn_api.h"
+#include "vk_reflex_frame.h"
+#include "vk_temporal.h"
 #include "vk.h"
 #include "vk_exec.h"
 #include "platform/platform.h"
@@ -62,6 +64,127 @@ static int64_t ready_slack(uint64_t at, uint64_t value) {
     return ready ? (int64_t)(at - ready) : -1;
 }
 
+// Frame generation's flips (MKW_FG_FLIP_THREAD, default on): the present thread hands each game frame's schedule
+// (its made frames, then its own, one step apart) to this thread and goes back for the next game frame at once. Held
+// on the present thread, the schedule kept the next game frame's job waiting up to a step past its display time, and
+// with it the replay's next submission (vk_present_drain waits for the job to be taken): with DLSS-G at 4K HDR10 the
+// game frame went over 20 ms in 4 % of the race against none with frame generation off (ab-hl0, base-fgoff,
+// 15/11/2026). The swapchain keeps VK_FG_MAX images past its minimum with frame generation (gfx_present.c): two game
+// frames of 2x fit, and the present thread waits for flips only when the next frame's would not.
+typedef struct { int nf; uint64_t first, step, frame, queued, slot, value; } FlipJob;   // slot: display time; value: the blits' timeline value
+static PlatMutex fl_m = PLAT_MUTEX_INIT;
+static PlatCond fl_cv = PLAT_COND_INIT;
+static FlipJob fl_q[4];
+static int fl_head, fl_n, fl_images, fl_thread;   // fl_images: blitted images not flipped yet
+
+typedef struct { uint64_t first, step, previous; int clock; } FlipPace;
+
+// The first call keeps the clock's old behavior because ready_slack waits at that exact time. Later pictures snap the
+// requested timestamp to the nearest predicted call: at 119.88 Hz, several hundred microseconds of live phase noise
+// at the half-refresh boundary must not ceil every later picture a whole vblank late.
+static uint64_t flip_pace_clock(uint64_t t, int first) {
+    if (first) return vk_present_flip_time(t);
+    double hz = vk_present_refresh_hz();
+    if (hz <= 0) return 0;
+    uint64_t half = (uint64_t)(5e8 / hz + 0.5);
+    return vk_present_flip_time(t > half ? t - half : 0);
+}
+
+// The requested step, not one refresh, separates the pictures of one game frame. Each slot is placed from the same
+// start so fractional steps can alternate refresh gaps. If a slot is late or already used, advance to a future slot
+// so that mailbox does not replace a queued picture before its vblank.
+static uint64_t flip_pace_next(FlipPace *p, int k, uint64_t now, int first) {
+    uint64_t ideal = p->first + (uint64_t)k * p->step;
+    if (!p->clock) return ideal;
+    uint64_t at = flip_pace_clock(first && ideal < now ? now : ideal, first);
+    if (at && !first && (at < now || at <= p->previous)) {
+        uint64_t earliest = p->previous + 1;
+        at = vk_present_flip_time(earliest < now ? now : earliest);
+    }
+    if (!at) {   // the vblank clock is not ready, or the swapchain was renewed during the job
+        p->clock = 0;
+        return ideal;
+    }
+    if (first) p->first = at;
+    p->previous = at;
+    return at;
+}
+
+static void trace_present(uint64_t frame, uint64_t t1, uint64_t t0, uint64_t target, uint64_t queued, int made) {
+    static uint64_t last, last_queued;
+    // MKW_TRACE=present: one line per present: the host present's interval, the interval of the game's present
+    // calls (when the host present went out before back-edge pacing), the wait and how far past its target it went;
+    // with frame generation, the game's frame and how many were shown before it
+    if (rt_trace & RT_TRACE_PRESENT)
+        rt_log("present: frame %llu interval %.3f ms, game %.3f ms, waited %.3f ms, %.3f ms past target, %d made",
+               (unsigned long long)frame, last ? (t1 - last) / 1e6 : 0.0,
+               last_queued ? (queued - last_queued) / 1e6 : 0.0, (t1 - t0) / 1e6,
+               target && t1 > target ? (t1 - target) / 1e6 : 0.0, made);
+    last = t1;
+    last_queued = queued;
+}
+
+static void flip_main(void *arg) {
+    (void)arg;
+    plat_mutex_lock(&fl_m);
+    for (;;) {
+        while (!fl_n) plat_cond_wait(&fl_cv, &fl_m);
+        FlipJob f = fl_q[fl_head];
+        plat_mutex_unlock(&fl_m);
+        uint64_t t0 = kern_now_ns();
+        // On the vblank clock (gfx_present.c, from the presents' display times), each flip is half a refresh before
+        // the first vblank that can carry its requested-step target. One refresh per flip was twice too fast for
+        // 60 -> 120 on a 240 Hz display and also queued a game frame's pictures back-to-back on 119.88 Hz.
+        static int on_clock = -1;
+        if (on_clock < 0) on_clock = !(cfg_get("MKW_FG_VBLANK") && !strcmp(cfg_get("MKW_FG_VBLANK"), "0"));
+        FlipPace pace = {f.first, f.step, 0, on_clock};
+        uint64_t at = flip_pace_next(&pace, 0, t0, 1);
+        // The first flip's wait is ready_slack's (it also measures MKW_LOW_LATENCY's slack), so the late test below is
+        // for the flips after it: after that wait `at` has always just passed, and tested there it moved every first
+        // made frame a refresh late (19 % of flips two refreshes apart, the game at 50 fps instead of 60 with 2x;
+        // merged-fsr-display75 against old89aa-current-display75 and ab-fg, 16/11/2026).
+        frame_jit_slack(f.slot, ready_slack(at ? at : f.first, f.value));   // MKW_LOW_LATENCY (core/boot/frame_jit.c)
+        for (int k = 1; k < f.nf; k++) {
+            if (k > 1) at = flip_pace_next(&pace, k - 1, kern_now_ns(), 0);
+            wait_until(at);
+            uint64_t rfx = vk_rfx_oob_present_start(f.frame);
+            uint64_t id = vk_present_flip();
+            vk_rfx_oob_present_end(rfx);
+            vk_lat_flip(f.slot, k == 1, 0, id);   // MKW_LATENCY: a made frame
+            plat_mutex_lock(&fl_m);
+            fl_images--;
+            plat_cond_broadcast(&fl_cv);
+            plat_mutex_unlock(&fl_m);
+        }
+        uint64_t target = flip_pace_next(&pace, f.nf - 1, kern_now_ns(), 0);
+        wait_until(target);
+        uint64_t t1 = kern_now_ns();
+        uint64_t pid = vk_rfx_present_start(f.frame);   // Reflex: the game frame's present carries its id
+        if (!pid) pid = vk_present_game_id(f.frame);   // (or the vblank phase's measure does)
+        vk_lat_flip(f.slot, f.nf <= 1, 1, vk_present_flip_id(pid));   // MKW_LATENCY: the game's own picture
+        vk_rfx_present_end(pid);
+        trace_present(f.frame, t1, t0, target, f.queued, f.nf - 1);
+        plat_mutex_lock(&fl_m);
+        fl_images--;
+        fl_head = (fl_head + 1) % 4, fl_n--;
+        plat_cond_broadcast(&fl_cv);
+    }
+}
+
+static int flip_thread_wanted(void) {
+    static int on = -1;
+    if (on < 0) on = rt_knob("FG_FLIP_THREAD", "1");   // "ab": with the MKW_AB blocks
+    return RT_KNOB_ON(on);
+}
+
+// Waits until n more images fit beside the ones still to be flipped (n 0: until every flip went out)
+static void flips_wait_room(int n) {
+    int room = vk_present_ahead_max();
+    plat_mutex_lock(&fl_m);
+    while (fl_n && (n ? fl_images + n > room || fl_n == 4 : 1)) plat_cond_wait(&fl_cv, &fl_m);
+    plat_mutex_unlock(&fl_m);
+}
+
 static void present_main(void *arg) {
     (void)arg;
     uint64_t last = 0, last_queued = 0;
@@ -79,10 +202,30 @@ static void present_main(void *arg) {
         VkImage fo[VK_FG_MAX];
         int fw = 0, fh = 0;
         uint64_t step = 0;
+        vk_fg_game_frame = j.frame;   // DLSS-G and FSR 3.1 take that frame's depth and motion (vk_temporal.c)
+        vk_fg_src_format = j.format;
+        uint64_t b0 = kern_now_ns();
         int nf = vk_fg_frame(j.image, j.w, j.h, j.has_crop ? j.crop : NULL, j.at, fo, &fw, &fh, &step);
-        for (int k = 0; k < nf; k++) vk_present_blit_ahead(fo[k], VK_IMAGE_LAYOUT_GENERAL, VK_FORMAT_R8G8B8A8_UNORM, fw, fh, NULL);
+        uint64_t b1 = kern_now_ns();
+        int threaded = nf && flip_thread_wanted();
+        if (fl_thread) flips_wait_room(threaded ? nf : 0);   // (without: every flip of the thread goes out first)
+        if (nf) vk_present_queue(vk_fg_queue());   // the frames were written there: blitted and presented there
+        for (int k = 0; k < nf; k++) vk_present_blit_ahead(fo[k], VK_IMAGE_LAYOUT_GENERAL, vk_fg_out_format, fw, fh, NULL);
+        vk_present_queue(VK_NULL_HANDLE);
         if (!nf) vk_present_blit(j.image, VK_IMAGE_LAYOUT_GENERAL, j.format, j.w, j.h, j.has_crop ? j.crop : NULL);
         uint64_t f = vk_sync_submit(NULL, 0);   // a timeline value after the blit: deferred destruction waits for the blit too
+        {   // how long each present job held the replay's next submission (vk_present_drain): frame generation, blits
+            static double fg_sum, bl_sum, mx;
+            static unsigned cnt;
+            uint64_t b2 = kern_now_ns();
+            fg_sum += (b1 - b0) / 1e6, bl_sum += (b2 - b1) / 1e6, cnt++;
+            if ((b2 - b0) / 1e6 > mx) mx = (b2 - b0) / 1e6;
+            if (cnt == 600) {
+                if (nf) rt_log("present: busy per game frame %.2f ms (frame generation %.2f, blits and submit %.2f), max %.2f",
+                               (fg_sum + bl_sum) / cnt, fg_sum / cnt, bl_sum / cnt, mx);
+                fg_sum = bl_sum = mx = 0, cnt = 0;
+            }
+        }
         if (j.value && f != j.value)
             rt_fatal("vk: the present of frame %llu signalled %llu, queued as %llu", (unsigned long long)j.frame,
                      (unsigned long long)f, (unsigned long long)j.value);
@@ -94,15 +237,43 @@ static void present_main(void *arg) {
         // with frame generation the first frame at the display time, or now when that has passed, the next ones one
         // step apart: the game's frame goes out last
         uint64_t first = nf && t0 > j.at ? t0 : j.at;
+        if (threaded) {
+            plat_mutex_lock(&fl_m);
+            if (!fl_thread) {
+                if (!plat_thread_spawn(flip_main, NULL, "vk flip", 0)) rt_fatal("vk: cannot start the flip thread");
+                fl_thread = 1;
+            }
+            fl_q[(fl_head + fl_n) % 4] = (FlipJob){nf, first, step, j.frame, j.queued, j.at, f};
+            fl_n++, fl_images += nf;
+            plat_cond_broadcast(&fl_cv);
+            plat_mutex_unlock(&fl_m);
+            vk_pipeline_autosave();
+            plat_mutex_lock(&pl);
+            continue;
+        }
         frame_jit_slack(j.at, ready_slack(nf ? first : j.at, f));   // MKW_LOW_LATENCY (core/boot/frame_jit.c)
         for (int k = 1; k < nf; k++) {
             wait_until(first + (uint64_t)(k - 1) * step);
-            vk_lat_flip(j.at, k == 1, 0, vk_present_flip());   // MKW_LATENCY: the first made frame
+            uint64_t rfx = vk_rfx_oob_present_start(j.frame);
+            uint64_t id = vk_present_flip();
+            vk_rfx_oob_present_end(rfx);
+            vk_lat_flip(j.at, k == 1, 0, id);   // MKW_LATENCY: a made frame
         }
         uint64_t target = nf ? first + (uint64_t)(nf - 1) * step : j.at;
+        // the game's frame alone: half a refresh before a vblank on the vblank clock (gfx_present.c), so with the tick
+        // locked to the display its phase cannot sit on a vblank for the session (MKW_FG_VBLANK=0: at its time)
+        static int clock_on = -1;
+        if (clock_on < 0) clock_on = !(cfg_get("MKW_FG_VBLANK") && !strcmp(cfg_get("MKW_FG_VBLANK"), "0"));
+        if (!nf && clock_on && vk_fg_wanted()) {   // (without frame generation, at its time as in main)
+            uint64_t q = vk_present_flip_time(target);
+            if (q) target = q;
+        }
         wait_until(target);
         uint64_t t1 = kern_now_ns();
-        vk_lat_flip(j.at, nf <= 1, 1, vk_present_flip());
+        uint64_t pid = vk_rfx_present_start(j.frame);   // Reflex: the game frame's present carries its id
+        if (!pid) pid = vk_present_game_id(j.frame);   // (or the vblank phase's measure does)
+        vk_lat_flip(j.at, nf <= 1, 1, vk_present_flip_id(pid));   // MKW_LATENCY: the game's own picture
+        vk_rfx_present_end(pid);
         // MKW_TRACE=present: one line per present: the host present's interval, the interval of the game's present
         // calls (when the host present went out before back-edge pacing), the wait and how far past its target it went;
         // with frame generation, the game's frame and how many were shown before it
@@ -135,6 +306,9 @@ static void present_image(const tex_t *t, const int crop[4], uint64_t at_ns, uin
     if (vk_pt_on()) vk_pt_frame(frame);
     vk_spec_frame(frame);
     vk_exec_present_note(frame);   // before vk_exec_frame_log, which resets the frame's draw counts
+    vk_tmp_present(frame);         // the temporal upscalers' frame boundary (vk_temporal.c)
+    if (t) vk_tmp_present_size(t->d.width, t->d.height);
+    vk_rfx_submitted(frame);       // Reflex: the frame's work is recorded (vk_reflex_frame.c)
     vk_exec_frame_log(t, frame);
     vk_mem_census(frame);
     if (vk_dump_armed) vk_dump_present(frame);
@@ -201,6 +375,12 @@ static PlatCond rcv = PLAT_COND_INIT;   // item queued, item taken, item done
 static ReplayItem rq[RQ_CAP];
 static int rq_head, rq_n, r_busy, r_started;
 static uint64_t r_presents_queued, r_presents_done, r_submit_done, game_frames;
+
+// The id of the frame the game thread is about to simulate: the number its present will get (vk_be_present).
+uint64_t vk_be_next_frame_id(void) {
+    return (gfx_replay_async() ? __atomic_load_n(&game_frames, __ATOMIC_RELAXED)
+                               : __atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED)) + 1;
+}
 // Under rl: calls, calls that waited and the time waited per cause, since the last replay_log line and over the run.
 static uint64_t dr_calls[DR_N], dr_waits[DR_N], dr_ns[DR_N], dr_tcalls[DR_N], dr_twaits[DR_N], dr_tns[DR_N];
 // MKW_REPLAY_CHECK: ReadTexels compared with a read after a full drain (under rl): checked, differing, differing

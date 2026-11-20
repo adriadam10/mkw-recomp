@@ -10,6 +10,8 @@
 //     --probe-nvn, --probe-nvn-tex, --probe-window, --probe-vkmem, --probe-vkexec    graphics probes
 //     --probe-astc      the compute ASTC decoder against astc_decode_ldr; needs no game files
 //     --probe-framegen  frame generation's passes on two pictures (MKW_FG_PROBE=DIR); needs no game files
+//     --probe-oflow     hardware optical flow against a known synthetic translation; MKW_FG_NVOF=1
+//     --probe-fsr-fg    real FSR generation on analytical geometry and shading motion, without game assets
 //     --probe-gpu-clocks  whether the driver lowers the GPU clock in idle gaps (MKW_CLK_FILL, MKW_GPU_CLOCKS); no game files
 
 //     --boot            run the game to the first NVN call
@@ -511,7 +513,7 @@ static int usage(const char *argv0) {
     fprintf(stderr, "usage: %s [--exefs DIR] [--romfs DIR|FILE.nup|FILE.nx] [--nup FILE] [--profile DIR] [--mod NAME]... [--launcher | --play | --selftest | --probe-loader | --probe-plugin | "
                     "--probe-cfg | --probe-kernel | --probe-audio | --probe-services | --probe-fs | --probe-gfx-abi | "
                     "--probe-nvn | --probe-nvn-tex | --probe-window | --probe-vkmem | "
-                    "--probe-vkexec | --probe-astc | --probe-framegen | --probe-gpu-clocks | --probe-fps | --probe-merge | --probe-spill | --probe-discord | --probe-dsu | --probe-texpre | --texpre | --prewarm | --boot |--seconds S [--shot PNG]]\n", argv0);
+                    "--probe-vkexec | --probe-astc | --probe-framegen | --probe-gpu-clocks | --probe-fps | --probe-oflow | --probe-fsr-fg | --probe-merge | --probe-spill | --probe-discord | --probe-dsu | --probe-texpre | --texpre | --prewarm | --boot |--seconds S [--shot PNG]]\n", argv0);
     return 2;
 }
 
@@ -749,6 +751,8 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "--probe-framegen")) return probe_framegen();
     if (!strcmp(mode, "--probe-gpu-clocks")) return probe_gpu_clocks();
     if (!strcmp(mode, "--probe-fps")) return probe_fps();
+    if (!strcmp(mode, "--probe-oflow")) return probe_oflow();
+    if (!strcmp(mode, "--probe-fsr-fg")) return probe_fsr_fg();
     if (!strcmp(mode, "--probe-merge")) return probe_merge();
     if (!strcmp(mode, "--probe-spill")) return probe_spill();
     if (!strcmp(mode, "--probe-discord")) return probe_discord();

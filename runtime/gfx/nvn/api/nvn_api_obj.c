@@ -655,9 +655,10 @@ NVN_API(nvnWindowSetCrop) {
 // ---------- Present pacing
 // The vsync thread ticks at a fixed rate whatever the monitor does (60 Hz, MKW_LOGIC_HZ), so one game frame lasts
 // `interval` ticks; the turbo (core/hacks/turbo.c) makes them `turbo_speed` times shorter.
+uint64_t gfx_vsync_tick_ns(void);   // gfx_present.c: 1/MKW_LOGIC_HZ s, or locked to the display's refresh
+int64_t gfx_pace_nudge_take(void);   // gfx_present.c: a move of the present phase to make, once
 static uint64_t present_period(const win_t *o) {
-    return (o->interval > 0 ? (uint64_t)o->interval : 1ull) * 1000000000ull / (uint64_t)frame_logic_hz() /
-           (uint64_t)turbo_speed();
+    return (o->interval > 0 ? (uint64_t)o->interval : 1ull) * gfx_vsync_tick_ns() / (uint64_t)turbo_speed();
 }
 
 // MacNativeGames nvn_pace.h: the present slot is the previous slot plus one period. Early: wait for the slot. Late by
@@ -672,6 +673,16 @@ static uint64_t pace(uint64_t *target, uint64_t now, uint64_t period) {
 }
 
 static void sleep_until(uint64_t deadline) {
+    // MKW_ACQUIRE_HIRES=ab compares the high-resolution timer already used by present with the old millisecond
+    // acquire wait in one run. Keep the display deadline and the GPU release fence unchanged: only the OS wait differs.
+    static int hires = -1;
+    // off by default: A/B ab2 (15/11/2026, timer_1ms 0, one Windows machine) gave p90 window max 22.3 vs 33.7 ms;
+    // it changes every player's present wait, so it waits for an A/B on more machines (PR 462 review)
+    if (hires < 0) hires = rt_knob("ACQUIRE_HIRES", "0");
+    if (RT_KNOB_ON(hires)) {
+        plat_sleep_until_ns(deadline);
+        return;
+    }
     for (;;) {
         uint64_t now = kern_now_ns();
         if (now >= deadline) return;
@@ -806,6 +817,7 @@ NVN_API(nvnQueuePresentTexture) {
     if (rt_trace & RT_TRACE_PERF) nvn_sync_wait_window();
     const tex_t *t = (const tex_t *)o->tex[idx];
     uint64_t period = present_period(o), now = kern_now_ns();
+    if (o->pace) o->pace += (uint64_t)gfx_pace_nudge_take();   // the vblank phase moved (gfx_present.c)
     uint64_t slot = now + pace(&o->pace, now, period);
     lat_game_present(slot);   // MKW_LATENCY, before the present thread can flip it
     frame_jit_present(slot, acquired_of(o, idx));

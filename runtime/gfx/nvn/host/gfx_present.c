@@ -13,11 +13,13 @@
 // The in-game menu (ui/menu/menu.h) draws over the game image in the present's command buffer, after the blit. The window's
 // size and fullscreen state are the settings MKW_WINDOW_SIZE and MKW_FULLSCREEN, which the back end applies at start
 // and whenever a cfg_set changes them (window_settings_live -> gfx_window_apply_settings).
+#include "vk_reflex_frame.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "cfg.h"
+#include <math.h>
 #include "flight.h"
 #include "fs.h"
 #include "gfx.h"
@@ -97,6 +99,170 @@ void gfx_window_set_refresh(double hz) {
 
 double vk_present_refresh_hz(void) { return __atomic_load_n(&g_rate_mhz, __ATOMIC_RELAXED) / 1000.0; }
 
+// The length of a vsync tick in ns (the console's 60 Hz). The Switch's game is locked to its display; here the tick is
+// locked to the host's display when its refresh is a whole multiple of about 60 Hz (within 0.5 %): 2 / 119.880 Hz
+// (16.683 ms) on a TV at 119.88 Hz instead of 16.667. At exactly 60 the presents drifted across the TV's vblanks and
+// every few seconds frames were shown for one refresh and the next for three: 44 frames held 25 ms in 45 s of race
+// with frame generation off (PresentMon, dep-off, 15/11/2026). The game counts presents (game.c), so it runs 0.1 %
+// slower in real time; sound has its own clock. Only with frame generation asked for (MKW_FRAMEGEN not off), whose
+// made frames need the display's clock; without it the tick stays the console's 60 Hz as in main (PR 462 review,
+// 16/11/2026: everyone's game ran 0.1 % slow on 59.94 Hz screens). MKW_VSYNC_LOCK=1 forces it, =0 never.
+// ---- the vblank phase (VK_KHR_present_wait). With the tick locked to the display, the presents keep one phase against
+// its vblanks for the whole session; at a phase near a vblank a game frame shown for one refresh and the next for
+// three (or, with frame generation, two flips in one refresh and one dropped: 461 of 5231 in lock-dg, 15/11/2026)
+// went on for good. A thread of its own waits for each game frame's present (vkWaitForPresentKHR on its id) and
+// measures the time from vkQueuePresentKHR to the display; over 120 frames, a spread of half a refresh or more means
+// the flips straddle a vblank, and the pacer moves its phase by half a refresh (gfx_pace_nudge_take, nvn_api_obj.c).
+// Like the tick: only with frame generation asked for; MKW_PHASE_LOCK=1 (or nudge) forces it, =0 never.
+static struct {
+    PlatMutex m;
+    PlatCond cv;
+    uint64_t id[64], t[64];
+    VkSwapchainKHR sc[64];
+    int head, n, busy, hold, started;
+    double lat[120];
+    int nl, cool;
+    uint64_t moves;
+    // the vblank clock: a display time (ns) and the refresh, kept from the presents' display times
+    uint64_t vb;
+    double vb_err;
+    int vb_n;
+} PW = {.m = PLAT_MUTEX_INIT, .cv = PLAT_COND_INIT};
+
+// The time to call vkQueuePresentKHR for a flip shown at the first vblank whose call time is not before t: half a
+// refresh before that vblank, so the call's own jitter (the flip thread's wake-up, the queue) cannot move it into the
+// next or the last refresh. 0 while the vblank clock is unknown (no present wait yet).
+uint64_t vk_present_flip_time(uint64_t t) {
+    double hz = vk_present_refresh_hz();
+    plat_mutex_lock(&PW.m);
+    uint64_t vb = PW.vb_n >= 8 ? PW.vb : 0;
+    plat_mutex_unlock(&PW.m);
+    if (!vb || hz <= 0) return 0;
+    double r = 1e9 / hz;
+    double k = ceil(((double)t + r * 0.5 - (double)vb) / r);   // the first vblank at least half a refresh after t
+    return (uint64_t)((double)vb + k * r - r * 0.5);
+}
+static volatile int64_t g_nudge;
+uint64_t gfx_vsync_tick_ns(void);
+int64_t gfx_pace_nudge_take(void) { return plat_xchg64(&g_nudge, 0); }
+
+// A pacing switch of frame generation's (MKW_VSYNC_LOCK, MKW_PHASE_LOCK): "0" never, any other value always, unset
+// while frame generation is asked for. Read live: the menu turns frame generation on and off.
+static int fg_pacing(const char *key) {
+    const char *v = cfg_get(key);
+    return v && *v ? strcmp(v, "0") != 0 : vk_fg_wanted();
+}
+
+static int phase_lock_on(void) { return vk_ctx() && vk_ctx()->has_present_wait && fg_pacing("MKW_PHASE_LOCK"); }
+
+uint64_t vk_present_game_id(uint64_t frame) { return phase_lock_on() ? frame : 0; }
+
+static int pw_cmp(const void *a, const void *b) {
+    double x = *(const double *)a, y = *(const double *)b;
+    return x < y ? -1 : x > y;
+}
+
+static void pw_main(void *arg) {
+    (void)arg;
+    PFN_vkWaitForPresentKHR wait = (PFN_vkWaitForPresentKHR)vkGetDeviceProcAddr(vk_ctx()->device, "vkWaitForPresentKHR");
+    if (!wait) return;
+    plat_mutex_lock(&PW.m);
+    for (;;) {
+        while (!PW.n || PW.hold) plat_cond_wait(&PW.cv, &PW.m);
+        int i = PW.head;
+        uint64_t id = PW.id[i], t = PW.t[i];
+        VkSwapchainKHR sc = PW.sc[i];
+        PW.head = (PW.head + 1) % 64, PW.n--;
+        PW.busy = 1;
+        plat_mutex_unlock(&PW.m);
+        VkResult r = wait(vk_ctx()->device, sc, id, 50000000ull);
+        uint64_t now = kern_now_ns();
+        plat_mutex_lock(&PW.m);
+        PW.busy = 0;
+        plat_cond_broadcast(&PW.cv);
+        if (r != VK_SUCCESS) continue;
+        {   // the vblank clock: each display time moves it a tenth of the way, wrapped to the nearest refresh
+            double hz = vk_present_refresh_hz();
+            if (hz > 0) {
+                double rr = 1e9 / hz;
+                if (!PW.vb) PW.vb = now;
+                double e = (double)now - (double)PW.vb;
+                e -= rr * floor(e / rr + 0.5);
+                PW.vb = (uint64_t)((double)PW.vb + e * 0.1);
+                PW.vb_err = PW.vb_err * 0.9 + fabs(e) * 0.1;
+                PW.vb_n++;
+            }
+        }
+        PW.lat[PW.nl++] = (double)(now - t) / 1e6;
+        if (PW.nl < 120) continue;
+        PW.nl = 0;
+        double s[120];
+        memcpy(s, PW.lat, sizeof s);
+        qsort(s, 120, sizeof *s, pw_cmp);
+        double hz = vk_present_refresh_hz(), refresh = hz > 0 ? 1000.0 / hz : 16.667;
+        double spread = s[108] - s[12];   // p90 - p10
+        // (moving the pacer's phase: MKW_PHASE_LOCK=nudge; frame generation places its flips on the vblank clock)
+        static int nudge = -1;
+        if (nudge < 0) nudge = cfg_get("MKW_PHASE_LOCK") && !strcmp(cfg_get("MKW_PHASE_LOCK"), "nudge");
+        int move = !nudge ? 0 : PW.cool ? (PW.cool--, 0)
+                 : spread > refresh * 0.45 && gfx_vsync_tick_ns() != VSYNC_NS / (uint64_t)frame_logic_hz();
+        if (move) {
+            plat_xchg64(&g_nudge, (int64_t)(refresh * 0.5e6));
+            PW.cool = 2, PW.moves++;
+        }
+        if ((rt_trace & RT_TRACE_PRESENT) || move)
+            rt_log("present: to the display p10 %.2f p50 %.2f p90 %.2f ms (a refresh %.2f), vblank clock error %.2f ms%s",
+                   s[12], s[60], s[108], refresh, PW.vb_err / 1e6,
+                   move ? ": the flips straddle a vblank, phase moved by half a refresh" : "");
+    }
+}
+
+static void pw_note(uint64_t id, uint64_t t, VkSwapchainKHR sc) {   // g_pl held, after the present
+    if (!id || !phase_lock_on()) return;
+    plat_mutex_lock(&PW.m);
+    if (!PW.started) {
+        PW.started = 1;
+        if (!plat_thread_spawn(pw_main, NULL, "present wait", 0)) PW.started = -1;
+    }
+    if (PW.n < 64 && !PW.hold) {
+        int i = (PW.head + PW.n) % 64;
+        PW.id[i] = id, PW.t[i] = t, PW.sc[i] = sc, PW.n++;
+        plat_cond_broadcast(&PW.cv);
+    }
+    plat_mutex_unlock(&PW.m);
+}
+
+static void pw_hold(int on) {   // a swapchain goes: nothing waits on it (g_pl held)
+    plat_mutex_lock(&PW.m);
+    PW.hold = on;
+    if (on) {
+        PW.n = 0;
+        while (PW.busy) plat_cond_wait(&PW.cv, &PW.m);
+    }
+    plat_cond_broadcast(&PW.cv);
+    plat_mutex_unlock(&PW.m);
+}
+
+uint64_t gfx_vsync_tick_ns(void) {
+    static uint64_t told;
+    static unsigned seen = ~0u;
+    static int on;
+    unsigned v = cfg_version();
+    if (v != seen) seen = v, on = fg_pacing("MKW_VSYNC_LOCK");
+    // the tick is 1/MKW_LOGIC_HZ s (60 by default); locked, k display refreshes when the display runs at k times it
+    double hz = vk_present_refresh_hz(), n = (double)frame_logic_hz();
+    if (on && hz > 40.0) {
+        double k = floor(hz / n + 0.5);
+        if (k >= 1.0 && fabs(hz / k - n) < 0.3 * n / 60.0) {
+            uint64_t t = (uint64_t)(1e9 * k / hz + 0.5);
+            if (told != t) told = t, rt_log("gfx: vsync tick %.4f ms, locked to the display's %.3f Hz", t / 1e6, hz);
+            return t;
+        }
+    }
+    if (told) told = 0, rt_log("gfx: vsync tick back to %d Hz", frame_logic_hz());
+    return VSYNC_NS / (uint64_t)frame_logic_hz();
+}
+
 // ---- swapchain and present state (g_pl)
 static PlatRMutex g_pl;
 static VkSwapchainKHR g_sc;
@@ -126,7 +292,9 @@ static int g_cap_w, g_cap_h, g_cap_valid;
 // The swapchain images whose blit was submitted and whose present waits, oldest first: vk_present_flip presents the
 // oldest. More than one only with frame generation (vk_present_blit_ahead).
 static uint32_t g_flip_q[MAX_IMAGES];
+static VkQueue g_flip_on[MAX_IMAGES];   // the queue each waiting present's blit went to: it is presented there
 static int g_flip_n;
+static VkQueue g_blit_q;   // vk_present_queue: the queue the next blits go to (frame generation's), 0 the game's
 static float g_aspect;           // gfx_aspect_set: the ultrawide output's aspect (MKW_ASPECT), 0 at 16:9
 void gfx_aspect_set(float a) { g_aspect = a; }
 static int g_frames = 2;         // slots in use (create_swapchain): 2, FRAMES with frame generation
@@ -163,7 +331,7 @@ static void vsync_main(void *arg) {
     plat_thread_priority(PLAT_PRIO_HIGHEST);
     uint64_t n = 0, due = kern_now_ns();
     for (;;) {
-        due += VSYNC_NS / (uint64_t)frame_logic_hz() / (uint64_t)turbo_speed();
+        due += gfx_vsync_tick_ns() / (uint64_t)turbo_speed();
         uint64_t now = kern_now_ns();
         if (now > due + 100000000ull) {                  // the process stalled: restart the schedule, no catch-up burst
             due = now;
@@ -247,6 +415,13 @@ static VkPresentModeKHR pick_present_mode(VkPhysicalDevice pd) {
     const char *e = cfg_value("MKW_VK_PRESENT");
     VkPresentModeKHR want = !strcmp(e, "mailbox") ? VK_PRESENT_MODE_MAILBOX_KHR
                           : !strcmp(e, "immediate") ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR;
+    // With frame generation, mailbox becomes FIFO: its frames go out one a refresh on the vblank clock, and mailbox
+    // threw away a made or a game frame whenever the next one overtook it before the vblank (571 of 5341 presents,
+    // vb-dg; FIFO 35, those in moments Windows composed the window: fifo-vb1, 15/11/2026, 4K HDR10 at 119.88 Hz).
+    // MKW_FG_MAILBOX=1 keeps mailbox.
+    if (want == VK_PRESENT_MODE_MAILBOX_KHR && vk_fg_wanted() &&
+        !(cfg_get("MKW_FG_MAILBOX") && !strcmp(cfg_get("MKW_FG_MAILBOX"), "1")))
+        want = VK_PRESENT_MODE_FIFO_KHR;
     uint32_t n = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(pd, g_surface, &n, NULL);
     VkPresentModeKHR m[16];
@@ -270,24 +445,59 @@ static VkPresentModeKHR pick_present_mode(VkPhysicalDevice pd) {
 
 const char *gfx_window_present_mode(void) { return __atomic_load_n(&g_present_got, __ATOMIC_ACQUIRE); }
 
-// Queues the oldest present a blit left waiting (g_pl held). Returns its present id (MKW_LATENCY), else 0.
-static uint64_t flip_one_locked(void) {
+// The swapchain's lock for the Reflex calls that name it (vk_reflex_frame.c): acquire and present hold it
+void gfx_swapchain_lock(void) { plat_rmutex_lock(&g_pl); }
+void gfx_swapchain_unlock(void) { plat_rmutex_unlock(&g_pl); }
+
+// Queues the oldest present a blit left waiting (g_pl held), with present_id as its VkPresentIdKHR (Reflex's frame id,
+// or the vblank phase's measure; 0 none). MKW_LATENCY (vk_latency.c, a diagnosis) numbers every present itself while
+// it measures: present ids must grow on a swapchain, so its own replace ours then. Returns the id presented with, or 0.
+static uint64_t flip_one_locked_id(uint64_t present_id) {
     if (!g_flip_n) return 0;
     uint32_t idx = g_flip_q[0];
+    VkQueue q = g_flip_on[0] ? g_flip_on[0] : vk_ctx()->gfx_queue;
     g_flip_n--;
     memmove(g_flip_q, g_flip_q + 1, (size_t)g_flip_n * sizeof *g_flip_q);
+    memmove(g_flip_on, g_flip_on + 1, (size_t)g_flip_n * sizeof *g_flip_on);
     if (!g_sc) return 0;
-    uint64_t id = vk_lat_next_id();
-    VkPresentIdKHR pid = {.sType = VK_STRUCTURE_TYPE_PRESENT_ID_KHR, .swapchainCount = 1, .pPresentIds = &id};
-    VkPresentInfoKHR pi = {.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, .pNext = id ? &pid : NULL,
-                           .waitSemaphoreCount = 1, .pWaitSemaphores = &g_render_done[idx], .swapchainCount = 1,
-                           .pSwapchains = &g_sc, .pImageIndices = &idx};
+    uint64_t lat_id = vk_lat_next_id();
+    if (lat_id) present_id = lat_id;
+    VkPresentInfoKHR pi = {.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, .waitSemaphoreCount = 1,
+                           .pWaitSemaphores = &g_render_done[idx], .swapchainCount = 1, .pSwapchains = &g_sc,
+                           .pImageIndices = &idx};
+    VkPresentIdKHR pid = {.sType = VK_STRUCTURE_TYPE_PRESENT_ID_KHR, .swapchainCount = 1, .pPresentIds = &present_id};
+    if (present_id && vk_ctx()->has_present_id) pi.pNext = &pid;   // Reflex (vk_reflex_frame.c), MKW_LATENCY
+    uint64_t l0 = kern_now_ns();
     vk_queue_lock();
-    VkResult r = vkQueuePresentKHR(vk_ctx()->gfx_queue, &pi);
+    uint64_t begin = kern_now_ns();
+    VkResult r = vkQueuePresentKHR(q, &pi);
+    uint64_t end = kern_now_ns();
     vk_queue_unlock();
+    // The source-group trace in vk_backend.c cannot reveal uneven spacing between generated frames. These are host
+    // queue-call timestamps, including every generated flip; display/scanout timing still requires a presentation trace.
+    if (rt_trace & RT_TRACE_PRESENT) {
+        static uint64_t last;
+        rt_log("flip: start_ns %llu interval %.3f ms, queue %.3f ms, id %llu, result %d",
+               (unsigned long long)begin, last ? (double)(begin - last) / 1e6 : 0., (double)(end - begin) / 1e6,
+               (unsigned long long)present_id, (int)r);
+        last = begin;
+    }
+    {   // MKW_TRACE=present: the time each present waited for the queue lock and spent in vkQueuePresentKHR (holding it)
+        static double lw, pr, pm;
+        static unsigned n;
+        lw += (begin - l0) / 1e6, pr += (end - begin) / 1e6, n++;
+        if ((end - begin) / 1e6 > pm) pm = (end - begin) / 1e6;
+        if (n == 1200) {
+            if (rt_trace & RT_TRACE_PRESENT)
+                rt_log("present: vkQueuePresentKHR %.3f ms mean, %.3f max; queue lock waited %.3f ms mean", pr / n, pm, lw / n);
+            lw = pr = pm = 0, n = 0;
+        }
+    }
     if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR) plat_xchg32(&g_dirty, 1);
-    return id;
+    if (!lat_id && (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR)) pw_note(present_id, begin, g_sc);
+    return present_id;
 }
+static uint64_t flip_one_locked(void) { return flip_one_locked_id(0); }
 
 // Queues every waiting present (g_pl held). A swapchain rebuild and the next blit (not an ahead one) flush them first;
 // the device release drops them.
@@ -352,6 +562,8 @@ static int create_swapchain(void) {
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE, .preTransform = caps.currentTransform,
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, .presentMode = pick_present_mode(c->phys), .clipped = VK_TRUE,
         .oldSwapchain = old};
+    VkSwapchainLatencyCreateInfoNV lat;
+    ci.pNext = vk_rfx_swapchain_pnext(&lat, ci.pNext);   // Reflex's low-latency mode allowed (vk_reflex_frame.c)
     vk_lat_swapchain(1, VK_NULL_HANDLE);   // MKW_LATENCY: no present wait on the swapchain this retires
     VkResult r = vkCreateSwapchainKHR(c->device, &ci, NULL, &g_sc);
     vk_lat_swapchain(0, r == VK_SUCCESS ? g_sc : old);
@@ -366,7 +578,8 @@ static int create_swapchain(void) {
         if (g_sc_view[i]) vkDestroyImageView(c->device, g_sc_view[i], NULL);
         g_sc_view[i] = VK_NULL_HANDLE;
     }
-    if (old) vkDestroySwapchainKHR(c->device, old, NULL);
+    if (old) pw_hold(1), vk_rfx_swapchain_destroying(old), vkDestroySwapchainKHR(c->device, old, NULL), pw_hold(0);
+    vk_rfx_swapchain_created(g_sc);
     gfx_hdr_metadata(g_sc);
     g_sc_fmt = sf.format;
     g_sc_hdr = sf.colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT;
@@ -626,7 +839,19 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
         goto out;
     }
     uint32_t idx = 0;
+    uint64_t a0 = kern_now_ns();
     VkResult r = vkAcquireNextImageKHR(c->device, g_sc, 1000000000ull, g_acquire[slot], VK_NULL_HANDLE, &idx);
+    {
+        static double as, am;
+        static unsigned an;
+        double t = (kern_now_ns() - a0) / 1e6;
+        as += t, an++;
+        if (t > am) am = t;
+        if (an == 1200) {
+            if (rt_trace & RT_TRACE_PRESENT) rt_log("present: vkAcquireNextImageKHR %.3f ms mean, %.3f max", as / an, am);
+            as = am = 0, an = 0;
+        }
+    }
     if (r == VK_ERROR_OUT_OF_DATE_KHR) {
         plat_xchg32(&g_dirty, 1);
         if (!create_swapchain()) goto out;
@@ -773,10 +998,12 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
     VkSubmitInfo2 si = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2, .waitSemaphoreInfoCount = 1, .pWaitSemaphoreInfos = &wait,
                         .commandBufferInfoCount = 1, .pCommandBufferInfos = &cbi, .signalSemaphoreInfoCount = 1,
                         .pSignalSemaphoreInfos = &sig};
+    VkQueue bq = g_blit_q ? g_blit_q : c->gfx_queue;
     vk_queue_lock();
-    r = vkQueueSubmit2(c->gfx_queue, 1, &si, g_fence[slot]);
+    r = vkQueueSubmit2(bq, 1, &si, g_fence[slot]);
     vk_queue_unlock();
     if (r == VK_SUCCESS) {
+        g_flip_on[g_flip_n] = bq;
         g_flip_q[g_flip_n++] = idx;   // (at most g_ahead: flushed above)
         if (!defer) flip_locked();
     } else {
@@ -787,7 +1014,7 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
         VkSubmitInfo2 empty = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2, .waitSemaphoreInfoCount = 1,
                                .pWaitSemaphoreInfos = &wait};
         vk_queue_lock();
-        VkResult re = vkQueueSubmit2(c->gfx_queue, 1, &empty, g_fence[slot]);
+        VkResult re = vkQueueSubmit2(bq, 1, &empty, g_fence[slot]);
         vk_queue_unlock();
         if (re != VK_SUCCESS) rt_log("gfx: the empty batch after it failed too (%d)", (int)re);
         plat_xchg32(&g_dirty, 1);
@@ -827,9 +1054,20 @@ void vk_present_blit_ahead(VkImage src, VkImageLayout layout, VkFormat fmt, int 
 
 int vk_present_ahead_max(void) { return __atomic_load_n(&g_ahead, __ATOMIC_RELAXED); }
 
+// The queue of the blits that follow (the present thread; VK_NULL_HANDLE: the game's). Frame generation's blits read
+// only its own images, written on its queue: they go there, and their presents too, behind no game work.
+void vk_present_queue(VkQueue q) { g_blit_q = q; }
+
 uint64_t vk_present_flip(void) {
     plat_rmutex_lock(&g_pl);
     uint64_t id = flip_one_locked();
+    plat_rmutex_unlock(&g_pl);
+    return id;
+}
+
+uint64_t vk_present_flip_id(uint64_t present_id) {
+    plat_rmutex_lock(&g_pl);
+    uint64_t id = flip_one_locked_id(present_id);
     plat_rmutex_unlock(&g_pl);
     return id;
 }
@@ -868,7 +1106,8 @@ void gfx_window_release_vk(void) {
         }
         if (g_pool) vkDestroyCommandPool(c->device, g_pool, NULL);
         vk_lat_swapchain(1, VK_NULL_HANDLE);
-        if (g_sc) vkDestroySwapchainKHR(c->device, g_sc, NULL);
+        // (hold released after: left on, the present-wait thread slept through every later swapchain; PR 462 review)
+        if (g_sc) pw_hold(1), vk_rfx_swapchain_destroying(g_sc), vkDestroySwapchainKHR(c->device, g_sc, NULL), pw_hold(0);
         vk_lat_swapchain(0, VK_NULL_HANDLE);
         if (g_surface) vkDestroySurfaceKHR(c->instance, g_surface, NULL);
         g_sc = VK_NULL_HANDLE; g_surface = VK_NULL_HANDLE; g_pool = VK_NULL_HANDLE; g_sc_n = 0;

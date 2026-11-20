@@ -1,0 +1,77 @@
+#version 450
+// The HUD over a made frame (gfx/vk/device/vk_framegen.c): DLSS-G and FSR 3.1 interpolate the pictures without the HUD
+// (vk_temporal.c makes them), and this puts the game frame's own HUD back on top, unmoved. Without it the HUD went
+// through the interpolation: the timer's digits came out as a crossfade of two numbers and the see-through minimap moved
+// with the road behind it (DLSS-G with its own HUDLess input, hl-dlss-on 15/11/2026).
+//
+// The game draws its HUD over the scene: F = S (1 - a) + U a per pixel (F the picture, S the one without the HUD, U and
+// a the HUD's colour and coverage), so the made frame with the same HUD is F + (1 - a) (G - S), G the made frame
+// without it. Where F = S there is no HUD and the result is G. Elsewhere k = 1 - a is measured where the scene behind
+// the HUD changed from the last game frame to this one while the HUD stayed: F' - F = k (S' - S), least squares over
+// the 3x3 neighbours that have HUD in both frames. Where the scene behind did not change there is nothing to measure
+// and nothing to move either: k = 0 keeps the frame's own pixel. The blend is done in linear light, as the game's.
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0) uniform sampler2D fCur;    // this game frame's picture
+layout(binding = 1) uniform sampler2D sCur;    // ... without the HUD
+layout(binding = 2) uniform sampler2D fPrev;   // the last game frame's picture
+layout(binding = 3) uniform sampler2D sPrev;   // ... without the HUD
+layout(binding = 4) uniform sampler2D gen;     // the made frame without the HUD (the image written below)
+layout(binding = 5) uniform writeonly image2D dst;
+layout(push_constant) uniform P {
+    ivec4 a;   // x: 0 sRGB-encoded bytes, 1 PQ (HDR10), 2 linear (scRGB); y: the last frame's pictures are valid;
+               // zw: size
+} p;
+
+vec3 lin(vec3 c) {
+    if (p.a.x == 0) return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
+    if (p.a.x == 1) {   // PQ to linear, 1 = 100 nits (as SDR's white): the measure's threshold below means the same
+        vec3 e = pow(max(c, vec3(0.0)), vec3(1.0 / 78.84375));
+        return 100.0 * pow(max(e - 0.8359375, vec3(0.0)) / (18.8515625 - 18.6875 * e), vec3(1.0 / 0.1593017578125));
+    }
+    return c;
+}
+
+vec3 enc(vec3 c) {
+    c = max(c, vec3(0.0));
+    if (p.a.x == 0) return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+    if (p.a.x == 1) {
+        vec3 y = pow(c * 0.01, vec3(0.1593017578125));
+        return pow((0.8359375 + 18.8515625 * y) / (1.0 + 18.6875 * y), vec3(78.84375));
+    }
+    return c;
+}
+
+void main() {
+    ivec2 px = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 sz = p.a.zw;
+    if (px.x >= sz.x || px.y >= sz.y) return;
+    vec4 g4 = texelFetch(gen, px, 0);
+    vec4 fc4 = texelFetch(fCur, px, 0);
+    vec3 fc = lin(fc4.rgb), sc = lin(texelFetch(sCur, px, 0).rgb);
+    // HUD here: the picture differs from the one without it by more than a quantisation step (in the encoded values)
+    const float EPS = 1.5 / 255.0;
+    vec3 dc = abs(fc4.rgb - texelFetch(sCur, px, 0).rgb);
+    if (max(max(dc.r, dc.g), dc.b) <= EPS) {
+        imageStore(dst, px, g4);
+        return;
+    }
+    float k = 0.0;
+    if (p.a.y != 0) {
+        ivec2 lo = ivec2(0), hi = sz - 1;
+        float num = 0.0, den = 0.0;
+        for (int y = -1; y <= 1; y++)
+            for (int x = -1; x <= 1; x++) {
+                ivec2 q = clamp(px + ivec2(x, y), lo, hi);
+                vec3 f1e = texelFetch(fCur, q, 0).rgb, s1e = texelFetch(sCur, q, 0).rgb;
+                vec3 f0e = texelFetch(fPrev, q, 0).rgb, s0e = texelFetch(sPrev, q, 0).rgb;
+                vec3 h1 = abs(f1e - s1e), h0 = abs(f0e - s0e);
+                if (max(max(h1.r, h1.g), h1.b) <= EPS || max(max(h0.r, h0.g), h0.b) <= EPS) continue;   // HUD in both
+                vec3 dF = lin(f1e) - lin(f0e), dS = lin(s1e) - lin(s0e);
+                num += dot(dF, dS), den += dot(dS, dS);
+            }
+        // enough change behind the HUD to measure against (a few levels of 255 over the neighbourhood)
+        if (den > 9.0 * 1e-4) k = clamp(num / den, 0.0, 1.0);
+    }
+    vec3 o = fc + k * (lin(g4.rgb) - sc);
+    imageStore(dst, px, vec4(enc(o), g4.a));
+}

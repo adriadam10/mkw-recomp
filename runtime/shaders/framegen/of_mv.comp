@@ -1,0 +1,103 @@
+// Native VK_NV_optical_flow output: two signed 16-bit components with five fractional bits per grid cell.
+// INPUT=current, REFERENCE=previous, so these vectors already point current -> previous. Convert output pixels to
+// FSR's render pixels without reintroducing jitter from the resolved source images. The hardware baseline uses the
+// cell directly; interpolating vectors across an object boundary would mix the driver's and the road's motion.
+//
+// MKW_FG_NVOF_GEOMETRY keeps the stored depth of static geometry on the camera's reprojected motion. Image optical
+// flow follows a moving shadow over the road even though both frames' depth describe the road. The reprojection matrix
+// and the current/previous R32 depth copies are already free of temporal viewport jitter. A current depth sample agrees
+// with the previous world point only when the camera predicts the previous depth there within the relative tolerance;
+// otherwise the pixel is camera-attached or moving independently and the hardware vector remains untouched.
+#version 450
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0, std430) readonly buffer Flow { uint cells[]; } flow;
+layout(binding = 1, rg16f) uniform writeonly image2D dst;
+layout(binding = 2) uniform sampler2D current_depth;
+layout(binding = 3) uniform sampler2D previous_depth;
+layout(binding = 4) uniform sampler2D current_color;
+layout(binding = 5) uniform sampler2D previous_color;
+layout(push_constant) uniform P {
+    vec4 size;     // render width/height, output width/height
+    ivec4 grid;    // grid width/height, cell side, endpoint refinement enabled
+    vec4 jitter;   // current depth's render-pixel jitter; the optical-flow pictures are already resolved
+    mat4 reproj;   // column-major as GLSL reads it: clip_prev = reproj * clip_this
+    vec4 geometry; // x: 1 depth classification, 2 camera agreement; y/z near/far; w relative depth tolerance
+} p;
+
+vec2 vector_at(ivec2 cell) {
+    cell = clamp(cell, ivec2(0), p.grid.xy - 1);
+    uint packed = flow.cells[cell.y * p.grid.x + cell.x];
+    return vec2(float(int(packed << 16) >> 16), float(int(packed) >> 16)) / 32.0;
+}
+
+float match_error(vec3 color, vec2 uv, vec2 vector) {
+    vec2 previous_uv = uv + vector / p.size.zw;
+    if (any(lessThan(previous_uv, vec2(0.0))) || any(greaterThanEqual(previous_uv, vec2(1.0)))) return 1e20;
+    vec3 error = abs(color - textureLod(previous_color, previous_uv, 0.0).rgb);
+    return max(error.r, max(error.g, error.b));
+}
+
+float linear_depth(float depth) {
+    float n = p.geometry.y, f = p.geometry.z;
+    if (!(n > 0.0 && f > n)) return depth;
+    float ndc = 2.0 * depth - 1.0;
+    return 2.0 * n * f / max((f + n) - ndc * (f - n), 1e-6);
+}
+
+void main() {
+    ivec2 px = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(px, ivec2(p.size.xy)))) return;
+    vec2 output_px = (vec2(px) + 0.5 - p.jitter.xy) * p.size.zw / p.size.xy;
+    ivec2 block = clamp(ivec2(output_px) / p.grid.z, ivec2(0), p.grid.xy - 1);
+    vec2 mv = vector_at(block);
+    if (p.grid.w != 0) {
+        // Hardware block regularization can straddle an object or stationary shadow edge. Select a correspondence
+        // at the CURRENT source pixel, before FSR dilates/reconstructs depth. No generated pixels are replaced.
+        vec2 uv = output_px / p.size.zw;
+        vec3 color = textureLod(current_color, uv, 0.0).rgb;
+        float margin = 0.002 * max(0.1, max(color.r, max(color.g, color.b)));
+        float best_error = match_error(color, uv, mv);
+        const ivec2 offsets[8] = ivec2[8](ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(-1,0),
+                                            ivec2(1,0),ivec2(-1,1),ivec2(0,1),ivec2(1,1));
+        for (int i = 0; i < 9; i++) {
+            vec2 candidate = i == 8 ? vec2(0.0) : vector_at(block + offsets[i]);
+            float error = match_error(color, uv, candidate);
+            if (error + margin < best_error) { mv = candidate; best_error = error; }
+        }
+    }
+    mv = mv * p.size.xy / p.size.zw;
+
+    if (p.geometry.x > 0.5) {
+        ivec2 depth_size = textureSize(current_depth, 0);
+        ivec2 prev_depth_size = textureSize(previous_depth, 0);
+        vec2 uv = (vec2(px) + 0.5) / p.size.xy;
+        ivec2 depth_px = ivec2(uv * vec2(depth_size));
+        if (all(greaterThanEqual(depth_px, ivec2(0))) && all(lessThan(depth_px, depth_size))) {
+            float d = texelFetch(current_depth, depth_px, 0).r;
+            if (d >= 0.0 && d <= 1.0) {
+                vec4 clip = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, d * 2.0 - 1.0, 1.0);
+                vec4 prev = p.reproj * clip;
+                if (abs(prev.w) > 1e-7) {
+                    vec3 ndc = prev.xyz / prev.w;
+                    vec2 prev_uv = vec2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
+                    if (all(greaterThanEqual(prev_uv, vec2(0.0))) && all(lessThan(prev_uv, vec2(1.0)))) {
+                        vec2 camera_mv = (prev_uv - uv) * p.size.xy;
+                        // Hardware agreement identifies camera motion without extending the road's geometry across
+                        // an image-motion boundary. Suppress subpixel block noise only within the verified 2px bound.
+                        if (p.geometry.x > 1.5) {
+                            if (length((mv - camera_mv) * p.size.zw / p.size.xy) < 2.0) mv = camera_mv;
+                        } else {
+                        ivec2 prev_px = ivec2(prev_uv * vec2(prev_depth_size));
+                        if (all(greaterThanEqual(prev_px, ivec2(0))) && all(lessThan(prev_px, prev_depth_size))) {
+                            float expected = linear_depth(ndc.z * 0.5 + 0.5);
+                            float actual = linear_depth(texelFetch(previous_depth, prev_px, 0).r);
+                            if (abs(actual - expected) <= abs(expected) * p.geometry.w) mv = (prev_uv - uv) * p.size.xy;
+                        }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    imageStore(dst, px, vec4(mv, 0.0, 0.0));
+}

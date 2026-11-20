@@ -1,0 +1,90 @@
+// FSR frame generation's dense motion (runtime/gfx/vk/device/vk_framegen.c). fg_flow writes one vector per 16x16 output
+// pixels with the current-minus-previous sign (previous = current - flow). FSR's temporal input uses the opposite sign,
+// so a selected native vector is negated after output-to-render pixel scaling.
+//
+// fg_flow searches F.pic's final, already resolved pictures. Those are post-DLSS and post-HUD, so the game's render
+// jitter has already been removed and must not be added back here.
+//
+// A camera vector alone moves the player's kart and driver like the road. At each pixel, one max-RGB endpoint comparison
+// chooses among the four neighbouring native cell vectors, the pixel's own cell, and still. RGB rather than horizontal
+// luma taps keeps adjacent materials with similar brightness apart. The camera is the fallback unless a native candidate
+// improves the match by a margin. This costs at most 13 texture fetches per pixel; the former 3-tap search over all 3x3
+// cells cost roughly 80 and was too heavy at 4K.
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D cur_col;
+layout(binding = 1) uniform sampler2D prev_col;
+layout(binding = 2) uniform sampler2D depth_tex;   // R32F, 0 near and 1 far
+layout(binding = 3) uniform sampler2D camera_mv;   // RG16F, previous - current, in render pixels
+layout(binding = 4) uniform sampler2D native_flow; // RG16F, current - previous, in render pixels, one per 16x16
+layout(binding = 5, rg16f) uniform writeonly image2D out_mv;
+
+layout(push_constant) uniform Params {
+    vec2 render_size;
+    vec2 output_size;
+    vec2 flow_size;      // output-resolution blocks, one vector per 16x16
+    vec2 options;        // x: diagnostic depth-matched still-cell anchors; preserves the 32-byte ABI
+} p;
+
+bool inside(ivec2 q, ivec2 m) { return all(greaterThanEqual(q, ivec2(0))) && all(lessThan(q, m)); }
+
+ivec2 output_pixel(ivec2 render_px) {
+    vec2 q = (vec2(render_px) + vec2(0.5)) * p.output_size / p.render_size;
+    return clamp(ivec2(floor(q)), ivec2(0), ivec2(p.output_size) - 1);
+}
+
+float max_rgb(vec3 a, vec3 b) {
+    vec3 d = abs(a - b);
+    return max(d.r, max(d.g, d.b));
+}
+
+void main() {
+    ivec2 px = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 image_size = ivec2(p.render_size);
+    ivec2 flow_size = ivec2(p.flow_size);
+    vec2 to_render = p.render_size / p.output_size;
+    if (!inside(px, image_size)) return;
+
+    ivec2 block = output_pixel(px) / 16;
+    vec3 cur = textureLod(cur_col, (vec2(px) + 0.5) / p.render_size, 0.0).rgb;
+    vec2 camera = texelFetch(camera_mv, px, 0).xy;
+    vec2 camera_q = clamp(vec2(px) + camera, vec2(0.0), vec2(image_size - 1));
+    float best_error = max_rgb(cur, textureLod(prev_col, (camera_q + 0.5) / p.render_size, 0.0).rgb);
+    vec2 best = camera;
+    float depth = p.options.x > 0.5 ? texelFetch(depth_tex, px, 0).r : 0.0;
+    bool still_surface = false;
+    bool near_still_cell = false;
+    float still_error = 1.0;
+    // The four physical neighbours provide vectors on both sides of an object boundary; still is candidate 5. The old
+    // hard test against each cell's centre depth lost thin surfaces and the player's still kart cluster.
+    const ivec2 off[5] = ivec2[5](ivec2(0), ivec2(-1, 0), ivec2(1, 0), ivec2(0, -1), ivec2(0, 1));
+    for (int i = 0; i < 6; i++) {
+        vec2 native = i == 5 ? vec2(0.0) : texelFetch(native_flow, clamp(block + off[i], ivec2(0), flow_size - 1), 0).xy;
+        if (p.options.x > 0.5 && i < 5 && dot(native, native) < 2.25) {
+            near_still_cell = true;
+            ivec2 b = clamp(block + off[i], ivec2(0), flow_size - 1);
+            ivec2 anchor = clamp(ivec2((vec2(b * 16 + 8) + 0.5) * to_render), ivec2(0), image_size - 1);
+            float ad = texelFetch(depth_tex, anchor, 0).r;
+            // For finite perspective depth, 1-depth is proportional to inverse distance away from the far plane.
+            // Keep a still object's vector on its own surface, rather than spreading it onto the road behind it.
+            still_surface = still_surface || abs(ad - depth) < 0.15 * max(1.0 - depth, 1.0 - ad);
+        }
+        if (any(greaterThan(abs(native), vec2(256.0)))) continue;
+        vec2 mv = -native * to_render;   // native: current - previous; FSR: previous - current
+        vec2 q = clamp(vec2(px) + mv, vec2(0.0), vec2(image_size - 1));
+        float e = max_rgb(cur, textureLod(prev_col, (q + 0.5) / p.render_size, 0.0).rgb);
+        if (i == 5) still_error = e;
+        e += i == 5 ? 0.0 : 0.0015 * float(abs(off[i].x) + abs(off[i].y));
+        // Repeated flat texture keeps the per-pixel camera vector unless an object candidate improves it clearly.
+        if (e < best_error - 0.004) {
+            best_error = e;
+            best = mv;
+        }
+    }
+    // A moving object's shadow has the road's depth. It can still agree at zero displacement; do not make a tiny
+    // accidental RGB improvement select the road vector inside that otherwise stationary dark patch.
+    if (still_surface || (near_still_cell && still_error < 0.10 && still_error < best_error + 0.04)) best = vec2(0.0);
+    imageStore(out_mv, px, vec4(best, 0.0, 0.0));
+}

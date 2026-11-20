@@ -1,0 +1,153 @@
+--- a/Kits/FidelityFX/framegeneration/fsr3/include/gpu/frameinterpolation/ffx_frameinterpolation_callbacks_hlsl.h
++++ b/Kits/FidelityFX/framegeneration/fsr3/include/gpu/frameinterpolation/ffx_frameinterpolation_callbacks_hlsl.h
+@@ -535,17 +535,17 @@
+ // declare UAVs and UAV accessors
+ ///////////////////////////////////////////////
+ #if defined(FFX_FRAMEINTERPOLATION_BIND_UAV_INPAINTING_MASK) && defined(FFX_FRAMEINTERPOLATION_BIND_UAV_OUTPUT)
+-    RWTexture2D<FfxFloat32x3> rw_output          FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_OUTPUT);
++    RWTexture2D<FfxFloat32x4> rw_output          FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_OUTPUT);
+     RWTexture2D<FfxFloat32>   rw_inpainting_mask FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_INPAINTING_MASK);
+ 
+     FfxFloat32x4 RWLoadFrameinterpolationOutput(FFX_PARAMETER_IN FfxInt32x2 iPxPos)
+     {
+-        return FfxFloat32x4(rw_output[iPxPos], rw_inpainting_mask[iPxPos]);
++        return FfxFloat32x4(rw_output[iPxPos].rgb, rw_inpainting_mask[iPxPos]);
+     }
+ 
+     void StoreFrameinterpolationOutput(FFX_PARAMETER_IN FfxInt32x2 iPxPos, FFX_PARAMETER_IN FfxFloat32x4 val)
+     {
+-        rw_output[iPxPos] = val.rgb;
++        rw_output[iPxPos] = val;
+         rw_inpainting_mask[iPxPos] = val.a;
+     }
+ 
+@@ -564,6 +564,7 @@
+ #endif
+ 
+ #ifdef FFX_FRAMEINTERPOLATION_BIND_UAV_DILATED_MOTION_VECTORS
++    [[vk::image_format("rg16f")]]
+     RWTexture2D<FfxFloat32x2> rw_dilated_motion_vectors FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_DILATED_MOTION_VECTORS);
+ 
+     FfxFloat32x2 RWLoadDilatedMotionVectors(FFX_PARAMETER_IN FfxInt32x2 iPxPos)
+@@ -592,6 +593,7 @@
+ #endif
+ 
+ #ifdef FFX_FRAMEINTERPOLATION_BIND_UAV_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME
++    [[vk::image_format("r32ui")]]
+     RWTexture2D<FfxUInt32> rw_reconstructed_depth_previous_frame FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_RECONSTRUCTED_DEPTH_PREVIOUS_FRAME);
+ 
+     FfxFloat32 RWLoadReconstructedDepthPreviousFrame(FFX_PARAMETER_IN FfxInt32x2 iPxPos)
+@@ -612,6 +614,7 @@
+ #endif
+ 
+ #ifdef FFX_FRAMEINTERPOLATION_BIND_UAV_RECONSTRUCTED_DEPTH_INTERPOLATED_FRAME
++    [[vk::image_format("r32ui")]]
+     RWTexture2D<FfxUInt32>   rw_reconstructed_depth_interpolated_frame FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_RECONSTRUCTED_DEPTH_INTERPOLATED_FRAME);
+     
+     FfxFloat32 RWLoadReconstructedDepthInterpolatedFrame(FFX_PARAMETER_IN FfxInt32x2 iPxPos)
+@@ -654,7 +657,9 @@
+ #if defined(FFX_FRAMEINTERPOLATION_BIND_UAV_GAME_MOTION_VECTOR_FIELD_X) && \
+     defined(FFX_FRAMEINTERPOLATION_BIND_UAV_GAME_MOTION_VECTOR_FIELD_Y)
+ 
++    [[vk::image_format("r32ui")]]
+     RWTexture2D<FfxUInt32> rw_game_motion_vector_field_x FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_GAME_MOTION_VECTOR_FIELD_X);
++    [[vk::image_format("r32ui")]]
+     RWTexture2D<FfxUInt32> rw_game_motion_vector_field_y FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_GAME_MOTION_VECTOR_FIELD_Y);
+ 
+     FfxUInt32 RWLoadGameMotionVectorFieldX(FFX_PARAMETER_IN FfxInt32x2 iPxPos)
+@@ -699,7 +704,9 @@
+ #if defined(FFX_FRAMEINTERPOLATION_BIND_UAV_OPTICAL_FLOW_MOTION_VECTOR_FIELD_X) && \
+     defined(FFX_FRAMEINTERPOLATION_BIND_UAV_OPTICAL_FLOW_MOTION_VECTOR_FIELD_Y)
+ 
++    [[vk::image_format("r32ui")]]
+     RWTexture2D<FfxUInt32> rw_optical_flow_motion_vector_field_x FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_OPTICAL_FLOW_MOTION_VECTOR_FIELD_X);
++    [[vk::image_format("r32ui")]]
+     RWTexture2D<FfxUInt32> rw_optical_flow_motion_vector_field_y FFX_DECLARE_UAV(FFX_FRAMEINTERPOLATION_BIND_UAV_OPTICAL_FLOW_MOTION_VECTOR_FIELD_Y);
+ 
+     FfxUInt32 RWLoadOpticalflowMotionVectorFieldX(FFX_PARAMETER_IN FfxInt32x2 iPxPos)
+--- a/Kits/FidelityFX/framegeneration/fsr3/include/gpu/opticalflow/ffx_opticalflow_callbacks_hlsl.h
++++ b/Kits/FidelityFX/framegeneration/fsr3/include/gpu/opticalflow/ffx_opticalflow_callbacks_hlsl.h
+@@ -208,30 +208,39 @@
+ 
+     // UAV declarations
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT
++        [[vk::image_format("r8ui")]]
+         RWTexture2D<FfxUInt32>                   rw_optical_flow_input               FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_1
++        [[vk::image_format("r8ui")]]
+         globallycoherent RWTexture2D<FfxUInt32>  rw_optical_flow_input_level_1       FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_1);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_2
++        [[vk::image_format("r8ui")]]
+         globallycoherent RWTexture2D<FfxUInt32>  rw_optical_flow_input_level_2       FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_2);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_3
++        [[vk::image_format("r8ui")]]
+         globallycoherent RWTexture2D<FfxUInt32>  rw_optical_flow_input_level_3       FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_3);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_4
++        [[vk::image_format("r8ui")]]
+         globallycoherent RWTexture2D<FfxUInt32>  rw_optical_flow_input_level_4       FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_4);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_5
++        [[vk::image_format("r8ui")]]
+         globallycoherent RWTexture2D<FfxUInt32>  rw_optical_flow_input_level_5       FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_5);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_6
++        [[vk::image_format("r8ui")]]
+         globallycoherent RWTexture2D<FfxUInt32>  rw_optical_flow_input_level_6       FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_INPUT_LEVEL_6);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW
++        [[vk::image_format("rg16i")]]
+         RWTexture2D<FfxInt32x2>                   rw_optical_flow                     FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_NEXT_LEVEL
++        [[vk::image_format("rg16i")]]
+         RWTexture2D<FfxInt32x2>                   rw_optical_flow_next_level          FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_NEXT_LEVEL);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_ADDITIONAL_INFO
+@@ -241,21 +250,26 @@
+         RWTexture2D<FfxUInt32x2>                  rw_optical_flow_additional_info_next_level FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_ADDITIONAL_INFO_NEXT_LEVEL);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_HISTOGRAM
++        [[vk::image_format("r32ui")]]
+         RWTexture2D<FfxUInt32>                    rw_optical_flow_histogram           FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_HISTOGRAM);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_GLOBAL_MOTION_SEARCH
++        [[vk::image_format("r32ui")]]
+         globallycoherent RWTexture2D<FfxUInt32>   rw_optical_flow_global_motion_searchFFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_GLOBAL_MOTION_SEARCH);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_HISTOGRAM
++        [[vk::image_format("r32ui")]]
+         RWTexture2D<FfxUInt32>                    rw_optical_flow_scd_histogram       FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_HISTOGRAM);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_PREVIOUS_HISTOGRAM
+         RWTexture2D<FfxFloat32>                   rw_optical_flow_scd_previous_histogram FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_PREVIOUS_HISTOGRAM);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_TEMP
++        [[vk::image_format("r32ui")]]
+         RWTexture2D<FfxUInt32>                    rw_optical_flow_scd_temp            FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_TEMP);
+     #endif
+     #if defined FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_OUTPUT
++        [[vk::image_format("r32ui")]]
+         RWTexture2D<FfxUInt32>                    rw_optical_flow_scd_output          FFX_DECLARE_UAV(FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_OUTPUT);
+     #endif
+ 
+--- a/Kits/FidelityFX/framegeneration/fsr3/include/gpu/frameinterpolation/ffx_frameinterpolation_game_motion_vector_field.h
++++ b/Kits/FidelityFX/framegeneration/fsr3/include/gpu/frameinterpolation/ffx_frameinterpolation_game_motion_vector_field.h
+@@ -60,6 +60,14 @@
+     FfxUInt32 uLowPriorityFactor = FfxUInt32(ffxRound(ffxPow(MinDividedByMax(prevLuma, currLuma), 1.0f / 1.0f) * PRIORITY_LOW_MAX))
+     * FfxUInt32(IsUvInside(fUvInInterpolationRect + fGameMotionVector * fUvLetterBoxScale));
+ 
++    // Equal-depth, exact photometric matches otherwise tie on every priority bit. InterlockedMax then favors a
++    // negative half-float vector over zero. Reserve the last low-priority bin for verified stationary matches;
++    // the existing higher depth priority still lets a genuine nearer moving foreground occlude the background.
++    // A 256x128 analytical 64-pixel translation with an opaque fixed shadow went from 41.429/255 shadow error to
++    // exactly zero, with the fixed foreground unchanged; validated on RTX 5080 against the official 3.1.6 provider.
++    if (!(length(fGameMotionVector * RenderSize()) <= 1.0f && uLowPriorityFactor == PRIORITY_LOW_MAX))
++        uLowPriorityFactor = ffxMin(uLowPriorityFactor, PRIORITY_LOW_MAX - 1);
++
+     // Update primary motion vectors
+     {
+         const FfxUInt32x2 packedVectorPrimary = PackVectorFieldEntries(true, uHighPriorityFactorPrimary, uLowPriorityFactor, fMotionVectorHalf);

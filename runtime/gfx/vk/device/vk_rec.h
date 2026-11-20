@@ -17,6 +17,10 @@
 void rec_begin(VkCommandBuffer cb);   // the submitting thread, sub_lock held
 void rec_end(void);                   // waits for the recorder; no-op when rec_begin did not start it
 void rec_drain(void);                 // waits until the recorder made every call queued so far
+// The submitting thread records directly for a section whose extension or driver calls must stay on this thread.
+// suspend drains the part first and returns the state resume must restore; it does not end the replay part.
+int rec_suspend(void);
+void rec_resume(int saved);
 void rec_stats_log(void);             // MKW_TRACE=perf: packets, bytes, drains and waits since the last call
 
 // Extension commands called through device function pointers.

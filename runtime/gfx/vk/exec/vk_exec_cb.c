@@ -14,6 +14,7 @@
 #include "nvn_api.h"
 #include "nvn_hmap.h"
 #include "tex.h"
+#include "vk_temporal.h"
 #include "vk.h"
 #include "vk_draw_internal.h"
 #include "vk_exec.h"
@@ -251,9 +252,11 @@ void record_fixed(VkExec *ex) {
     if (ex->dirty & VK_EXEC_DIRTY_VIEWPORT) {
         float x = 0, y = 0, w = (float)ex->pass_w, h = (float)ex->pass_h;
         if (ex->has_vp) x = ex->vp[0][0], y = ex->vp[0][1], w = ex->vp[0][2], h = ex->vp[0][3];
+        if (ex->has_vp) vk_tmp_scale_rect(ex, &x, &y, &w, &h);   // a pass moved to the output's size (vk_temporal.c)
         if (w < 1) w = 1;
         if (h < 1) h = 1;
         VkViewport v = {x, y + h, w, -h, ex->depth_range[0], ex->depth_range[1]};   // the y flip: negative height
+        vk_tmp_viewport(ex, &v);   // the temporal upscalers' jitter on the scene's draws (vk_temporal.c)
         vkCmdSetViewportWithCount(cb, 1, &v);
         ex->recorded++;
     }

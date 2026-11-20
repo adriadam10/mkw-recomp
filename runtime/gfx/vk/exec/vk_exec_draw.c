@@ -24,6 +24,7 @@
 #include "nvn_api.h"
 #include "nvn_hmap.h"
 #include "tex.h"
+#include "vk_temporal.h"
 #include "vk.h"
 #include "vk_draw_internal.h"
 #include "vk_exec.h"
@@ -527,6 +528,7 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
     // draw into per-frame targets is skipped until it is ready and comes back next frame.
     int oneshot = -1, skip = pipe_skip_mode();   // -1: not looked up
     if (!vs || (has_fs && !fs)) return vk_exec_frame.skip[VK_SKIP_SHADER_MISSING]++, 0;
+    if (!vk_tmp_draw(ex, vs, has_fs ? fs : NULL)) return 0;   // the scene's camera and jitter; DLAA in SMAA's place
     if (SP.n && skip_listed(vs, has_fs ? fs : NULL)) return 0;
     PD_MARK(PD_SHADER);
     uint32_t fbl = feedback_prepare(ex, fs);
