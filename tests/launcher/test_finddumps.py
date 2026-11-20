@@ -51,8 +51,14 @@ def test_nup_versions_and_titles(tmp_path: Path) -> None:
     nup(tmp_path / "Downloads/MKW 1.8.0.nup", [(MKW, 0), (MKW, 917504)])  # base game then update: the newest counts
     nup(tmp_path / "Downloads/other.nup", [(0x0100000000010000, 0)])
     nup(tmp_path / "Games/MKW new.NUP", [(MKW, 1 << 20)])
+    # the newest of the game's titles by version, wherever it sits; a DLC (another id) last does not hide the game
+    nup(tmp_path / "Games/MKW eglantine.nup", [(MKW, 917504), (MKW | 0x800, 0), (MKW | 0x1001, 1 << 16)])
     (tmp_path / "Games/broken.nup").write_bytes(b"NUP\x01")
-    assert found([tmp_path]) == {("nup", "1.8.0", "MKW 1.8.0.nup"), ("nup", "?", "MKW new.NUP")}
+    assert found([tmp_path]) == {
+        ("nup", "1.8.0", "MKW 1.8.0.nup"),
+        ("nup", "?", "MKW new.NUP"),
+        ("nup", "1.8.0", "MKW eglantine.nup"),
+    }
 
 
 def test_nx_and_loose_copies(tmp_path: Path) -> None:

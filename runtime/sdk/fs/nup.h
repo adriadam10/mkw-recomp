@@ -13,7 +13,9 @@ typedef struct Nup Nup;
 
 int nup_is(const char *path);                             // a regular file that starts with the NUP magic
 // The package at path, parsed once and kept until exit (NULL and a log line when it is not a valid NUP).
-// Its newest title (the last in the table, as an update's comes after the base game's) is the one read.
+// Its game's titles are layered (the base game and its updates; DLC, another title id, left out): the ExeFS is the
+// newest title's (by version), a RomFS path the newest title's that has it, as an update may hold only what it adds or
+// changes (Eglantine's --pack-nup). A package of one title reads as that title.
 Nup *nup_open(const char *path);
 // The files of a part (NUP_EXEFS, NUP_ROMFS), sorted by name; the array belongs to the Nup. A zstd file is PACK_WHOLE
 // (one frame per file), the rest PACK_RAW.

@@ -8,6 +8,7 @@ Usage: uv run pytest tests
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 from collections.abc import Callable
@@ -528,6 +529,108 @@ def test_nup_pack_reads_back(tmp_path: Path) -> None:
     assert n.title_id == "0400C3F00006E000" and n.version == 0
     got = {f"{part}/{k}": n.read(e) for part in ("exefs", "romfs") for k, e in n.files(part).items()}
     assert got == files
+
+
+def layered_nup(path: Path, titles: list[tuple[int, int, dict[str, bytes]]]) -> None:
+    """A .nup of several titles, (title id, version, {"exefs/x" | "romfs/x": data}) each, laid out as nup.c documents
+    and Eglantine's --pack-nup writes it: one root/exefs/romfs dir tree per title, "z:" names stored as one zstd frame.
+    A title without exefs files gets no exefs dir (index past the table)."""
+    from compression import zstd
+
+    dirs: list[list] = []  # [name, children]; children ("d", i) or ("f", i)
+    files: list[tuple[str, bytes, bool]] = []
+    recs = []
+
+    def tree(name: str, entries: dict[str, bytes]) -> int:
+        d = len(dirs)
+        dirs.append([name, []])
+        subs: dict[str, dict[str, bytes]] = {}
+        for rel, data in entries.items():
+            head, _, rest = rel.partition("/")
+            if rest:
+                subs.setdefault(head, {})[rest] = data
+            else:
+                z = head.startswith("z:")
+                dirs[d][1].append(("f", len(files)))
+                files.append((head[2:] if z else head, data, z))
+        for sub, inner in sorted(subs.items()):
+            dirs[d][1].append(("d", tree(sub, inner)))
+        return d
+
+    for tid, version, content in titles:
+        parts: dict[str, dict[str, bytes]] = {"exefs": {}, "romfs": {}}
+        for k, v in content.items():
+            part, _, rel = k.partition("/")
+            parts[part][rel] = v
+        root = tree("", {})
+        ex = tree("exefs", parts["exefs"]) if parts["exefs"] else 0xFFFFFFFF
+        ro = tree("romfs", parts["romfs"])
+        dirs[root][1] = ([("d", ex)] if ex != 0xFFFFFFFF else []) + [("d", ro)]
+        recs.append(struct.pack("<QIIII", tid, root, ex, ro, version).ljust(0x40, b"\0"))
+    pool = bytearray()
+
+    def name(s: str) -> tuple[int, int]:
+        b = s.encode()
+        pool.extend(b)
+        return len(pool) - len(b), len(b)
+
+    nd, nf = len(dirs), len(files)
+    nchild = sum(len(d[1]) for d in dirs)
+    pool_off = 0x30 + 0x40 * len(titles) + nd * 24 + nf * 80 + nchild * 4
+    dir_names = [name(d[0]) for d in dirs]
+    file_names = [name(f[0]) for f in files]
+    data_at = (0x80 + pool_off + len(pool) + 0xFFF) & ~0xFFF
+    blobs = [zstd.compress(f[1]) if f[2] else f[1] for f in files]
+    toc = (b"TOC\x01" + struct.pack("<IQQQQ", len(titles), nd, nf, pool_off, len(pool))).ljust(0x30, b"\0")
+    toc += b"".join(recs)
+    first = 0
+    for (off, n), d in zip(dir_names, dirs, strict=True):
+        toc += struct.pack("<4I8x", off, n, first, len(d[1]))
+        first += len(d[1])
+    at, offsets = data_at, []
+    for (off, n), f, blob in zip(file_names, files, blobs, strict=True):
+        codec = bytes([1 if f[2] else 0])  # @0x40 after the 32-byte hash: 1 is one zstd frame
+        toc += struct.pack("<IIQQQ", off, n, len(f[1]), at, len(blob)) + bytes(32) + codec + bytes(15)
+        offsets.append(at)
+        at = (at + len(blob) + 15) & ~15
+    for d in dirs:
+        toc += b"".join(struct.pack("<I", i if kind == "d" else nd + i) for kind, i in d[1])
+    toc += pool
+    with open(path, "wb") as o:
+        o.write((b"NUP\x01" + struct.pack("<II", 0x10080, 0x80) + struct.pack("<Q", len(toc))).ljust(0x80, b"\0"))
+        o.write(toc)
+        for blob, off in zip(blobs, offsets, strict=True):
+            o.seek(off)
+            o.write(blob)
+
+
+def test_nup_titles_layered(tmp_path: Path) -> None:
+    # base game + an update holding only what it changes (Eglantine's --pack-nup): the RomFS read through every title,
+    # the newest file kept; the ExeFS the update's whole; a DLC (another title id) and a title's order in the table
+    # ignored, by version; one zstd frame read back
+    sys.path.insert(0, str(ROOT / "tools/prepare"))
+    import nup
+
+    mkw = 0x0400C3F00006E000
+    base = {"exefs/main": b"NSO0 1.0.0", "exefs/subsdk0": b"old", "romfs/a.bin": b"a100", "romfs/Sub/b": b"b100",
+            "romfs/gone": b"only in 1.0.0"}  # fmt: skip
+    update = {"exefs/main": b"NSO0 1.8.0", "exefs/subsdk0": b"movie", "exefs/subsdk1": b"old",
+              "romfs/a.bin": b"a180", "romfs/Sub/z:new": b"n" * 4000}  # fmt: skip
+    dlc = {"romfs/a.bin": b"dlc", "romfs/dlc": b"d"}
+    out = tmp_path / "layered.nup"
+    layered_nup(out, [(mkw, 917504, update), (mkw | 0x1001, 65536, dlc), (mkw, 0, base)])
+    n = nup.Nup(out)
+    assert (n.title_id, n.version) == ("0400C3F00006E000", 917504)
+    exefs = {k: n.read(e) for k, e in n.files("exefs").items()}
+    romfs = {k: n.read(e) for k, e in n.files("romfs").items()}
+    assert exefs == {"main": b"NSO0 1.8.0", "subsdk0": b"movie", "subsdk1": b"old"}
+    assert romfs == {"a.bin": b"a180", "Sub/b": b"b100", "Sub/new": b"n" * 4000, "gone": b"only in 1.0.0"}
+    assert list(n.files("romfs")) == sorted(romfs)
+    # an update without an ExeFS of its own: the base game's
+    layered_nup(out, [(mkw, 0, base), (mkw | 0x800, 917504, {"romfs/a.bin": b"a180"})])
+    n = nup.Nup(out)
+    assert n.version == 917504 and n.read(n.files("exefs")["main"]) == b"NSO0 1.0.0"
+    assert n.read(n.files("romfs")["a.bin"]) == b"a180" and set(n.files("romfs")) == {"a.bin", "Sub/b", "gone"}
 
 
 def test_copy_removes_other_versions_files(tmp_path: Path) -> None:

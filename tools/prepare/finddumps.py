@@ -6,8 +6,8 @@ desktop's portal. In Steam's Gaming Mode (gamescope, on a Steam Deck or Bazzite)
 controller could not pick the copy at all (issue #486 was a Deck set up in desktop mode). Listed here, each copy found
 is one button on the setup page.
 
-What counts: a .nup whose newest title is Mario Kart World (its table of contents: title id and version, as nup.py
-reads it), a .nx package (NXAR; its version is read by the setup), and a folder with exefs/main of a build
+What counts: a .nup of Mario Kart World with the version of its newest title (its table of contents: title ids and
+versions, as nup.py reads it), a .nx package (NXAR; its version is read by the setup), and a folder with exefs/main of a build
 recomp/versions.py knows beside a romfs/ folder. Where: the home folder's usual places (Downloads, Desktop,
 Documents, Games, EmuDeck's Emulation), Steam's Proton prefixes (compatdata/*/pfx/drive_c, where #486's copy was),
 removable media (/run/media, /media, /mnt: SteamOS mounts the SD card there) and on Windows the profile's folders and
@@ -42,8 +42,8 @@ SKIP = {"node_modules", "proc", "sys", "dev", "Windows", "$Recycle.Bin", "System
 
 
 def nup_version(path: Path) -> str | None:
-    """The version of a Mario Kart World .nup from its newest title, "?" for one not listed, None for another title or
-    not a package (the layout of tools/prepare/nup.py Nup)."""
+    """The version of a Mario Kart World .nup: the newest of the game's titles (the base game and its updates, as
+    tools/prepare/nup.py Nup layers them), "?" for one not listed, None for another game or not a package."""
     try:
         with open(path, "rb") as f:
             head = f.read(12)
@@ -57,16 +57,17 @@ def nup_version(path: Path) -> str | None:
             nt = struct.unpack_from("<I", th, 4)[0]
             if not 0 < nt < 64:
                 return None
-            f.seek(toc + 0x30 + (nt - 1) * 0x40)
-            rec = f.read(0x18)
+            recs = f.read(nt * 0x40)
     except OSError:
         return None
-    if len(rec) < 0x18:
+    if len(recs) < nt * 0x40:
         return None
-    tid, _, _, _, version = struct.unpack_from("<QIIII", rec)
-    if tid != TITLE:
+    # an update's id differs from the base game's in the low 12 bits only, a DLC's is higher: the lowest names the game
+    titles = [struct.unpack_from("<QIIII", recs, i * 0x40) for i in range(nt)]
+    game = min(t[0] & ~0xFFF for t in titles)
+    if game != TITLE:
         return None
-    return NUP_VERSIONS.get(version, "?")
+    return NUP_VERSIONS.get(max(t[4] for t in titles if t[0] & ~0xFFF == game), "?")
 
 
 def is_nx(path: Path) -> bool:

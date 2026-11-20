@@ -39,8 +39,20 @@ def is_nup(path: Path) -> bool:
         return False
 
 
+def game_titles(titles: list[tuple]) -> list[tuple]:
+    """The game's (title id, ...) records of a package, oldest version first (the table's order breaks a tie): a base
+    game's and its update's ids differ only in the low 12 bits (0x800 on the console), a DLC's is higher (base +
+    0x1000 and up), so the lowest id names the game and DLC is not layered into its RomFS."""
+    game = min(t[0] & ~0xFFF for t in titles)
+    return sorted((t for t in titles if t[0] & ~0xFFF == game), key=lambda t: t[4])
+
+
 class Nup:
-    """The package's newest title (the last in its table: an update's comes after the base game's)."""
+    """The package's game, its titles layered: a package can hold the base game and its updates as separate titles,
+    an update's RomFS only what it adds or changes (Eglantine's --pack-nup writes it so), so a RomFS path is read from
+    the newest title that has it, by version; the ExeFS is the newest one whole (an update's replaces all modules, as
+    1.8.0's subsdk0 is another module). title_id and version are the newest's. Titles of another game (DLC) are left
+    out. A package of one title (a dump, nup.py pack) reads as before."""
 
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -61,7 +73,8 @@ class Nup:
         self._dirs = 0x30 + nt * 0x40
         self._files = self._dirs + self._nd * 24
         self._children = self._files + nf * 80
-        tid, _, self._exefs, self._romfs, self.version = struct.unpack_from("<QIIII", self._t, 0x30 + (nt - 1) * 0x40)
+        self._titles = game_titles([struct.unpack_from("<QIIII", self._t, 0x30 + i * 0x40) for i in range(nt)])
+        tid, _, _, _, self.version = self._titles[-1]
         self.title_id = f"{tid:016X}"
         self._parts: dict[str, dict[str, Entry]] = {}
 
@@ -69,25 +82,37 @@ class Nup:
         off, n = struct.unpack_from("<II", self._t, rec)
         return self._t[self._pool + off : self._pool + off + n].decode("utf-8")
 
+    def _walk(self, top: int) -> dict[str, Entry]:
+        """The files under one title's part dir; none when the title has no such part (a dir index past the table)."""
+        out: dict[str, Entry] = {}
+        stack = [(top, "")] if top < self._nd else []
+        while stack:
+            d, prefix = stack.pop()
+            _, _, first, count = struct.unpack_from("<4I", self._t, self._dirs + d * 24)
+            for k in range(first, first + count):
+                c = struct.unpack_from("<I", self._t, self._children + k * 4)[0]
+                if c < self._nd:
+                    stack.append((c, prefix + self._name(self._dirs + c * 24) + "/"))
+                    continue
+                rec = self._files + (c - self._nd) * 80
+                size, off, stored = struct.unpack_from("<QQQ", self._t, rec + 8)
+                codec = self._t[rec + 0x40]
+                if codec > 1:
+                    raise ValueError(f"{self.path}: unknown codec {codec} for {prefix + self._name(rec)}")
+                out[prefix + self._name(rec)] = Entry(off, size, stored, codec == 1)
+        return out
+
     def files(self, part: str) -> dict[str, Entry]:
-        """{path under the part: Entry} of "exefs" or "romfs", sorted by path."""
+        """{path under the part: Entry} of "exefs" or "romfs", sorted by path (the layering: see the class)."""
         if part not in self._parts:
             out: dict[str, Entry] = {}
-            stack = [(self._exefs if part == "exefs" else self._romfs, "")]
-            while stack:
-                d, prefix = stack.pop()
-                _, _, first, count = struct.unpack_from("<4I", self._t, self._dirs + d * 24)
-                for k in range(first, first + count):
-                    c = struct.unpack_from("<I", self._t, self._children + k * 4)[0]
-                    if c < self._nd:
-                        stack.append((c, prefix + self._name(self._dirs + c * 24) + "/"))
-                        continue
-                    rec = self._files + (c - self._nd) * 80
-                    size, off, stored = struct.unpack_from("<QQQ", self._t, rec + 8)
-                    codec = self._t[rec + 0x40]
-                    if codec > 1:
-                        raise ValueError(f"{self.path}: unknown codec {codec} for {prefix + self._name(rec)}")
-                    out[prefix + self._name(rec)] = Entry(off, size, stored, codec == 1)
+            if part == "exefs":
+                for t in reversed(self._titles):
+                    if out := self._walk(t[2]):
+                        break
+            else:
+                for t in self._titles:
+                    out.update(self._walk(t[3]))
             self._parts[part] = dict(sorted(out.items()))
         return self._parts[part]
 

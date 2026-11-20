@@ -9,6 +9,8 @@
 //   then a u32 child list: an index below the dir count is a dir, else a file (index - dir count)
 // Of Mario Kart World 1.0.0's 205 665 files, 35 081 are zstd frames (2.4 GB once decoded, the largest 78 MB); the rest
 // are stored raw, and the RomFS reads them in place at their offset.
+// Titles are layered (nup.h): a package can hold the base game and an update as two titles, the update's RomFS only
+// what it adds or changes. Eglantine's --pack-nup writes MKW 1.0.0 + 1.8.0 so: 205 660 base files, 8 224 in the update.
 #include <stdlib.h>
 #include <string.h>
 
@@ -117,6 +119,46 @@ static int entry_order(const void *a, const void *b) {
     return strcmp(((const PackEntry *)a)->name, ((const PackEntry *)b)->name);
 }
 
+// A base game's and its update's title ids differ only in the low 12 bits (0x800 on the console), a DLC's is higher
+// (base + 0x1000 and up): the lowest id, so masked, names the game.
+#define GAME_ID(tid) ((tid) & ~0xFFFull)
+
+typedef struct {
+    const uint8_t *rec;   // the title's 0x40-byte record
+    uint32_t version;
+    uint32_t index;       // in the table, to break a tie of versions
+} Title;
+
+static int title_order(const void *a, const void *b) {
+    const Title *x = a, *y = b;
+    if (x->version != y->version) return x->version < y->version ? -1 : 1;
+    return x->index < y->index ? -1 : x->index > y->index;
+}
+
+// Sorts by name and keeps one file per name: the newest title's. w->out holds the titles' files oldest title first, so
+// the one pushed last wins; qsort is not stable, so each entry's position goes in its id (unused by .nup rows) first.
+static int layer_order(const void *a, const void *b) {
+    int c = entry_order(a, b);
+    if (c) return c;
+    uint32_t x = ((const PackEntry *)a)->id, y = ((const PackEntry *)b)->id;
+    return x > y ? -1 : x < y;
+}
+
+static void layer(Walk *w) {
+    for (size_t i = 0; i < w->n; i++) w->out[i].id = (uint32_t)i;
+    qsort(w->out, w->n, sizeof *w->out, layer_order);
+    size_t k = 0;
+    for (size_t i = 0; i < w->n; i++) {
+        if (k && !strcmp(w->out[k - 1].name, w->out[i].name)) {
+            free(w->out[i].name);
+            continue;
+        }
+        w->out[k] = w->out[i];
+        w->out[k++].id = 0;
+    }
+    w->n = k;
+}
+
 static Nup *parse(const char *path) {
     PlatFile *f = plat_file_open(path);
     PlatFileId id;
@@ -137,26 +179,51 @@ static Nup *parse(const char *path) {
     }
     t = malloc(size);
     if (!t || !read_all(f, t, size, toc)) { err = "table of contents unreadable"; goto bad; }
-    const uint8_t *title = t + 0x30 + (nt - 1) * 0x40;
+    // The game's titles (DLC, a higher id, left out), oldest first.
+    uint64_t game = UINT64_MAX;
+    for (uint32_t i = 0; i < nt; i++) {
+        uint64_t g = GAME_ID(u64(t + 0x30 + (uint64_t)i * 0x40));
+        if (g < game) game = g;
+    }
+    Title *ts = malloc(nt * sizeof *ts);
+    size_t used = 0;
+    if (!ts) { err = "memory"; goto bad; }
+    for (uint32_t i = 0; i < nt; i++) {
+        const uint8_t *r = t + 0x30 + (uint64_t)i * 0x40;
+        if (GAME_ID(u64(r)) == game) ts[used++] = (Title){r, u32(r + 20), i};
+    }
+    qsort(ts, used, sizeof *ts, title_order);
+    const uint8_t *title = ts[used - 1].rec;
     n = calloc(1, sizeof *n);
-    if (!n || !(n->path = strdup(path))) { err = "memory"; goto bad; }
+    if (!n || !(n->path = strdup(path))) { free(ts); err = "memory"; goto bad; }
     for (int p = 0; p < 2; p++) {
         Walk w = {t, size, nd, nf, dirs, files, children, pool, pool_size, id.size, NULL, 0, 0, 0, NULL};
-        walk(&w, u32(title + (p ? 16 : 12)), "");
+        // ExeFS: the newest title's whole (an update replaces every module; 1.8.0's subsdk0 is another module than
+        // 1.0.0's). RomFS: every title's, the newest's file kept where they share a path. A title without the part
+        // (its dir index past the table) adds nothing.
+        if (p == NUP_EXEFS) {
+            for (size_t k = used; k-- > 0 && !w.n && !w.err;)
+                if (u32(ts[k].rec + 12) < nd) walk(&w, u32(ts[k].rec + 12), "");
+        } else {
+            for (size_t k = 0; k < used && !w.err; k++)
+                if (u32(ts[k].rec + 16) < nd) walk(&w, u32(ts[k].rec + 16), "");
+        }
         if (w.err) {
             for (size_t i = 0; i < w.n; i++) free(w.out[i].name);
             free(w.out);
+            free(ts);
             err = w.err;
             goto bad;
         }
-        qsort(w.out, w.n, sizeof *w.out, entry_order);
+        layer(&w);
         n->part[p] = w.out;
         n->count[p] = w.n;
     }
     n->f = f;
     n->file_size = id.size;
-    rt_log("NUP %s: title %016llx v%u, %zu exefs and %zu romfs files", path, (unsigned long long)u64(title),
-           u32(title + 20), n->count[0], n->count[1]);
+    rt_log("NUP %s: title %016llx v%u (%zu of %u titles layered), %zu exefs and %zu romfs files", path,
+           (unsigned long long)u64(title), u32(title + 20), used, (unsigned)nt, n->count[0], n->count[1]);
+    free(ts);
     free(t);
     return n;
 bad:
