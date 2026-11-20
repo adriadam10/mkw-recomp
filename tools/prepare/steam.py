@@ -188,7 +188,12 @@ def add(vdf: Path, name: str, exe: str, start_dir: str, icon_path: str = "") -> 
         root = read_map(vdf.read_bytes(), 0)[0] if vdf.is_file() and vdf.stat().st_size else {}
     except (IndexError, struct.error) as e:
         raise ValueError(f"{vdf.name} contains incomplete or invalid Steam shortcut data") from e
-    rows = list(root.get("shortcuts", {}).values())
+    shortcuts = root.get("shortcuts", {})
+    if root.keys() - {"shortcuts"} or not isinstance(shortcuts, dict) or any(
+        not isinstance(row, dict) for row in shortcuts.values()
+    ):
+        raise ValueError(f"{vdf.name} contains incomplete or invalid Steam shortcut data")
+    rows = list(shortcuts.values())
     quoted = f'"{exe}"'
     grid = vdf.parent / "grid"
 

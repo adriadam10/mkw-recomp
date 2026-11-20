@@ -67,6 +67,19 @@ def test_add_keeps_the_others_replaces_the_same_exe(tmp_path: Path) -> None:
     assert len(steam.read_map(p.read_bytes(), 0)[0]["shortcuts"]) == 2
 
 
+@pytest.mark.parametrize("data", [
+    steam.write_map({"shortcuts": "not a map"}),
+    steam.write_map({"shortcuts": {"0": "not a row"}}),
+    steam.write_map({"unknown": {"keep": "me"}}),
+])
+def test_add_refuses_unexpected_shortcut_structure(tmp_path: Path, data: bytes) -> None:
+    vdf = tmp_path / "shortcuts.vdf"
+    vdf.write_bytes(data)
+    with pytest.raises(ValueError, match="invalid Steam shortcut data"):
+        steam.add(vdf, NAME, EXE, "/games/mkw")
+    assert vdf.read_bytes() == data
+
+
 def test_add_creates_the_file(tmp_path: Path) -> None:
     p = tmp_path / "config" / "shortcuts.vdf"
     p.parent.mkdir()
@@ -101,12 +114,12 @@ def test_add_reports_truncated_shortcuts(
 
 @pytest.mark.parametrize("bad_first", [False, True])
 @pytest.mark.parametrize("running", [False, True])
-def test_add_reports_partial_success_and_updates_healthy_profiles(tmp_path, monkeypatch, capsys, bad_first, running):
+@pytest.mark.parametrize("data", [b"\x00shortcuts\x00", steam.write_map({"shortcuts": {"0": "bad"}})])
+def test_add_reports_partial_success_and_updates_healthy_profiles(tmp_path, monkeypatch, capsys, bad_first, running, data):
     good, bad = tmp_path / "userdata/100", tmp_path / "userdata/200"
     for profile in (good, bad):
         (profile / "config").mkdir(parents=True)
     damaged = bad / "config/shortcuts.vdf"
-    data = b"\x00shortcuts\x00"
     damaged.write_bytes(data)
     iterdir = Path.iterdir
     order = [bad, good] if bad_first else [good, bad]
