@@ -18,6 +18,7 @@ The setup, the installation selector and the Add to Steam of the start screen.
 | `test_mod_import_encoding.py` | The real mod-import CLI with cp1252 pipes: UTF-8 success, error paths, variants and argument diagnostics for ASCII, accented and Chinese names, from folders and synthetic ZIPs |
 | `test_mod_import_events.py` | Actual importer output through the production Mods-page result parser: names with spaces and Unicode, metadata-free results and error messages, without SDL or a game |
 | `test_mod_ips.py` | `tools/mod/ips.py`: IPS, IPS32 and `.pchtxt` records read, and a cut or malformed patch reported as a `PatchFailed` the import shows, not a traceback |
+| `test_mod_merge_damaged.py` | The mod merge with a SARC whose header is cut short, in the mods or the game's own file: it is served whole and the other archives still merge |
 | `test_mod_original_choice.py` | Original conflict choices with and without an original, cache migration and the production conflict reader |
 | `test_gamebanana_cache.py` | GameBanana's mod info command recovers unreadable cached JSON, reuses the repaired cache and preserves the old entry if replacement fails, using a local response fixture |
 | `test_gamebanana_eyeballs.py` | GameBanana's connections race every resolved address so a blackholed IPv6 does not stall IPv4, verified against a local server with a dead first address |

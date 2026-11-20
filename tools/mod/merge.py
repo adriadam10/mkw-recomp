@@ -217,7 +217,7 @@ def main():
                         return fail("io", f"{m}/{rel}: zstd: {e}")
                 try:
                     inners, ver = parse_sarc_ordered(raw)
-                except ValueError:
+                except (ValueError, struct.error):   # struct.error: a header cut short, which no one caught
                     continue   # not an archive (a texture etc.): the overlay serves it whole
                 per_archive.setdefault(rel, []).append((m, dict(inners), ver))
     conflicts, merged_n, auto_n = [], 0, 0
@@ -237,7 +237,7 @@ def main():
                 try:
                     vanilla, verr = parse_sarc_ordered(lraw)
                     vanilla = dict(vanilla)
-                except ValueError:
+                except (ValueError, struct.error):
                     vanilla = None
         # inner file -> {mod: data} for mods that differ from vanilla (or add)
         changed = {}
