@@ -60,14 +60,37 @@ def test_crash_retried_once(tmp_path: Path, capsys: pytest.CaptureFixture[str], 
         assert "Program arguments" in capsys.readouterr().err  # the crash's head, which the 300-character tail lost
 
 
-def test_zig_cache_failure_says_what_to_do(tmp_path: Path) -> None:
+def test_zig_cache_failure_says_what_to_do(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """#406: zig's own "checking cache failed" (its cache folder on a drive it cannot use) told the
     player nothing; the message names the cause and the way out, and the compile is not retried."""
+    cache = str(tmp_path / "player cache")
+    monkeypatch.setenv("ZIG_GLOBAL_CACHE_DIR", cache)
     err, n, stamp = compile_with(tmp_path, "cache")
     assert n == 1
     assert not stamp.is_file()
     assert "cache folder" in err
     assert "ZIG_GLOBAL_CACHE_DIR" in err
+    assert cache in err
+
+
+def test_link_cache_failure_names_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cache = str(tmp_path / "player cache")
+    monkeypatch.setenv("ZIG_GLOBAL_CACHE_DIR", cache)
+    monkeypatch.setattr(gamecode.build, "gen_modules", lambda _: [])
+    monkeypatch.setattr(gamecode.build, "module_glue", lambda *args: "int x;")
+    monkeypatch.setattr(gamecode.build, "game_id", lambda: "test")
+    monkeypatch.setattr(gamecode.fastcc, "setup", lambda *args: None)
+    monkeypatch.setattr(gamecode, "legacy_compilers", lambda *args: [])
+    monkeypatch.setattr(gamecode, "common_key", lambda *args, **kwargs: "key")
+    monkeypatch.setattr(gamecode, "object_key", lambda *args: "key")
+    monkeypatch.setattr(gamecode, "compile_one", lambda *args: "")
+    monkeypatch.setattr(gamecode, "probe_link", lambda *args: None)
+    monkeypatch.setattr(gamecode.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(
+        args[0], 1, "", "checking cache failed"))
+    with pytest.raises(gamecode.Failed, match="linking the game code failed") as exc:
+        gamecode.compile_game(tmp_path, tmp_path, tmp_path / "work", ["clang"], "linux", 1)
+    assert cache in str(exc.value)
+    assert "ZIG_GLOBAL_CACHE_DIR" in str(exc.value)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="a shell script stands in for the compiler")
