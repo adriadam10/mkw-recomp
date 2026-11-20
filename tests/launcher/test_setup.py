@@ -136,8 +136,7 @@ def test_resume_without_earlier_setup(tmp_path: Path) -> None:
 def test_warm_failure_does_not_fail_the_setup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], failure: str
 ) -> None:
-    # 0.1.13 failed the whole setup when the prewarm's game process exited (#59, #152, #356, #404, #546, #588, #606,
-    # #609); since 0.1.14 the game builds its pipelines as it draws, and the setup finishes
+    # Until 17/11/2026 the prewarm ran the game for a minute and kept the keys of what its title drew.
     def run(argv: list[str], **kwargs: object) -> SimpleNamespace:
         if failure == "timeout":
             raise prepare.subprocess.TimeoutExpired(argv, 1)
