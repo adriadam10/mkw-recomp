@@ -512,6 +512,24 @@ def test_fetch_retries_damaged_downloads(tmp_path: Path, monkeypatch: pytest.Mon
         spec.fetch("x/pkg.zip", want, tmp_path)
 
 
+@pytest.mark.parametrize("cut", [8, 0x80 + 8, 0x80 + 0x30 + 0x40 + 3 * 24 + 16])
+def test_nup_cut_table_is_reported(tmp_path: Path, cut: int) -> None:
+    import nup
+
+    src = tmp_path / "source"
+    for name in ("exefs/main", "romfs/file"):
+        path = src / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"synthetic")
+    package = tmp_path / "cut.nup"
+    nup.pack(src, package, 0x0400C3F00006E000, 0)
+    data = package.read_bytes()
+    assert nup.Nup(package).files("romfs")
+    package.write_bytes(data[:cut])
+    with pytest.raises(ValueError, match="cut short"):
+        nup.Nup(package).files("romfs")
+
+
 def test_nup_pack_reads_back(tmp_path: Path) -> None:
     # a loose dump packed into one .nup (nup.py pack) reads back the same through the module the setup uses
     sys.path.insert(0, str(ROOT / "tools/prepare"))
