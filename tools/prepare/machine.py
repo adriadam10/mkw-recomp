@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -84,6 +85,46 @@ def use_own_zig_cache(game: Path) -> None:
     own = game / "setup-work" / ZIG_CACHE
     own.mkdir(parents=True, exist_ok=True)
     os.environ["ZIG_GLOBAL_CACHE_DIR"] = os.environ["ZIG_LOCAL_CACHE_DIR"] = str(own)
+
+
+def zig_cache_works(cc: list[str], probe_dir: Path) -> bool | None:
+    """Whether zig can compile with its current cache folder: a one-line C file compiled into probe_dir. None when it
+    fails for another reason (the cache is not what stopped it)."""
+    src, out = probe_dir / "cache_probe.c", probe_dir / "cache_probe.o"
+    src.write_text("int cache_probe;\n")
+    try:
+        r = subprocess.run([*cc, "-c", str(src), "-o", str(out)], capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", check=False, timeout=120)  # fmt: skip
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    finally:
+        src.unlink(missing_ok=True)
+        out.unlink(missing_ok=True)
+    if not r.returncode:
+        return True
+    return False if "checking cache failed" in r.stderr else None
+
+
+def settle_zig_cache(cc: list[str], game: Path, probe_dir: Path) -> None:
+    """When zig cannot use the cache folder use_own_zig_cache chose (every chunk failed with `checking cache failed:
+    manifest_create Unexpected` on a Batocera game folder run through GE-Proton, #406), the cache goes to the system's
+    temporary folder, if a probe compile works there. A cache folder the player named (ZIG_GLOBAL_CACHE_DIR) is theirs
+    and stays; the probe's compile is also what checks that the object can be moved from that cache to probe_dir."""
+    own = str(game / "setup-work" / ZIG_CACHE)
+    if os.environ.get("ZIG_GLOBAL_CACHE_DIR") != own or zig_cache_works(cc, probe_dir) is not False:
+        return
+    other = Path(tempfile.gettempdir()) / "mkw-zig-cache"
+    try:
+        other.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"compile: zig cannot use {own}, and {other} cannot be made: {e}", file=sys.stderr)
+        return
+    os.environ["ZIG_GLOBAL_CACHE_DIR"] = os.environ["ZIG_LOCAL_CACHE_DIR"] = str(other)
+    if zig_cache_works(cc, probe_dir):
+        print(f"compile: zig cannot use its cache folder {own}: it is in {other}", file=sys.stderr)
+        return
+    os.environ["ZIG_GLOBAL_CACHE_DIR"] = os.environ["ZIG_LOCAL_CACHE_DIR"] = own
+    print(f"compile: zig cannot use its cache folder {own}, nor {other}", file=sys.stderr)
 
 
 def crt_spec(game: Path, cc: list[str]) -> Path | None:

@@ -20,7 +20,7 @@ import build  # (GEN_FLAGS, gen_modules, module_glue, game_id: the same game cod
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fastcc
-from machine import Failed, crt_link, emit, package_dir
+from machine import Failed, crt_link, emit, package_dir, settle_zig_cache
 
 # The compiler's messages as text: zig writes UTF-8 (paths with "Área de Trabalho" in it), which the locale's code page
 # could not decode, and the reader thread's error left stdout None (#527: setup failed at compile on a Portuguese Windows)
@@ -99,6 +99,8 @@ def compile_game(
     if v2:  # the FMADDs and the RECPS/RSQRTS steps become fma/fmaf calls: correctly rounded ones, not the C runtime's
         jobs_c.append((cpu / "fma.c", obj / "cpu_fma.o", [*flags, f"-I{cpu}"]))
     jobs_c.append((obj / "modules.c", obj / "modules.o", [*flags, gid, *inc]))
+    if Path(cc[0]).stem == "zig":
+        settle_zig_cache(cc, game, obj)  # before fastcc's zig cc -###, which needs the cache too
     cc1 = fastcc.setup(cc, package_dir(game), obj, [jobs_c[0][2], jobs_c[-1][2]])
     jobs_c.sort(key=lambda j: -j[0].stat().st_size)  # the largest first: no 10 MB main_table.c alone at the end
     total, done = len(jobs_c) + 1, 0  # the link is the last unit: a progress bar full before it hid it (issue #2)
