@@ -151,6 +151,7 @@ class GitHub:
             ["gh", "api", "--paginate", "--slurp", f"repos/{self.repo}/{path}"],
             capture_output=True,
             text=True,
+            encoding="utf-8",  # gh writes UTF-8; the locale's code page (cp1252 on Windows) cannot decode every issue text
             check=True,
             env=self.env,
         ).stdout

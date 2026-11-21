@@ -73,7 +73,7 @@ class GitHub:
         args = ["gh", "api", "graphql", "-f", f"query={q}"]
         for k, val in v.items():
             args += ["-F" if isinstance(val, int) else "-f", f"{k}={val}"]
-        r = subprocess.run(args, capture_output=True, text=True)
+        r = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")  # as moderate.py: gh writes UTF-8
         if r.returncode:
             raise SystemExit(f"gh api graphql: {r.stderr.strip() or r.stdout.strip()}")
         return json.loads(r.stdout)["data"]
