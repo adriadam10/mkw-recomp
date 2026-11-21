@@ -167,10 +167,15 @@ def intercept_lib(cc: list[str], work: Path, crt: Path | None) -> Path:
             subprocess.run([*cc, "-O2", "-shared", "-o", str(dll), str(HERE / "intercept_win.c")], check=True)
             return dll
         sys.path.insert(0, str(ROOT / "tools/prepare"))
+        import fastcc
         from machine import lld_link
 
         obj = work / "intercept_win.o"
-        subprocess.run([*cc, "-O2", "-c", "-o", str(obj), str(HERE / "intercept_win.c")], check=True)
+        # zig cc, or under Wine (where zig cannot use its cache) the package's clang on zig's line; crt is the package's
+        # setup/lib/crt/link.json
+        sys.stderr.flush()
+        fastcc.compile_c(cc, crt.resolve().parents[2], work, ["-O2"], HERE / "intercept_win.c", obj)
+        sys.stderr.flush()
         subprocess.run(lld_link(cc[0], crt, dll, [str(obj)], f"-IMPLIB:{work / 'intercept.lib'}"), check=True)
         return dll
     so = work / "intercept.so"

@@ -7,6 +7,11 @@ that line (zig's libc headers, the target, the flags); LLVM's clang runs it with
 version, same line: the objects keep zig's key, so either compiler's objects are reused by the other.
 zig compiles as before when the package has no clang, it does not start (a Linux older than glibc 2.34 or libstdc++
 of GCC 12), its version is not zig's, or MKW_SETUP_CC=zig. zig still links. Not run on its own.
+
+Under Wine (Proton, the Windows package on Linux) this is the only compiler: zig.exe cannot lock its cache's manifest
+there and every `zig cc -c` ends in "checking cache failed: manifest_create Unexpected" (SteamOS, Proton 11.0,
+20/11/2026; any cache folder, Z: or C:). `zig cc -###` still prints its line before that error, clang.exe needs no
+cache, and `zig lld-link` links without one. compile_c is that for one file (sm86/spec/spec.py's helper DLL).
 """
 
 import os
@@ -19,6 +24,15 @@ PROBE = "fastcc_probe"
 _QUOTED = re.compile(r'"((?:[^"\\]|\\.)*)"')
 _ESCAPE = re.compile(r"\\(.)")
 UTF8 = {"encoding": "utf-8", "errors": "replace"}
+CACHE_FAILED = "checking cache failed"  # zig's error when it cannot use its cache folder (gamecode.py names it too)
+RENAME_FAILED = "failed to rename"
+
+
+def cache_failed(stderr: str) -> bool:
+    """Whether zig's only errors are that it could not use its cache (Wine: it cannot lock the manifest). Every error
+    line must be that one: a real error in the flags or the source beside it is not passed over."""
+    errors = [ln for ln in stderr.splitlines() if "error:" in ln and '"-cc1"' not in ln]
+    return bool(errors) and all(CACHE_FAILED in ln for ln in errors)
 
 
 def clang_path(package: Path) -> Path:
@@ -38,8 +52,9 @@ def version(cmd: list[str]) -> str:
 class Cc1:
     """clang -cc1 command lines, one per set of flags, from zig cc -###; cmd() gives a chunk's."""
 
-    def __init__(self, clang: Path, zig_cc: list[str], obj: Path) -> None:
-        self.clang, self.zig_cc = str(clang), zig_cc
+    def __init__(self, clang: Path, zig_cc: list[str], obj: Path, std: tuple[str, ...] = ("-std=gnu11",)) -> None:
+        self.clang, self.zig_cc, self.std = str(clang), zig_cc, std
+        self.no_cache = False  # zig could not use its cache (Wine): it cannot compile here, only print its line
         self.src, self.out = obj / f"{PROBE}.c", obj / f"{PROBE}.o"
         self.lines: dict[tuple[str, ...], list[str]] = {}
         self.outs: dict[tuple[str, ...], str] = {}  # the object path each line writes (zig.exe: a cache temporary)
@@ -47,13 +62,17 @@ class Cc1:
     def add(self, flags: list[str]) -> None:
         """zig's -cc1 line for these flags; raises RuntimeError when it is not the expected one."""
         self.src.write_text("int fastcc_probe;\n")
-        cmd = [*self.zig_cc, "-std=gnu11", *flags, "-c", str(self.src), "-o", str(self.out), "-###"]
+        cmd = [*self.zig_cc, *self.std, *flags, "-c", str(self.src), "-o", str(self.out), "-###"]
         r = subprocess.run(cmd, capture_output=True, **UTF8, check=False, timeout=120)
         lines = [ln for ln in r.stderr.splitlines() if '"-cc1"' in ln]
         # zig.exe compiles into its cache's tmp/ and renames the object to -o afterwards; with -### there is no object,
         # so it prints the line and exits 1 on the rename (the Windows PC, 18/11/2026: every chunk fell back to zig)
-        if len(lines) != 1 or (r.returncode and "failed to rename" not in r.stderr):
+        # Under Wine it prints the line and exits 1 because it cannot lock its cache's manifest (see the top): the line
+        # is the one it would run, so it is taken, but only when that is the whole failure
+        no_cache = bool(r.returncode) and RENAME_FAILED not in r.stderr and cache_failed(r.stderr)
+        if len(lines) != 1 or (r.returncode and RENAME_FAILED not in r.stderr and not no_cache):
             raise RuntimeError(f"zig cc -### gave rc {r.returncode} and {len(lines)} -cc1 lines")
+        self.no_cache |= no_cache
         args = [_ESCAPE.sub(r"\1", a) for a in _QUOTED.findall(lines[0])]
         out = args[args.index("-o") + 1] if "-o" in args[:-1] else ""
         # the probe's paths, each where the chunk's go: the output (ours or zig's temporary), the input and its name
@@ -74,8 +93,11 @@ class Cc1:
         ]
 
 
-def setup(zig_cc: list[str], package: Path, obj: Path, flag_sets: list[list[str]]) -> Cc1 | None:
-    """The Cc1 for these flag sets, or None (zig compiles) with the reason in setup.log."""
+def setup(
+    zig_cc: list[str], package: Path, obj: Path, flag_sets: list[list[str]], std: tuple[str, ...] = ("-std=gnu11",)
+) -> Cc1 | None:
+    """The Cc1 for these flag sets, or None (zig compiles) with the reason in setup.log. std: the language flag put
+    before each set (the game code's; compile_c gives none, as its caller's own zig cc line has none)."""
     clang = clang_path(package)
     why = ""
     if os.environ.get("MKW_SETUP_CC") == "zig":
@@ -91,7 +113,7 @@ def setup(zig_cc: list[str], package: Path, obj: Path, flag_sets: list[list[str]
     if why:
         print(f"compile: zig compiles ({why})", file=sys.stderr)
         return None
-    cc1 = Cc1(clang, zig_cc, obj)
+    cc1 = Cc1(clang, zig_cc, obj, std)
     try:
         for flags in flag_sets:
             cc1.add(flags)
@@ -101,4 +123,21 @@ def setup(zig_cc: list[str], package: Path, obj: Path, flag_sets: list[list[str]
     finally:
         cc1.src.unlink(missing_ok=True)
     print(f"compile: {clang} on zig's -cc1 lines", file=sys.stderr)
+    if cc1.no_cache:
+        print(f"compile: zig cannot use its cache folder ({CACHE_FAILED}, as under Wine): it only gave the lines",
+              file=sys.stderr)  # fmt: skip
     return cc1
+
+
+def compile_c(zig_cc: list[str], package: Path, work: Path, flags: list[str], src: Path, out: Path) -> None:
+    """`zig cc <flags> -c src -o out`, and when zig fails only on its cache (Wine), the same line on the package's
+    clang. Raises CalledProcessError, the compiler's output on stderr, as subprocess.run(check=True) would. zig
+    first, so where zig works (Windows, Linux) nothing changes."""
+    cmd = [*zig_cc, *flags, "-c", str(src), "-o", str(out)]
+    r = subprocess.run(cmd, capture_output=True, **UTF8, check=False)
+    if r.returncode and cache_failed(r.stderr) and (cc1 := setup(zig_cc, package, work, [flags], std=())):
+        cmd = cc1.cmd(flags, src, out)
+        r = subprocess.run(cmd, capture_output=True, **UTF8, check=False)
+    sys.stderr.write(r.stdout + r.stderr)
+    if r.returncode:
+        raise subprocess.CalledProcessError(r.returncode, cmd, r.stdout, r.stderr)
