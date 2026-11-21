@@ -183,9 +183,11 @@ static void scan_pads(void) {
     input_wheel_map();
     int n = 0;
     SDL_JoystickID *ids = SDL_GetGamepads(&n);
+    const char *p2_cfg = cfg_get("MKW_PAD_P2");
+    int pad_p2 = p2_cfg && atoi(p2_cfg) > 0;
     for (int i = 0; ids && i < n; i++) {
         if (pad_is_open(ids[i])) continue;
-        int p = 0;
+        int p = pad_p2 ? 1 : 0;
         while (p < INPUT_MAX_PLAYERS && (p ? extra[p] != NULL : pad != NULL)) p++;
         if (p == INPUT_MAX_PLAYERS) break;
         SDL_Gamepad *g = SDL_OpenGamepad(ids[i]);
@@ -462,6 +464,15 @@ void input_poll(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_
 
 void input_poll_ui(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry) {
     poll_merged(buttons, lx, ly, rx, ry);
+    const char *p2_cfg = cfg_get("MKW_PAD_P2");
+    if (p2_cfg && atoi(p2_cfg) > 0 && extra[1] && SDL_GamepadConnected(extra[1])) {
+        uint64_t b2 = 0;
+        int32_t sl2[2] = {0, 0}, sr2[2] = {0, 0};
+        gamepad_read(extra[1], input_pad_layout_pick(cfg_value("MKW_PAD_LAYOUT"), extra_east_a[1]), &b2, sl2, sr2);
+        *buttons |= b2;
+        pick(lx, ly, sl2[0], sl2[1]);
+        pick(rx, ry, sr2[0], sr2[1]);
+    }
 }
 
 uint32_t input_player_mask(void) {
