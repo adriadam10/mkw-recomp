@@ -15,7 +15,7 @@ what already shipped is in the [CHANGELOG](../../CHANGELOG.md).
 
 - Three shader translator bugs left (found by comparing with another Switch 2 port).
 - The kart's shadow misses a frame now and then.
-- Zero Vulkan validation errors: none from boot to a race in one and two players; photo mode and the other modes are unchecked.
+- Zero Vulkan validation errors: none from boot to a race in one to four players and in a time trial; free roam's one is fixed in #752; photo mode is unchecked.
 
 ## 3. Menus
 
