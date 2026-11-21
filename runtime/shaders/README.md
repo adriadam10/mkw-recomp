@@ -7,6 +7,7 @@ with `uv run tools/shaders/embed_spv.py runtime/shaders/<folder>/<name>.comp`.
 |---|---|
 | [texture/](texture/README.md) | ASTC decoding and BC1/BC7 recompression on the GPU |
 | [mesh/](mesh/README.md) | Task/mesh groups compacted as compute |
+| [mem/](mem/README.md) | The VRAM mirror's write-back merged by bytes |
 | [fsr/](fsr/README.md) | AMD FSR 1: scaling and sharpening |
 | `ffx/` | AMD's FidelityFX headers that `fsr/` includes (MIT, `ffx/LICENSE.txt`) |
 | [framegen/](framegen/README.md) | Frame generation |

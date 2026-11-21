@@ -1,0 +1,52 @@
+#version 450
+// The bases of the VRAM mirror's merged write-back (runtime/gfx/vk/mem/vk_mem_mmerge.c, mirror_merge.comp): in the
+// prologue of a part, the mirror words of each range the part's GPU work writes, copied into a base chunk before it
+// runs. One dispatch is every base of the prologue; the words are numbered in table order (w0) as in the merge.
+#extension GL_EXT_nonuniform_qualifier : require
+
+#define MAXP 512
+#define MAXC 32
+layout(local_size_x = 256) in;
+
+layout(std430, set = 0, binding = 0) readonly buffer Now { uint w[]; } mir[MAXP];
+layout(std430, set = 0, binding = 1) buffer Base { uint w[]; } base[MAXC];
+// src: first word in the pool's mirror; dst: first word in the chunk; w0: first word number; pc: pool | chunk << 16
+struct Copy { uint src, dst, w0, pc; };
+layout(std430, set = 0, binding = 5) readonly buffer Copies { Copy cp[]; };
+
+layout(push_constant) uniform P { uint copies, words; } p;
+
+#define BLOCK 2048
+shared uint s_first, s_last;
+
+uint find(uint g, uint a, uint z) {   // the last copy of [a, z) with w0 <= g
+    while (z - a > 1) {
+        uint m = (a + z) / 2;
+        if (cp[m].w0 <= g) a = m;
+        else z = m;
+    }
+    return a;
+}
+
+void main() {   // a workgroup finds its copies as mirror_merge.comp finds its jobs
+    uint blocks = (p.words + BLOCK - 1) / BLOCK, per = (blocks + gl_NumWorkGroups.x - 1) / gl_NumWorkGroups.x;
+    uint b0 = gl_WorkGroupID.x * per, b1 = min(b0 + per, blocks), prev = 0;
+    for (uint bk = b0; bk < b1; bk++) {
+        uint g0 = bk * BLOCK;
+        if (gl_LocalInvocationID.x == 0) {
+            s_first = find(g0, prev, p.copies);
+            s_last = find(min(g0 + BLOCK - 1, p.words - 1), s_first, p.copies);
+        }
+        barrier();
+        uint a = s_first, last = s_last;
+        barrier();
+        prev = a;
+        for (uint i = 0; i < BLOCK / 256; i++) {
+            uint g = g0 + i * 256 + gl_LocalInvocationID.x;
+            if (g >= p.words) break;
+            while (a < last && cp[a + 1].w0 <= g) a++;
+            Copy c = cp[a];
+            base[nonuniformEXT(c.pc >> 16)].w[c.dst + (g - c.w0)] = mir[nonuniformEXT(c.pc & 0xffffu)].w[c.src + (g - c.w0)];
+        }
+    }
+}

@@ -35,6 +35,8 @@ typedef struct VkCtx {
     int has_custom_border_color, has_eds, has_eds2, has_eds3, has_vertex_input_dynamic_state,
         has_conditional_rendering, has_transform_feedback, has_provoking_vertex, has_device_fault, has_memory_budget,
         has_robustness2, has_buffer_device_address, has_fragment_shader_interlock,
+        has_8bit_storage,                   // storageBuffer8BitAccess: the mirror's merged write-back (vk_mem_mmerge.c)
+        has_ssbo_nonuniform,                // its arrays: non-uniform storage buffer indexing and partially bound sets
         has_unused_attachments,             // VK_EXT_dynamic_rendering_unused_attachments
         has_buffer_marker,                  // VK_AMD_buffer_marker: the GPU breadcrumbs (vk_crumbs.c)
         has_nv_checkpoints,                 // VK_NV_device_diagnostic_checkpoints: the same on NVIDIA

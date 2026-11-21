@@ -45,6 +45,12 @@ int mirror_cpu_gen = 1;         // MKW_MIRROR_CPU_GEN (default 1; "ab"): sync by
 static PoolRec **mlist;                // pool_lock: mirrored pools by import_lo
 static int nm, mcap;
 static uint32_t msub;                  // replay: number of the submission being recorded
+static int mm_active, mm_inited;       // replay: this submission's write-backs merge by bytes (vk_mem_mmerge.c)
+// Whose: a pool without a shadow (every pool on Windows, MKW_SHADOW off there). A shadowed pool's write-back reaches
+// guest memory through the shadow's own merge (vk_mem_merge.c), which keeps the CPU's bytes: with the merge on every
+// pool, a Linux race (shadows) counted none kept by it (MKW_MIRROR_MERGE_CENSUS, wm1 20/11/2026), and it cost +0.2-0.3
+// ms of GPU a frame over the copy (MKW_MIRROR_MERGE_TIME, wab5/wab5i). MKW_MIRROR_MERGE_ALL=1 merges those too.
+static int merged(const PoolRec *r) { return mm_active && (!r->smap || mmerge_all); }
 static uint32_t mepoch;                // replay: its write-watch snapshot epoch (vk_texture_epoch)
 typedef struct { PoolRec *r; uint64_t off, size; } MRange;
 static MRange *pend, *wbl;             // replay: copies for the next prologue; GPU writes into mirrors this submission
@@ -238,6 +244,8 @@ void mirror_retire(void *arg) {
 // callback never ran go now.
 void mirror_reset(VkCtx *c) {
     nm = npend = nwbl = 0;
+    mmerge_shutdown(c);
+    mm_inited = mm_active = 0;
     for (int i = 0; i < nretiring; i++) destroy_rec(c, retiring[i]);
     nretiring = 0;
 }
@@ -340,6 +348,7 @@ void vk_mem_gpu_wrote(const VkMemSpan *sp, uint64_t size) {
     if (!r || r->mstate != MS_ON || sp->buffer != r->mbuf || !size) return;
     plat_mutex_lock(&use_lock);
     range_add(&wbl, &nwbl, &cwbl, r, sp->offset, size);
+    if (merged(r)) mmerge_note(r, sp->offset, size);
     plat_mutex_unlock(&use_lock);
 }
 
@@ -374,6 +383,8 @@ void vk_mem_mirror_begin(void) {
         return;
     }
     uint64_t t0 = qpc();
+    if (!mm_inited) mm_inited = 1, mmerge_init(vk_ctx());
+    mm_active = mmerge_ready();
     uint32_t prev = msub;
     msub = msub + 1 ? msub + 1 : 1;
     __atomic_add_fetch(&mirror_gen, 1, __ATOMIC_RELEASE);
@@ -405,10 +416,13 @@ void vk_mem_mirror_begin(void) {
     mrep.presnap_t += qpc() - t0;
 }
 
-int vk_mem_mirror_pending(void) { return npend; }
+int vk_mem_mirror_pending(void) { return npend + mmerge_pending(); }
 
 void vk_mem_mirror_prologue(VkCommandBuffer cb) {
-    if (!npend) return;
+    if (!npend) {   // only the bases of the merged write-backs (vk_mem_mmerge.c), which need no barrier before them
+        mmerge_prologue(cb, 0);
+        return;
+    }
     // A shadowed pool's mirror is copied from its shadow, which holds the writes stamped up to its sgen only. A pool
     // already synced for this submission (by the early thread or an earlier part) is not synced again, so the shadow
     // keeps the bytes of that sync, but the mirror sync's query stamps the writes made since and listed them, and its
@@ -428,6 +442,7 @@ void vk_mem_mirror_prologue(VkCommandBuffer cb) {
     mbarrier(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
              VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT);
     copy_ranges(cb, pend, npend, 1, &mrep.upload_bytes, &mrep.upload_copies);
+    mmerge_prologue(cb, npend > 0);   // the bases of the ranges this part writes, from the mirror just uploaded
     mbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
              VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT);
     vk_crumb_end(cb, VK_CRUMB_OP, crumb);
@@ -526,13 +541,22 @@ static int verify_record(VkCommandBuffer cb, uint64_t fence) {
 
 int vk_mem_mirror_end(VkCommandBuffer cb, uint64_t fence) {
     if (!vk_mirror_on) return 0;
-    int rec = 0;
+    int rec = 0, tq = nwbl ? mmerge_time_begin(cb) : -1;
+    if (mm_active) rec += mmerge_end(cb, fence, &mrep.wb_bytes);   // the ranges in wbl, by bytes
     if (nwbl) {
-        mbarrier(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
-                 VK_ACCESS_2_TRANSFER_READ_BIT);
         for (int i = 0; i < nwbl; i++) wbl[i].r->wb_sub = msub;
         mrep.wb_ranges += (uint64_t)nwbl;
-        rec += copy_ranges(cb, wbl, nwbl, 0, &mrep.wb_bytes, &mrep.wb_copies) + 2;
+        int ncopy = 0;   // the ranges not merged first
+        for (int i = 0; i < nwbl; i++)
+            if (!merged(wbl[i].r)) {
+                MRange t = wbl[ncopy];
+                wbl[ncopy++] = wbl[i], wbl[i] = t;
+            }
+        if (ncopy) {
+            mbarrier(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
+                     VK_ACCESS_2_TRANSFER_READ_BIT);
+            rec += copy_ranges(cb, wbl, ncopy, 0, &mrep.wb_bytes, &mrep.wb_copies) + 2;
+        }
         if (reup_diag < 0) {
             const char *e = cfg_get("MKW_MIRROR_REUP");
             reup_diag = e && *e && strcmp(e, "0") != 0;
@@ -542,11 +566,13 @@ int vk_mem_mirror_end(VkCommandBuffer cb, uint64_t fence) {
             memcpy(wbprev, wbl, (size_t)nwbl * sizeof *wbl);
             nwbprev = nwbl;
         }
-        mbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                 VK_PIPELINE_STAGE_2_HOST_BIT | VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-                 VK_ACCESS_2_HOST_READ_BIT | VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT);
+        if (ncopy)
+            mbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                     VK_PIPELINE_STAGE_2_HOST_BIT | VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                     VK_ACCESS_2_HOST_READ_BIT | VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT);
         nwbl = 0;
     }
+    mmerge_time_end(cb, tq, fence, mm_active);
     if (mirror_verify) rec += verify_record(cb, fence);
     plat_mutex_lock(&mirror_stat_lock);
     uint64_t *d = (uint64_t *)&macc, *s = (uint64_t *)&mrep;
@@ -573,17 +599,19 @@ void mirror_log(uint64_t frame) {
         snprintf(ver, sizeof ver, "; verify: pages compared %lld, skipped %lld (written since), mismatches %lld",
                  (long long)plat_xchg64(&v_pages, 0), (long long)plat_xchg64(&v_skipped, 0),
                  (long long)plat_xchg64(&v_mismatch, 0));
+    char mm[384];
+    mmerge_log(mm, sizeof mm, f);
     rt_log("mem: mirror frame %llu: pools %lld, %.1f MiB device-local; stay imported: budget %lld (%.1f MiB), untracked "
            "%lld, overlapping %lld, failed %lld; per frame: submits %.2f, syncs %.1f, upload %.3f MiB in %.1f ranges, "
            "first use %.2f pools %.3f MiB, write-back %.3f MiB in %.1f ranges, flush calls %.1f (%.3f MiB), queries "
-           "%.1f pre-snap (%.1f MiB) + %.1f sync, prologues %.2f, tracking cpu %.3f ms (pre-snap %.3f, syncs %.3f)%s"
+           "%.1f pre-snap (%.1f MiB) + %.1f sync, prologues %.2f, tracking cpu %.3f ms (pre-snap %.3f, syncs %.3f)%s%s"
            "; GPU-written kept %.3f MiB%s%.3f MiB uploaded again after only the GPU wrote them (MKW_MIRROR_REUP)",
            (unsigned long long)frame, (long long)m_live_n, m_live_bytes / M, (long long)m_refused_n[MR_BUDGET],
            m_refused_bytes[MR_BUDGET] / M, (long long)m_refused_n[MR_UNTRACKED], (long long)m_refused_n[MR_OVERLAP],
            (long long)m_refused_n[MR_ALLOC], a.subs / f, a.syncs / f, a.upload_bytes / f / M, a.upload_copies / f,
            a.first_n / f, a.first_bytes / f / M, a.wb_bytes / f / M, a.wb_copies / f, fc / f, fb / f / M,
            a.presnap_queries / f, a.presnap_bytes / f / M, a.sync_queries / f, a.prologues / f, qpc_ms(a.presnap_t + a.sync_t) / f,
-           qpc_ms(a.presnap_t) / f, qpc_ms(a.sync_t) / f, ver, a.gpu_kept_bytes / f / M, reup_diag > 0 ? "; " : "",
+           qpc_ms(a.presnap_t) / f, qpc_ms(a.sync_t) / f, ver, mm, a.gpu_kept_bytes / f / M, reup_diag > 0 ? "; " : "",
            a.reup_bytes / f / M);
 }
 

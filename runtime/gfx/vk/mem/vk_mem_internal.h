@@ -52,6 +52,9 @@ typedef struct PoolRec {
     uint32_t mgen;                     // gen_lock: every page write stamped up to this generation is in the mirror
                                        // (or in a copy queued before its next use)
     uint64_t fl_lo, fl_hi;             // flush_lock: nvnMemoryPoolFlushMappedRange bytes not copied yet (fl_hi 0: none)
+    uint32_t mm_sub;                   // vk_mem_mmerge.c, mm_lock: the submission whose merge jobs mm_head lists
+    int mm_head, mm_hit;               // its newest job (each links the one before); the last that covered a note
+    int mm_idx;                        // its place in the merge sets' arrays (-1: copied whole)
     // Shadow storage (POOL_IMPORT in shadow mode, "shadow storage" below): buf is a host-visible copy of the guest pages.
     VmaAllocation salloc;
     uint8_t *smap;                     // its mapping; offsets as in buf (from import_lo)
@@ -225,6 +228,18 @@ void mirror_retiring(PoolRec *r);   // vk_pool_fini: kept until mirror_retire (o
 void mirror_retire(void *arg);      // completion thread: destroys a finalized mirrored pool's record
 int retiring_count(void);
 void mirror_log(uint64_t frame);
+// vk_mem_mmerge.c: the mirror's write-back merged by bytes on the GPU (MKW_MIRROR_MERGE)
+extern int mmerge_mode, mmerge_all;   // MKW_MIRROR_MERGE, MKW_MIRROR_MERGE_ALL
+void mmerge_init(VkCtx *c);                                    // replay thread, at the first mirrored submission
+void mmerge_shutdown(VkCtx *c);
+int mmerge_ready(void);                                        // on for the submission starting ("ab" decides now)
+void mmerge_note(PoolRec *r, uint64_t off, uint64_t size);     // use_lock: the submission's GPU work writes it
+int mmerge_pending(void);                                      // base copies for the next prologue
+int mmerge_prologue(VkCommandBuffer cb, int after_uploads);    // records them; returns the commands
+int mmerge_end(VkCommandBuffer cb, uint64_t fence, uint64_t *bytes);   // the merges, at the submission's end
+void mmerge_log(char *out, size_t n, double frames);
+int mmerge_time_begin(VkCommandBuffer cb);                     // MKW_MIRROR_MERGE_TIME: -1 off
+void mmerge_time_end(VkCommandBuffer cb, int slot, uint64_t fence, int kind);   // 0 whole copy, 1 merge, 2 bases
 void mirror_reset(VkCtx *c);
 
 // vk_mem_log.c: census, VRAM summary and the memory mode

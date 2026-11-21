@@ -1,0 +1,94 @@
+#version 450
+// The VRAM mirror's write-back merged by bytes (runtime/gfx/vk/mem/vk_mem_mmerge.c). A range a submission binds
+// writable is the whole binding, not the bytes its shaders store, and the CPU keeps writing other bytes of it while the
+// GPU runs (each frame's indirect arguments around the counts a culling dispatch adds to). Copied back whole, the
+// mirror's old copy of those bytes reverted them in guest memory; this writes back only the bytes the GPU changed: the
+// mirror now (r) against its copy taken before the submission wrote the range (b, mirror_base.comp).
+// One dispatch is every job of a submission: each a range [lo, hi) of a pool, the pools' mirrors and storage bound as
+// arrays; the words of all jobs are numbered in table order (w0, a prefix sum). A workgroup takes a contiguous span in
+// blocks of 2048 words, 8 an invocation; its first invocation finds the jobs of a block's first and last word by binary
+// search from the last block's, and each invocation steps from there to the jobs of its words (they only grow). A binary
+// search for every 256 words, between two barriers, left the merge slower than the copy it replaces (bridge58: 0.81
+// against 0.63 ms of GPU a frame). The table is in VRAM, copied there before the dispatch.
+// A word the GPU changed goes back whole, not by bytes: the GPU stores words, so a changed byte means it wrote the word,
+// and a float that moved a little keeps its exponent byte: by bytes, those words took three single-byte PCIe writes each
+// (merge time grew with the bytes changed, ~5 ns a byte: tt8 0.33 ms, bridge58 0.80). Only the range's edge words, whose
+// other bytes are not the range's, go by bytes. A CPU byte inside a word the GPU also changed is lost, as on a console
+// whose GPU writes the word after the CPU.
+#extension GL_EXT_shader_8bit_storage : require   // SPIR-V StorageBuffer8BitAccess only (no Int8)
+#extension GL_EXT_nonuniform_qualifier : require
+
+#define MAXP 512
+#define MAXC 32
+layout(local_size_x = 256) in;
+
+layout(std430, set = 0, binding = 0) readonly buffer Now { uint w[]; } mir[MAXP];   // each pool's mirror
+layout(std430, set = 0, binding = 1) buffer Base { uint w[]; } base[MAXC];         // base chunks
+layout(std430, set = 0, binding = 2) buffer Dst { uint w[]; } dst[MAXP];           // each pool (a shadow pool: its shadow)
+layout(std430, set = 0, binding = 3) buffer Dst8 { uint8_t b[]; } dst8[MAXP];      // the same, by bytes
+layout(std430, set = 0, binding = 4) buffer Census { uint cnt[2]; };               // bytes the GPU changed, CPU bytes kept
+// lo, hi: bytes of the pool; boff: the base of lo & ~3 in its chunk; w0: first word number; pc: pool | chunk << 16
+struct Job { uint lo, hi, boff, w0, pc; };
+layout(std430, set = 0, binding = 5) readonly buffer Jobs { Job job[]; };
+
+// jobs: table entries; words: all of their words; census: 1 counts into cnt (reads the pool: PCIe)
+layout(push_constant) uniform P { uint jobs, words, census; } p;
+
+#define BLOCK 2048
+shared uint s_first, s_last;
+
+uint find(uint g, uint a, uint z) {   // the last job of [a, z) with w0 <= g
+    while (z - a > 1) {
+        uint m = (a + z) / 2;
+        if (job[m].w0 <= g) a = m;
+        else z = m;
+    }
+    return a;
+}
+
+void main() {
+    uint changed = 0, kept = 0;
+    uint blocks = (p.words + BLOCK - 1) / BLOCK, per = (blocks + gl_NumWorkGroups.x - 1) / gl_NumWorkGroups.x;
+    uint b0 = gl_WorkGroupID.x * per, b1 = min(b0 + per, blocks), prev = 0;
+    for (uint bk = b0; bk < b1; bk++) {
+        uint g0 = bk * BLOCK;
+        if (gl_LocalInvocationID.x == 0) {
+            s_first = find(g0, prev, p.jobs);
+            s_last = find(min(g0 + BLOCK - 1, p.words - 1), s_first, p.jobs);
+        }
+        barrier();
+        uint a = s_first, last = s_last;
+        barrier();   // read before the next block writes them
+        prev = a;
+        for (uint i = 0; i < BLOCK / 256; i++) {
+            uint g = g0 + i * 256 + gl_LocalInvocationID.x;
+            if (g >= p.words) break;
+            while (a < last && job[a + 1].w0 <= g) a++;
+            Job j = job[a];
+            uint pi = j.pc & 0xffffu, ci = j.pc >> 16;
+            uint at = (j.lo & ~3u) + 4 * (g - j.w0), wi = at / 4;
+            uint rv = mir[nonuniformEXT(pi)].w[wi], bv = base[nonuniformEXT(ci)].w[j.boff / 4 + (g - j.w0)], x = rv ^ bv;
+            uint m = 0, valid = 0;
+            for (uint k = 0; k < 4; k++) {
+                if (at + k < j.lo || at + k >= j.hi) continue;
+                valid |= 1u << k;
+                if (((x >> (8 * k)) & 0xffu) != 0) m |= 1u << k;
+            }
+            if (p.census != 0) {
+                uint y = dst[nonuniformEXT(pi)].w[wi] ^ bv;   // pool bytes away from the base: the CPU wrote them meanwhile
+                for (uint k = 0; k < 4; k++)
+                    if ((valid >> k & 1) != 0 && (m >> k & 1) == 0 && ((y >> (8 * k)) & 0xffu) != 0) kept++;
+                changed += bitCount(m);
+            }
+            if (m == 0) continue;
+            if (valid == 0xfu) {   // a word inside the range the GPU changed goes back whole: see below
+                dst[nonuniformEXT(pi)].w[wi] = rv;
+                continue;
+            }
+            for (uint k = 0; k < 4; k++)   // the range's first or last word: the bytes outside it are not its
+                if ((m >> k & 1) != 0) dst8[nonuniformEXT(pi)].b[at + k] = uint8_t((rv >> (8 * k)) & 0xffu);
+        }
+    }
+    if (p.census != 0 && changed != 0) atomicAdd(cnt[0], changed);
+    if (p.census != 0 && kept != 0) atomicAdd(cnt[1], kept);
+}
