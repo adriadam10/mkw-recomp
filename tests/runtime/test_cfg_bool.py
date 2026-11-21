@@ -16,7 +16,11 @@ HARNESS = r"""
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
+#else
 #include <strings.h>
+#endif
 typedef struct { const char *key, *def; } CfgMeta;
 static const char *value, *def;
 static const char *cfg_value(const char *name) { (void)name; return value; }
