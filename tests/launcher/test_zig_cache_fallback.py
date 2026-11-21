@@ -15,14 +15,14 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/prepare"))
 import machine  # noqa: E402
 
-# A compiler whose cache folder (ZIG_GLOBAL_CACHE_DIR) the test may refuse: argv[1] lists the folder names it refuses.
+# A compiler whose cache folder (ZIG_GLOBAL_CACHE_DIR) the test may refuse: argv[1] lists the name prefixes it refuses.
 FAKE_ZIG = """
 import os, sys
 from pathlib import Path
 refused = sys.argv[1].split(",")
 cache = os.environ.get("ZIG_GLOBAL_CACHE_DIR", "")
 Path(sys.argv[2]).open("a").write("x")
-if Path(cache).name in refused:
+if any(r and Path(cache).name.startswith(r) for r in refused):
     sys.stderr.write("error: unable to build: checking cache failed: manifest_create Unexpected\\n")
     sys.exit(1)
 if "-c" not in sys.argv:
@@ -48,15 +48,17 @@ def setup(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     def cc(refused: str) -> list[str]:
         return [sys.executable, str(fake), refused, str(calls)]
 
-    return game, probe, own, tmp_path / "tmp" / "mkw-zig-cache", cc, calls
+    return game, probe, own, tmp_path / "tmp", cc, calls
 
 
 def test_cache_moves_when_the_game_folder_refuses_it(setup, capsys: pytest.CaptureFixture[str]) -> None:
-    game, probe, own, other, cc, _ = setup
+    game, probe, own, temp, cc, _ = setup
     machine.settle_zig_cache(cc(machine.ZIG_CACHE), game, probe)
-    assert os.environ["ZIG_GLOBAL_CACHE_DIR"] == os.environ["ZIG_LOCAL_CACHE_DIR"] == str(other)
-    assert other.is_dir()
-    assert str(other) in capsys.readouterr().err
+    moved = Path(os.environ["ZIG_GLOBAL_CACHE_DIR"])
+    assert os.environ["ZIG_LOCAL_CACHE_DIR"] == str(moved)
+    assert moved.parent == temp and moved.name.startswith("mkw-zig-cache-")  # a new folder of this run, not a fixed name
+    assert moved.is_dir()
+    assert str(moved) in capsys.readouterr().err
     assert not list(probe.iterdir())  # the probe's files are gone
 
 
@@ -68,10 +70,11 @@ def test_cache_stays_when_it_works(setup) -> None:
 
 
 def test_cache_is_restored_when_no_folder_works(setup, capsys: pytest.CaptureFixture[str]) -> None:
-    game, probe, own, _, cc, _ = setup
-    machine.settle_zig_cache(cc(f"{machine.ZIG_CACHE},mkw-zig-cache"), game, probe)
+    game, probe, own, temp, cc, _ = setup
+    machine.settle_zig_cache(cc(f"{machine.ZIG_CACHE},mkw-zig-cache-"), game, probe)
     assert os.environ["ZIG_GLOBAL_CACHE_DIR"] == os.environ["ZIG_LOCAL_CACHE_DIR"] == str(own)
     assert "nor" in capsys.readouterr().err
+    assert not list(temp.iterdir())  # the folder that did not work is removed
 
 
 def test_the_players_own_cache_is_left_alone(setup, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
