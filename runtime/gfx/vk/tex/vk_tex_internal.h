@@ -47,6 +47,8 @@ typedef struct Tex {
     uint8_t sparse;               // a Vulkan sparse image whose tiles follow the game's MapVirtual (vk_sparse.c)
     VkSparseTail sparse_tail;      // privately backed small mips; zeroed at image initialization, without touching shared tiles
     uint64_t use;                 // MKW_GPU_GUARD: newest submission part that looked it up (vk_guard_note)
+    VkTexImage dtwin;             // vk_tex_twin.c: its D32_SFLOAT copy for depth-compare sampling (image NULL: none)
+    VmaAllocation dtwin_alloc;
 } Tex;
 
 // A slot keeps what vk_texture_by_id resolved for it, so a draw binding skips the key lookup and the address chain: the
@@ -127,6 +129,7 @@ void sweep_released(void);
 // vk_tex_upload.c: uploads and the freshness checks
 void make_fresh(Tex *e);
 void make_fresh_snap(Tex *e);
+void upload_again(Tex *e);   // uploads a CPU-written entry from its storage now (its depth twin's first fill)
 void expand_rgb(int format, const uint8_t *src, uint8_t *dst, size_t n);
 void shrink_rgb(int format, const uint8_t *src, uint8_t *dst, size_t n);
 int storage_rewritten(const Tex *e, uint32_t since, uint32_t *now);
@@ -135,6 +138,10 @@ int gpu_base_kept(const Tex *e);     // those bytes unchanged since: 1; changed:
 int rewritten_since_gpu(const Tex *e);   // the CPU rewrote e's storage after its GPU write: that render is not written back
 extern uint64_t trace_addr;
 int tracing(uint64_t addr);
+
+// vk_tex_twin.c: depth twins of colour textures sampled with a depth compare
+void tex_twin_copy(Tex *e, VkCommandBuffer cb, const uint8_t *stg, VkDeviceSize total, const VkBufferImageCopy *rg, uint32_t n);
+void tex_twin_destroy(Tex *e);
 
 // vk_tex_alias.c: aliases (MKW_TEX_ALIAS) and GPU writes into mirrored storage
 enum { WB_SMALL = 64 << 10 };

@@ -42,24 +42,26 @@ static const struct { VkImageType t; VkImageViewType vt; uint32_t layers; VkSamp
     {VK_IMAGE_TYPE_2D, VK_IMAGE_VIEW_TYPE_2D_ARRAY, 1, VK_SAMPLE_COUNT_4_BIT, 0}};
 
 // A 1x1 stand-in image of view type dinfo[i] in `fmt`, moved to GENERAL by the upload batch (which reaches the queue before
-// the submission that uses it). *sview is the view a storage descriptor takes (a cube becomes a 2D array).
+// the submission that uses it). *sview is the view a storage descriptor takes (a cube becomes a 2D array). D32_SFLOAT:
+// a depth stand-in for shadow slots (shadow_dummy), sampled only.
 static void make_dummy(int i, VkFormat fmt, VkImage *image, VmaAllocation *alloc, VkImageView *view, VkImageView *sview) {
     VkCtx *c = vk_ctx();
-    int ms = dinfo[i].s != VK_SAMPLE_COUNT_1_BIT;
+    int ms = dinfo[i].s != VK_SAMPLE_COUNT_1_BIT, depth = fmt == VK_FORMAT_D32_SFLOAT;
+    VkImageAspectFlags aspect = depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     VkImageCreateInfo ii = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .flags = dinfo[i].f, .imageType = dinfo[i].t,
                             .format = fmt, .extent = {1, 1, 1}, .mipLevels = 1, .arrayLayers = dinfo[i].layers,
                             .samples = dinfo[i].s, .tiling = VK_IMAGE_TILING_OPTIMAL,
                             .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                     (ms ? 0 : VK_IMAGE_USAGE_STORAGE_BIT),
+                                     (ms || depth ? 0 : VK_IMAGE_USAGE_STORAGE_BIT),
                             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED};
     VmaAllocationCreateInfo ia = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
     if (vmaCreateImage(c->vma, &ii, &ia, image, alloc, NULL) != VK_SUCCESS) rt_fatal("vk: stand-in image %d failed", i);
     VkImageViewCreateInfo vi = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = *image,
                                 .viewType = dinfo[i].vt, .format = fmt,
-                                .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, dinfo[i].layers}};
+                                .subresourceRange = {aspect, 0, 1, 0, dinfo[i].layers}};
     if (vkCreateImageView(c->device, &vi, NULL, view) != VK_SUCCESS) rt_fatal("vk: stand-in view failed");
     *sview = *view;
-    if (!ms && (dinfo[i].vt == VK_IMAGE_VIEW_TYPE_CUBE || dinfo[i].vt == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY)) {
+    if (!ms && !depth && (dinfo[i].vt == VK_IMAGE_VIEW_TYPE_CUBE || dinfo[i].vt == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY)) {
         vi.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
         if (vkCreateImageView(c->device, &vi, NULL, sview) != VK_SUCCESS) rt_fatal("vk: stand-in view failed");
     }
@@ -68,7 +70,7 @@ static void make_dummy(int i, VkFormat fmt, VkImage *image, VmaAllocation *alloc
                                  .dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
                                  .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_GENERAL,
                                  .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                 .image = *image, .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, dinfo[i].layers}};
+                                 .image = *image, .subresourceRange = {aspect, 0, 1, 0, dinfo[i].layers}};
     VkCommandBuffer cb = vk_upload_begin();
     VkDependencyInfo di = {.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &bar};
     vkCmdPipelineBarrier2(cb, &di);
@@ -79,8 +81,10 @@ static void make_dummy(int i, VkFormat fmt, VkImage *image, VmaAllocation *alloc
     if (magenta < 0) magenta = cfg_get("MKW_STANDIN_MAGENTA") && atoi(cfg_get("MKW_STANDIN_MAGENTA"));
     VkClearColorValue cv = {0};
     if (magenta && fmt == VK_FORMAT_R8G8B8A8_UNORM) cv.float32[0] = cv.float32[2] = cv.float32[3] = 1.0f;
-    VkImageSubresourceRange rr = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, dinfo[i].layers};
-    vkCmdClearColorImage(cb, *image, VK_IMAGE_LAYOUT_GENERAL, &cv, 1, &rr);
+    VkImageSubresourceRange rr = {aspect, 0, 1, 0, dinfo[i].layers};
+    VkClearDepthStencilValue dv = {0};   // a depth of 0, as the colour stand-in's red
+    if (depth) vkCmdClearDepthStencilImage(cb, *image, VK_IMAGE_LAYOUT_GENERAL, &dv, 1, &rr);
+    else vkCmdClearColorImage(cb, *image, VK_IMAGE_LAYOUT_GENERAL, &cv, 1, &rr);
     VkMemoryBarrier2 mb = {.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2, .srcStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT,
                            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT, .dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
                            .dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT};
@@ -119,6 +123,22 @@ static VkImageView storage_dummy(int di, int code) {
         }
         if (SD[i].di == di && SD[i].fmt == fmt) { v = SD[i].sview; break; }
     }
+    plat_mutex_unlock(&sd_lock);
+    return v;
+}
+
+// The stand-in of an empty shadow slot: a depth image, since Vulkan compares only on depth formats (the RGBA8 one with
+// the compare sampler broke VUID-vkCmdDraw-None-06479). 2D, 2D array and cube shapes; the others keep the colour one.
+static struct { int made; VkImage image; VmaAllocation alloc; VkImageView view, sview; } SH[DV_COUNT];
+
+static VkImageView shadow_dummy(int di) {
+    if (di != DV_2D && di != DV_2D_ARRAY && di != DV_CUBE && di != DV_CUBE_ARRAY) return Z.img[di].view;
+    plat_mutex_lock(&sd_lock);
+    if (!SH[di].made) {
+        make_dummy(di, VK_FORMAT_D32_SFLOAT, &SH[di].image, &SH[di].alloc, &SH[di].view, &SH[di].sview);
+        SH[di].made = 1;
+    }
+    VkImageView v = SH[di].view;
     plat_mutex_unlock(&sd_lock);
     return v;
 }
@@ -165,6 +185,9 @@ void vk_exec_draw_shutdown(void) {
         vmaDestroyImage(c->vma, SD[i].image, SD[i].alloc);
     }
     memset(SD, 0, sizeof SD);
+    for (int i = 0; i < DV_COUNT; i++)
+        if (SH[i].made) vkDestroyImageView(c->device, SH[i].view, NULL), vmaDestroyImage(c->vma, SH[i].image, SH[i].alloc);
+    memset(SH, 0, sizeof SH);
     vk_exec_bind_shutdown();
     vk_exec_cb_shutdown();
     vk_usnap_shutdown();
@@ -412,6 +435,12 @@ void tex_info_full(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage, i
         view_t v;
         int hv;
         const VkTexImage *img = vk_texture_by_id_locked((int)(h & 0xfffff), &v, &hv);
+        // A shadow slot compares, which Vulkan allows only on depth formats: a colour texture there reads its depth
+        // twin (vk_tex_twin.c; the minimap's R32_SFLOAT, val-free2 21/11/2026)
+        if (img && !storage && (r->type & 0x400) && !(img->aspect & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+            const VkTexImage *tw = vk_texture_depth_twin_locked(img);
+            if (tw) img = tw;
+        }
         if (img) view = get_view(ex, img, &v, hv, r->type, storage, r->format), *image = img->image;
         if (img && !storage) vk_tmp_sampled(image, &view);   // the screen target at the output's size (vk_temporal.c)
         if (img && storage) vk_texture_storage_bound_locked(img);
@@ -427,7 +456,7 @@ void tex_info_full(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage, i
     }
     if (!view) {
         int di = dummy_index(res_view_type(r->type), ms);
-        view = storage ? storage_dummy(di, r->format) : Z.img[di].view;
+        view = storage ? storage_dummy(di, r->format) : r->type & 0x400 ? shadow_dummy(di) : Z.img[di].view;
     }
     if (!samp) samp = r->type & 0x400 ? Z.samp_shadow : Z.samp;
     *out = (VkDescriptorImageInfo){separate || storage ? VK_NULL_HANDLE : samp, view, layout};

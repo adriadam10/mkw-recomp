@@ -534,6 +534,9 @@ uint32_t vk_texture_slot_format(int id, uint64_t *addr);   // NVN format the gam
 void vk_texture_lock(void);
 void vk_texture_unlock(void);
 const VkTexImage *vk_texture_by_id_locked(int id, view_t *view, int *has_view);
+// For a shadow slot (a depth-compare sampler): the D32_SFLOAT twin of a colour texture (vk_tex_twin.c), made and filled
+// on first use; NULL when img gets none (bound as it is)
+const VkTexImage *vk_texture_depth_twin_locked(const VkTexImage *img);
 VkSampler vk_sampler_by_id_locked(int id);
 // The slot's sampler with nearest filtering and no anisotropy: a depth texture read without a compare lands on one texel
 // on the Switch although the game binds a linear sampler, and MacNativeGames samples it the same way. VK_NULL_HANDLE

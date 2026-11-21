@@ -335,6 +335,7 @@ static void upload(Tex *e) {
                         (unsigned long long)e->pub.addr, d->format, d->width, d->height);
     } else {
         vkCmdCopyBufferToImage(cb, sb, e->pub.image, VK_IMAGE_LAYOUT_GENERAL, n, rg);
+        if (e->dtwin.image) tex_twin_copy(e, cb, stg, total, rg, n);   // its depth twin (vk_tex_twin.c) from the same texels
     }
     barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, ALL_RW);
     vk_upload_end();
@@ -564,6 +565,10 @@ void make_fresh(Tex *e) {
     e->last_ch = ch;
     if (ch < 0 && e->t.mem && same_storage(e)) return;   // not tracked: the hash decides
     if (ch) upload(e);   // 1 written, -1 not tracked and rewritten: both upload again
+}
+
+void upload_again(Tex *e) {
+    if (e->pub.mirrored && !e->pub.gpu_owned) upload(e);
 }
 
 // make_fresh for draw bindings: the page check answers from this submission's write-watch snapshot (vk_memory.c
