@@ -375,10 +375,18 @@ int cfg_steam_console(void) {
 }
 
 const char *cfg_steam_video_driver(void) {
+#ifdef _WIN32
+    // The Windows build under Wine/Proton sees the Linux session's variables too (DISPLAY, WAYLAND_DISPLAY, Steam's),
+    // and SDL has no x11 driver there: "SDL video init failed (x11 not available)", no window and no Vulkan device, for
+    // the game, the start screen and the setup's prewarm alike (SteamOS desktop, Proton 11.0, 20/11/2026). Wine's own
+    // driver puts the window on X11 or Wayland.
+    return NULL;
+#else
     const char *own = getenv("SDL_VIDEODRIVER"), *wl = getenv("WAYLAND_DISPLAY"), *x = getenv("DISPLAY"),
                *gs = getenv("GAMESCOPE_WAYLAND_DISPLAY"), *off = cfg_get("MKW_STEAM_X11");
     if ((own && *own) || (gs && *gs) || (off && !strcmp(off, "0")) || !cfg_steam_started()) return NULL;
     return wl && *wl && x && *x ? "x11" : NULL;
+#endif
 }
 
 const char *cfg_get(const char *name) {
