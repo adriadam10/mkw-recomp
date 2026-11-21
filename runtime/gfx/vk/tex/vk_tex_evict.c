@@ -163,6 +163,7 @@ void destroy_tex(Tex *e) {
     vk_defer_image(e->pub.image, e->alloc);
     if (binds) vk_mem_defer_fence(prev);
     vk_mem_defer_use(0);
+    free(e->gpu_base);
     free(e);
 }
 

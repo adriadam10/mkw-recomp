@@ -464,6 +464,52 @@ static int test_pitch(const GfxBackend *b, uint8_t *guest, int *bytes) {
     return 0;
 }
 
+// ---- pitch page part: a pitch texture smaller than a page shares that page with other data. The CPU writes a
+// neighbour on the page after the GPU render (MKW 1.8.0: a 16x1 R16F target, 128 bytes, beside data the CPU rewrites
+// every frame); the texture's own bytes still go back at the fence wait. The page's write watch alone took the
+// neighbour's write for a rewrite of the texture and dropped the render (MKW_TEX_WB_BYTES=0 fails here).
+#define PP_OFF 0x40f80   // the last 128 bytes of a page
+#define PP_NEIGH 0x40010
+
+static int test_pitch_page(const GfxBackend *b, uint8_t *guest, int *bytes) {
+    pool_t pool = {.magic = NVN_POOL_MAGIC, .flags = 0x22, .mem = guest + 0xa00000, .size = 0x100000,
+                   .game_mem = guest + 0xa00000};
+    CHECK(b->pool_init(&pool), "pool_init of a CPU-visible pool for the pitch page part");
+    uint8_t *m = pool.mem;
+    static tex_t t;
+    init_tex(&t, &pool, PP_OFF, NVN_FORMAT_R16F);
+    t.d.width = 16, t.d.height = 1, t.d.flags = NVN_TEXTURE_FLAGS_LINEAR_RENDER_TARGET;
+    nvn_tex_layout(&t.d, &t.L);
+    t.serial = 302;
+    CHECK(t.L.size <= 0x80, "pitch page texture layout: %#llx bytes", (unsigned long long)t.L.size);
+    uint16_t *src = (uint16_t *)m;
+    for (int i = 0; i < 16; i++) src[i] = (uint16_t)(0x3c00 + i * 17);
+    memset(t.mem, 0, t.L.size);
+    m[PP_NEIGH] = 1;
+
+    static _Alignas(8) uint8_t stream[512];
+    uint8_t *p = put(stream, OP_BEGIN, NULL, 0);
+    p_copy_b2t up;
+    memset(&up, 0, sizeof up);
+    up.src = (uint64_t)(uintptr_t)m, up.tex = &t, up.r = (NVNcopyRegion){0, 0, 0, 16, 1, 1};
+    p = put(p, OP_COPY_B2T, &up, sizeof up);
+    p = put(p, OP_END, NULL, 0);
+    CHECK(p <= stream + sizeof stream, "pitch page op stream overflow");
+    uint64_t handle = (uint64_t)(uintptr_t)stream;
+    uint64_t f = b->submit(&handle, 1);
+    CHECK(b->fence_wait(f, 5000000000ull), "fence_wait of the pitch page submission timed out");
+    m[PP_NEIGH] = 2;   // after the render was recorded: the neighbour, not the texture
+    b->cpu_synced(f);
+    int ok = !memcmp(t.mem, src, 32) && m[PP_NEIGH] == 2;
+    uint16_t got = *(const uint16_t *)t.mem;
+    b->texture_release(&t);
+    b->pool_fini(&pool);
+    CHECK(ok, "the 16x1 pitch texture's storage does not hold what the GPU copied into it after a write beside it on "
+          "its page (first word %#x, expected %#x)", got, src[0]);
+    *bytes = 32;
+    return 0;
+}
+
 // A texture in a physical pool's memory that nothing wrote reads zero, as Switch pool memory starts zeroed
 // (MKW_FIX_ZERO; the driver may return zeros without it, then this is a guard).
 static int test_zero(const GfxBackend *b, uint8_t *guest, int *bytes) {
@@ -743,6 +789,8 @@ int probe_vkexec(void) {
     if (!bad) bad = test_xfer(b, guest, &xfer_bytes);
     int pitch_bytes = 0;
     if (!bad) bad = test_pitch(b, guest, &pitch_bytes);
+    int page_bytes = 0;
+    if (!bad) bad = test_pitch_page(b, guest, &page_bytes);
     int zero_bytes = 0;
     if (!bad) bad = test_zero(b, guest, &zero_bytes);
     if (!bad) bad = test_sparse_tail_zero(b);
@@ -774,6 +822,8 @@ int probe_vkexec(void) {
            XF_W, XF_H, xfer_bytes);
     printf("probe-vkexec: pitch part passed (a %dx%d RGBA16F LINEAR_RENDER_TARGET texture filled by a buffer copy holds the "
            "texels in its pool bytes after the fence wait, %d bytes compared)\n", PT_W, PT_H, pitch_bytes);
+    printf("probe-vkexec: pitch page part passed (a 16x1 R16F pitch texture in the last 128 bytes of a page holds the GPU's "
+           "texels after a CPU write beside it on that page, %d bytes compared)\n", page_bytes);
     printf("probe-vkexec: nvnx part passed (ClearBuffer then ReportValue in GPU order, a CPU-invisible pool fill copied out, "
            "Downsample 64x64 -> 32x32 within 1 of the 2x2 average, stencil view aspect of D24S8, %d bytes compared)\n",
            nvnx_bytes);

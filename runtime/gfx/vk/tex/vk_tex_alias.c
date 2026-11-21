@@ -43,8 +43,7 @@ static int alias_compatible(const Tex *e, const Tex *src) {
 static int alias_has_gpu_content(const Tex *src) {
     if (!src->pub.gpu_owned) return 0;
     if (!src->pub.mirrored) return 1;
-    uint32_t now;
-    return src->gpu_dirty && !storage_rewritten(src, src->gpu_gen, &now);
+    return src->gpu_dirty && !rewritten_since_gpu(src);
 }
 
 // Maxwell reads the same bytes through both descriptors: src's content goes into the new image e at the replay's
@@ -211,6 +210,7 @@ static void gpu_written_locked(Tex *e) {
     if (!e->pub.mirrored) return;
     e->gpu_dirty = 1;
     storage_rewritten(e, 0, &e->gpu_gen);   // CPU writes up to here are older than this one
+    gpu_base_note(e);
     e->gpu_seq = ++gpu_writes;
     e->gpu_fence = f;
     if (wb_at_fence(&e->t.d, e->t.L.size)) __atomic_store_n(&small_pending, 1, __ATOMIC_RELEASE);

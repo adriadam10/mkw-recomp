@@ -441,8 +441,7 @@ void vk_texture_write_back(uint64_t addr, uint64_t size) {
     if (!hit) rt_fatal("vk: out of memory for a texture write-back");
     int n = owned_dirty(addr, size, hit), k = 0;   // owned[] cannot change while tex_lock is held
     for (int i = 0; i < n; i++) {
-        uint32_t now;
-        if (storage_rewritten(hit[i], hit[i]->gpu_gen, &now) == 1) hit[i]->gpu_dirty = 0;
+        if (rewritten_since_gpu(hit[i])) hit[i]->gpu_dirty = 0;
         else hit[k++] = hit[i];
     }
     for (int i = 1; i < k; i++)
@@ -489,8 +488,7 @@ void vk_texture_write_back_small(uint64_t fence) {
     if (later) __atomic_store_n(&small_pending, 1, __ATOMIC_RELEASE);
     int k = 0;
     for (int i = 0; i < n; i++) {
-        uint32_t now;
-        if (storage_rewritten(hit[i], hit[i]->gpu_gen, &now) == 1) hit[i]->gpu_dirty = 0;
+        if (rewritten_since_gpu(hit[i])) hit[i]->gpu_dirty = 0;
         else hit[k++] = hit[i];
     }
     for (int i = 1; i < k; i++)
