@@ -698,7 +698,22 @@ int cfg_int(const char *name) {
     return end == v || *end ? (int)default_number(name) : (int)l;
 }
 
-int cfg_bool(const char *name) { return strcmp(cfg_value(name), "0") != 0; }
+// "0", "off", "false", "no" are false and "1", "on", "true", "yes" true, in any case; another number is true as it was; a
+// word that is none of these gives the default, as cfg_int does. Only "0" was false before: MKW_DISCORD=off switched
+// Rich Presence on, MKW_LAN=off the LAN sockets and MKW_UPDATE_CHECK=off the update check, all rows of "0|1".
+int cfg_bool(const char *name) {
+    static const char *const no[] = {"0", "off", "false", "no"}, *const yes[] = {"1", "on", "true", "yes"};
+    const char *v = cfg_value(name);
+    for (size_t i = 0; i < sizeof no / sizeof *no; i++)
+        if (!strcasecmp(v, no[i])) return 0;
+    for (size_t i = 0; i < sizeof yes / sizeof *yes; i++)
+        if (!strcasecmp(v, yes[i])) return 1;
+    char *end;
+    long l = strtol(v, &end, 10);
+    if (end != v && !*end) return l != 0;
+    const CfgMeta *m = cfg_meta(name);
+    return m ? strcmp(m->def, "0") != 0 : 1;   // a row without a default (K) keeps the old reading: true
+}
 
 // ---- cfg_save: the file as lines, each with its line ending
 typedef struct { const char *s; size_t n; } Line;   // n includes the '\n' (and '\r') when present

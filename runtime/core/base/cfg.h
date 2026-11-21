@@ -74,7 +74,8 @@ const CfgMeta *cfg_meta_at(int i);
 // consumer reads cfg_get and keeps its own "unset" branch. An empty value counts as unset.
 const char *cfg_value(const char *name);
 // cfg_value parsed. A set value that does not parse (int: whole string; double: strtod) gives the default's number.
-// cfg_bool: "0" is false, anything else true.
+// cfg_bool: "0", "off", "false" and "no" are false, "1", "on", "true", "yes" and any other number true (any case); a
+// word that is none of these gives the row's default (true for a row without one).
 int cfg_int(const char *name);
 double cfg_double(const char *name);
 int cfg_bool(const char *name);
