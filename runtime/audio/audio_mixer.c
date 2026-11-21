@@ -87,6 +87,7 @@ static float background_gain(void) {
         seen = ver;
         on = cfg_int("MKW_BACKGROUND_MUTE") != 0;
     }
+    if (gfx_window_focus_held()) return 0.0f;   // a plugin's overlay covers the game (MkwPluginApi.focus_set)
     return on && !gfx_window_focused() ? 0.0f : 1.0f;
 }
 static unsigned audio_revision(const AudioRenderer *r) { unsigned byte = r->revision >> 24; return byte >= '0' ? byte - '0' : 0; }

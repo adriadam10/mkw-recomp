@@ -65,6 +65,18 @@ void gfx_window_focus_changed(int in) {
     plat_inc32(&g_focus_msgs);
 }
 
+// A plugin's overlay covers the game (MkwPluginApi.focus_set(0, ..)), as the console's HOME menu does: the game hears
+// out of focus until the hold ends and is suspended if it lets the console do that (ov_system.c oe_hold_focus), and
+// the output is silent meanwhile (audio_mixer.c), with any MKW_BACKGROUND_MUTE.
+static volatile int32_t g_focus_hold;
+int gfx_window_focus_hold(int out, int suspend) {
+    out = out != 0;
+    if (plat_xchg32(&g_focus_hold, out) != out)
+        rt_log("gfx: a plugin %s", out ? "holds the game out of focus" : "gives the focus back to the window");
+    return oe_hold_focus(out, suspend);
+}
+int gfx_window_focus_held(void) { return g_focus_hold; }
+
 // The window was closed: the process ends with it, as in MNG, once a save Commit still running in the background is
 // done.
 void gfx_window_closed(void) {
@@ -779,11 +791,11 @@ void vk_present_screen_shot(const char *path) {
     __atomic_store_n(&g_screen_on, 1, __ATOMIC_RELEASE);
 }
 
-// The captured swapchain image as a PNG (the menu's test hook), RGBA with opaque alpha.
-static void save_capture(const char *path) {
+// The captured swapchain image as RGBA with opaque alpha (sRGB also on an HDR display); the caller frees it.
+static uint8_t *capture_rgba(void) {
     size_t n = (size_t)g_cap_w * (size_t)g_cap_h * 4;
     uint8_t *px = malloc(n);
-    if (!px) return;
+    if (!px) return NULL;
     int bgra = g_sc_fmt == VK_FORMAT_B8G8R8A8_UNORM || g_sc_fmt == VK_FORMAT_B8G8R8A8_SRGB;
     if (g_sc_hdr) gfx_hdr_to_srgb8(g_cap_ptr, px, n / 4, g_sc_fmt == VK_FORMAT_A2R10G10B10_UNORM_PACK32);
     else for (size_t i = 0; i < n; i += 4) {
@@ -792,6 +804,13 @@ static void save_capture(const char *path) {
         px[i + 2] = g_cap_ptr[i + (bgra ? 0 : 2)];
         px[i + 3] = 255;
     }
+    return px;
+}
+
+// The captured swapchain image as a PNG (the menu's test hook).
+static void save_capture(const char *path) {
+    uint8_t *px = capture_rgba();
+    if (!px) return;
     rt_write_png(path, px, (uint32_t)g_cap_w, (uint32_t)g_cap_h);
     free(px);
     // MKW_SCREEN_RAW=1: the swapchain's own words too (<path>.raw, 32 bits a pixel; HDR10 PQ when in HDR), to measure
@@ -799,7 +818,7 @@ static void save_capture(const char *path) {
     if (g_sc_hdr && cfg_get("MKW_SCREEN_RAW") && *cfg_get("MKW_SCREEN_RAW") == '1') {
         char raw[600];
         snprintf(raw, sizeof raw, "%s.raw", path);
-        plat_file_write(raw, g_cap_ptr, n);
+        plat_file_write(raw, g_cap_ptr, (size_t)g_cap_w * (size_t)g_cap_h * 4);
     }
     rt_log("gfx: swapchain shot %s (%dx%d)", path, g_cap_w, g_cap_h);
 }
@@ -895,7 +914,8 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
     int overlay = src && g_sc_view[idx] &&
                   menu_overlay_frame(__atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED), &mt, &menu_shot);
     if (!menu_shot && __atomic_exchange_n(&g_screen_on, 0, __ATOMIC_ACQ_REL)) menu_shot = g_screen_path;
-    int cap = src && (g_capture || menu_shot) && ensure_capture_buffer();
+    int plugin_shot = plugins_frame_wanted();   // MkwPluginApi.frame_capture: this frame, as the player sees it
+    int cap = src && (g_capture || menu_shot || plugin_shot) && ensure_capture_buffer();
     int thumb = src && g_th_n && ensure_thumbs();
 
     VkCommandBuffer cb = g_cb[slot];
@@ -1027,6 +1047,11 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
         g_cap_h = (int)g_sc_ext.height;
         g_cap_valid = 1;
         if (menu_shot) save_capture(menu_shot);
+        if (plugin_shot) {
+            uint8_t *px = capture_rgba();
+            if (px) plugins_frame_captured(px, g_cap_w, g_cap_h);
+            free(px);
+        }
     }
 out:
     plat_rmutex_unlock(&g_pl);

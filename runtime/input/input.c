@@ -22,6 +22,7 @@
 #include "input_wsys.h"
 #include "switch2.h"
 #include "nvn_api.h"
+#include "plugin.h"
 #include "ui/menu/menu.h"
 #include "vk.h"
 #include "platform/platform.h"
@@ -410,6 +411,8 @@ static void poll_merged(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx
     static int combo_held;
     int32_t st[4] = {sl[0], sl[1], sr[0], sr[1]};
     int guide = state == 1 && pad && SDL_GamepadConnected(pad) && SDL_GetGamepadButton(pad, SDL_GAMEPAD_BUTTON_GUIDE);
+    // A plugin's filter first (MkwPluginApi.input_filter): what it takes reaches neither the shortcut below nor the game
+    plugins_input_filter(0, &b, st, &guide);
     int toggle = input_menu_gate(&combo_held, menu_is_open(), &b, st, guide);
     static int overlay_held;   // L3+R3 step the performance overlay (F10)
     int overlay = input_overlay_gate(&overlay_held, &b);
@@ -491,6 +494,9 @@ void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, 
     }
     plat_mutex_unlock(&lock);
     script_apply(&b, sl, sr, player);
+    int32_t st[4] = {sl[0], sl[1], sr[0], sr[1]};
+    plugins_input_filter(player, &b, st, NULL);
+    sl[0] = st[0], sl[1] = st[1], sr[0] = st[2], sr[1] = st[3];
     stick_bits(&b, sl[0], sl[1], B_SL_LEFT);
     stick_bits(&b, sr[0], sr[1], B_SR_LEFT);
     if (g_block || g_menu) b = 0, sl[0] = sl[1] = sr[0] = sr[1] = 0;

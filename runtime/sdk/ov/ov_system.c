@@ -180,10 +180,12 @@ static void ov_performance_mode(Cpu *c) { ret_x(c, ov_handheld() ? 0 : 1); }
 
 // void SetFocusHandlingMode(FocusHandlingMode mode): the nnMain checkpoint of --boot
 static volatile int32_t focus_mode;
+static void hold_apply(void);
 static void ov_focus_mode(Cpu *c) {
     int64_t mode = (int32_t)arg_x(c, 0);
     if (mode < 0 || mode > 3) rt_fatal("nn::oe::SetFocusHandlingMode: unknown mode %lld", (long long)mode);
     plat_xchg32(&focus_mode, (int32_t)mode);
+    hold_apply();   // a plugin's hold suspends the game or not by this mode
     if (rt_config()->boot) {
         rt_boot_event("checkpoint", c, "SetFocusHandlingMode");
     } else {
@@ -199,7 +201,27 @@ static void ov_focus_mode(Cpu *c) {
 // FinishStartupLogo; MKW handles one with a manager it makes later (main+0x26380c4 reads main+0x33e54b0, null
 // then): a window that lost the focus during the boot ended the run reading 0xd8 (issues #83 #89 #92, 11/11/2026).
 // Until the logo is done the game sees 1 and no message; the change waiting is told at FinishStartupLogo.
-static volatile int32_t focus_state = 1, focus_window = 1, logo_done;
+// A plugin's overlay over the game (MkwPluginApi.focus_set, oe_hold_focus) is the console's HOME menu to the game:
+// out of focus while it is held, whatever the window says and also with MKW_ASSUME_FOCUS, which is about the window.
+// The console also suspends the application then, unless the game asked to be only notified (FocusHandlingMode 1,
+// Notify; 0, 2 and 3 suspend). MKW sets the mode itself, frame by frame: 2 (SuspendAndNotify) normally, 1 while it
+// uses the network (1.8.0 main+0x36ac10 with the predicate main+0x36adb0), so a race against the computer stops
+// behind HOME and an online one runs on. A hold that allows it does the same with freeze.c: the game thread waits in
+// its present, by the mode the game has at that moment and at each change of it.
+static volatile int32_t focus_state = 1, focus_window = 1, focus_hold, logo_done;   // focus_hold: 1 held, 2 and may suspend
+static volatile int32_t hold_suspended;
+static PlatMutex hold_lock = PLAT_MUTEX_INIT;
+static void hold_apply(void) {
+    if (!focus_hold && !hold_suspended) return;   // the common case, each SetFocusHandlingMode of the game
+    plat_mutex_lock(&hold_lock);
+    int want = focus_hold == 2 && focus_mode != 1 && __atomic_load_n(&logo_done, __ATOMIC_ACQUIRE);
+    if (plat_xchg32(&hold_suspended, want) != want) {
+        rt_log("oe: the game is %s (a plugin's hold; focus handling mode %d)", want ? "suspended" : "resumed",
+               (int)focus_mode);
+        freeze_set(want, 0);
+    }
+    plat_mutex_unlock(&hold_lock);
+}
 static int assume_focus(void) {
     static volatile int32_t v = -1;
     int32_t a = v;
@@ -212,9 +234,24 @@ static int assume_focus(void) {
 }
 void oe_set_focus(int in_focus) {
     plat_xchg32(&focus_window, in_focus || assume_focus() ? 1 : 2);
-    if (!__atomic_load_n(&logo_done, __ATOMIC_ACQUIRE)) return;
+    if (!__atomic_load_n(&logo_done, __ATOMIC_ACQUIRE) || focus_hold) return;   // held: told when the hold ends
     plat_xchg32(&focus_state, focus_window);
     oe_push_message(OE_MSG_FOCUS_STATE_CHANGED);
+}
+// out 1: the game is out of focus until out 0, then what the window says again; the message goes only with a change.
+// suspend 1: and suspended meanwhile when its focus handling mode says so (hold_apply). 1 when it is suspended now.
+int oe_hold_focus(int out, int suspend) {
+    int32_t hold = out ? (suspend ? 2 : 1) : 0;
+    int32_t was = plat_xchg32(&focus_hold, hold);
+    if ((was != 0) != (hold != 0) && __atomic_load_n(&logo_done, __ATOMIC_ACQUIRE)) {
+        int32_t want = hold ? 2 : focus_window;
+        if (plat_xchg32(&focus_state, want) != want) oe_push_message(OE_MSG_FOCUS_STATE_CHANGED);
+    }
+    hold_apply();
+    if (!was && hold && !hold_suspended)
+        rt_log("oe: the game runs on out of focus (a plugin's hold; focus handling mode %d%s)", (int)focus_mode,
+               hold == 2 ? focus_mode == 1 ? ": notified only" : "" : ", no suspension asked");
+    return hold_suspended;
 }
 static void ov_focus_state(Cpu *c) { ret_x(c, (uint64_t)focus_state); }
 
@@ -255,7 +292,11 @@ static void ov_finish_logo(Cpu *c) {
     (void)c;
     rt_log("oe: the game finished its startup logo");
     plat_xchg32(&logo_done, 1);
-    if (focus_window != 1) oe_set_focus(0);   // the focus lost meanwhile, told now
+    if (focus_hold) {   // a plugin's hold from before the logo's end, told now
+        plat_xchg32(&focus_state, 2);
+        oe_push_message(OE_MSG_FOCUS_STATE_CHANGED);
+        hold_apply();
+    } else if (focus_window != 1) oe_set_focus(0);   // the focus lost meanwhile, told now
 }
 
 

@@ -1,4 +1,5 @@
-// mkw-recomp native plugin API, version 2 (version 1 plus a mod's settings and its options page). The one header a plugin includes; it links against nothing of mkw-recomp.
+// mkw-recomp native plugin API, version 4 (version 1; a mod's settings and its options page in 2; images in 3; the pad
+// filter, the menu and the shown picture in 4). The one header a plugin includes; it links against nothing of mkw-recomp.
 //
 // A plugin is a shared library (.so on Linux, .dll on Windows) in mods/<mod>/plugin/ of the game folder. The runtime
 // loads it at start when the player has the mod enabled (the Mods page, or `--mod <name>` / MKW_MODS), before the game
@@ -23,7 +24,7 @@
 extern "C" {
 #endif
 
-#define MKW_PLUGIN_API_VERSION 3
+#define MKW_PLUGIN_API_VERSION 4
 
 // The start of the runtime's guest CPU state; ABI-stable for every API version (the runtime checks it at build time).
 // Arguments in x[0..7], the result in x[0], the return address in x[30].
@@ -54,6 +55,22 @@ typedef struct MkwOverlay {
 typedef void (*MkwOverlayFn)(const MkwOverlay *o, void *user);
 
 struct MkwPage;   // a mod's page (below): MkwPluginApi.settings_tab draws one
+
+// A player's pad as the game is about to read it (input_filter, version 4): the buttons after the layout, the
+// remapping and the keyboard's share, so what a remapper outside the game (Steam Input) made of the pad.
+enum {   // MkwPad.buttons bits
+    MKW_PAD_A, MKW_PAD_B, MKW_PAD_X, MKW_PAD_Y, MKW_PAD_STICK_L, MKW_PAD_STICK_R, MKW_PAD_L, MKW_PAD_R, MKW_PAD_ZL,
+    MKW_PAD_ZR, MKW_PAD_PLUS, MKW_PAD_MINUS, MKW_PAD_LEFT, MKW_PAD_UP, MKW_PAD_RIGHT, MKW_PAD_DOWN,
+};
+typedef struct MkwPad {
+    uint32_t size;           // sizeof(MkwPad) of the runtime
+    int player;              // 0: player 1 (with the keyboard), 1-7: the others
+    uint64_t buttons;        // 1 << MKW_PAD_*
+    int32_t lx, ly, rx, ry;  // the sticks, -32767..32767, up and right positive
+    int guide;               // the Guide (Xbox, PS, Home) button held; player 1 only
+} MkwPad;
+typedef void (*MkwPadFn)(MkwPad *pad, void *user);
+typedef void (*MkwFrameFn)(const uint8_t *rgba, int width, int height, int row_bytes, void *user);
 
 typedef struct MkwPluginApi {
     uint32_t size;      // sizeof(MkwPluginApi) of the runtime: a field is there when its offset is below size
@@ -141,6 +158,35 @@ typedef struct MkwPluginApi {
     // only an image the game is not showing (triple buffer as the game's own native images do, with their syncs).
     // 1 done, 0 not one of native_image_create's handles.
     int (*native_image_touch)(uint32_t handle);
+
+    // ---- version 4: the pad before the game reads it, the menu and the shown picture (an overlay of the plugin's own)
+    // filter(pad, user) runs at every read of a player's input, on the thread that reads it (the game's, several times
+    // a frame), before the runtime's own menu shortcut and before the game: what it clears or sets is what both get,
+    // so a button the plugin takes opens nothing else, and a pad it empties is an idle pad for the game. It does not
+    // wait and runs no guest code. One filter per plugin, in load order. Only from mkw_plugin_init; 1 done, 0 refused.
+    int (*input_filter)(MkwPadFn filter, void *user);
+    // Opens (1) or closes (0) the runtime's in-game menu, as F1 does. Any thread.
+    void (*menu_open)(int open);
+    // The next shown frame as the player sees it (the game's picture with the menu, notices and overlays; sRGB also on
+    // an HDR display), scaled down to fit max_w x max_h (not up), RGBA8 with opaque alpha: cb(rgba, width, height,
+    // row_bytes, user) on the present thread, once; the pixels are the runtime's and gone when cb returns. cb does not
+    // wait. No frame is shown while the window is minimised: then cb is not called. A newer request replaces one not
+    // answered yet. 1 asked, 0 refused (a size outside 16..4096).
+    int (*frame_capture)(int max_w, int max_h, MkwFrameFn cb, void *user);
+
+    // ---- version 4, continued: the plugin's overlay covers the game as a console's HOME menu does
+    // in_focus 0: the game is told it is out of focus (nn::oe::GetCurrentFocusState 2 and the FocusStateChanged
+    // message), whatever the window says and also with MKW_ASSUME_FOCUS, and the game's sound is silent. With suspend
+    // 1 the game is also suspended as the console suspends an application behind HOME, when the game lets it: by its
+    // own nn::oe::SetFocusHandlingMode at that moment and at each change of it (MKW: suspended, except while it uses
+    // the network; then it is only notified and runs on). Suspended, the game thread waits in its present: the
+    // picture stays, the game's clock (it counts frames) stands still, no input is read, so the plugin's pad filter
+    // is not called; loading and audio threads go on. in_focus 1: what the window says again, and the game runs.
+    // Returns 1 when the game is suspended now, else 0. Any thread.
+    int (*focus_set)(int in_focus, int suspend);
+    // Ends the game as the menu's Quit and the window's close button do: the plugins' on_exit, the saves finished,
+    // the pipeline cache written, then the process ends. Returns at once; also while suspended. Any thread.
+    void (*quit)(void);
 } MkwPluginApi;
 
 // Exported by the plugin. api_version is the runtime's (api->version); size tells which fields exist. Return 0 to stay

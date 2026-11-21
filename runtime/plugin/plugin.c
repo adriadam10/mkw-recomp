@@ -4,12 +4,14 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <SDL3/SDL.h>
 
 #include "cfg.h"
 #include "dispatch.h"
+#include "gfx.h"
 #include "host.h"
 #include "mkw_plugin.h"
 #include "mod_page_ui.h"
@@ -207,6 +209,91 @@ static int (*const setting_set_slot[MAX_PLUGINS])(const char *, const char *) = 
 _Static_assert(MAX_PLUGINS == 32, "one setting_get / setting_set pair per plugin slot");
 
 
+// ---- version 4: the pad before the game reads it, the menu, the shown picture
+static struct { MkwPadFn fn; void *user; } filters[MAX_PLUGINS];
+static int nfilters;
+
+static int api_input_filter(MkwPadFn fn, void *user) {
+    if (!in_init || !fn || nfilters == MAX_PLUGINS) {
+        rt_log("plugin: input_filter refused: only from mkw_plugin_init, with a function");
+        return 0;
+    }
+    filters[nfilters].fn = fn;
+    filters[nfilters++].user = user;
+    return 1;
+}
+
+// input.c, under its lock: the filters see the 16 buttons (the stick directions are made after them).
+void plugins_input_filter(int player, uint64_t *buttons, int32_t sticks[4], int *guide) {
+    if (!nfilters) return;
+    MkwPad p = {.size = sizeof p, .player = player, .buttons = *buttons & 0xffff, .lx = sticks[0], .ly = sticks[1],
+                .rx = sticks[2], .ry = sticks[3], .guide = guide ? *guide : 0};
+    for (int i = 0; i < nfilters; i++) filters[i].fn(&p, filters[i].user);
+    *buttons = (*buttons & ~0xffffull) | (p.buttons & 0xffff);
+    sticks[0] = p.lx, sticks[1] = p.ly, sticks[2] = p.rx, sticks[3] = p.ry;
+    if (guide) *guide = p.guide != 0;
+}
+
+static void api_menu_open(int open) {
+    if ((menu_is_open() != 0) != (open != 0)) menu_toggle();
+}
+
+static struct { MkwFrameFn cb; void *user; int max_w, max_h; } frame_req;
+static volatile int32_t frame_state;   // 0 none, 1 being asked, 2 asked, 3 being answered
+
+static int api_frame_capture(int max_w, int max_h, MkwFrameFn cb, void *user) {
+    if (!cb || max_w < 16 || max_h < 16 || max_w > 4096 || max_h > 4096 ||
+        (plat_cas32(&frame_state, 1, 0) != 0 && plat_cas32(&frame_state, 1, 2) != 2)) {
+        rt_log("plugin: frame_capture refused: a function, a size of 16..4096, not while one is being answered");
+        return 0;
+    }
+    frame_req.cb = cb, frame_req.user = user, frame_req.max_w = max_w, frame_req.max_h = max_h;
+    plat_xchg32(&frame_state, 2);
+    return 1;
+}
+
+int plugins_frame_wanted(void) { return frame_state == 2; }
+
+// gfx_present.c, after the present that copied its image: box-filtered down to fit the request, never up.
+void plugins_frame_captured(const uint8_t *rgba, int w, int h) {
+    if (w <= 0 || h <= 0 || plat_cas32(&frame_state, 3, 2) != 2) return;
+    int ow = w, oh = h;
+    if ((int64_t)ow * frame_req.max_h > (int64_t)oh * frame_req.max_w) {   // the width binds
+        if (ow > frame_req.max_w) oh = (int)((int64_t)h * frame_req.max_w / w), ow = frame_req.max_w;
+    } else if (oh > frame_req.max_h) {
+        ow = (int)((int64_t)w * frame_req.max_h / h), oh = frame_req.max_h;
+    }
+    if (ow < 1) ow = 1;
+    if (oh < 1) oh = 1;
+    uint8_t *out = ow == w && oh == h ? NULL : malloc(4ull * (size_t)ow * (size_t)oh);
+    if (out)
+        for (int y = 0; y < oh; y++)
+            for (int x = 0; x < ow; x++) {
+                int x0 = (int)((int64_t)x * w / ow), x1 = (int)((int64_t)(x + 1) * w / ow);
+                int y0 = (int)((int64_t)y * h / oh), y1 = (int)((int64_t)(y + 1) * h / oh);
+                if (x1 <= x0) x1 = x0 + 1;
+                if (y1 <= y0) y1 = y0 + 1;
+                uint32_t sum[3] = {0}, k = 0;
+                for (int sy = y0; sy < y1; sy++)
+                    for (int sx = x0; sx < x1; sx++, k++)
+                        for (int c = 0; c < 3; c++) sum[c] += rgba[4ull * ((size_t)sy * (size_t)w + (size_t)sx) + (size_t)c];
+                uint8_t *o = out + 4ull * ((size_t)y * (size_t)ow + (size_t)x);
+                o[0] = (uint8_t)(sum[0] / k), o[1] = (uint8_t)(sum[1] / k), o[2] = (uint8_t)(sum[2] / k), o[3] = 255;
+            }
+    if (out) frame_req.cb(out, ow, oh, ow * 4, frame_req.user);
+    else if (ow == w && oh == h) frame_req.cb(rgba, w, h, w * 4, frame_req.user);
+    free(out);
+    plat_xchg32(&frame_state, 0);
+}
+
+// ---- version 4, continued: the plugin's overlay covers the game (focus, with the console's suspension), the game's end
+static int api_focus_set(int in_focus, int suspend) { return gfx_window_focus_hold(!in_focus, suspend); }
+
+static void api_quit(void) {
+    rt_log("plugin: the game's end asked (MkwPluginApi.quit)");
+    gfx_window_request_close();
+}
+
 // gfx/nvn/procs/nvn2.c: images a plugin fills (version 3)
 uint32_t nvn2_native_image_create(int w, int h, void **pixels, int *row_bytes);
 int nvn2_native_image_touch(uint32_t handle);
@@ -235,6 +322,11 @@ static const MkwPluginApi api_template = {
     .settings_tab = api_settings_tab,
     .native_image_create = nvn2_native_image_create,
     .native_image_touch = nvn2_native_image_touch,
+    .input_filter = api_input_filter,
+    .menu_open = api_menu_open,
+    .frame_capture = api_frame_capture,
+    .focus_set = api_focus_set,
+    .quit = api_quit,
 };
 
 // A plugin that declines or fails to load is told to the player too: the mod they enabled does nothing this run.

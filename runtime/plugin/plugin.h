@@ -22,6 +22,12 @@ void plugin_overlay_show(MkwOverlayFn fn, int on);
 int plugins_overlay_wanted(void);                       // one is on: the overlay lays out a frame
 void plugins_overlay_draw(float width, float height, float scale);   // in the current ImGui frame
 
+// Version 4 (plugin.c): the plugins' pad filters, run by input/input.c at each read of a player's input (sticks: left
+// x, y, right x, y; guide NULL for players 2-8), and the shown picture a plugin asked for (gfx_present.c).
+void plugins_input_filter(int player, uint64_t *buttons, int32_t sticks[4], int *guide);
+int plugins_frame_wanted(void);                                    // this present copies its swapchain image
+void plugins_frame_captured(const uint8_t *rgba, int w, int h);    // RGBA8, tight rows; the present thread
+
 #ifdef __cplusplus
 }
 #endif
