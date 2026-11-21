@@ -13,6 +13,9 @@
 // physical page share their texels, as on the console (the game maps a whole layer to one page as a stand-in). ASTC is
 // decoded (BC7 or RGBA8): one ASTC 8x8 page of 512x512 texels is 4 BC7 blocks or 16 RGBA8 blocks, each a slot of its
 // own. Slots come zeroed from 16 MiB blocks and are freed once no binding names them and the GPU is past the unbind.
+// The private mip tail's memory is handed to the caller by vk_sparse_destroy and freed behind the image's own fence,
+// after the image (destroy_tex): freed at the next submission, it could go while the image's opaque mip-tail bind still
+// named it, and the next vkDestroyImage walked the freed VkDeviceMemory.
 //
 // Changed blocks are listed per image and bound by the next graphics-queue submission (vk_sparse_order from
 // vk_sync.c and vk_upload_flush): vkQueueBindSparse waits for every earlier submission, parts of the frame being
@@ -78,7 +81,7 @@ typedef struct SparseImg {
     // the game maps, so they never got memory and read as zero, copies into them dropped. They get memory of their
     // own instead (tail_*: one allocation, bound once): the race's bushes and cacti sample those levels of the terrain
     // arrays and came out black (m8, m10: still black with every tile resident).
-    VmaAllocation tail_alloc;
+    VmaAllocation tail_alloc;         // handed to vk_sparse_destroy's caller, freed after the image
     VkDeviceSize va_size;   // the image's memory requirements' size: the address space it reserves
     VkDeviceMemory tail_mem;
     VkDeviceSize tail_base;
@@ -113,8 +116,53 @@ static uint64_t order_val, bind_val;
 static int binary_pending;        // MKW_SPARSE_ORDER=0: a bind signalled bind_sem for the submission being made   // last value handed out; value of the last bind (0: none yet)
 static uint64_t sparse_va;   // address space the live sparse images reserve (their memory requirements' size)
 static int64_t n_slots, n_failed, n_binds, n_images, n_blocks, n_over, n_written, n_tail_writes, n_host_blocks;
-static VmaAllocation *dying_tails;   // tail memory of destroyed images: freed behind the next submission
-static int ndying_tails, cdying_tails, ntail_pending;
+static int ntail_pending;
+
+// A large sparse image whose address space does not fit: the shape and the live sparse VA at the failure. RADV's
+// sparseAddressSpaceSize (128 GiB here) is not the real limit: the GFX8 PRT range ran out at ~56 GiB (the 5th
+// 8192x8192x68 array at 57,342 MiB failed, five standalone ones at 54,615 MiB went through), and the game retries the
+// same failed shape every frame. Remembering it skips the failed vkCreateImage (and the 21 GiB vk_mem_relieve that
+// trimmed textures and waited for the GPU, then failed too) until a sparse image is destroyed and the VA drops.
+typedef struct { VkFormat fmt; uint32_t w, h, layers, levels; uint64_t size, live; } SparseFail;
+#define SPARSE_FAILS 16
+static SparseFail s_fails[SPARSE_FAILS];
+static int ns_fails;
+
+static int fail_match(const SparseFail *f, const VkImageCreateInfo *ci, uint64_t size) {
+    return f->fmt == ci->format && f->w == ci->extent.width && f->h == ci->extent.height &&
+           f->layers == ci->arrayLayers && f->levels == ci->mipLevels && f->size == size;
+}
+
+// 1 when this shape failed before and the live sparse VA has not dropped since.
+static int fail_known(const VkImageCreateInfo *ci, uint64_t size) {
+    int hit = 0;
+    plat_mutex_lock(&sp_lock);
+    for (int i = 0; i < ns_fails; i++) {
+        if (!fail_match(&s_fails[i], ci, size)) continue;
+        if (sparse_va < s_fails[i].live) {   // a sparse image went: the shape may fit now
+            s_fails[i] = s_fails[--ns_fails];
+            continue;
+        }
+        hit = 1;
+        break;
+    }
+    plat_mutex_unlock(&sp_lock);
+    return hit;
+}
+
+static void fail_add(const VkImageCreateInfo *ci, uint64_t size) {
+    plat_mutex_lock(&sp_lock);
+    for (int i = 0; i < ns_fails; i++)
+        if (fail_match(&s_fails[i], ci, size)) {
+            s_fails[i].live = sparse_va;
+            plat_mutex_unlock(&sp_lock);
+            return;
+        }
+    if (ns_fails < SPARSE_FAILS)
+        s_fails[ns_fails++] = (SparseFail){ci->format,      ci->extent.width, ci->extent.height,
+                                           ci->arrayLayers, ci->mipLevels,     size, sparse_va};
+    plat_mutex_unlock(&sp_lock);
+}
 
 static void grow(void **arr, int *cap, size_t elem) {
     *cap = *cap ? *cap * 2 : 256;
@@ -501,7 +549,9 @@ static void tail_binds(const SparseImg *s, VkSparseImageMemoryBindInfo *ib, VkSp
     *ob = (VkSparseImageOpaqueMemoryBindInfo){.image = s->img, .bindCount = nt, .pBinds = mb};
 }
 
-static void tail_free(void *arg) { vmaFreeMemory(vk_ctx()->vma, arg); }
+// The private mip tail of a destroyed sparse image: deferred with the image and freed after it (destroy_tex), so the
+// VkDeviceMemory outlives every bind that names it.
+void vk_sparse_tail_free(void *arg) { vmaFreeMemory(vk_ctx()->vma, arg); }
 
 static int order_on(void);
 
@@ -571,11 +621,13 @@ void vk_sparse_granularity_texels(VkFormat f, uint32_t *gw, uint32_t *gh) {
 }
 
 int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_t addr, uint64_t size, VkImage *out,
-                     VkSparseTail *tail) {
+                     VkSparseTail *tail, uint32_t *levels, uint32_t *layers) {
     VkCtx *c = vk_ctx();
-    static volatile int32_t nwarn;
+    static volatile int32_t nwarn, n_base;
     *out = VK_NULL_HANDLE;
     *tail = (VkSparseTail){0};
+    if (levels) *levels = ci0->mipLevels;
+    if (layers) *layers = ci0->arrayLayers;
     if (!on() || !(d->flags & NVN_TEXTURE_FLAGS_SPARSE) || !nvn_gpu_only(addr) || ci0->imageType != VK_IMAGE_TYPE_2D ||
         ci0->samples != VK_SAMPLE_COUNT_1_BIT || !(ci0->usage & VK_IMAGE_USAGE_SAMPLED_BIT))
         return 0;
@@ -595,12 +647,13 @@ int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_
         if (plat_inc32(&nwarn) <= 8) rt_log("vk: sparse: VkFormat %d usage %#x has no standard sparse blocks", (int)ci.format, ci.usage);
         return 0;
     }
+    if (size >= (64ull << 20) && ci.mipLevels > 1 && fail_known(&ci, size)) return -1;
     int32_t lay[4];   // levels with whole tiles, tile width, height, depth
     nvn_sparse_tile_layout(d, lay);
     SparseImg *s = calloc(1, sizeof *s);
     if (!s) rt_fatal("vk: out of memory (sparse image)");
     s->addr = addr, s->size = size, s->fmt = ci.format, s->aspect = fp[0].aspectMask;
-    s->w = ci.extent.width, s->h = ci.extent.height, s->layers = ci.arrayLayers;
+    s->w = ci.extent.width, s->h = ci.extent.height;
     s->ntw = (uint32_t)lay[1], s->nth = (uint32_t)lay[2];
     s->gw = fp[0].imageGranularity.width, s->gh = fp[0].imageGranularity.height;
     vk_sparse_granularity_texels(ci.format, &s->gw, &s->gh);
@@ -611,26 +664,52 @@ int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_
         free(s);
         return 0;
     }
-    VkResult cr = vkCreateImage(c->device, &ci, NULL, &s->img);
+    VkImageCreateInfo image_ci = ci;
+    uint32_t image_levels = ci.mipLevels, image_layers = ci.arrayLayers;
+    int reduced = 0;
+    VkResult cr = vkCreateImage(c->device, &image_ci, NULL, &s->img);
+    if (cr != VK_SUCCESS && image_ci.mipLevels > 1) {
+        // The legacy AddrLib (Lib::PostComputeMipLevel, addrlib1.cpp) pads the array layers of every mipmapped image to
+        // the next power of two: 68 layers are charged as 128, so this 5,802 MiB NVN array reserves 10,923 MiB of sparse
+        // address space. When the full chain does not fit (RADV GFX8's real limit is ~56 GiB, not the 128 GiB it
+        // reports), the base level alone is not padded: 68 x 64 MiB = 4,352 MiB, the terrain's full-resolution level.
+        // All 68 layers stay (a 64-layer image left the game's layers 64-67 out of range and hung the gfx ring on the
+        // RX 580); the mips clamp to the base, and copies into them are dropped by vk_exec_xfer.c's img->levels check.
+        image_ci.mipLevels = 1;
+        image_levels = 1;
+        cr = vkCreateImage(c->device, &image_ci, NULL, &s->img);
+        if (cr == VK_SUCCESS) reduced = 1;
+    }
     if (cr != VK_SUCCESS) {
-        // The virtual range of a sparse image is reserved at creation: on RADV GFX8 (Polaris, #314) the 8192x8192x68
-        // arrays failed, likely past the device's sparse address space. Its size, ours so far and the device's say.
+        // A failed create must not be re-queried: vkGetDeviceImageMemoryRequirements creates a temporary image from the
+        // same info, and RADV's implementation (radv_GetDeviceImageMemoryRequirements) only asserts that it succeeded
+        // (compiled out in a release build) before destroying the uninitialized stack VkImage. That is the crash on
+        // RADV GFX8 (Polaris, #314): the 8192x8192x68 arrays fail to create, the query re-runs the same failing
+        // create, and vkDestroyImage then walks a stack address (vk_object_base_finish, or free() of the texture's
+        // guest address) before this line could say why. The size logged is the NVN storage; the driver's VA size is
+        // only known for an image that was made.
         if (plat_inc32(&nwarn) <= 8) {
-            VkDeviceImageMemoryRequirements q = {.sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS, .pCreateInfo = &ci};
-            VkMemoryRequirements2 r2 = {.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
-            vkGetDeviceImageMemoryRequirements(c->device, &q, &r2);
             plat_mutex_lock(&sp_lock);
             uint64_t live = sparse_va;
             plat_mutex_unlock(&sp_lock);
-            rt_log("vk: sparse: vkCreateImage failed (%d; VkFormat %d %ux%u layers %u levels %u, %llu MiB of address space; "
+            rt_log("vk: sparse: vkCreateImage failed (%d; VkFormat %d %ux%u layers %u levels %u, NVN storage %llu MiB; "
                    "%llu MiB in %lld sparse images live, device sparse address space %llu MiB)", (int)cr, (int)ci.format,
-                   s->w, s->h, ci.arrayLayers, ci.mipLevels, (unsigned long long)(r2.memoryRequirements.size >> 20),
+                   s->w, s->h, ci.arrayLayers, ci.mipLevels, (unsigned long long)(size >> 20),
                    (unsigned long long)(live >> 20), (long long)n_images,
                    (unsigned long long)(c->props.limits.sparseAddressSpaceSize >> 20));
+        }
+        if (size >= (64ull << 20) && ci.mipLevels > 1) {
+            // A non-sparse image of this size cannot fit either (10.9 GiB on an 8 GB card): the VMA fallback's
+            // vk_mem_relieve(2 x the image) trimmed textures and waited for the GPU on every retry, then failed. The
+            // game's zero stand-in is the right result; remember the shape so the retries are free until VA drops.
+            fail_add(&ci, size);
+            free(s);
+            return -1;
         }
         free(s);
         return 0;
     }
+    s->layers = image_ci.arrayLayers;
     VkMemoryRequirements mr;
     vkGetImageMemoryRequirements(c->device, s->img, &mr);
     s->va_size = mr.size;
@@ -638,7 +717,7 @@ int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_
     VkSparseImageMemoryRequirements sr;
     vkGetImageSparseMemoryRequirements(c->device, s->img, &nr, &sr);
     s->slot_size = mr.alignment, s->type_bits = mr.memoryTypeBits;
-    s->nlev = (uint32_t)lay[0] < ci.mipLevels ? (uint32_t)lay[0] : ci.mipLevels;
+    s->nlev = (uint32_t)lay[0] < image_levels ? (uint32_t)lay[0] : image_levels;
     if (nr && sr.imageMipTailFirstLod < s->nlev) s->nlev = sr.imageMipTailFirstLod;   // not seen on RADV: log below
     s->nnvn = (uint32_t)lay[0];
     for (uint32_t l = 0, page = 0, blk = 0; l < s->nnvn; l++) {
@@ -655,7 +734,7 @@ int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_
     if (!(s->bound = calloc((size_t)s->layers * s->nblk, sizeof *s->bound)) ||
         !(s->dirty = calloc((size_t)s->layers * s->nblk, 1)))
         rt_fatal("vk: out of memory (sparse table)");
-    tail_alloc(c, s, nr ? &sr : NULL, ci.mipLevels, mr.memoryTypeBits);
+    tail_alloc(c, s, nr ? &sr : NULL, image_levels, mr.memoryTypeBits);
     tail_bind_now(c, s);
     plat_mutex_lock(&sp_lock);
     s->next = images, images = s;
@@ -672,11 +751,22 @@ int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_
     plat_mutex_unlock(&sp_lock);
     if (ni <= 16 || !(ni & (ni - 1)))
         rt_log("vk: sparse image %lld: %#llx %ux%u layers %u VkFormat %d, NVN tile %ux%u (%u levels, %u pages a layer), "
-               "Vulkan block %ux%u of %llu bytes, mip tail from level %u, %llu MiB of address space; %lld slots live",
+               "image %u levels, Vulkan block %ux%u of %llu bytes, mip tail from level %u, %llu MiB of address space; "
+               "%lld slots live",
                (long long)ni,
                (unsigned long long)addr, s->w, s->h, s->layers, (int)ci.format, s->ntw, s->nth, (unsigned)lay[0],
-               s->stride, s->gw, s->gh, (unsigned long long)s->slot_size, nr ? sr.imageMipTailFirstLod : 0,
-               (unsigned long long)(s->va_size >> 20), (long long)ns);
+               s->stride, image_levels, s->gw, s->gh, (unsigned long long)s->slot_size,
+               nr ? sr.imageMipTailFirstLod : 0, (unsigned long long)(s->va_size >> 20), (long long)ns);
+    if (reduced && plat_inc32(&n_base) <= 8) {
+        plat_mutex_lock(&sp_lock);
+        uint64_t live = sparse_va - s->va_size;   // before this image
+        plat_mutex_unlock(&sp_lock);
+        rt_log("vk: sparse: %ux%u layers %u: base level only, %llu MiB, after the full %u-level image did not fit "
+               "(%llu MiB in %lld sparse images live)", s->w, s->h, s->layers, (unsigned long long)(s->va_size >> 20),
+               ci.mipLevels, (unsigned long long)(live >> 20), (long long)(n_images - 1));
+    }
+    if (levels) *levels = image_levels;
+    if (layers) *layers = image_layers;
     *out = s->img;
     if (s->tail_alloc) {
         uint32_t w = s->w >> s->nlev, h = s->h >> s->nlev;
@@ -688,8 +778,9 @@ int vk_sparse_create(const VkImageCreateInfo *ci0, const nvn_texdesc *d, uint64_
     return 1;
 }
 
-uint64_t vk_sparse_destroy(VkImage img) {
+uint64_t vk_sparse_destroy(VkImage img, VmaAllocation *tail) {
     uint64_t bind_fence = 0;
+    if (tail) *tail = NULL;
     plat_mutex_lock(&sp_lock);
     SparseImg **pp = &images;
     while (*pp && (*pp)->img != img) pp = &(*pp)->next;
@@ -701,9 +792,13 @@ uint64_t vk_sparse_destroy(VkImage img) {
             if (s->bound[i]) slot_unref(s->bound[i]);
         if (s->ndl) ndirty--;   // binds not issued yet: the image goes away first
         if (s->tail_pending) ntail_pending--;
+        // The tail's memory goes back to the caller, which defers it behind the image's own fence, after the image.
+        // Freed at the next submission instead (as before), it went while the image's opaque mip-tail bind still named
+        // it: the next vkDestroyImage walked the freed VkDeviceMemory (RADV: vk_object_base_finish on a stale handle).
         if (s->tail_alloc) {
-            if (ndying_tails == cdying_tails) grow((void **)&dying_tails, &cdying_tails, sizeof *dying_tails);
-            dying_tails[ndying_tails++] = s->tail_alloc;
+            if (!tail) rt_fatal("vk: sparse image with a private mip tail and no owner for it (vk_sparse_destroy)");
+            *tail = s->tail_alloc;
+            s->tail_alloc = NULL;
         }
         free(s->bound);
         free(s->dirty);
@@ -791,8 +886,6 @@ VkSparseOrder vk_sparse_order(uint64_t fence, int binds) {
     if (fence) {
         for (int i = 0; i < ndying; i++) vk_completion_add(fence, slot_reap, dying[i]);
         ndying = 0;
-        for (int i = 0; i < ndying_tails; i++) vk_completion_add(fence, tail_free, dying_tails[i]);
-        ndying_tails = 0;
     }
     if (ndirty || ntail_pending) {
         int ni = 0, nb = 0, total = 0, no = 0, nm = 0, mtotal = 0;
@@ -936,16 +1029,16 @@ void vk_sparse_shutdown(void) {
         if (b->alloc) vmaFreeMemory(c->vma, b->alloc);
         free(b);
     }
-    for (int i = 0; i < ndying_tails; i++) vmaFreeMemory(c->vma, dying_tails[i]);
-    free(dying_tails), free(dying);
-    dying_tails = NULL, dying = NULL;
-    ndying_tails = cdying_tails = ndying = cdying = ndirty = ntail_pending = 0;
+    free(dying);
+    dying = NULL;
+    ndying = cdying = ndirty = ntail_pending = 0;
     if (order_tl) vkDestroySemaphore(c->device, order_tl, NULL);
     if (bind_sem) vkDestroySemaphore(c->device, bind_sem, NULL);
     order_tl = bind_sem = VK_NULL_HANDLE;
     order_val = bind_val = sparse_va = 0;
     binary_pending = 0;
     n_slots = n_failed = n_binds = n_images = n_blocks = n_over = n_written = n_tail_writes = n_host_blocks = 0;
+    ns_fails = 0;
     memset(lanes, 0, sizeof lanes);
     lane_at = 0;
     plat_mutex_unlock(&sp_lock);

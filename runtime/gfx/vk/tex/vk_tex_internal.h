@@ -45,6 +45,7 @@ typedef struct Tex {
     uint32_t shash_epoch;         // submit_epoch of the last hash check
     uint8_t sparse;               // a Vulkan sparse image whose tiles follow the game's MapVirtual (vk_sparse.c)
     VkSparseTail sparse_tail;      // privately backed small mips; zeroed at image initialization, without touching shared tiles
+    VkSparseTail sparse_tail_b;    // the same for a 64 + 4 split's second image
     uint64_t use;                 // MKW_GPU_GUARD: newest submission part that looked it up (vk_guard_note)
 } Tex;
 

@@ -723,6 +723,36 @@ static int test_sparse_tail_zero(const GfxBackend *b) {
     return 0;
 }
 
+// One level: the shape vk_sparse_create falls back to when the full mip chain does not fit the sparse address space
+// (the driver pads 68 layers to 128 for any mipmapped image). The image has one level, no private tail, and the level 0
+// tiles bind as usual.
+static int test_sparse_base_level(const GfxBackend *b) {
+    pool_t pool = {.magic = NVN_POOL_MAGIC,
+                  .flags = NVN_MEMORY_POOL_FLAGS_VIRTUAL | NVN_MEMORY_POOL_FLAGS_CPU_NO_ACCESS | NVN_MEMORY_POOL_FLAGS_GPU_CACHED,
+                  .mem = (uint8_t *)(uintptr_t)(RT_GPU_VA_BASE + 0x20000000ull), .size = 0x1000000};
+    CHECK(b->pool_init(&pool), "sparse base level virtual pool init");
+    tex_t t;
+    init_tex(&t, &pool, 0, NVN_FORMAT_RGBA8);
+    t.d.target = NVN_TEXTURE_TARGET_2D_ARRAY;
+    t.d.width = t.d.height = 512, t.d.depth = 2, t.d.levels = 1;
+    t.d.flags = NVN_TEXTURE_FLAGS_SPARSE;
+    nvn_tex_layout(&t.d, &t.L);
+    t.serial = 20000;
+    const VkTexImage *image = vk_texture_get(&t);
+    CHECK(image, "sparse base level probe did not create an image");
+    if (!vk_sparse_is(image->image)) {
+        b->texture_release(&t); b->pool_fini(&pool);
+        puts("probe-vkexec: sparse base level check skipped (sparse images unavailable)");
+        return 0;
+    }
+    CHECK(image->levels == 1, "sparse base level image has %u levels, expected 1", image->levels);
+    b->texture_release(&t); b->pool_fini(&pool);
+    for (int k = 0; k < 3; k++) b->submit(NULL, 0);
+    b->finish();
+    puts("probe-vkexec: sparse base level image is one level");
+    return 0;
+}
+
 int probe_vkexec(void) {
     main_tid = plat_thread_id();
     // The exact colour checks need the plain picture, whatever mkw.ini says: the SDR swapchain (HDR10, MKW_HDR auto on an
@@ -746,6 +776,7 @@ int probe_vkexec(void) {
     int zero_bytes = 0;
     if (!bad) bad = test_zero(b, guest, &zero_bytes);
     if (!bad) bad = test_sparse_tail_zero(b);
+    if (!bad) bad = test_sparse_base_level(b);
     int nvnx_bytes = 0, mirror_bytes = 0;
     if (!bad) bad = test_nvnx(b, guest, &nvnx_bytes);
     if (!bad) bad = test_mirror(b, guest, &mirror_bytes);

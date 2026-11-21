@@ -411,9 +411,20 @@ void tex_info_full(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage, i
         view_t v;
         int hv;
         const VkTexImage *img = vk_texture_by_id_locked((int)(h & 0xfffff), &v, &hv);
-        if (img) view = get_view(ex, img, &v, hv, r->type, storage, r->format), *image = img->image;
-        if (img && storage) vk_texture_storage_bound_locked(img);
-        if (img && !storage && ex->nfbl && in_fbl(ex, img->image)) layout = VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT;
+        if (img) {
+            VkTexImage bimg = *img;
+            if ((r->flags & 0x10) && img->image_b) {   // the 64 + 4 split's second image
+                bimg.image = img->image_b;
+                bimg.layers = img->layers_b;
+                bimg.levels = img->levels_b;
+                bimg.drop = 0;
+                bimg.split_layer = 0;
+            }
+            view = get_view(ex, &bimg, &v, hv, r->type, storage, r->format), *image = bimg.image;
+            if (storage) vk_texture_storage_bound_locked(&bimg);
+            if (!storage && ex->nfbl && in_fbl(ex, bimg.image))
+                layout = VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT;
+        }
         if (!storage && !separate) {
             // A depth texture sampled without a compare reads one texel on the Switch, whatever the sampler's filter:
             // blending neighbouring depths puts reconstructed positions in mid-air at object edges (shadow masks).

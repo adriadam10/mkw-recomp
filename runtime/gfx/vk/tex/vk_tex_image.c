@@ -67,11 +67,12 @@ static int bind_pool_memory(VkCtx *c, Tex *e, VkImage img) {
     // diagnosed by elenotrindade). A depth or stencil image is not read through other formats in that memory, so it
     // gets its own; a colour one stays bound, as the game may alias it. MKW_POOL_SPILL=1 binds them all as before.
     static int spill_env = -1;
+    static volatile int32_t n_spill;
     if (spill_env < 0) spill_env = cfg_get("MKW_POOL_SPILL") && atoi(cfg_get("MKW_POOL_SPILL"));
     if ((e->f.depth || e->f.stencil) && req.size > e->t.L.size && !spill_env) {
-        rt_log("vk_tex: depth %#llx %ux%u fmt %#x takes %#llx bytes for NVN's %#llx: own memory (MKW_POOL_SPILL)",
-               (unsigned long long)e->pub.addr, e->key.d.width, e->key.d.height, e->key.d.format,
-               (unsigned long long)req.size, (unsigned long long)e->t.L.size);
+        log_limited(&n_spill, "vk_tex: depth %#llx %ux%u fmt %#x takes %#llx bytes for NVN's %#llx: own memory "
+                    "(MKW_POOL_SPILL)", (unsigned long long)e->pub.addr, e->key.d.width, e->key.d.height,
+                    e->key.d.format, (unsigned long long)req.size, (unsigned long long)e->t.L.size);
         return 0;
     }
     VkMemSpan sp;
@@ -237,6 +238,27 @@ static int usage_ok(const VkImageCreateInfo *ci) {
            ((VkSampleCountFlags)ci->samples & got.samples) == (VkSampleCountFlags)ci->samples;
 }
 
+static void sparse_tail_zero(VkCommandBuffer cb, VkImage image, const VkSparseTail *tail, uint32_t levels, uint32_t layers,
+                             uint32_t width, uint32_t height) {
+    if (!tail->zero_bytes) return;
+    VkBuffer zeros;
+    void *map = vk_staging(tail->zero_bytes, &zeros, NULL);
+    memset(map, 0, (size_t)tail->zero_bytes);
+    uint32_t n = (levels - tail->first) * layers;
+    VkBufferImageCopy *regions = calloc(n, sizeof *regions);
+    if (!regions) rt_fatal("vk: out of memory for sparse tail initialization");
+    uint32_t k = 0;
+    for (uint32_t l = tail->first; l < levels; l++) {
+        uint32_t w = width >> l, h = height >> l;
+        for (uint32_t layer = 0; layer < layers; layer++)
+            regions[k++] = (VkBufferImageCopy){.imageSubresource = {tail->aspect, l, layer, 1},
+                                              .imageExtent = {w ? w : 1, h ? h : 1, 1}};
+    }
+    vkCmdCopyBufferToImage(cb, zeros, image, VK_IMAGE_LAYOUT_GENERAL, n, regions);
+    barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, ALL_RW);
+    free(regions);
+}
+
 // UNDEFINED -> GENERAL; new depth / stencil images start cleared (LAS textures.c: the game copies depth
 // without stencil, and the stencil of those images must not be whatever the memory held).
 void init_image(Tex *e, VkCommandBuffer cb) {
@@ -248,27 +270,20 @@ void init_image(Tex *e, VkCommandBuffer cb) {
                                 .image = e->pub.image, .subresourceRange = {e->pub.aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS}};
     VkDependencyInfo di = {.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &ib};
     vkCmdPipelineBarrier2(cb, &di);
+    if (e->pub.image_b) {
+        VkImageMemoryBarrier2 ib_b = ib;
+        ib_b.image = e->pub.image_b;
+        VkDependencyInfo di_b = di;
+        di_b.pImageMemoryBarriers = &ib_b;
+        vkCmdPipelineBarrier2(cb, &di_b);
+    }
     if (e->sparse) {
         // Mapped tiles get zeroed memory separately and may alias another image. Only the private small mips are ours
         // to initialize here: VMA can reuse memory holding another texture's data, even before this image was written.
-        if (e->sparse_tail.zero_bytes) {
-            VkBuffer zeros;
-            void *map = vk_staging(e->sparse_tail.zero_bytes, &zeros, NULL);
-            memset(map, 0, (size_t)e->sparse_tail.zero_bytes);
-            uint32_t n = (e->pub.levels - e->sparse_tail.first) * e->pub.layers;
-            VkBufferImageCopy *regions = calloc(n, sizeof *regions);
-            if (!regions) rt_fatal("vk: out of memory for sparse tail initialization");
-            uint32_t k = 0;
-            for (uint32_t l = e->sparse_tail.first; l < e->pub.levels; l++) {
-                uint32_t w = e->pub.width >> l, h = e->pub.height >> l;
-                for (uint32_t layer = 0; layer < e->pub.layers; layer++)
-                    regions[k++] = (VkBufferImageCopy){.imageSubresource = {e->sparse_tail.aspect, l, layer, 1},
-                                                      .imageExtent = {w ? w : 1, h ? h : 1, 1}};
-            }
-            vkCmdCopyBufferToImage(cb, zeros, e->pub.image, VK_IMAGE_LAYOUT_GENERAL, n, regions);
-            barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, ALL_RW);
-            free(regions);
-        }
+        sparse_tail_zero(cb, e->pub.image, &e->sparse_tail, e->pub.levels, e->pub.layers, e->pub.width, e->pub.height);
+        if (e->pub.image_b)
+            sparse_tail_zero(cb, e->pub.image_b, &e->sparse_tail_b, e->pub.levels_b, e->pub.layers_b, e->pub.width,
+                             e->pub.height);
     } else if (e->f.depth || e->f.stencil) {
         VkClearDepthStencilValue zero = {0.0f, 0};
         VkImageSubresourceRange rg = {e->pub.aspect, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
@@ -464,6 +479,20 @@ VkResult vma_image(VkCtx *c, const VkImageCreateInfo *ci, const VmaAllocationCre
 
 // defer_init: the caller records the image's first transition (init_image or alias_copy).
 
+// The 64 KiB pages one layer of the game's sparse layout maps (nvn_sparse_tile_layout's whole-tile levels), for a
+// 64 + 4 split.
+static uint32_t sparse_layer_pages(const nvn_texdesc *d) {
+    int32_t lay[4];
+    nvn_sparse_tile_layout(d, lay);
+    uint32_t tw = (uint32_t)lay[1] ? (uint32_t)lay[1] : 1, th = (uint32_t)lay[2] ? (uint32_t)lay[2] : 1;
+    uint32_t pages = 0;
+    for (int l = 0; l < lay[0] && l < 16; l++) {
+        uint32_t w = d->width >> l ? d->width >> l : 1, h = d->height >> l ? d->height >> l : 1;
+        pages += ((w + tw - 1) / tw) * ((h + th - 1) / th);
+    }
+    return pages ? pages : 1;
+}
+
 // The memory an image of ci takes (0 if it cannot be made).
 static VkDeviceSize image_bytes(VkCtx *c, const VkImageCreateInfo *ci) {
     VkImage probe;
@@ -527,7 +556,7 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
         plat_inc32(&why[w]);
         int32_t all = 0;
         for (int i = 0; i < 6; i++) all += why[i];
-        if (all % 256 == 0)
+        if (all % 4096 == 0)
             rt_log("vk: ASTC BC1 (MKW_ASTC_BC1): %d of %d images; BC7 for 4096+ %d, no CPU storage %d, GPU-only %d, "
                    "sparse %d, alpha %d (BC1 for alpha 1 decoded in every texel %d, %.0f ms decoding)", why[0], all,
                    why[1], why[2], why[3], why[4], why[5], alpha_one, alpha_ns / 1e6);
@@ -642,15 +671,57 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
     e->t = *t;
     e->f = f;
     e->pub.addr = k->addr;
-    VkImage img = VK_NULL_HANDLE;
-    if (vk_sparse_create(&ci, d, k->addr, L.size, &img, &e->sparse_tail)) e->sparse = 1;
-    else if (nvn_gpu_only(k->addr)) {   // storage in a physical or virtual pool: alias the pool memory (section 3.2)
+    VkImage img = VK_NULL_HANDLE, img_b = VK_NULL_HANDLE;
+    uint32_t image_levels = levels, image_layers = layers, levels_b = 0, layers_b = 0;
+    int sr = 0;
+    // 64 + 4 for the 68-layer terrain arrays: both layer counts are powers of two, so the legacy driver padding
+    // (68 -> 128) does not apply. The pair costs 5,802 MiB with all layers and mips against 10,923 for one 68-layer
+    // image; the B image holds the game's layers 64-67 as its own 0-3.
+    if (sparse_cand && layers > 64 && levels > 1) {
+        uint64_t stride = (uint64_t)sparse_layer_pages(d) * NVN_VPOOL_PAGE;
+        uint64_t a_size = 64 * stride, b_size = (uint64_t)(layers - 64) * stride;
+        VkImageCreateInfo ca = ci, cb = ci;
+        ca.arrayLayers = 64;
+        cb.arrayLayers = layers - 64;
+        VkSparseTail ta = {0}, tb = {0};
+        VmaAllocation ta_alloc = NULL, tb_alloc = NULL;
+        uint32_t la = levels, lb = levels, na = 64, nb = layers - 64;
+        int ra = vk_sparse_create(&ca, d, k->addr, a_size, &img, &ta, &la, &na);
+        int rb = ra > 0 ? vk_sparse_create(&cb, d, k->addr + a_size, b_size, &img_b, &tb, &lb, &nb) : -1;
+        if (ra > 0 && rb > 0) {
+            e->sparse = 1;
+            e->sparse_tail = ta, e->sparse_tail_b = tb;
+            image_levels = la, levels_b = lb, layers_b = nb;
+            sr = 1;
+        } else {
+            if (ra > 0) vk_sparse_destroy(img, &ta_alloc);
+            if (rb > 0) vk_sparse_destroy(img_b, &tb_alloc);
+            if (ta_alloc) vk_sparse_tail_free(ta_alloc);
+            if (tb_alloc) vk_sparse_tail_free(tb_alloc);
+            img = img_b = VK_NULL_HANDLE;
+            e->sparse_tail = (VkSparseTail){0};
+            sr = vk_sparse_create(&ci, d, k->addr, L.size, &img, &e->sparse_tail, &image_levels, &image_layers);
+            if (sr > 0) e->sparse = 1;
+        }
+    } else {
+        sr = vk_sparse_create(&ci, d, k->addr, L.size, &img, &e->sparse_tail, &image_levels, &image_layers);
+        if (sr > 0) e->sparse = 1;
+    }
+    if (sr == 0 && nvn_gpu_only(k->addr)) {   // storage in a physical or virtual pool: alias the pool memory (section 3.2)
         if (vkCreateImage(c->device, &ci, NULL, &img) == VK_SUCCESS && !bind_pool_memory(c, e, img)) {
             vkDestroyImage(c->device, img, NULL);
             img = VK_NULL_HANDLE;
             log_limited(&n_unbound, "texture %#llx (%ux%u fmt %#x, %u levels, %u layers) cannot alias its pool memory; "
                         "own memory instead", (unsigned long long)k->addr, w, h, d->format, ci.mipLevels, ci.arrayLayers);
         }
+    }
+    if (sr < 0) {
+        // A large sparse image whose address space does not fit: a non-sparse one of the same shape cannot fit either,
+        // and vk_mem_relieve would trim textures and wait for the GPU only to fail again. The slot resolves to the
+        // zero stand-in, as it did when the create failed; vk_sparse_create remembered the shape so retries are free.
+        plat_inc32(&n_failed);
+        free(e);
+        return NULL;
     }
     if (!img) {
         VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
@@ -704,11 +775,13 @@ Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
     }
     VkTexImage *p = &e->pub;
     p->image = img;
+    p->image_b = img_b;
+    p->levels_b = levels_b, p->layers_b = layers_b, p->split_layer = img_b ? 64 : 0;
     p->format = f.vk;
     p->type = type;
     p->usage = usage;
     p->aspect = aspect_of(&f);
-    p->width = w, p->height = h, p->depth = depth, p->levels = levels, p->layers = layers, p->samples = samples;
+    p->width = w, p->height = h, p->depth = depth, p->levels = image_levels, p->layers = image_layers, p->samples = samples;
     p->drop = (uint8_t)drop;
     p->view_type = type == VK_IMAGE_TYPE_1D ? (d->target == NVN_TEXTURE_TARGET_1D_ARRAY ? VK_IMAGE_VIEW_TYPE_1D_ARRAY : VK_IMAGE_VIEW_TYPE_1D)
                  : type == VK_IMAGE_TYPE_3D ? VK_IMAGE_VIEW_TYPE_3D

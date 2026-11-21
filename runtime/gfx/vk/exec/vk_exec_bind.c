@@ -331,7 +331,7 @@ typedef struct {
     uint64_t h, tok;
     uint32_t gen, epoch, sgen;
     uint16_t type;
-    uint8_t separate, valid;
+    uint8_t separate, b, valid;
     VkImage image;
     VkDescriptorImageInfo out;
 } TexMemo;
@@ -359,9 +359,10 @@ static void tex_info(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage,
         return;
     }
     uint64_t th = pd_on ? plat_cycles() : 0;
+    int b = (r->flags & 0x10) != 0;
     uint32_t gen = vk_texture_slots_gen(), ep = vk_texture_epoch(), sg = vk_sampler_gen();   // before any lookup
-    typeof(TD[0]) *m = &TD[(h * 0x9E3779B97F4A7C15ull ^ (uint64_t)r->type << 7 ^ (uint64_t)separate) >> 51];
-    if (m->valid && m->h == h && m->type == r->type && m->separate == separate && m->sgen == sg &&
+    typeof(TD[0]) *m = &TD[(h * 0x9E3779B97F4A7C15ull ^ (uint64_t)r->type << 7 ^ (uint64_t)separate ^ (uint64_t)b << 12) >> 51];
+    if (m->valid && m->h == h && m->type == r->type && m->separate == separate && m->b == (uint8_t)b && m->sgen == sg &&
         slot_still(&m->gen, m->tok, h, gen)) {
         td_stat[0]++;
         if (m->epoch != ep) {   // the slot's first binding in this submission: only its storage check is due
@@ -401,7 +402,7 @@ static void tex_info(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage,
     if (ru_cap) ru_note_tex(h, image, 0);
     if (pd_on) td_stat[4] += plat_cycles() - t0;
     *m = (typeof(*m)){.h = h, .tok = tok, .gen = gen, .epoch = ep, .sgen = sg, .type = r->type,
-                      .separate = (uint8_t)separate, .valid = 1, .image = image, .out = *out};
+                      .separate = (uint8_t)separate, .b = (uint8_t)b, .valid = 1, .image = image, .out = *out};
 }
 
 // What support_fill reads: viewport size, point size and the alpha test's reference (0 with the test off, so a

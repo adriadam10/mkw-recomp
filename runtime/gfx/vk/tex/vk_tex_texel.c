@@ -102,6 +102,9 @@ int image_texels(Tex *e, const Region *g, const NVNcopyRegion *r, uint8_t *mem, 
     VkCommandBuffer cb = VK_NULL_HANDLE;
     if (write) cb = vk_upload_begin_staging(slice * (size_t)g->nz, &sb, (void **)&stg);
     else stg = vk_staging(slice * (size_t)g->nz, &sb, &sa);
+    VkImage image = e->pub.image;
+    uint32_t first = g->layer0 + (uint32_t)r->zoffset;
+    if (e->pub.split_layer && first >= e->pub.split_layer) image = e->pub.image_b, first -= e->pub.split_layer;
     VkBufferImageCopy *rg = calloc((size_t)g->nz, sizeof *rg);
     for (int z = 0; z < g->nz; z++) {
         uint8_t *s = stg + slice * (size_t)z;
@@ -123,7 +126,7 @@ int image_texels(Tex *e, const Region *g, const NVNcopyRegion *r, uint8_t *mem, 
             }
         }
         rg[z] = (VkBufferImageCopy){.bufferOffset = slice * (size_t)z,
-                                    .imageSubresource = {aspect, g->level, g->is3d ? 0 : g->layer0 + (uint32_t)r->zoffset + (uint32_t)z, 1},
+                                    .imageSubresource = {aspect, g->level, g->is3d ? 0 : first + (uint32_t)z, 1},
                                     .imageOffset = {r->xoffset, r->yoffset, g->is3d ? r->zoffset + z : 0},
                                     .imageExtent = {w, h, 1}};
     }
@@ -139,17 +142,17 @@ int image_texels(Tex *e, const Region *g, const NVNcopyRegion *r, uint8_t *mem, 
                                        .lw = e->pub.width >> g->level, .lh = e->pub.height >> g->level};
             uint64_t a0 = perf_begin();
             done = vk_astc_record(cb, sb, slice * (size_t)g->nz, ar, g->nz, e->f.astc_bw, e->f.astc_bh, e->f.astc_srgb,
-                                  e->pub.image, aspect, e->f.astc_bc7, VK_NULL_HANDLE);
+                                  image, aspect, e->f.astc_bc7, VK_NULL_HANDLE);
             perf_end(PERF_ASTC, a0);
             free(ar);
         }
-        if (!agpu) vkCmdCopyBufferToImage(cb, sb, e->pub.image, VK_IMAGE_LAYOUT_GENERAL, (uint32_t)g->nz, rg);
+        if (!agpu) vkCmdCopyBufferToImage(cb, sb, image, VK_IMAGE_LAYOUT_GENERAL, (uint32_t)g->nz, rg);
         else if (!done) log_limited(&n_astc, "WriteTexels of ASTC texture %#llx not decoded on the GPU: left as it was",
                                     (unsigned long long)e->pub.addr);
         barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, ALL_RW);
     } else {
         barrier(cb, ALL_RW, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT);
-        vkCmdCopyImageToBuffer(cb, e->pub.image, VK_IMAGE_LAYOUT_GENERAL, sb, (uint32_t)g->nz, rg);
+        vkCmdCopyImageToBuffer(cb, image, VK_IMAGE_LAYOUT_GENERAL, sb, (uint32_t)g->nz, rg);
         barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_HOST_BIT,
                 VK_ACCESS_2_HOST_READ_BIT);
     }

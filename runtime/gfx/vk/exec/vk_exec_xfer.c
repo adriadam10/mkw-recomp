@@ -457,6 +457,7 @@ int vk_exec_xfer_state(VkExec *ex, uint32_t op, const void *payload) {
 
 typedef struct {
     const VkTexImage *img;
+    VkTexImage bimg;            // img, or its 64 + 4 B image with layers rebased
     VkImageAspectFlags aspect;
     uint32_t level, layer0;
     int bpb, bw, bh;
@@ -502,6 +503,27 @@ static int sub_resolve(const tex_t *t, const view_t *v, int has_v, const NVNcopy
     s->nz = r->depth > 0 ? (uint32_t)r->depth : 1;
     s->w = r->width > 0 ? (uint32_t)r->width : defaults_to_level ? (s->x < (int32_t)lw ? lw - (uint32_t)s->x : 0) : 0;
     s->h = r->height > 0 ? (uint32_t)r->height : defaults_to_level ? (s->y < (int32_t)lh ? lh - (uint32_t)s->y : 0) : 0;
+    if (img->split_layer) {   // 64 + 4: layers 64.. live in image_b at its own 0..
+        uint32_t first = s->layer0 + (uint32_t)s->z;
+        s->bimg = *img;
+        s->bimg.split_layer = 0;
+        if (first >= img->split_layer) {
+            s->bimg.image = img->image_b;
+            s->bimg.layers = img->layers_b;
+            s->bimg.levels = img->levels_b;
+            s->bimg.drop = 0;
+            s->layer0 = first - img->split_layer;
+        } else if ((uint64_t)first + s->nz > img->split_layer) {
+            warn_once(W_REGION, "copy region crosses the 64 + 4 split: skipped");
+            return 0;
+        } else {
+            s->bimg.layers = img->split_layer;
+            s->layer0 = first;
+        }
+        s->z = 0;
+        s->img = &s->bimg;
+        img = s->img;
+    }
     int is3d = img->type == VK_IMAGE_TYPE_3D;
     uint32_t layers = is3d ? 1 : (uint32_t)s->z + s->nz, first = is3d ? 0 : s->layer0;
     if (s->level >= img->levels || s->x < 0 || s->y < 0 || s->z < 0 || !s->w || !s->h ||

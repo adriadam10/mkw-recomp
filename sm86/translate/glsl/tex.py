@@ -152,47 +152,60 @@ class TexOps:
         coords = [f(f"c{k}") for k in range(ncoord)]
         key = (i.v("bank5"), i.v("tsPtrIdx"))
         t = f"t{key[0]}_{key[1]}"
-        if aoffi:  # 4-bit signed texel offsets per axis; GLSL wants them constant, so they move the coordinates
-            lvl = f"int({f('lod')})" if lod == "LL" else "0"
-            for k in range(ncoord):
-                off = f"float(bitfieldExtract(int({reg(regs['off'])}), {4 * k}, 4))"
-                coords[k] = f"({coords[k]} + {off} / float(textureSize({t}, {lvl}).{'xyz'[k]}))"
+        tb = f"{t}b"
+        idxf = f"float({reg(regs['idx'])})" if is_array else None
         if is_array:
-            coords.append(f"float({reg(regs['idx'])})")
+            coords.append(idxf)
         if dc:
             coords.append(f("ref"))
-        vec = coords[0] if len(coords) == 1 else f"vec{len(coords)}({', '.join(coords)})"
         sampler = f"sampler{name}{'Shadow' if dc else ''}"
         self.textures[key] = sampler
         if dc and lod == "LL":
             self.uses_shadow_lod = True  # textureLod on array and cube shadow samplers
-        if ptp:
-            # One offset per texel: 4 signed bytes x, y per texel in two registers (Mesa NAK nak_nir_lower_tex.c:309-316).
-            # Texel k is the (i0, j0) texel (.w) of a gather at offset k, as GLSL's textureGatherOffsets defines it;
-            # one gather each, since the offsets are not constant here.
-            ch = "" if dc else f", {({'R': 0, 'G': 1, 'B': 2, 'A': 3}[i.sym('comp') or 'R'])}"
-            args = self.split_ref(coords) if dc else vec
-            offs = [
-                f"ivec2(bitfieldExtract(int({reg(regs[f'p{k // 2}'])}), {16 * (k % 2)}, 8), "
-                f"bitfieldExtract(int({reg(regs[f'p{k // 2}'])}), {16 * (k % 2) + 8}, 8))"
-                for k in range(4)
-            ]
-            call = f"vec4({', '.join(f'textureGatherOffset({t}, {args}, {o}{ch}).w' for o in offs)})"
-        elif gather:
-            ch = {"R": 0, "G": 1, "B": 2, "A": 3}[i.sym("comp") or "R"]
-            call = f"textureGather({t}, {vec}, {ch})" if not dc else f"textureGather({t}, {self.split_ref(coords)})"
-        elif lod == "LZ":
-            call = f"textureLod({t}, {vec}, 0.0)" if not dc else f"textureGrad({t}, {vec}, {self.zero_grad(name)})"
-        elif lod == "LL":
-            call = f"textureLod({t}, {vec}, {f('lod')})"
-        elif lod == "LB":
-            call = f"texture({t}, {vec}, {f('lod')})"
-        elif lod in ("nolodlc", ""):
-            call = f"texture({t}, {vec})"
-        else:
-            raise Unsupported(f"TEX lod mode {lod}")
-        if dc and not gather:
-            call = f"vec4({call}, 0.0, 0.0, 1.0)"
+
+        def build(tname: str, cds: list[str]) -> str:
+            cs = list(cds)
+            if aoffi:  # 4-bit signed texel offsets per axis; GLSL wants them constant, so they move the coordinates
+                lvl = f"int({f('lod')})" if lod == "LL" else "0"
+                for k in range(ncoord):
+                    off = f"float(bitfieldExtract(int({reg(regs['off'])}), {4 * k}, 4))"
+                    cs[k] = f"({cs[k]} + {off} / float(textureSize({tname}, {lvl}).{'xyz'[k]}))"
+            v = cs[0] if len(cs) == 1 else f"vec{len(cs)}({', '.join(cs)})"
+            if ptp:
+                # One offset per texel: 4 signed bytes x, y per texel in two registers (Mesa NAK nak_nir_lower_tex.c:
+                # 309-316). Texel k is the (i0, j0) texel (.w) of a gather at offset k, as GLSL's textureGatherOffsets
+                # defines it; one gather each, since the offsets are not constant here.
+                ch = "" if dc else f", {({'R': 0, 'G': 1, 'B': 2, 'A': 3}[i.sym('comp') or 'R'])}"
+                args = self.split_ref(cs) if dc else v
+                offs = [
+                    f"ivec2(bitfieldExtract(int({reg(regs[f'p{k // 2}'])}), {16 * (k % 2)}, 8), "
+                    f"bitfieldExtract(int({reg(regs[f'p{k // 2}'])}), {16 * (k % 2) + 8}, 8))"
+                    for k in range(4)
+                ]
+                return f"vec4({', '.join(f'textureGatherOffset({tname}, {args}, {o}{ch}).w' for o in offs)})"
+            if gather:
+                ch = {"R": 0, "G": 1, "B": 2, "A": 3}[i.sym("comp") or "R"]
+                call = f"textureGather({tname}, {v}, {ch})" if not dc else f"textureGather({tname}, {self.split_ref(cs)})"
+            elif lod == "LZ":
+                call = f"textureLod({tname}, {v}, 0.0)" if not dc else f"textureGrad({tname}, {v}, {self.zero_grad(name)})"
+            elif lod == "LL":
+                call = f"textureLod({tname}, {v}, {f('lod')})"
+            elif lod == "LB":
+                call = f"texture({tname}, {v}, {f('lod')})"
+            elif lod in ("nolodlc", ""):
+                call = f"texture({tname}, {v})"
+            else:
+                raise Unsupported(f"TEX lod mode {lod}")
+            if dc and not gather:
+                call = f"vec4({call}, 0.0, 0.0, 1.0)"
+            return call
+
+        if is_array:
+            coords[ncoord] = f"min({idxf}, 63.0)"
+        call = build(t, coords)
+        if is_array:
+            coords[ncoord] = f"clamp({idxf} - 64.0, 0.0, 3.0)"
+            call = f"({idxf} < 64.0 ? {call} : {build(tb, coords)})"
         outs = self.tex_outs(i)
         return f"{{ vec4 tv = {call}; {' '.join(outs)} }}" if outs else ""
 
@@ -249,14 +262,20 @@ class TexOps:
         else:
             regs = {n: a + k for k, n in enumerate(g0)} | {n: b + k for k, n in enumerate(g1)}
         self.regs.update(r for r in regs.values() if r != RZ)
-        ints = [f"int({reg(regs[f'c{k}'])})" for k in range(ncoord)] + (
-            [f"int({reg(regs['idx'])})"] if is_array else []
-        )
+        idx = f"int({reg(regs['idx'])})" if is_array else None
+        ints = [f"int({reg(regs[f'c{k}'])})" for k in range(ncoord)] + ([idx] if is_array else [])
+        if is_array:
+            ints[-1] = f"min({idx}, 63)"
         vec = ints[0] if len(ints) == 1 else f"ivec{len(ints)}({', '.join(ints)})"
         key = (i.v("bank5"), i.v("tsPtrIdx"))
         self.textures.setdefault(key, f"sampler{name}")
         lv = f"int({reg(regs['ms' if ms else 'lod'])})" if ms or lod == "LL" else "0"
-        call = f"texelFetch(t{key[0]}_{key[1]}, {vec}, {lv})"
+        t = f"t{key[0]}_{key[1]}"
+        call = f"texelFetch({t}, {vec}, {lv})"
+        if is_array:
+            ints[-1] = f"clamp({idx} - 64, 0, 3)"
+            vec_b = ints[0] if len(ints) == 1 else f"ivec{len(ints)}({', '.join(ints)})"
+            call = f"({idx} < 64 ? {call} : texelFetch({t}b, {vec_b}, {lv}))"
         outs = self.tex_outs(i)
         return f"{{ vec4 tv = {call}; {' '.join(outs)} }}" if outs else ""
 

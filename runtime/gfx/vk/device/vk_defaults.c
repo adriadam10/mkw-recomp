@@ -4,13 +4,18 @@
 #include "vk_defaults.h"
 
 // Tile slots of the sparse textures (vk_sparse.c). Integrated: 768, the 660M's (1024 hung it with MKW_ASTC_BC1,
-// run-race41). Discrete: a quarter of the VRAM in 256 MiB steps, 768 to 3072; the title binds 1 472 MiB uncapped
-// (run-sp3), so 8 GB and up hold all of it and a 4 GB card keeps the 660M's figure. Below 3 GB the 768 floor took most
-// of the budget (a 2 GB GTX 750 Ti, budget 1399 MiB: 9961 slots live when a block of 16 MiB failed and the device was
-// lost, #215): there a quarter of the VRAM, 256 at least; flatter ground in the distance, not a lost device.
+// run-race41). Discrete: a quarter of the VRAM up to 6 GB (nothing was measured there, and the 4 GB GTX 1050 Ti already
+// runs out of VRAM late in a race), five fourteenths from the 8 GB class up (a largest heap of 7,000 MiB and over: the
+// RX 580's 7,168/7,885-heap logs get 2,560/2,816, the 8 GB RTX 2070's 7,989 gets 2,816), 768 to 3072. The title binds
+// 1 472 MiB uncapped (run-sp3), and the race's six 8192x8192x68 arrays bind ~2.16 GiB (four bound 1 570 MiB on the 8 GB
+// RX 580, where the old quarter, 1 792 MiB, left the last two without slots); the textures, mirrors and pools need
+// ~2.8 GiB beside it. Below 3 GB the 768 floor took most of the budget (a 2 GB GTX 750 Ti, budget 1399 MiB: 9961 slots
+// live when a block of 16 MiB failed and the device was lost, #215): there a quarter of the VRAM, 256 at least; flatter
+// ground in the distance, not a lost device.
 uint64_t vk_default_sparse_mib(int discrete, uint64_t vram_mib) {
     if (!discrete) return 768;
-    uint64_t mib = vram_mib / 4 / 256 * 256, floor = vram_mib < 3072 ? 256 : 768;
+    uint64_t mib = (vram_mib >= 7000 ? vram_mib * 5 / 14 : vram_mib / 4) / 256 * 256;
+    uint64_t floor = vram_mib < 3072 ? 256 : 768;
     return mib < floor ? floor : mib > 3072 ? 3072 : mib;
 }
 
