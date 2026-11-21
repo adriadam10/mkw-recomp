@@ -1,5 +1,9 @@
-// MKW_WB_PAR=N (default 0: off; "ab": 4 threads in the B blocks): the fence's write-backs on N threads besides the
-// completion thread. Before a fence's waiters are released the completion thread writes back what the GPU wrote into guest memory
+// MKW_WB_PAR=N (default 4 with 6 or more physical cores, else 0; "ab": 4 threads in the B blocks): the fence's
+// write-backs on N threads besides the completion thread. Only shadow storage (Linux) and pools whose import failed
+// write back, so elsewhere the threads are never started. The default follows the in-run A/Bs and their inverted twins
+// on an i7-14700F with an RX 6700 XT (RADV, Linux, 21/11/2026): 4 players -2.07 / -1.68 ms a frame (~30 ms), 2 players
+// -0.05 / -1.00 (near the 60 fps cap), 1 player 0 (at the cap); RTX 3090 Linux, 3-4 players, -1.6 to -2.1 ms (#641).
+// Off below 6 cores, as MKW_REPLAY_PAR: on a Steam Deck's 4 the threads would take the game's CPU (not measured). Before a fence's waiters are released the completion thread writes back what the GPU wrote into guest memory
 // (cb_done -> vk_gpu_written -> merge_back): in a 3-player race ~600 ranges and ~23 MiB a frame, 3.2 of the 3.7 ms
 // between the GPU reaching the value and the game being released (MKW_WB_CENSUS, MKW_TRACE_TL; RTX 3090, Core Ultra 7
 // 270K Plus, Linux, 19/11/2026, #641),
@@ -77,7 +81,8 @@ int vk_wb_par_threads(void) {
     if (wp_threads < 0) {
         const char *e = cfg_get("MKW_WB_PAR");
         wp_ab = e && !strcmp(e, "ab");
-        int n = wp_ab ? 4 : e ? atoi(e) : 0, ok = 0;
+        uint64_t all, first;
+        int n = wp_ab ? 4 : e && *e ? atoi(e) : plat_cpu_cores(&all, &first) >= 6 ? 4 : 0, ok = 0;
         if (n > WP_MAX) n = WP_MAX;
         for (int i = 0; i < n; i++) ok += plat_thread_spawn(wp_main, NULL, "vk wb par", 0);
         if (n > 0) rt_log("vk: fence write-backs on %d threads besides the completion thread%s (MKW_WB_PAR)", ok,
