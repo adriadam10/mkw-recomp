@@ -197,6 +197,7 @@ def clean(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # launcher_update.cpp reads this pipe as UTF-8
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     # the package's own Python runs natively, so its machine is the package's: an AArch64 AppImage updates to the same
