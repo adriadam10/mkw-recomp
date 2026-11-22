@@ -214,3 +214,13 @@ def test_newest_log_and_the_setup_warm_up():
     assert newest == [("mkw.1.log", ipi)]
     # renamed copies ("teste.geral.mkw.log") count as mkw.log
     assert classify.log_age("teste.geral.mkw.log") == 0 and classify.log_age("mkw.3.log") == 3
+
+
+def test_a_prerelease_or_named_tag_does_not_stop_the_release_order():
+    """moderate.py reads every published release (only drafts are left out): max(..., key=vkey) raised ValueError on
+    "v0.1.18-rc1" or "nightly" and the bot stopped on every issue."""
+    rel = {"v0.1.15", "v0.1.16", "v0.1.17", "v0.1.18-rc1", "nightly"}
+    assert classify.vkey("v0.1.18-rc1") == (0, 1, 18)
+    assert classify.vkey("nightly") == ()
+    assert max(rel, key=classify.vkey) == "v0.1.18-rc1"
+    assert not classify.behind("v0.1.17", rel)
