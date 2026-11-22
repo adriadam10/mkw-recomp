@@ -15,6 +15,7 @@
 #include "cfg.h"
 #include "dsu.h"
 #include "hacks.h"
+#include "hd_rumble.h"
 #include "host.h"
 #include "input.h"
 #include "input_map.h"
@@ -170,6 +171,7 @@ static void pad_adopt(void);
 // Close the gamepads that went away and open the new ones (player 1 first, then the first free player); logs each change.
 static void scan_pads(void) {
     if (pad && !SDL_GamepadConnected(pad)) {
+        hd_rumble_detach(pad);
         SDL_CloseGamepad(pad); pad = NULL; sensor_pad[0] = 0; sensor_ok[0] = 0;
         plat_xchg32(&pad_layout_shown, -1);
         plat_xchg32(&pad_dz_shown, -1);
@@ -227,6 +229,7 @@ static void pad_adopt(void) {
     plat_xchg32(&pad_dz_shown, (int32_t)lroundf(dead_zone_for(pad, 0) * 1000));
     rt_log("input: stick dead zones %.1f %% left, %.1f %% right (%s)", dead_zone_for(pad, 0) * 100,
            dead_zone_for(pad, 1) * 100, set && *set ? "MKW_STICK_DEADZONE" : "this controller's default; MKW_STICK_DEADZONE sets one");
+    hd_rumble_attach(pad);   // HD rumble when RenHDrum knows this controller (hd_rumble.c)
 }
 
 // Under lock: the layout of the open gamepad, picked again when a setting or the gamepad changed; logs each change.
@@ -633,6 +636,7 @@ int input_rumble(int player, uint16_t low, uint16_t high, uint32_t ms) {
     static int triggers = -1;
     static unsigned seen;
     if (triggers < 0 || seen != cfg_version()) seen = cfg_version(), triggers = input_rumble_triggers_enabled();
+    if (player <= 0 && hd_rumble_owns()) return 1;   // RenHDrum plays player 1's values itself (hd_rumble.c)
     plat_mutex_lock(&lock);
     SDL_Gamepad *g = player <= 0 ? pad : player < INPUT_MAX_PLAYERS ? extra[player] : NULL;
     int rumble = player <= 0 ? pad_rumble : player < INPUT_MAX_PLAYERS && extra_rumble[player];

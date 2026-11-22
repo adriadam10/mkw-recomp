@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "cfg.h"
+#include "hd_rumble.h"
 #include "host.h"
 #include "input.h"
 #include "ov.h"
@@ -367,6 +368,12 @@ static void play(int side, const VibrationValue *v) {
     vib_last[side] = c;
     vib_at[side] = now;
     rumble_update(side / 2, now);
+    // Player 1's controller with HD rumble (input/hd_rumble.c) gets the value itself, silent when vibration is not
+    // permitted or MKW_RUMBLE_STRENGTH is 0; while RenHDrum drives it, input_rumble leaves its motors to it.
+    if (side < 2) {
+        const VibrationValue *h = vib_allowed && rumble_strength > 0 ? &c : &vib_neutral;
+        hd_rumble_play(side, h->amp_low, h->freq_low, h->amp_high, h->freq_high);
+    }
     plat_mutex_unlock(&vib_lock);
 }
 
@@ -442,6 +449,7 @@ static void ov_vib_permit(Cpu *c) {
     vib_allowed = on;
     uint64_t now = kern_now_ns();
     for (int p = 0; p < INPUT_MAX_PLAYERS; p++) rumble_update(p, now);
+    hd_rumble_permit(on);
     plat_mutex_unlock(&vib_lock);
     ret_x(c, 0);
 }

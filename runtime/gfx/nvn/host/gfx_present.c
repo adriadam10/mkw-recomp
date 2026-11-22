@@ -25,6 +25,7 @@
 #include "gfx.h"
 #include "gfx_wsys.h"
 #include "hacks.h"
+#include "hd_rumble.h"
 #include "host.h"
 #include "nvn_api.h"
 #include "plugin.h"
@@ -82,6 +83,7 @@ int gfx_window_focus_held(void) { return g_focus_hold; }
 void gfx_window_closed(void) {
     rt_log("gfx: window closed; exiting");
     plugins_exit();   // the mods' goodbyes (a seat given back), before the saves finish
+    hd_rumble_shutdown();   // the controller's HD rumble, speaker and trigger effects stop with the game
     fs_save_flush();
     vk_pipeline_save();
     prof_write();   // plat_exit runs no atexit handlers
