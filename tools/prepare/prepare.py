@@ -91,6 +91,7 @@ from machine import (
     default_cc,
     default_glslc,
     emit,
+    environment,
     hold_lock,
     mem_available_gb,
     mem_gb,
@@ -376,6 +377,7 @@ def main() -> None:
         f"generate jobs, {sys.platform}",
         file=sys.stderr,
     )
+    print(f"env: {environment(game)}", file=sys.stderr)
     t_all, step, t_step = time.monotonic(), "check", time.monotonic()
     glslc = args.glslc or default_glslc(game)
     work = game / "setup-work"

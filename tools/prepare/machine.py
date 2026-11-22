@@ -7,6 +7,8 @@ Why apart: prepare.py holds the steps; this is what they run with. Not run on it
 import faulthandler
 import json
 import os
+import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -235,6 +237,54 @@ def shader_jobs(share: float = 1.0) -> int:
     to 0.75 GB on the largest programs (translate.py). Half the cores, as before, left 8 of 12 idle: 40 min."""
     cores = min(os.cpu_count() or 1, 61) if os.name == "nt" else os.cpu_count() or 1  # Windows' pool limit (#222)
     return max(1, min(cores, int(mem_available_gb() * share / 0.75)))
+
+
+def wine_version() -> str | None:
+    """Wine's version when this Windows process runs under Wine or Proton (ntdll exports wine_get_version there only),
+    else None."""
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes  # noqa: PLC0415
+
+        get = ctypes.WinDLL("ntdll").wine_get_version
+        get.restype = ctypes.c_char_p
+        return get().decode("ascii", "replace")
+    except AttributeError, OSError:
+        return None
+
+
+DRIVE_KINDS = {2: "removable", 3: "fixed", 4: "network", 5: "optical", 6: "ram disk"}
+
+
+def drive_kind(path: Path) -> str:
+    """The kind of drive a Windows path is on (GetDriveTypeW: fixed, network, removable...), else "unknown"."""
+    if os.name != "nt" or not path.anchor:
+        return "unknown"
+    try:
+        import ctypes  # noqa: PLC0415
+
+        return DRIVE_KINDS.get(ctypes.windll.kernel32.GetDriveTypeW(path.anchor), "unknown")
+    except AttributeError, OSError:
+        return "unknown"
+
+
+def environment(game: Path) -> str:
+    """The "env:" line of logs/setup.log: the system, whether it is Wine or Proton, the drive the game folder is on and
+    its free space, and the zig cache folder if the player set one. The setup fails differently under Wine (#406: zig's
+    cache cannot be locked), on a network share (#439) or on a full disk, and the log did not say which one it was."""
+    parts = [platform.platform(terse=True)]
+    if os.name == "nt":
+        wine = wine_version()
+        parts.append(f"Wine {wine}" if wine else "native Windows")
+    parts.append(f"{drive_kind(game)} drive")
+    try:
+        parts.append(f"{shutil.disk_usage(game).free / 2**30:.1f} GB free")
+    except OSError:
+        parts.append("free space unknown")
+    if cache := os.environ.get("ZIG_GLOBAL_CACHE_DIR"):
+        parts.append(f"ZIG_GLOBAL_CACHE_DIR={cache}")
+    return ", ".join(parts)
 
 
 def mem_gb() -> float:
