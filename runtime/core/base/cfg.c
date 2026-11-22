@@ -572,6 +572,19 @@ const char *cfg_steam_video_driver(void) {
 #endif
 }
 
+const char *cfg_video_failed(const char *err, char *out, int size) {
+    const char *drv = getenv("SDL_VIDEO_DRIVER"), *how = "";
+    if (!drv || !*drv) drv = getenv("SDL_VIDEODRIVER");   // SDL 2's name, still read
+#ifndef _WIN32
+    const char *wl = getenv("WAYLAND_DISPLAY"), *x = getenv("DISPLAY");
+    if (!(wl && *wl) && !(x && *x)) how = ". Neither WAYLAND_DISPLAY nor DISPLAY is set: start it from a desktop session";
+#endif
+    int asks = drv && *drv;
+    snprintf(out, (size_t)size, "No window can open: %.200s%s%.40s%s%s", err && *err ? err : "SDL gives no reason",
+             asks ? ". SDL_VIDEO_DRIVER asks for \"" : "", asks ? drv : "", asks ? "\"" : "", how);
+    return out;
+}
+
 const char *cfg_get(const char *name) {
     const char *v = raw_get(name);
     if (v || strncmp(name, PREFIX, PREFIX_LEN)) return v;

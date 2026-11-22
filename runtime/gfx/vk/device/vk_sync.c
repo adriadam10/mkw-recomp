@@ -335,7 +335,7 @@ void vk_sync_start(void) {
     if (__atomic_load_n(&started, __ATOMIC_ACQUIRE)) return;
     plat_mutex_lock(&start_lock);
     if (!started) {
-        if (!vk_init()) rt_fatal("vk: no usable Vulkan device (see the vk: lines above; MKW_GPU=null runs without a GPU)");
+        if (!vk_init()) rt_fatal("vk: %s", gfx_window_failed() ? gfx_window_failed() : "no usable Vulkan device (see the vk: lines above; MKW_GPU=null runs without a GPU)");
         VkCtx *c = vk_ctx();
         VkCommandPoolCreateInfo pi = {.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                                       .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,

@@ -93,6 +93,7 @@ static struct {
     int gb_open;                    // a 1-Click link: the Mods page's GameBanana tab first (launcher_gb_install)
     int save_pending;
     // test hook
+    char no_window[512];            // why open_window failed, for the player
     long shot_at;
     Page shot_page;
     int shot_tab;
@@ -1989,12 +1990,22 @@ static bool open_window(void) {
     bool background = bg && *bg && strcmp(bg, "0");
     SDL_SetHint(SDL_HINT_APP_ID, background ? "mkw-recomp-run" : "mkw-recomp");
     if (background) SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
-    if (const char *drv = cfg_steam_video_driver()) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, drv);   // as the game's window (cfg.h)
+    const char *drv = cfg_steam_video_driver();   // as the game's window (cfg.h)
+    if (drv) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, drv);
     input_wheel_hint();
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
-        rt_log("launcher: SDL_Init failed: %s", SDL_GetError());
+    bool video = SDL_Init(SDL_INIT_VIDEO);
+    if (!video && drv) {   // the driver asked for Steam's sake: without it
+        rt_log("launcher: SDL's %s driver does not start (%s): SDL's own choice", drv, SDL_GetError());
+        SDL_ResetHint(SDL_HINT_VIDEO_DRIVER);
+        video = SDL_Init(SDL_INIT_VIDEO);
+    }
+    if (!video) {
+        cfg_video_failed(SDL_GetError(), L.no_window, sizeof L.no_window);
+        rt_log("launcher: SDL video init failed: %s", SDL_GetError());
         return false;
     }
+    // Apart from the video: without controllers the start screen still opens, for the mouse and the keyboard
+    if (!SDL_InitSubSystem(SDL_INIT_GAMEPAD)) rt_log("launcher: SDL gamepad init failed: %s", SDL_GetError());
     float ds = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     if (!(ds > 0)) ds = 1;
     // A window: the game's MKW_FULLSCREEN is the game's; the start screen goes fullscreen by its own F11, and from
@@ -2014,6 +2025,8 @@ static bool open_window(void) {
     if (L.win) app_icon_set(L.win);
     L.ren = L.win ? SDL_CreateRenderer(L.win, nullptr) : nullptr;
     if (!L.ren) {
+        snprintf(L.no_window, sizeof L.no_window, "The start screen's window cannot open (%.200s), and the game files are "
+                 "not set up or not where the setup left them", SDL_GetError());   // else the game starts (no_window)
         rt_log("launcher: no window: %s", SDL_GetError());
         return false;
     }
@@ -2142,6 +2155,20 @@ static int console_start(int updated, int other) {
     return 1;
 }
 
+// No start screen. The game may still open its own window (it draws with Vulkan, not with SDL's renderer) when SDL's
+// video started and the game files are there; else the player is told here: the game would close with an error about
+// its files, or about the graphics card ("no usable Vulkan device"), neither the reason.
+static int no_window(void) {
+    if (SDL_WasInit(SDL_INIT_VIDEO) && rt_game_present() && !files_gone()) {
+        rt_log("launcher: no start screen: the game starts");
+        return LAUNCHER_PLAY;
+    }
+    fprintf(stderr, "mkw-recomp: %s\n", L.no_window);
+    SDL_Quit();   // its SIGTERM handler too: the box blocks, and a process stopped from outside must end
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "mkw-recomp", L.no_window, nullptr);
+    return LAUNCHER_FAILED;
+}
+
 extern "C" int launcher_run(void) {
     L.result = -1;
     L.focus_main = 1;
@@ -2150,7 +2177,7 @@ extern "C" int launcher_run(void) {
     int updated = update_just_installed(L.exe_dir, L.updated, sizeof L.updated);
     int other = !updated && !L.shot_at && setup_from_other_version();
     if (console_start(updated, other)) return LAUNCHER_PLAY;
-    if (!open_window()) return LAUNCHER_PLAY;   // no start screen: the game itself says what is wrong
+    if (!open_window()) return no_window();
     L.picked_event = SDL_RegisterEvents(1);
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();

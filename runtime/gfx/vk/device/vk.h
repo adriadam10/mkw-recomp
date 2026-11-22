@@ -204,6 +204,7 @@ void vk_present_screen_shot(const char *path);   // the next swapchain image to 
 // The window system's part of device creation (gfx_window_sdl.c): the instance
 // extensions a surface needs (their count, at most max), and whether a queue family of pd can present to it.
 int gfx_window_vk_extensions(const char **out, int max);
+const char *gfx_window_failed(void);   // why no window can open, once its thread has tried; NULL when one can
 int gfx_window_vk_presentable(VkInstance inst, VkPhysicalDevice pd, uint32_t family);
 void gfx_window_resize(int client_w, int client_h);   // programmatic resize; returns after the swapchain is rebuilt
 void gfx_vsync_bind_counter(volatile int32_t *counter);  // host-side stand-in for a bound event: incremented per tick

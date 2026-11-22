@@ -1144,7 +1144,7 @@ void gfx_window_release_vk(void) {
 void gfx_window_start(void) {
     plat_rmutex_lock(&g_start_lock);
     if (!g_started) {
-        if (!vk_init()) rt_fatal("gfx: no usable Vulkan device (see the vk: lines above)");
+        if (!vk_init()) rt_fatal("gfx: %s", gfx_window_failed() ? gfx_window_failed() : "no usable Vulkan device (see the vk: lines above)");
         VkCtx *c = vk_ctx();
         static int opened;
         if (!opened && !(opened = wsys_open())) rt_fatal("gfx: window creation failed");

@@ -642,7 +642,8 @@ static int run_launcher(int argc, char **argv) {
     if (exefs) launcher_set_exefs(exefs);
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--gb-install")) launcher_gb_install(argv[i + 1]);
-    if (launcher_run() != LAUNCHER_PLAY) return 0;
+    int r = launcher_run();
+    if (r != LAUNCHER_PLAY) return r == LAUNCHER_FAILED ? 70 : 0;   // 70 as rt_fatal's
     plat_setenv("MKW_LAUNCHED", "1");
     plat_reexec();
 }

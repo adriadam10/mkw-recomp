@@ -92,3 +92,6 @@ int cfg_bool(const char *name);
 int cfg_steam_started(void);
 int cfg_steam_console(void);
 const char *cfg_steam_video_driver(void);
+// SDL's video could not start, err its reason: the sentence for the player into out, with what picks the driver and the
+// display (SDL_VIDEO_DRIVER, WAYLAND_DISPLAY, DISPLAY). Returns out.
+const char *cfg_video_failed(const char *err, char *out, int size);

@@ -32,6 +32,7 @@ static uint32_t g_ev_base;               // SDL_RegisterEvents: the user events 
 enum { EV_RUN, EV_SETTINGS, EV_CLOSE, EV_COUNT };
 static PlatEvent g_video_ready;          // manual-reset: SDL video is up (or failed)
 static int g_video_ok;
+static char g_video_err[512];   // why not, for the player (cfg_video_failed)
 static PlatOnce g_thread_once = PLAT_ONCE_INIT;
 static uint32_t g_window_tid;            // the window thread, which runs the video calls
 static volatile int32_t g_density_milli = 1000;   // pixels per window unit, x1000
@@ -253,7 +254,15 @@ static void window_main(void *arg) {
     const char *steam_drv = steam_video_driver();   // started by Steam on a Wayland desktop, SDR: XWayland
     if (steam_drv) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, steam_drv);
     g_video_ok = SDL_Init(SDL_INIT_VIDEO);
-    if (!g_video_ok) rt_log("gfx: SDL video init failed (%s)", SDL_GetError());
+    if (!g_video_ok && steam_drv) {   // the driver asked for Steam's sake: without it, as if started from the desktop
+        rt_log("gfx: SDL's %s driver does not start (%s): SDL's own choice", steam_drv, SDL_GetError());
+        SDL_ResetHint(SDL_HINT_VIDEO_DRIVER);
+        g_video_ok = SDL_Init(SDL_INIT_VIDEO);
+    }
+    if (!g_video_ok) {
+        rt_log("gfx: SDL video init failed (%s)", SDL_GetError());
+        cfg_video_failed(SDL_GetError(), g_video_err, sizeof g_video_err);
+    }
     // SDL's Vulkan queries need its Vulkan loader, which a window would load at creation: the instance and the device
     // are made before the window.
     else if (!SDL_Vulkan_LoadLibrary(NULL)) {
@@ -284,6 +293,8 @@ static int video_up(void) {
     plat_once(&g_thread_once, video_start, NULL);
     return g_video_ok;
 }
+
+const char *gfx_window_failed(void) { return g_video_err[0] ? g_video_err : NULL; }
 
 int gfx_window_vk_extensions(const char **out, int max) {
     if (!video_up()) return 0;
