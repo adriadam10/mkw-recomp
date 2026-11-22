@@ -160,13 +160,30 @@ static uint64_t budget_default(void) {
     return vk_default_sparse_mib(c->props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, vram >> 20);
 }
 
+// A whole number of MiB, digits only, below 2^44 (so the shift to bytes cannot wrap). Why: atol took "abc" and "1g"
+// as 0 or 1 and "-256" as a wrapped huge value, so a typo in sparse_mib lifted the cap that keeps an over-committed
+// GPU from losing its device (#215) instead of keeping the default.
+static int parse_mib(const char *e, uint64_t *mib) {
+    uint64_t v = 0;
+    if (!*e) return 0;
+    for (; *e; e++) {
+        if (*e < '0' || *e > '9' || v >= (1ull << 40)) return 0;
+        v = v * 10 + (uint64_t)(*e - '0');
+    }
+    *mib = v;
+    return 1;
+}
+
 static uint64_t budget(void) {
     static uint64_t v;
     if (!v) {
         const char *e = cfg_get("MKW_SPARSE_MIB");
-        uint64_t mib = e && *e ? (uint64_t)atol(e) : budget_default();
+        uint64_t mib = 0;
+        int set = e && *e && parse_mib(e, &mib);
+        if (e && *e && !set) rt_log("vk: sparse: MKW_SPARSE_MIB=%s is not a whole number of MiB: default used", e);
+        if (!set) mib = budget_default();
         rt_log("vk: sparse: tile slots up to %llu MiB (MKW_SPARSE_MIB%s; 0 lifts it)", (unsigned long long)mib,
-               e && *e ? "" : " unset, from the GPU");
+               set ? "" : e && *e ? " invalid, from the GPU" : " unset, from the GPU");
         v = mib ? mib << 20 : UINT64_MAX;
     }
     return v;
