@@ -25,12 +25,22 @@
 // before it (rec_drain): they record with their own function pointers, not through the ring. The replay's memo of what
 // is bound is dropped afterwards (vk_exec_draw_forget).
 //
-// NGX is the driver's own (_nvngx.dll, found through the registry), the DLSS model nvngx_dlss.dll next to the
-// executable; no NVIDIA SDK code or header is compiled in: the few NGX types used are declared here from its ABI, and
-// its parameter object's virtual functions are called through their vtable slots (MSVC's order of the overloads),
-// checked with a set-then-get round trip at start.
+// NGX is the driver's own (Windows: _nvngx.dll, found through the registry; Linux: libnvidia-ngx.so.1, shipped with the
+// proprietary driver), the DLSS model next to the executable (nvngx_dlss.dll; libnvidia-ngx-dlss.so.<version> from
+// NVIDIA's DLSS repository, lib/Linux_x86_64/rel); no NVIDIA SDK code or header is compiled in: the few NGX types used
+// are declared here from its ABI, and its parameter object's virtual functions are called through their vtable slots
+// (the compiler ABI's order of the overloads, below), checked with a set-then-get round trip at start.
 #ifdef _WIN32
 #include <windows.h>
+#define ngx_sym(h, n) ((void *)GetProcAddress((HMODULE)(h), (n)))
+#define DLSS_MODEL "nvngx_dlss.dll"
+#else
+#include <dirent.h>
+#include <dlfcn.h>
+#include <limits.h>
+#include <unistd.h>
+#define ngx_sym(h, n) dlsym((h), (n))
+#define DLSS_MODEL "libnvidia-ngx-dlss.so"
 #endif
 #include <math.h>
 #include <stdio.h>
@@ -103,10 +113,15 @@ typedef NgxResult (*PFN_NgxEvaluate)(VkCommandBuffer, const NgxHandle *, const N
 typedef NgxResult (*PFN_NgxRelease)(NgxHandle *);
 typedef NgxResult (*PFN_NgxShutdown1)(VkDevice);
 
-// The parameter object's vtable, MSVC's layout: each group of overloads in reverse declaration order (the SDK declares
-// Set(u64), Set(float), Set(double), Set(u32), Set(int), Set(ID3D11Resource *), Set(ID3D12Resource *), Set(void *),
-// then the Get overloads in the same order).
+// The parameter object's vtable. The SDK declares Set(u64), Set(float), Set(double), Set(u32), Set(int),
+// Set(ID3D11Resource *), Set(ID3D12Resource *), Set(void *), then the Get overloads in the same order. MSVC (Windows)
+// lays each group of overloads out in reverse declaration order; the Itanium C++ ABI of Linux's libnvidia-ngx keeps
+// declaration order.
+#ifdef _WIN32
 enum { S_P = 0, S_D12, S_D11, S_I, S_U32, S_D, S_F, S_U64, G_P, G_D12, G_D11, G_I, G_U32, G_D, G_F, G_U64 };
+#else
+enum { S_U64 = 0, S_F, S_D, S_U32, S_I, S_D11, S_D12, S_P, G_U64, G_F, G_D, G_U32, G_I, G_D11, G_D12, G_P };
+#endif
 typedef void (*SetI)(NgxParam *, const char *, int);
 typedef void (*SetU)(NgxParam *, const char *, unsigned);
 typedef void (*SetF)(NgxParam *, const char *, float);
@@ -206,7 +221,19 @@ static int core_load(void) {
         rt_log("temporal: cannot load %s (error %lu): DLSS unavailable", path, GetLastError());
         return 0;
     }
-#define FN(f, name) N.f = (void *)GetProcAddress((HMODULE)N.core, name)
+#else
+    // the proprietary driver's; NGX itself finds the DLSS model in the paths ngx_init hands it
+    static const char *const cores[] = {"libnvidia-ngx.so.1", "libnvidia-ngx.so"};
+    const char *path = cores[0];
+    for (size_t i = 0; i < sizeof cores / sizeof *cores && !N.core; i++)
+        N.core = dlopen(path = cores[i], RTLD_NOW | RTLD_LOCAL);
+    if (!N.core) {
+        rt_log("temporal: cannot load %s (%s): DLSS unavailable (NVIDIA's proprietary driver has it)", cores[0],
+               dlerror());
+        return 0;
+    }
+#endif
+#define FN(f, name) N.f = ngx_sym(N.core, name)
     FN(init, "NVSDK_NGX_VULKAN_Init_Ext2");
     FN(req_ext, "NVSDK_NGX_VULKAN_RequiredExtensions");
     FN(caps, "NVSDK_NGX_VULKAN_GetCapabilityParameters");
@@ -224,10 +251,6 @@ static int core_load(void) {
     N.loaded = 1;
     rt_log("temporal: NGX core %s", path);
     return 1;
-#else
-    rt_log("temporal: DLSS is only wired on Windows in this build");
-    return 0;
-#endif
 }
 
 // Before the device (romfs_res.c, when it writes the game's 3D resolution at start): whether the engine MKW_TEMPORAL
@@ -246,6 +269,26 @@ int vk_tmp_engine_usable(void) {
     snprintf(path + n, MAX_PATH - n, "nvngx_dlss.dll");
     if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) return 1;
     rt_log("temporal: no %s: DLSS unavailable", path);
+#else
+    // libnvidia-ngx-dlss.so.<version> as NVIDIA ships it, or renamed without the version, next to mkw (where ngx_init
+    // points NGX), else the driver's own copy
+    char dir[PATH_MAX] = "";
+    ssize_t n = readlink("/proc/self/exe", dir, sizeof dir - 1);
+    while (n > 0 && dir[n - 1] != '/') n--;
+    dir[n > 0 ? n : 0] = 0;
+    DIR *d = opendir(n > 0 ? dir : ".");
+    for (struct dirent *e; d && (e = readdir(d));)
+        if (!strncmp(e->d_name, "libnvidia-ngx-dlss.so", 21) && (!e->d_name[21] || e->d_name[21] == '.')) {
+            closedir(d);
+            return 1;
+        }
+    if (d) closedir(d);
+    static const char *const sys[] = {"/usr/lib/libnvidia-ngx-dlss.so",
+                                      "/usr/lib/x86_64-linux-gnu/libnvidia-ngx-dlss.so"};
+    for (size_t i = 0; i < sizeof sys / sizeof *sys; i++)
+        if (!access(sys[i], R_OK)) return 1;
+    rt_log("temporal: no libnvidia-ngx-dlss.so next to %smkw: DLSS unavailable (NVIDIA's DLSS repository, "
+           "lib/Linux_x86_64/rel)", dir);
 #endif
     return 0;
 }
@@ -257,16 +300,11 @@ int vk_tmp_menu_state(const char *key) {
     int fg = !strcmp(key, "MKW_FG_ENGINE");
     if (!strcmp(v, "fsr3")) return vk_tmp_ffx_load() ? 0 : 2;
     if (strcmp(v, "dlss")) return 0;
-#ifdef _WIN32
     const VkCtx *c = vk_ctx();
     if (c && c->props.vendorID != 0x10DE) return 2;   // not an NVIDIA GPU
     if (!N.loaded) return N.wanted_at_start ? 2 : 1;
     if (!N.up) return 2;
     return (fg ? N.fg_max : N.dlss) ? 0 : 2;
-#else
-    (void)fg;
-    return 2;
-#endif
 }
 
 static int listed(const char *const *list, uint32_t n, const char *s) {
@@ -294,9 +332,8 @@ void vk_tmp_instance_exts(const char **ext, uint32_t *n, uint32_t max) {
     if (!core_load() || !NGX_OK(N.req_ext(&ni, &ie, &nd, &de))) return;
     for (unsigned i = 0; i < ni; i++)
         if (!listed(ext, *n, ie[i]) && *n < max) ext[(*n)++] = ie[i], rt_log("temporal: NGX instance extension %s", ie[i]);
-#ifdef _WIN32
-    PFN_FeatInstReq req = (PFN_FeatInstReq)(void *)GetProcAddress((HMODULE)N.core,
-                                                                  "NVSDK_NGX_VULKAN_GetFeatureInstanceExtensionRequirements");
+    PFN_FeatInstReq req = (PFN_FeatInstReq)ngx_sym(N.core,
+                                                   "NVSDK_NGX_VULKAN_GetFeatureInstanceExtensionRequirements");
     if (!req) return;
     static const wchar_t here[] = L".";
     NgxDiscovery d;
@@ -310,7 +347,6 @@ void vk_tmp_instance_exts(const char **ext, uint32_t *n, uint32_t max) {
             const char *nm = fg_names[fg_nnames++];
             if (!listed(ext, *n, nm) && *n < max) ext[(*n)++] = nm, rt_log("temporal: DLSS-G instance extension %s", nm);
         }
-#endif
 }
 
 static char fgd_names[16][VK_MAX_EXTENSION_NAME_SIZE];
@@ -322,10 +358,9 @@ void vk_tmp_device_exts(VkInstance inst, VkPhysicalDevice phys, const VkExtensio
     const char *want[48];
     unsigned nw = 0;
     for (unsigned i = 0; i < nd && nw < 32; i++) want[nw++] = de[i];
-#ifdef _WIN32
     // DLSS Frame Generation's own (VK_NV_optical_flow and the like): without them it can only blend the two pictures
-    PFN_FeatDevReq req = (PFN_FeatDevReq)(void *)GetProcAddress((HMODULE)N.core,
-                                                                "NVSDK_NGX_VULKAN_GetFeatureDeviceExtensionRequirements");
+    PFN_FeatDevReq req = (PFN_FeatDevReq)ngx_sym(N.core,
+                                                 "NVSDK_NGX_VULKAN_GetFeatureDeviceExtensionRequirements");
     if (req) {
         static const wchar_t here[] = L".";
         NgxDiscovery d;
@@ -342,7 +377,6 @@ void vk_tmp_device_exts(VkInstance inst, VkPhysicalDevice phys, const VkExtensio
                 rt_log("temporal: DLSS-G device extension %s", fgd_names[i]);
             }
     }
-#endif
     for (unsigned i = 0; i < nw; i++) {
         int ok = 0;
         for (uint32_t k = 0; k < nhave && !ok; k++) ok = !strcmp(have[k].extensionName, want[i]);
@@ -397,9 +431,26 @@ static void ngx_init(void) {
     DWORD len = GetModuleFileNameW(NULL, wdir, MAX_PATH);
     while (len && wdir[len - 1] != L'\\') len--;
     wdir[len] = 0;
+#else
+    char dir[PATH_MAX] = ".";
+    ssize_t dlen = readlink("/proc/self/exe", dir, sizeof dir - 1);
+    if (dlen > 0) {
+        dir[dlen] = 0;
+        while (dlen && dir[dlen - 1] != '/') dlen--;
+        dir[dlen] = 0;
+    }
+    static wchar_t wdir[PATH_MAX];
+    static const wchar_t *wpaths[1];
+    mbstowcs(wdir, dir, PATH_MAX - 1);
+    wdir[PATH_MAX - 1] = 0;
+    wpaths[0] = wdir;
+#endif
     const VkCtx *c = vk_ctx();
     static NgxCommonInfo ci;
     const char *lg = cfg_get("MKW_NGX_LOG");
+#ifndef _WIN32
+    ci.paths = wpaths, ci.npaths = 1;
+#endif
     ci.log = ngx_log, ci.min_level = 1, ci.other_sinks_off = 1;
     if (lg && atoi(lg) > 0) ngx_log_print = 1, ci.min_level = atoi(lg) > 1 ? 2 : 1, ci.other_sinks_off = 0;
     NgxResult r = N.init(NGX_APP_ID, wdir, c->instance, c->phys, c->device, vkGetInstanceProcAddr, vkGetDeviceProcAddr,
@@ -423,9 +474,8 @@ static void ngx_init(void) {
     N.dlss = avail != 0;
     N.fg_max = fga ? (mx < 1 ? 1 : (int)mx) : 0;
     rt_log("temporal: NGX up; DLSS Super Resolution %s%s; DLSS Frame Generation %s (up to %dx)",
-           avail ? "available" : "NOT available (is nvngx_dlss.dll next to mkw.exe?)",
+           avail ? "available" : "NOT available (is " DLSS_MODEL " next to the executable?)",
            driver ? " (the driver needs an update)" : "", fga ? "available" : "not available", N.fg_max + 1);
-#endif
 }
 
 // ---------------------------------------------------------------- the frame's state
