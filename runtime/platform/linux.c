@@ -577,6 +577,12 @@ static void renice(pid_t tid, int prio) {
     if (tid > 0 && may_renice(nice)) setpriority(PRIO_PROCESS, (id_t)tid, nice);
 }
 
+int plat_perf_core_setup(char *why, size_t n) {
+    snprintf(why, n, "not done on Linux");
+    return 0;
+}
+int plat_thread_perf_core(void) { return -1; }
+
 void plat_thread_priority(int prio) { renice((pid_t)syscall(SYS_gettid), prio); }
 
 void plat_thread_set_priority(PlatThread *t, int prio) { renice(__atomic_load_n(&t->tid, __ATOMIC_ACQUIRE), prio); }

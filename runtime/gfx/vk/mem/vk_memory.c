@@ -412,6 +412,14 @@ static int resolve_locked(uint64_t addr, uint64_t size, VkMemSpan *out) {
     return ok;
 }
 
+int vk_mem_span_live(const VkMemSpan *sp) {
+    // Imported or placed guest memory itself (POOL_IMPORT without a shadow copy): the GPU reads the pages the CPU
+    // wrote. Shadow storage (salloc) is synced at submit, after an upload batch may already have been recorded.
+    if (!sp || !sp->buffer || !sp->pool || sp->alloc) return 0;
+    const PoolRec *r = sp->pool;
+    return r->kind == POOL_IMPORT && !r->salloc;
+}
+
 int vk_mem_virt_phys(uint64_t addr, uint64_t *phys) {
     *phys = 0;
     plat_mutex_lock_shared(&pool_lock);

@@ -259,6 +259,7 @@ static void mirror_mode(int discrete) {
     shadow_live = shadow_on;
     if (shadow_on) rt_log("mem: shadow storage: CPU-visible pools are host-visible copies of guest memory, not imports%s",
                           sh && *sh ? " (MKW_SHADOW)" : "");
+    vk_mem_shadow_defer_init();   // MKW_SYNC_AHEAD / MKW_SHADOW_DEFER (after shadow_on is known)
     const char *dc = cfg_get("MKW_DIRTY_CENSUS");
     vk_dirty_census = (rt_trace & RT_TRACE_PERF) && dc && *dc && strcmp(dc, "0");
     const char *rt = cfg_get("MKW_READ_TRAPS");

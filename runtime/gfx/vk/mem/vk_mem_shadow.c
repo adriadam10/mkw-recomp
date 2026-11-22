@@ -61,6 +61,26 @@ static uint64_t s_late[3];                        // shadow_lock: bytes of the s
 // range's, another's), or never saw them, by their age at the sync (< 0.5 ms, < 2, more).
 static uint64_t s_none[5];
 
+// MKW_SHADOW_DEFER (with MKW_SYNC_AHEAD; from totk-pc-recomp vk_memory.c): a shadow update the CPU must not write yet
+// (a reader is still in flight under the guard) is queued and executed by the GPU at the start of the next part's
+// prologue (vk_mem_shadow_prologue). Without it the replay thread waits (shadow_wait_guard).
+typedef struct { PoolRec *r; uint64_t addr, len; } DRange;
+static int defer_on;
+static int sdefer_now;
+static uint64_t sdefer_fence;
+static DRange *dq;
+static int ndq, cdq;
+static uint64_t s_defer_pools, s_defer_bytes, s_defer_copies, s_wait_ticks, s_waits;
+
+// MKW_SYNC_AHEAD invalidate waits (vk_mem_shadow_read): a range not read lately with a pending GPU write waits for
+// the guard so the game does not read a stale or empty buffer of a value it was told is done.
+#define SREAD_N 64
+#define SREAD_AGE 64
+typedef struct { uint64_t addr, size, at; } SRead;
+static SRead sread[SREAD_N];
+static uint64_t s_read_waits, s_read_ticks;
+static uint64_t r_read_waits, r_read_ticks, r_read_max;
+
 int shadow_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
     r->import_lo = addr & ~0xfffull;
     r->import_hi = (addr + size + 0xfff) & ~0xfffull;
@@ -205,21 +225,15 @@ static void base_follow(PoolRec *r, uint64_t a, uint64_t b) {
     }
 }
 
-// shadow_lock held: copies [a, b) into the shadow, leaving out the bytes of GPU writes not copied back yet (spend from
-// index i on), or merging them in by bytes. The bytes come from src (a submit-time capture) or, NULL, guest memory.
-static void shadow_copy(PoolRec *r, uint64_t a, uint64_t b, int i, const uint8_t *src) {
-    for (; i < nspend; i++)
-        if (spend[i].lo < b && spend[i].hi > a && spend_blocks(&spend[i])) {
-            uint64_t lo = spend[i].lo > a ? spend[i].lo : a, hi = spend[i].hi < b ? spend[i].hi : b;
-            int merged = spend[i].merge && shadow_merge(r, lo, hi, src ? src + (lo - a) : NULL);
-            if (!merged && lost_on > 0 && !src) lost_skip(r, lo, hi, spend_old(lo, hi));
-            if (!merged && watch_hi) watch_event("skip (pending)", lo, hi, spend[i].fence, hi - lo);
-            if (spend[i].lo > a) shadow_copy(r, a, spend[i].lo, i + 1, src);
-            if (spend[i].hi < b) shadow_copy(r, spend[i].hi, b, i + 1, src ? src + (spend[i].hi - a) : NULL);
-            return;
-        }
-    // A read-trapped page still holds the shadow's bytes: copying it would fault and fill it for nothing. The GPU's
-    // writes stamp their pages (vk_guest_written), so every sync after a fence would.
+// shadow_lock held: guest [a, b) into the shadow, or queued for the GPU when sdefer_now (no capture src).
+static void shadow_put(PoolRec *r, uint64_t a, uint64_t b, const uint8_t *src) {
+    if (sdefer_now && !src) {
+        if (ndq == cdq) vk_mem_grow((void **)&dq, &cdq, sizeof *dq);
+        dq[ndq++] = (DRange){r, a, b - a};
+        r->sdefer = sdefer_fence;
+        s_defer_bytes += b - a;
+        return;
+    }
     if (src) {
         memcpy(r->smap + (a - r->import_lo), src, b - a);
         shadow_flush(r, a, b);
@@ -239,6 +253,30 @@ static void shadow_copy(PoolRec *r, uint64_t a, uint64_t b, int i, const uint8_t
         s_copied += y - x;
         if (n_early_base) base_follow(r, x, y);
     }
+}
+
+// shadow_lock held: copies [a, b) into the shadow, leaving out the bytes of GPU writes not copied back yet (spend from
+// index i on), or merging them in by bytes. The bytes come from src (a submit-time capture) or, NULL, guest memory.
+// With sdefer_now, pending GPU ranges are left alone (no merge) and the rest are queued for the prologue, as TotK does.
+static void shadow_copy(PoolRec *r, uint64_t a, uint64_t b, int i, const uint8_t *src) {
+    for (; i < nspend; i++)
+        if (spend[i].lo < b && spend[i].hi > a && spend_blocks(&spend[i])) {
+            uint64_t lo = spend[i].lo > a ? spend[i].lo : a, hi = spend[i].hi < b ? spend[i].hi : b;
+            if (sdefer_now && !src) {
+                if (spend[i].lo > a) shadow_copy(r, a, spend[i].lo, i + 1, src);
+                if (spend[i].hi < b) shadow_copy(r, spend[i].hi, b, i + 1, src);
+                return;
+            }
+            int merged = spend[i].merge && shadow_merge(r, lo, hi, src ? src + (lo - a) : NULL);
+            if (!merged && lost_on > 0 && !src) lost_skip(r, lo, hi, spend_old(lo, hi));
+            if (!merged && watch_hi) watch_event("skip (pending)", lo, hi, spend[i].fence, hi - lo);
+            if (spend[i].lo > a) shadow_copy(r, a, spend[i].lo, i + 1, src);
+            if (spend[i].hi < b) shadow_copy(r, spend[i].hi, b, i + 1, src ? src + (spend[i].hi - a) : NULL);
+            return;
+        }
+    // A read-trapped page still holds the shadow's bytes: copying it would fault and fill it for nothing. The GPU's
+    // writes stamp their pages (vk_guest_written), so every sync after a fence would.
+    shadow_put(r, a, b, src);
 }
 
 // gen_lock held: stamps the written pages of [lo, hi) with g, one query per run of regions that are not frozen. 0: some
@@ -333,6 +371,36 @@ void shadow_query_pools(PoolRec **rs, uint8_t *tracked, int n, int hot_on) {
     }
 }
 
+// shadow_lock held: whether a shadow this sync is about to update has a reader in flight past done.
+static int shadow_reader_busy(PoolRec **rs, int n, uint64_t done) {
+    for (int i = 0; i < n; i++)
+        if (rs[i]->suse > done) return 1;
+    return 0;
+}
+
+// shadow_lock held (released while waiting), no MKW_SHADOW_DEFER: waits until the guard is done when a shadow to
+// update has a reader in flight. *g and *done are current on return.
+static void shadow_wait_guard(PoolRec **rs, int n, uint64_t fence, uint64_t *g, uint64_t *done) {
+    while (*g > *done && (!fence || *g < fence) && shadow_reader_busy(rs, n, *done)) {
+        uint64_t want = *g;
+        plat_mutex_unlock(&shadow_lock);
+        uint64_t t0 = qpc();
+        vk_sync_fence_wait(want, UINT64_MAX);
+        uint64_t dt = qpc() - t0;
+        plat_mutex_lock(&shadow_lock);
+        s_wait_ticks += dt, s_waits++;
+        *g = nvn_sync_ahead_guard();
+        *done = vk_sync_fence_done();
+    }
+}
+
+// shadow_lock held, MKW_SHADOW_DEFER: queue the pool's update when a reader is in flight under the guard, or an earlier
+// deferred copy into it has not run yet (a direct memcpy must not land before that copy).
+static int shadow_defers(const PoolRec *r, uint64_t g, uint64_t done) {
+    if (r->sdefer > done) return 1;
+    return g > done && r->suse > done;
+}
+
 // shadow_lock held: syncs rs[0..n) for the submission fence (its pools skip it from then on).
 static void sync_pools(PoolRec **rs, int n, uint64_t fence, uint64_t sub) {
     if (n > cstrack) {
@@ -340,6 +408,9 @@ static void sync_pools(PoolRec **rs, int n, uint64_t fence, uint64_t sub) {
         free(strack);
         if (!(strack = malloc((size_t)cstrack))) rt_fatal("vk: out of memory (shadow sync)");
     }
+    // The guard is read under the lock: see vk_mem_shadow_fence. Early syncs share this path.
+    uint64_t g = nvn_sync_ahead_guard(), done = g ? vk_sync_fence_done() : 0;
+    if (!defer_on && n) shadow_wait_guard(rs, n, fence, &g, &done);
     uint64_t t1 = qpc();
     gen_lock_x();
     int k = cap_split(rs, n);   // pools the captures cover go last and are not read here
@@ -351,7 +422,19 @@ static void sync_pools(PoolRec **rs, int n, uint64_t fence, uint64_t sub) {
     cap_activate(rs, k);
     for (int i = 0; i < n; i++) rs[i]->touch_sub = sub, __atomic_store_n(&rs[i]->ssub, fence, __ATOMIC_RELAXED);
     plat_mutex_unlock(&gen_lock);
-    for (int i = 0; i < nsruns; i++) shadow_copy(sruns[i].r, sruns[i].a, sruns[i].b, 0, NULL);
+    // Per-pool defer: a pool with a reader in flight under the guard queues GPU copies instead of a CPU memcpy.
+    for (int i = 0; i < nsruns; i++) {
+        PoolRec *r = sruns[i].r;
+        int was = sdefer_now;
+        sdefer_now = defer_on && fence && shadow_defers(r, g, done);
+        sdefer_fence = fence;
+        int before = ndq;
+        shadow_copy(r, sruns[i].a, sruns[i].b, 0, NULL);
+        if (ndq > before) s_defer_pools++;
+        sdefer_now = was;
+    }
+    for (int i = 0; i < n; i++)
+        if (fence > rs[i]->suse) rs[i]->suse = fence;
     s_t_copy += qpc() - t2;
     plat_mutex_lock(&touch_lock);   // after ssub: a touch meanwhile saw stouched and the sync took its writes
     for (int i = 0; i < n; i++) rs[i]->stouched = 0;
@@ -475,12 +558,15 @@ void vk_mem_shadow_sync(uint64_t fence) {
         rt_log("mem: hot shadow pools %s (MKW_SHADOW_HOT)", hot_mode == 2 ? "in the B blocks" : hot_mode ? "on" : "off");
     }
     if (early_mode < 0) {
-        int m = rt_knob("SHADOW_EARLY", "1");
+        // With frame-ahead the deferred copies must land in the submit prologue; early CPU copies would race readers.
+        int m = nvn_sync_ahead_on() ? 0 : rt_knob("SHADOW_EARLY", "1");
         if (m) {
             plat_cond_init(&touch_cv);
             if (!plat_thread_spawn(early_main, NULL, "vk shadow", 0)) rt_fatal("vk: cannot start the shadow thread");
         }
-        rt_log("mem: early shadow syncs %s (MKW_SHADOW_EARLY)", m == 2 ? "in the B blocks" : m ? "on" : "off");
+        rt_log("mem: early shadow syncs %s (MKW_SHADOW_EARLY)%s",
+               m == 2 ? "in the B blocks" : m ? "on" : "off",
+               nvn_sync_ahead_on() ? "; off while MKW_SYNC_AHEAD=1 (deferred copies need the submit prologue)" : "");
         __atomic_store_n(&early_mode, m, __ATOMIC_RELEASE);
     }
     uint64_t sub = __atomic_load_n(&vk_replay_submit, __ATOMIC_RELAXED);
@@ -530,6 +616,121 @@ void vk_mem_shadow_sync(uint64_t fence) {
 
 int vk_mem_shadow_on(void) { return shadow_on; }
 
+// nvnSyncWait raised the guard: a sync that read the old guard holds shadow_lock until its copies are made.
+void vk_mem_shadow_fence(void) {
+    plat_mutex_lock(&shadow_lock);
+    plat_mutex_unlock(&shadow_lock);
+}
+
+int vk_mem_shadow_deferred(void) { return ndq; }
+
+// MKW_SYNC_AHEAD, nvnMemoryPoolInvalidateMappedRange: while the guard is not done, a pending write into a range the
+// game has not invalidated lately can belong to a value it was told is done; wait for the guard so it does not read
+// zeros or a prior round's answer (TotK Depths gloom: totk-pc-recomp docs/architecture.md Frame ahead).
+void vk_mem_shadow_read(uint64_t addr, uint64_t size) {
+    if (!shadow_on || !size || !nvn_sync_ahead_guard()) return;
+    plat_mutex_lock(&shadow_lock);
+    uint64_t now = vk_sync_issued();
+    SRead *e = &sread[0];
+    for (int i = 0; i < SREAD_N; i++) {
+        if (sread[i].addr == addr && sread[i].size == size) { e = &sread[i]; break; }
+        if (sread[i].at < e->at) e = &sread[i];
+    }
+    int known = e->addr == addr && e->size == size && e->at + SREAD_AGE >= now, pending = 0;
+    for (int i = 0; i < nspend && !pending; i++) pending = spend[i].lo < addr + size && spend[i].hi > addr;
+    uint64_t g = nvn_sync_ahead_guard(), wait = pending && !known && g > vk_sync_fence_done() ? g : 0;
+    if (known || !pending || wait) *e = (SRead){addr, size, now};
+    plat_mutex_unlock(&shadow_lock);
+    if (!wait) return;
+    uint64_t t0 = qpc();
+    {
+        NVN_BLOCKING();
+        vk_sync_fence_wait(wait, UINT64_MAX);
+    }
+    uint64_t dt = qpc() - t0;
+    plat_mutex_lock(&shadow_lock);
+    s_read_waits++, s_read_ticks += dt;
+    r_read_waits++, r_read_ticks += dt;
+    if (dt > r_read_max) r_read_max = dt;
+    plat_mutex_unlock(&shadow_lock);
+}
+
+void vk_mem_shadow_read_log(void) {
+    static int32_t done;
+    if (!shadow_on || !nvn_sync_ahead_on() || plat_xchg32(&done, 1)) return;
+    plat_mutex_lock(&shadow_lock);
+    rt_log("mem: the game waited for a GPU write it reads %llu times, %.1f ms in all, longest %.2f ms",
+           (unsigned long long)r_read_waits, qpc_ms(r_read_ticks), qpc_ms(r_read_max));
+    plat_mutex_unlock(&shadow_lock);
+}
+
+typedef struct { VkBuffer b; VmaAllocation a; } StgFree;
+static void free_shadow_stg(void *arg) {
+    StgFree *f = arg;
+    vmaDestroyBuffer(vk_ctx()->vma, f->b, f->a);
+    free(f);
+}
+
+static void sbarrier(VkCommandBuffer cb, VkPipelineStageFlags2 ss, VkAccessFlags2 sa, VkPipelineStageFlags2 ds,
+                     VkAccessFlags2 da) {
+    VkMemoryBarrier2 mb = {.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2, .srcStageMask = ss, .srcAccessMask = sa,
+                           .dstStageMask = ds, .dstAccessMask = da};
+    VkDependencyInfo di = {.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .memoryBarrierCount = 1, .pMemoryBarriers = &mb};
+    vkCmdPipelineBarrier2(cb, &di);
+}
+
+// Records the deferred shadow copies: guest bytes into staging now, GPU copies into the pools' shadows. Barriers keep
+// earlier readers of the shadow ahead of the copies. Replay thread, sub_lock held (from totk-pc-recomp vk_memory.c).
+void vk_mem_shadow_prologue(VkCommandBuffer cb, uint64_t fence) {
+    if (!ndq) return;
+    sbarrier(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT,
+             VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT);
+    const uint64_t lim = (64ull << 20) / 2;   // half a staging block (vk_mem_upload.c STG_BLOCK)
+    uint64_t copies = 0;
+    int i = 0;
+    uint64_t at_i = 0;
+    while (i < ndq) {
+        uint64_t total = 0, jo = at_i;
+        for (int j = i; j < ndq && total < lim;) {
+            uint64_t left = dq[j].len - jo, take = left < lim - total ? left : lim - total;
+            total += take;
+            if (take == left) j++, jo = 0;
+            else jo += take;
+        }
+        VkBuffer sb;
+        VmaAllocation sa;
+        uint8_t *p = vk_staging(total, &sb, &sa);
+        for (uint64_t at = 0; at < total;) {
+            const DRange *d = &dq[i];
+            uint64_t left = d->len - at_i, take = left < total - at ? left : total - at;
+            memcpy(p + at, (const void *)(uintptr_t)(d->addr + at_i), take);
+            VkBufferCopy bc = {at, d->addr + at_i - d->r->import_lo, take};
+            vkCmdCopyBuffer(cb, sb, d->r->buf, 1, &bc);
+            copies++;
+            at += take, at_i += take;
+            if (at_i == d->len) i++, at_i = 0;
+        }
+        vmaFlushAllocation(vk_ctx()->vma, sa, 0, VK_WHOLE_SIZE);
+        StgFree *f = malloc(sizeof *f);
+        if (!f) rt_fatal("vk: out of memory");
+        f->b = sb, f->a = sa;
+        vk_completion_add(fence, free_shadow_stg, f);
+    }
+    sbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+             VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT);
+    ndq = 0;
+    plat_mutex_lock(&shadow_lock);
+    s_defer_copies += copies;
+    plat_mutex_unlock(&shadow_lock);
+}
+
+// Called from mirror_mode once shadow_on is known: SHADOW_DEFER defaults on with SYNC_AHEAD=1.
+void vk_mem_shadow_defer_init(void) {
+    defer_on = shadow_on && nvn_sync_ahead_on() && cfg_bool("MKW_SHADOW_DEFER");
+    if (defer_on)
+        rt_log("mem: MKW_SHADOW_DEFER: shadow updates that wait for a reader are queued for the GPU instead");
+}
+
 void shadow_log(uint64_t frame) {
     if (!shadow_live) return;
     uint64_t tn, tp, tf, to;
@@ -565,6 +766,13 @@ void shadow_log(uint64_t frame) {
     cap_log();
     merge_census_log();
     if (race_on > 0) race_log(frame);
+    if (defer_on || s_waits || s_read_waits)
+        rt_log("mem: shadow sync-ahead since the last line: deferred %llu pools %.1f MiB in %llu GPU copies; waited for "
+               "a reader %llu times %.2f ms; invalidate waits %llu %.2f ms",
+               (unsigned long long)s_defer_pools, s_defer_bytes / 1048576.0, (unsigned long long)s_defer_copies,
+               (unsigned long long)s_waits, qpc_ms(s_wait_ticks), (unsigned long long)s_read_waits,
+               qpc_ms(s_read_ticks));
+    s_defer_pools = s_defer_bytes = s_defer_copies = s_waits = s_wait_ticks = s_read_waits = s_read_ticks = 0;
     s_syncs = s_queries = s_copied = s_untracked = s_wb_bytes = s_ticks = s_merged = s_based = s_nobase = s_gpu_only = 0;
     s_base_bytes = 0;
     if (hot_mode > 0) {

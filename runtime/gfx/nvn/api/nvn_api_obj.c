@@ -814,6 +814,7 @@ NVN_API(nvnQueuePresentTexture) {
     turbo_poll();
     release_note(o, idx);
     nvn_present_fence_note();   // MKW_TRACE=perf: which frame each blocking SyncWait waits for
+    nvn_sync_ahead_present();   // MKW_SYNC_AHEAD: the lag compares against this present and the one before
     if (rt_trace & RT_TRACE_PERF) nvn_sync_wait_window();
     const tex_t *t = (const tex_t *)o->tex[idx];
     uint64_t period = present_period(o), now = kern_now_ns();

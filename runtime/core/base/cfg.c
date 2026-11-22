@@ -144,7 +144,13 @@ static const CfgRow rows[] = {
     S("GPL", "performance", "1", "0|1", RESTART),
     // textures and memory
     S("ASTC", "performance", "auto", "auto|gpu|native|cpu", RESTART),
+    S("DESWIZZLE", "performance", "auto", "auto|gpu|cpu|check", RESTART),
     S("MEMORY", "performance", "auto", "auto|import|mirror|verify", RESTART),
+    // Frame ahead (nvn_api_core.c, vk_mem_shadow.c): lag the per-frame SyncWait one present; default off until a wait
+    // site is known for this game version. discover: log LRs of SyncWaits for the last-presented frame. SHADOW_DEFER
+    // queues shadow updates that would race an in-flight reader (default on; only active with SYNC_AHEAD=1).
+    S("SYNC_AHEAD", "performance", "0", "0|1|discover", RESTART),
+    S("SHADOW_DEFER", "performance", "1", "0|1", RESTART),
     S("TEX_ALIAS", "performance", "1", "0|1", RESTART),
     S("ZSTD_NATIVE", NULL, "1", "0|1", RESTART),
     S("ZSTD_CHECK", NULL, "0", "0|1", RESTART),

@@ -18,6 +18,7 @@
 #include "nvn_pool_index.h"
 #include "platform/platform.h"
 #include "version.h"
+#include "vk.h"   // vk_mem_shadow_on, vk_mirror_on for MKW_SYNC_AHEAD
 
 #define DEV_MAGIC MAGIC('D', 'E', 'V', 0)
 #define QUEUE_MAGIC MAGIC('Q', 'U', 'E', 'U')
@@ -550,6 +551,84 @@ void nvn_present_fence_note(void) {
                      __ATOMIC_RELAXED);
 }
 
+// MKW_SYNC_AHEAD=1 (from totk-pc-recomp runtime/nvn_api_core.c): one more frame in flight. Each frame the game waits
+// (one nvnSyncWait, frame_wait_lr) for the frame it presented last; on the Switch that work is long done by then, here
+// it is still in the replay and on the GPU, and the wait sets the frame time. With the switch on, that wait, and only
+// that one, waits for the frame before it instead. Shadow storage (or the VRAM mirrors) keep the CPU's writes off what
+// the GPU of the frame in flight still reads (vk_mem_shadow.c SHADOW_DEFER). MKW_SUBMIT_CATCHUP is forced off: catchup
+// waits for each submit's GPU and would cancel the overlap. Default 0 until a wait site is known for this version.
+// pa_fence: newest fence at the latest present and the one before. pa_guard: newest value the game was told is done early.
+static uint64_t pa_fence[2], pa_guard;
+
+// The return address of that wait (full guest VA via rt_main_addr). Unknown for 1.0.0 and 1.8.0 until
+// MKW_SYNC_AHEAD=discover or bindb names the main offsets (0: refuse the switch).
+static uint64_t frame_wait_lr(void) {
+    int v = rt_version()->number;
+    (void)v;
+    // e.g. return v == 100 ? rt_main_addr(0x....) : v == 180 ? rt_main_addr(0x....) : 0;
+    return 0;
+}
+
+// sync_mode: 0 off, 1 on, 2 discover (log LRs of last-presented waits; wait stays exact).
+static int sync_mode(void) {
+    static int mode = -1;
+    if (mode < 0) {
+        const char *v = cfg_value("MKW_SYNC_AHEAD");
+        int on = !strcmp(v, "1"), discover = !strcmp(v, "discover");
+        if (strcmp(v, "0") && !on && !discover)
+            rt_log("nvn: MKW_SYNC_AHEAD=%s is not 0, 1 or discover: off", v);
+        if (on && !vk_mem_shadow_on() && !vk_mirror_on) {
+            rt_log("nvn: MKW_SYNC_AHEAD needs shadow storage or the VRAM mirrors (MKW_MEMORY=import reads the game's "
+                   "vertex and storage data in place); the game waits for the GPU as before");
+            on = 0;
+        }
+        if (on && !frame_wait_lr()) {
+            rt_log("nvn: MKW_SYNC_AHEAD=1: no wait site for version %s; the game waits for the GPU as before "
+                   "(set MKW_SYNC_AHEAD=discover to log LRs of SyncWaits for the last-presented frame)",
+                   rt_version()->display);
+            on = 0;
+        }
+        if (on)
+            rt_log("nvn: MKW_SYNC_AHEAD: a wait for the frame presented last waits for the frame before it (%s); "
+                   "MKW_SUBMIT_CATCHUP forced off (catchup would wait for each submit's GPU and cancel the overlap)",
+                   vk_mem_shadow_on() ? "shadow storage" : "VRAM mirrors");
+        if (discover)
+            rt_log("nvn: MKW_SYNC_AHEAD=discover: logging LR of SyncWaits whose fence is the last-presented frame's");
+        mode = on ? 1 : discover ? 2 : 0;
+    }
+    return mode;
+}
+static int sync_ahead(void) { return sync_mode() == 1; }
+void nvn_sync_ahead_present(void) {
+    if (!sync_mode()) return;
+    __atomic_store_n(&pa_fence[1], __atomic_load_n(&pa_fence[0], __ATOMIC_RELAXED), __ATOMIC_RELEASE);
+    __atomic_store_n(&pa_fence[0], nvn_fence_last(), __ATOMIC_RELEASE);
+}
+uint64_t nvn_sync_ahead_guard(void) { return __atomic_load_n(&pa_guard, __ATOMIC_ACQUIRE); }
+int nvn_sync_ahead_on(void) { return sync_ahead(); }
+
+// Present-frame age of a waited fence: 0 not presented yet, 1 last presented, ... (same as sync_wait_note).
+static int present_age(uint64_t fence) {
+    uint32_t at = __atomic_load_n(&present_at, __ATOMIC_RELAXED);
+    int k = 0;
+    while (k < 3 && at > (uint32_t)k &&
+           fence <= __atomic_load_n(&present_fence[(at - 1 - (uint32_t)k) % 4], __ATOMIC_RELAXED))
+        k++;
+    return k;
+}
+
+static void sync_ahead_discover(const Cpu *c, uint64_t fence, uint64_t timeout) {
+    if (sync_mode() != 2 || !timeout || present_age(fence) != 1) return;
+    static uint64_t last_lr, n;
+    uint64_t lr = c->x[30];
+    if (lr == last_lr && ++n % 60) return;   // one line a second of 60 fps when the same site keeps matching
+    last_lr = lr, n = 1;
+    char at[96];
+    // Hardcode the main offset into frame_wait_lr and compare with rt_main_addr(offset), as patches.c does for LRs.
+    rt_log("nvn: MKW_SYNC_AHEAD=discover: SyncWait for last-presented fence %llu at LR %s (guest %#llx)",
+           (unsigned long long)fence, ldr_describe(lr, at, sizeof at), (unsigned long long)lr);
+}
+
 // Also, every 60 presents with waits in them (the loading screens: the loaders wait ~10 ms for each upload they
 // submit, 470 waits in the boot, boot-ht1), where the waited value was when the wait began: not yet recorded by the
 // replay (the latency is ours, the replay queue), or sent and not finished by the GPU (or its completion).
@@ -630,7 +709,30 @@ NVN_API(nvnSyncWait) {
     uint64_t timeout = arg_x(c, 1);
     if (!s->fenced) { ret_x(c, NVN_SYNC_WAIT_RESULT_TIMEOUT_EXPIRED); return; }
     const GfxBackend *b = gfx_backend();
-    if (fence_early(b) && b->fence_done() < s->fence) {
+    uint64_t want = s->fence, lag = s->fence;
+    // Only the game's per-frame wait lags (and not a poll). Discover mode keeps the wait exact and logs the LR.
+    int mode = timeout && frame_wait_lr() && c->x[30] == frame_wait_lr() ? sync_mode() : 0;
+    int behind = b->fence_done() < want;
+    sync_ahead_discover(c, s->fence, timeout);
+    if (mode == 1 && behind) {
+        uint64_t p0 = __atomic_load_n(&pa_fence[0], __ATOMIC_ACQUIRE);
+        uint64_t p1 = __atomic_load_n(&pa_fence[1], __ATOMIC_ACQUIRE);
+        if (want <= p0 && want > p1) lag = p1;
+        want = lag;
+    }
+    if (want != s->fence) {
+        // The replay of the asked value first: every shadow copy of it is made before the game writes what it reads.
+        {
+            NVN_BLOCKING();
+            gfx_replay_wait_value(s->fence);
+        }
+        uint64_t g = __atomic_load_n(&pa_guard, __ATOMIC_RELAXED);
+        while (s->fence > g &&
+               !__atomic_compare_exchange_n(&pa_guard, &g, s->fence, 1, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {}
+        vk_mem_shadow_fence();   // a shadow sync that read the old guard finishes before the game writes again
+    }
+    // MKW_FENCE_EARLY: not with a lagged frame wait (that path raises the guard and needs a real GPU wait bound).
+    if (!mode && fence_early(b) && b->fence_done() < s->fence) {
         int ok;
         {
             NVN_BLOCKING();
@@ -647,16 +749,24 @@ NVN_API(nvnSyncWait) {
     }
     int poll = timeout < 1000000ull;
     if (poll) poll_note();
-    if (b->fence_done() >= s->fence) { b->cpu_synced(s->fence); ret_x(c, NVN_SYNC_WAIT_RESULT_ALREADY_SIGNALED); return; }
-    if (poll && poll_wait(s->fence)) { b->cpu_synced(s->fence); ret_x(c, NVN_SYNC_WAIT_RESULT_CONDITION_SATISFIED); return; }
+    if (b->fence_done() >= want) {
+        b->cpu_synced(want == s->fence ? s->fence : b->fence_done());
+        ret_x(c, NVN_SYNC_WAIT_RESULT_ALREADY_SIGNALED);
+        return;
+    }
+    if (poll && poll_wait(want)) {
+        b->cpu_synced(want == s->fence ? s->fence : b->fence_done());
+        ret_x(c, NVN_SYNC_WAIT_RESULT_CONDITION_SATISFIED);
+        return;
+    }
     int ok;
     uint64_t t0 = (rt_trace & RT_TRACE_PERF) ? kern_now_ns() : 0, iss0 = t0 ? b->fence_queued() : 0;
     {
         NVN_BLOCKING();
-        ok = b->fence_wait(s->fence, timeout);
+        ok = b->fence_wait(want, timeout);
     }
     if (t0) sync_wait_note(s->fence, kern_now_ns() - t0, iss0);
-    if (ok) b->cpu_synced(s->fence);
+    if (ok) b->cpu_synced(want == s->fence ? s->fence : b->fence_done());
     ret_x(c, ok ? NVN_SYNC_WAIT_RESULT_CONDITION_SATISFIED : NVN_SYNC_WAIT_RESULT_TIMEOUT_EXPIRED);
 }
 // void nvnEventBuilderSetDefaults(NVNeventBuilder *b)
@@ -853,6 +963,8 @@ NVN_API(nvnQueueSubmitCommands) {
     // MKW_SUBMIT_CATCHUP=report: only submits that report a samples-passed count wait (occlusion queries, whose results
     // the CPU reads back: here they reach memory at the fence, a frame later than on the console). One census line every
     // 1,500 submits.
+    // With MKW_SYNC_AHEAD=1 catchup is forced off: waiting for each submit's GPU would keep the game and the GPU in
+    // lockstep and cancel the one-frame overlap the lagged SyncWait is for.
     static int catchup = -1, last = -1, only_reports;
     static uint64_t cs_n, cs_sp, cs_rep, cs_ev, cs_sp_n;
     cs_n++, cs_sp += nvn_sub_sp_reports, cs_rep += nvn_sub_reports, cs_ev += nvn_sub_events, cs_sp_n += nvn_sub_sp_reports != 0;
@@ -866,8 +978,10 @@ NVN_API(nvnQueueSubmitCommands) {
         const char *e = cfg_get("MKW_SUBMIT_CATCHUP");
         only_reports = e && !strcmp(e, "report");
         catchup = only_reports ? 1 : rt_knob("SUBMIT_CATCHUP", mem_early_waits() ? "0" : "1");
-        rt_log("nvn: submits wait for their replay and GPU work%s (MKW_SUBMIT_CATCHUP)",
-               !catchup ? ": off" : catchup == 2 ? " in the B blocks" : only_reports ? " when they report samples passed" : "");
+        if (nvn_sync_ahead_on()) catchup = 0;
+        rt_log("nvn: submits wait for their replay and GPU work%s (MKW_SUBMIT_CATCHUP)%s",
+               !catchup ? ": off" : catchup == 2 ? " in the B blocks" : only_reports ? " when they report samples passed" : "",
+               nvn_sync_ahead_on() ? "; forced off by MKW_SYNC_AHEAD=1" : "");
     }
     if (catchup == 2 && RT_KNOB_ON(catchup) != last)
         last = RT_KNOB_ON(catchup), rt_log("indb: f%llu catchup %s",
@@ -875,7 +989,8 @@ NVN_API(nvnQueueSubmitCommands) {
                                            last ? "on" : "off");
     ev_note_submit(f);
     // (not a held one: the console's GPU stops at its wait too, until the other queue's submit; that one waits for both)
-    if (catchup && RT_KNOB_ON(catchup) && gfx_replay_async() && !held && (!only_reports || nvn_sub_sp_reports))
+    if (catchup && RT_KNOB_ON(catchup) && !nvn_sync_ahead_on() && gfx_replay_async() && !held &&
+        (!only_reports || nvn_sub_sp_reports))
         gfx_backend()->fence_wait(f, 500000000ull);
     uint64_t prev = __atomic_load_n(&last_fence, __ATOMIC_RELAXED);
     while (f > prev && !__atomic_compare_exchange_n(&last_fence, &prev, f, 1, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {}

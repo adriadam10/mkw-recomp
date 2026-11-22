@@ -49,6 +49,12 @@ int plat_process_affinity(uint64_t mask);   // every thread of the process to th
 // efficiency cores keep that work while the frame's threads stay on the fast ones (vk_backend.c replay_core). Linux
 // only; on Windows the process mask bounds every thread, so it does nothing there.
 void plat_thread_background(void);
+// Hybrid CPUs on Windows: finds the performance-core logical processors the process may use, once, before any thread
+// asks; returns their count (0: none to prefer, why says which case). plat_thread_perf_core: the calling thread prefers
+// them via SetThreadSelectedCpuSets (unlike plat_process_affinity, background threads stay free for the E-cores). 1
+// done, 0 refused, -1 nothing selected. Linux: setup returns 0 ("not done on Linux"); FAST_CORES covers it there.
+int plat_perf_core_setup(char *why, size_t n);
+int plat_thread_perf_core(void);
 
 // Interrupting a thread (kernel.c's asynchronous preemption). A thread makes its own handle; another thread stops it
 // wherever it runs, reads where it is, may send it elsewhere, and lets it go on. While it is stopped the caller must not

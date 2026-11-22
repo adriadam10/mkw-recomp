@@ -149,6 +149,7 @@ void vk_sync_parts_flush(void) {
 static void submit_main(void *arg) {
     (void)arg;
     is_submitter = 1;
+    perf_core_thread(PCORE_SUBMIT);
     plat_mutex_lock(&pend_mx);
     for (;;) {
         while (!__atomic_load_n(&pend_n, __ATOMIC_ACQUIRE)) plat_cond_wait(&pend_cv, &pend_mx);
@@ -366,6 +367,7 @@ void vk_sync_start(void) {
         if (!completion_thread) rt_fatal("vk: cannot start the completion thread");
         __atomic_store_n(&started, 1, __ATOMIC_RELEASE);
         vk_astc_mode();   // decides MKW_ASTC and builds the ASTC decoder now, not at the first ASTC upload
+        vk_deswz_mode();  // decides MKW_DESWIZZLE and builds the deswizzle pass now, not at the first upload
     }
     plat_mutex_unlock(&start_lock);
 }
@@ -418,7 +420,8 @@ static VkCommandBuffer prologue(VkCtx *c, uint64_t fence) {
         fe_waits++, fe_ns += kern_now_ns() - t0;
     }
     vk_mem_shadow_sync(fence);   // shadow storage: the CPU's writes go in before the part is submitted
-    if (!vk_mem_mirror_pending()) return VK_NULL_HANDLE;
+    // MKW_SYNC_AHEAD / SHADOW_DEFER: deferred shadow copies need a prologue even with no mirror uploads.
+    if (!vk_mem_mirror_pending() && !vk_mem_shadow_deferred()) return VK_NULL_HANDLE;
     int i = claim_slot(c, fence);   // before reading slots: the claim may move it
     VkCommandBuffer cb = slots[i].cb;
     VkCommandBufferBeginInfo bi = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -426,6 +429,7 @@ static VkCommandBuffer prologue(VkCtx *c, uint64_t fence) {
     vkBeginCommandBuffer(cb, &bi);
     if (vk_guard_on()) vk_guard_cb_begin(cb);
     int pair = vk_ts_open(cb);
+    vk_mem_shadow_prologue(cb, fence);   // before the mirror copies, which read the shadow these bring up to date
     vk_mem_mirror_prologue(cb);
     vk_ts_close(cb, pair, fence);
     vkEndCommandBuffer(cb);

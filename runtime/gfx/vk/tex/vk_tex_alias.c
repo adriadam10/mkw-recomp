@@ -258,12 +258,12 @@ void vk_texture_compute_written(int id) {
     // write-back paths (owned_dirty) never see it and physics reads a flat road while the GPU shows waves (#410).
     // As vk_texture_gpu_written above, resolved by slot: the dispatch binds by handle, not by tex_t.
     if (id < 0 || id >= (1 << 20)) return;
-    lock();
+    vk_texture_lock();   // by_id_locked needs tex then slots
     view_t v;
     int hv = 0;
     const VkTexImage *pub = vk_texture_by_id_locked(id, &v, &hv);
     if (pub) gpu_written_locked((Tex *)pub);   // pub is Tex's first member
-    unlock();
+    vk_texture_unlock();
 }
 
 void vk_texture_release(const tex_t *t) {

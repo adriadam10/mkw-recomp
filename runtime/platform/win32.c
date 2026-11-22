@@ -279,6 +279,98 @@ uint32_t plat_cpu_count(void) {
     return n ? (uint32_t)n : 1;
 }
 
+// ---- performance cores of a hybrid CPU
+// From totk-pc-recomp runtime/platform/win32.c plat_perf_core_setup / plat_thread_perf_core (MIT; see
+// docs/project/research.md). An Intel CPU with P-cores and E-cores runs a thread on an E-core at about 60% of a
+// P-core's speed, and the frame waits for its slowest critical thread. The few threads every frame goes through ask
+// for the P-cores (plat_thread_perf_core): their selected CPU sets are the logical processors above the lowest
+// efficiency class that the process affinity allows. A thread's CPU sets bind it like an affinity mask, except that
+// processors the system reserves for itself are left out instead of failing. Nothing is selected on a CPU with one
+// efficiency class, or when the affinity already leaves only P-cores or only E-cores. Nothing is selected either
+// below PC_MIN_CORES physical P-cores (an i5-1235U has 2): the bound threads and a spinning recorder would crowd two
+// cores while the E-cores stay idle. MKW_FAST_CORES stays off on Windows: its process mask would also hold background
+// threads; this path leaves them free for the E-cores.
+#define PC_MIN_CORES 4
+static ULONG *pc_ids;   // the CPU set ids of the allowed P-core logical processors; NULL: none selected
+static ULONG pc_n;
+
+int plat_perf_core_setup(char *why, size_t n) {
+    ULONG len = 0;
+    GetSystemCpuSetInformation(NULL, 0, &len, GetCurrentProcess(), 0);
+    uint8_t *buf = len ? malloc(len) : NULL;
+    if (!buf || !GetSystemCpuSetInformation((PSYSTEM_CPU_SET_INFORMATION)buf, len, &len, GetCurrentProcess(), 0)) {
+        free(buf);
+        snprintf(why, n, "no CPU set information (error %lu)", GetLastError());
+        return 0;
+    }
+    // The process affinity mask covers its first processor group only: it filters on a single-group system.
+    DWORD_PTR proc = 0, sys = 0;
+    int filter = GetActiveProcessorGroupCount() == 1 && GetProcessAffinityMask(GetCurrentProcess(), &proc, &sys) && proc;
+    int lo = 255, hi = -1, all = 0;
+    for (ULONG off = 0; off < len;) {
+        SYSTEM_CPU_SET_INFORMATION *i = (SYSTEM_CPU_SET_INFORMATION *)(buf + off);
+        if (!i->Size) break;
+        if (i->Type == CpuSetInformation) {
+            int ec = i->CpuSet.EfficiencyClass;
+            lo = ec < lo ? ec : lo, hi = ec > hi ? ec : hi, all++;
+        }
+        off += i->Size;
+    }
+    if (!all || hi <= lo) {
+        free(buf);
+        snprintf(why, n, "not a hybrid CPU (%d logical processors, one efficiency class)", all);
+        return 0;
+    }
+    ULONG *ids = calloc((size_t)all, sizeof *ids);
+    uint16_t *cores = calloc((size_t)all, sizeof *cores);   // group << 8 | core index of each allowed physical P-core
+    int np = 0, ne = 0, ok_p = 0, ok_e = 0, nc = 0;
+    for (ULONG off = 0; ids && cores && off < len;) {
+        SYSTEM_CPU_SET_INFORMATION *i = (SYSTEM_CPU_SET_INFORMATION *)(buf + off);
+        if (!i->Size) break;
+        if (i->Type == CpuSetInformation) {
+            int perf = i->CpuSet.EfficiencyClass > lo;
+            int allowed = !filter || (i->CpuSet.Group == 0 && i->CpuSet.LogicalProcessorIndex < 64 &&
+                                      (proc >> i->CpuSet.LogicalProcessorIndex) & 1);
+            perf ? np++ : ne++;
+            if (allowed) perf ? ok_p++ : ok_e++;
+            if (allowed && perf) {
+                ids[pc_n++] = i->CpuSet.Id;
+                uint16_t key = (uint16_t)(i->CpuSet.Group << 8 | i->CpuSet.CoreIndex);
+                int k = 0;
+                while (k < nc && cores[k] != key) k++;
+                if (k == nc) cores[nc++] = key;
+            }
+        }
+        off += i->Size;
+    }
+    int counted = ids && cores;
+    free(buf);
+    free(cores);
+    if (!counted || !ok_p || !ok_e) {
+        free(ids);
+        pc_n = 0;
+        snprintf(why, n, "hybrid CPU, %d P-core + %d E-core logical processors; the affinity allows %d + %d, so it decides",
+                 np, ne, ok_p, ok_e);
+        return 0;
+    }
+    if (nc < PC_MIN_CORES) {
+        free(ids);
+        pc_n = 0;
+        snprintf(why, n, "hybrid CPU, %d P-core + %d E-core logical processors on %d P-cores, fewer than %d", np, ne, nc,
+                 PC_MIN_CORES);
+        return 0;
+    }
+    pc_ids = ids;
+    snprintf(why, n, "hybrid CPU, %d P-core + %d E-core logical processors%s", np, ne,
+             ok_p != np || ok_e != ne ? " (affinity-limited)" : "");
+    return (int)pc_n;
+}
+
+int plat_thread_perf_core(void) {
+    if (!pc_ids) return -1;
+    return SetThreadSelectedCpuSets(GetCurrentThread(), pc_ids, pc_n) ? 1 : 0;
+}
+
 // PLAT_PRIO_* are the THREAD_PRIORITY_* values.
 void plat_thread_priority(int prio) { SetThreadPriority(GetCurrentThread(), prio); }
 void plat_thread_set_priority(PlatThread *t, int prio) { SetThreadPriority(t->h, prio); }

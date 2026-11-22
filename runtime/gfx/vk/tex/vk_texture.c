@@ -1,7 +1,8 @@
 // Vulkan textures of the graphics layer: a VkImage cache keyed by storage
 // GPU address plus descriptor, uploads through staging buffers with block-linear deswizzle and ASTC decode (vk_astc.c),
 // re-uploads when page write generations (vk_memory.c) show the storage written, ReadTexels / WriteTexels, the texture
-// and sampler descriptor slots, and VkSamplers. The cache state lives here; the parts, sharing vk_tex_internal.h:
+// and sampler descriptor slots, and VkSamplers. Image-cache state lives here under tex_lock; slot tables under
+// slots_lock (vk_tex_slots.c). Lock order: tex_lock → slots_lock → view_lock. The parts, sharing vk_tex_internal.h:
 // vk_tex_image.c (images, released entries), vk_tex_upload.c, vk_tex_alias.c (aliases, GPU writes into mirrored
 // storage), vk_tex_slots.c (descriptor slots, samplers) and vk_tex_texel.c (ReadTexels / WriteTexels, CPU reads).
 //
@@ -32,15 +33,16 @@
 #include "vk_tex_internal.h"
 #include "platform/platform.h"
 
-PlatRMutex tex_lock;
+PlatRMutex tex_lock;   // before slots_lock and view_lock when those are held too
+PlatMutex slots_lock = PLAT_MUTEX_INIT;   // after tex_lock, before view_lock
 PlatOnce tex_once = PLAT_ONCE_INIT;
 nvn_hmap by_key = {.klen = sizeof(TexKey)};
 nvn_hmap by_addr = {.klen = 8};
-TexSlot *tslots;
+TexSlot *tslots;   // under slots_lock
 int ntslots;
-SampSlot *sslots;
+SampSlot *sslots;   // under slots_lock
 int nsslots;
-nvn_hmap samplers = {.klen = sizeof(samp_par)};
+nvn_hmap samplers = {.klen = sizeof(samp_par)};   // under slots_lock (VkSampler cache; not Tex lifetime)
 int nreleased;
 uint64_t released_bytes;
 Tex *rel_head, *rel_tail;   // released entries in release order (sweep_released drops from the head)
@@ -63,6 +65,8 @@ uint64_t gpu_writes;  // GPU writes into mirrored textures so far: Tex.gpu_seq
 // use (the slot lookup and the follow of a finalized slot read only by_key, by_addr and the released flags).
 uint32_t tex_gen = 1;
 // Bumped with tex_gen and whenever a slot is registered: what vk_texture_by_id returns for any slot may have changed.
+// Atomic: TEX_MEMO / slot_still read it unlocked, and tex_gen_bump (tex_lock held, slots may already be held) must not
+// take slots_lock.
 uint32_t slots_gen = 1;
 uint32_t samp_gen = 1;   // bumped whenever a sampler slot is registered: vk_sampler_by_id may answer otherwise
 uint64_t n_checks;    // draw-binding storage checks (make_fresh_snap) since the last perf line
@@ -73,18 +77,18 @@ uint64_t n_checks;    // draw-binding storage checks (make_fresh_snap) since the
 uint32_t agen[AGEN_N];
 // Per slot id, for vk_texture_slot_token without the lock: the registration serial (bits 16-47; 0: never registered)
 // and the address generation index (bits 0-15), one word so a reader gets a consistent pair. Fixed-size (slot ids are
-// 20 bits), unlike tslots, which moves when it grows.
+// 20 bits), unlike tslots, which moves when it grows. Written under slots_lock; read unlocked.
 uint64_t *sinfo;
 // Per slot id, for vk_texture_checked without the lock: the submit_epoch of the slot's last freshness check (bits
 // 32-63) and the agen its entry was resolved under (bits 0-31); 0 after a registration. Fixed-size like sinfo.
 uint64_t *schk;
-uint32_t reg_serial;
+uint32_t reg_serial;   // under slots_lock; readers of tokens use the value published in sinfo
 
 uint32_t agen_idx(uint64_t addr) { return (uint32_t)(addr * 0x9E3779B97F4A7C15ull >> 52); }
 
 void tex_gen_bump(uint64_t addr) {
     if (!++tex_gen) tex_gen = 1;
-    slots_gen++;
+    __atomic_fetch_add(&slots_gen, 1, __ATOMIC_RELEASE);
     uint32_t *g = &agen[agen_idx(addr)];
     __atomic_store_n(g, *g + 1, __ATOMIC_RELEASE);
 }
@@ -207,6 +211,7 @@ void vk_texture_census(VkTexCensus *s) {
 void vk_texture_shutdown(void) {
     VkCtx *c = vk_ctx();
     lock();
+    lock_slots();   // tex then slots: freers of slot tables and the sampler hashmap
     Tex **list = malloc(sizeof *list * (size_t)(by_key.n + 1));
     int n = 0;
     for (uint32_t i = 0; i < by_key.cap; i++)
@@ -224,5 +229,6 @@ void vk_texture_shutdown(void) {
     rel_head = rel_tail = NULL;
     if (sinfo) memset(sinfo, 0, sizeof *sinfo << 20);   // no slot is registered: tokens 0
     if (schk) memset(schk, 0, sizeof *schk << 20);
+    unlock_slots();
     unlock();
 }

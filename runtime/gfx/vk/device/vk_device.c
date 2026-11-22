@@ -679,7 +679,7 @@ static void destroy_all(void) {
     gfx_window_release_vk();
     vk_rfx_shutdown();
     if (g_vk.device) vkDeviceWaitIdle(g_vk.device);
-    if (g_vk.device) vk_astc_release(), vk_crumbs_release(), vk_tmp_shutdown();
+    if (g_vk.device) vk_astc_release(), vk_deswz_release(), vk_crumbs_release(), vk_tmp_shutdown();
     if (g_vk.timeline) vkDestroySemaphore(g_vk.device, g_vk.timeline, NULL);
     vk_headroom_stop();
     vk_tex_pool_stop();

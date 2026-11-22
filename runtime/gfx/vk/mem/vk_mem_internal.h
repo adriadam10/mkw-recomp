@@ -63,6 +63,8 @@ typedef struct PoolRec {
     volatile uint8_t stouched;         // on the touched list: the GPU may use it in the submission being recorded
     uint64_t ssub;                     // shadow_lock: the submission whose shadow sync last covered it
     uint64_t sfence;                   // touch_lock: the submission recording when it went on the early list
+    uint64_t suse;                     // shadow_lock: newest fence value that synced this shadow as a GPU reader
+    uint64_t sdefer;                   // shadow_lock: newest value whose prologue carries a deferred copy into it
     uint8_t shist;                     // gen_lock: one bit per shadow sync of the last 8, set when the CPU had written it
     uint8_t shot;                      // gen_lock: syncs left that query it without protecting again (MKW_SHADOW_HOT)
     uint64_t touch_sub;                // shadow_lock: the submit number of the last sync that had it touched
@@ -191,6 +193,7 @@ extern PlatMutex shadow_lock;
 extern int hot_mode;
 void shadow_query_pools(PoolRec **rs, uint8_t *tracked, int n, int hot_on);   // gen_lock held
 void shadow_apply_run(PoolRec *r, uint64_t a, uint64_t b, const uint8_t *src);   // shadow_lock held
+void vk_mem_shadow_defer_init(void);   // mirror_mode: MKW_SHADOW_DEFER once sync_ahead is known
 
 // vk_mem_capture.c: the CPU's writes captured at each submit (MKW_SHADOW_SUBMIT)
 void cap_apply(uint64_t sub);                    // shadow_lock held: captures of submits up to sub into the shadows
