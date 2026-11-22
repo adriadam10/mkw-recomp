@@ -360,6 +360,7 @@ int fps_auto_step(FpsAuto *a, double measured_ms, double real_ms);   // a frame'
                                                                      // the interval to use out
 int probe_discord(void);                                   // discord_probe.c: Rich Presence against the local Discord
 int probe_dsu(void);                                       // dsu_probe.c: the DSU motion client against a fake server
+int probe_pads(void);                                      // pads_probe.c: players and their gamepads, traded (virtual gamepads)
 int probe_fps(void);                                       // fps_probe.c: the controller on synthetic frame times
 int probe_merge(void);                                     // merge_probe.c: the shadow write-back's two implementations
 int probe_share(void);                                     // share_probe.c: guest pages the GPU shares

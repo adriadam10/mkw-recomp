@@ -76,6 +76,10 @@ bool opt_choice_list(const char *key, UiTextId label, const char *const *values,
 // A row that runs an action: true on A or a click. id: unique on the page and not a setting ("##copy_info"); value:
 // shown on the right ("" none).
 bool opt_button(const char *id, UiTextId label, UiTextId desc, const char *value = "");
+// The page is the start screen's, not the in-game menu's.
+bool opt_start_screen(void);
+// The same with its label as text (a controller's name).
+bool opt_button_text(const char *id, const char *label, UiTextId desc, const char *value = "");
 // A row that only shows something (a controller's battery): its label as text, value on the right and note under it.
 void opt_info(const char *id, const char *label, const char *value, UiTextId desc, const char *note = nullptr);
 // lo..hi in steps of step (left and right held for a second go ten times as fast); fmt formats the value ("%.0f %%").

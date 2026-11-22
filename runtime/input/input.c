@@ -167,13 +167,25 @@ static int pad_is_open(SDL_JoystickID id) {
 
 static void pad_adopt(void);
 
+// Player 1 has no gamepad any more: what the menu shows of it.
+static void pad_lost(void) {
+    plat_xchg32(&pad_layout_shown, -1);
+    plat_xchg32(&pad_dz_shown, -1);
+    for (int i = 0; i < 4; i++) plat_xchg32(&pad_labels[i], PAD_LABEL_NONE);
+}
+
+// Player p's (2-8) new gamepad: its rumble and layout.
+static void extra_adopt(int p) {
+    SDL_Gamepad *g = extra[p];
+    extra_rumble[p] = SDL_GetBooleanProperty(SDL_GetGamepadProperties(g), SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false);
+    extra_east_a[p] = SDL_GetGamepadButtonLabel(g, SDL_GAMEPAD_BUTTON_EAST) == SDL_GAMEPAD_BUTTON_LABEL_A;
+}
+
 // Close the gamepads that went away and open the new ones (player 1 first, then the first free player); logs each change.
 static void scan_pads(void) {
     if (pad && !SDL_GamepadConnected(pad)) {
         SDL_CloseGamepad(pad); pad = NULL; sensor_pad[0] = 0; sensor_ok[0] = 0;
-        plat_xchg32(&pad_layout_shown, -1);
-        plat_xchg32(&pad_dz_shown, -1);
-        for (int i = 0; i < 4; i++) plat_xchg32(&pad_labels[i], PAD_LABEL_NONE);
+        pad_lost();
         rt_log("input: gamepad disconnected");
     }
     for (int p = 1; p < INPUT_MAX_PLAYERS; p++)
@@ -195,8 +207,7 @@ static void scan_pads(void) {
         if (!g) continue;
         if (!p) { pad = g; pad_adopt(); continue; }
         extra[p] = g;
-        extra_rumble[p] = SDL_GetBooleanProperty(SDL_GetGamepadProperties(g), SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false);
-        extra_east_a[p] = SDL_GetGamepadButtonLabel(g, SDL_GAMEPAD_BUTTON_EAST) == SDL_GAMEPAD_BUTTON_LABEL_A;
+        extra_adopt(p);
         rt_log("input: gamepad \"%s\" for player %d (%s)", SDL_GetGamepadName(g), p + 1,
                extra_rumble[p] ? "rumble" : "no rumble");
     }
@@ -227,6 +238,48 @@ static void pad_adopt(void) {
     plat_xchg32(&pad_dz_shown, (int32_t)lroundf(dead_zone_for(pad, 0) * 1000));
     rt_log("input: stick dead zones %.1f %% left, %.1f %% right (%s)", dead_zone_for(pad, 0) * 100,
            dead_zone_for(pad, 1) * 100, set && *set ? "MKW_STICK_DEADZONE" : "this controller's default; MKW_STICK_DEADZONE sets one");
+}
+
+static SDL_Gamepad **pad_slot(int p) { return p ? &extra[p] : &pad; }
+
+static int pad_p2_on(void) {
+    const char *e = cfg_get("MKW_PAD_P2");
+    return e && atoi(e) > 0;
+}
+
+// The first player with a gamepad of its own: player 2 with MKW_PAD_P2.
+static int pad_first(void) { return pad_p2_on() ? 1 : 0; }
+
+int input_pad_can_move_up(int p) {
+    plat_mutex_lock(&lock);
+    int ok = state == 1 && p > pad_first() && p < INPUT_MAX_PLAYERS && *pad_slot(p) && SDL_GamepadConnected(*pad_slot(p));
+    plat_mutex_unlock(&lock);
+    return ok;
+}
+
+int input_pad_swap(int a, int b) {
+    if (a == b || a < 0 || b < 0 || a >= INPUT_MAX_PLAYERS || b >= INPUT_MAX_PLAYERS) return 0;
+    plat_mutex_lock(&lock);
+    int ok = state == 1 && a >= pad_first() && b >= pad_first() && (*pad_slot(a) || *pad_slot(b));
+    if (ok) {
+        int at[2] = {a, b};
+        for (int i = 0; i < 2; i++)   // the game stops a rumble on the player that has the gamepad: the one left behind would go on
+            if (*pad_slot(at[i])) SDL_RumbleGamepad(*pad_slot(at[i]), 0, 0, 0), SDL_RumbleGamepadTriggers(*pad_slot(at[i]), 0, 0, 0);
+        SDL_Gamepad *g = *pad_slot(a);
+        *pad_slot(a) = *pad_slot(b), *pad_slot(b) = g;
+        for (int i = 0; i < 2; i++) {
+            int p = at[i];
+            sensor_pad[p] = 0, sensor_ok[p] = 0;   // the motion thread sets its sensors up again
+            g = *pad_slot(p);
+            if (!p) {
+                if (g) pad_adopt();
+                else pad_lost();
+            } else if (g) extra_adopt(p);
+            rt_log("input: player %d now has %s%s%s", p + 1, g ? "gamepad \"" : "no gamepad", g ? SDL_GetGamepadName(g) : "", g ? "\"" : "");
+        }
+    }
+    plat_mutex_unlock(&lock);
+    return ok;
 }
 
 // Under lock: the layout of the open gamepad, picked again when a setting or the gamepad changed; logs each change.

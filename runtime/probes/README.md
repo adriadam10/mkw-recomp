@@ -2,6 +2,7 @@
 
 Self-tests of each subsystem, one command-line option each (`build/mkw --probe-…`). They come from totk-pc-recomp
 except `texpre_probe.c`, `fg_probe.c`, `fps_probe.c`, `merge_probe.c`, `spill_probe.c`, `share_probe.c`, `discord_probe.c`, `clk_probe.c` and `dsu_probe.c`.
+except `texpre_probe.c`, `fg_probe.c`, `fps_probe.c`, `merge_probe.c`, `spill_probe.c`, `discord_probe.c`, `clk_probe.c`, `dsu_probe.c` and `pads_probe.c`.
 
 | File | Option | What it checks |
 |---|---|---|
@@ -12,6 +13,7 @@ except `texpre_probe.c`, `fg_probe.c`, `fps_probe.c`, `merge_probe.c`, `spill_pr
 | `fg_probe.c` | `--probe-framegen` | MKW's own: frame generation's passes (`vk_framegen.c`) on two pictures in `MKW_FG_PROBE` (from `tools/imagen/fg_check.py`), the frame halfway and the vectors of each level written back, and its GPU time |
 | `discord_probe.c` | `--probe-discord` | MKW's own: Discord Rich Presence (`core/presence`) against the Discord running on this machine: connects, shows each phase a few seconds, clears it |
 | `dsu_probe.c` | `--probe-dsu` | MKW's own: the Cemuhook / DSU motion client (`input/dsu.c`) against a fake server on the loopback: the request's header and CRC, the axes and units in the Switch frame, the fusion turning a quarter turn a second, a bad CRC ignored, the samples back after the server quits and starts again, `MKW_DSU=0` live; with `MKW_DSU_SERVER` set, against that server instead |
+| `pads_probe.c` | `--probe-pads` | MKW's own: which gamepad is which player (`input/input.c`) with four virtual gamepads: each button reaches its player only, `input_pad_swap` trades two of them live, a player without one gets it, player 1 keeps the keyboard with `MKW_PAD_P2` |
 | `fps_probe.c` | `--probe-fps` | MKW's own: `MKW_FPS=auto`'s controller (`fps_auto.c`) on synthetic frame times: the interval each steady frame time settles on with no changes after, a loading hitch, a return to 60, stalls slower than any interval |
 | `oflow_probe.c` | `--probe-oflow` | Hardware optical flow on a known synthetic translation, vector sign/scale and timeline ordering (`MKW_FG_NVOF=1`), without game assets |
 | `fsr_fg_probe.c` | `--probe-fsr-fg` | Real FSR generation on an analytical moving plane, fixed object and shadow; compares geometry/image vectors (`MKW_FSR_PROBE_MV`) without assets or presentation. `MKW_FSR_PROBE_SIZE`/`FRAMES` select size and duration. Raw timing mode (`MKW_FSR_PROBE_INPUT_PREFIX`, suffixes in `FRAMES`) reads captured `vN.bin`/`zN.bin` instead; `MKW_FSR_PROBE_VECTOR=x,y` supplies a constant fractional control. Raw mode does not claim analytical quality |

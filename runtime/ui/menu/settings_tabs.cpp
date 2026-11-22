@@ -472,7 +472,12 @@ static void pad_rows(void) {
         char id[16], label[128], value[64];
         snprintf(id, sizeof id, "##pad%d", p + 1);
         snprintf(label, sizeof label, menu_text(UI_MENU_PAD_PLAYER), p + 1, w.name);
-        opt_info(id, label, input_power_text(&w, value, sizeof value), UI_MENU_PAD_BATTERY_DESC);
+        input_power_text(&w, value, sizeof value);
+        // A controller with a player before it trades places with that player's, so any order takes a few presses.
+        // Not on the start screen: Play runs the game as another process, which gives them out again.
+        if (opt_start_screen() || !input_pad_can_move_up(p)) opt_info(id, label, value, UI_MENU_PAD_BATTERY_DESC);
+        else if (opt_button_text(id, label, UI_MENU_PAD_MOVE_DESC, value) && input_pad_swap(p, p - 1))
+            input_rumble(p - 1, 0x8000, 0x8000, 250);   // which one moved, among equal ones
         shown++;
     }
     if (!shown) opt_text(UI_MENU_PADS_NONE);

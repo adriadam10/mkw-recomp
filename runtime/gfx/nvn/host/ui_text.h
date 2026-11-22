@@ -118,6 +118,7 @@ typedef enum {
     UI_MENU_PADS,             // group heading over the players' rows
     UI_MENU_PAD_PLAYER,       // "Player %d: %s": the player and the controller's name
     UI_MENU_PAD_BATTERY_DESC, UI_MENU_PADS_NONE,
+    UI_MENU_PAD_MOVE_DESC,    // a controller's row that can trade places with the player before
     UI_POWER_LOW, UI_POWER_MEDIUM, UI_POWER_HIGH,   // a coarse band: a Switch 2 controller's voltage over Bluetooth, an Xbox pad's sysfs level on xone
     UI_POWER_CHARGING, UI_POWER_CHARGED, UI_POWER_WIRED, UI_POWER_UNKNOWN,
     UI_NOTICE_BATTERY_LOW,    // "Player %d's controller is running out of battery (%s)"

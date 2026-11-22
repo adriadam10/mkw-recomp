@@ -20,6 +20,11 @@ void input_wheel_map(void);
 // script. Each other player is one more gamepad, in connection order, plus the script's "p<N>" lines; MKW_VIRTUAL_PADS=N
 // attaches N virtual gamepads at start to try it without controllers. Any thread.
 enum { INPUT_MAX_PLAYERS = 8 };
+// Players a and b (index 0-7) trade gamepads, live: either may have none. 0 and nothing done when neither has one, for a bad
+// index, and for player 1 with MKW_PAD_P2 (theirs is the keyboard). Until the game closes. Any thread.
+int input_pad_swap(int a, int b);
+// 1 when player p's gamepad could go to the player before (a row of the menu's Controls tab).
+int input_pad_can_move_up(int p);
 uint32_t input_player_mask(void);   // bit k: player k + 1 has a controller; bit 0 always (the keyboard)
 void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
 // The in-game menu (ui/menu/menu.h): input_menu(1) when it opens (input_poll reports nothing, the cursor is released), (0) when

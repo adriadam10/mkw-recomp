@@ -769,6 +769,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "--probe-share")) return probe_share();
     if (!strcmp(mode, "--probe-discord")) return probe_discord();
     if (!strcmp(mode, "--probe-dsu")) return probe_dsu();
+    if (!strcmp(mode, "--probe-pads")) return probe_pads();
     if (!strcmp(mode, "--probe-vkdevice")) return probe_vkdevice();
 
     if (!strcmp(mode, "--probe-texpre")) return probe_texpre();
