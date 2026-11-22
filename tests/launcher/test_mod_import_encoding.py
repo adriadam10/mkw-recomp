@@ -83,6 +83,9 @@ def test_argument_errors_keep_utf8_details():
     assert "--未知参数" in result.stderr.decode("utf-8")
 
 
+# A lone surrogate in argv is POSIX's surrogateescape for bytes that are not UTF-8; Windows passes argv as UTF-16 and
+# turns it into U+FFFD before Python starts, so there is nothing for the importer to escape there.
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows argv cannot carry a lone surrogate")
 def test_argument_errors_escape_lone_surrogates():
     result = cli("--game", "x", "--romfs", "x", "--folder", "x", "--bad-\udcff")
     assert result.returncode == 2
