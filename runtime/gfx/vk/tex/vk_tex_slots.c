@@ -17,9 +17,10 @@
 #include "platform/platform.h"
 
 // ---------------------------------------------------------------- descriptor slots
+// Slot tables under slots_lock alone: the game registers while the replay may hold tex_lock for uploads/evicts.
 void vk_texture_register(int id, const tex_t *t, const view_t *v) {
     if (id < 0 || id >= (1 << 20)) rt_fatal("vk: texture slot %d out of range", id);
-    lock();
+    lock_slots();
     if (id >= ntslots) {
         int n = ntslots ? ntslots : 1024;
         while (n <= id) n *= 2;
@@ -41,13 +42,15 @@ void vk_texture_register(int id, const tex_t *t, const view_t *v) {
     s->t = *t;
     s->used = 1;
     s->ce = NULL;
-    slots_gen++;
-    if (!++reg_serial) reg_serial = 1;
-    __atomic_store_n(&sinfo[id], (uint64_t)reg_serial << 16 | agen_idx((uintptr_t)t->mem), __ATOMIC_RELEASE);
+    __atomic_fetch_add(&slots_gen, 1, __ATOMIC_RELEASE);
+    uint32_t rs = reg_serial + 1;
+    if (!rs) rs = 1;
+    __atomic_store_n(&reg_serial, rs, __ATOMIC_RELEASE);
+    __atomic_store_n(&sinfo[id], (uint64_t)rs << 16 | agen_idx((uintptr_t)t->mem), __ATOMIC_RELEASE);
     s->has_view = v != NULL;
     if (v) s->v = *v;
     else memset(&s->v, 0, sizeof s->v);
-    unlock();
+    unlock_slots();
 }
 
 // The entry slot s resolves to, and the view and has_view a caller gets with it (the slot's, with the descriptor's
@@ -103,9 +106,10 @@ static Tex *slot_resolve(TexSlot *s, view_t *view, int *has_view) {
     return e;
 }
 
-void vk_texture_lock(void) { lock(); }
-void vk_texture_unlock(void) { unlock(); }
-uint32_t vk_texture_slots_gen(void) { return slots_gen; }
+// Public "many locked lookups" hold: tex then slots (by_id_locked / sampler_by_id_locked need both tables).
+void vk_texture_lock(void) { lock(); lock_slots(); }
+void vk_texture_unlock(void) { unlock_slots(); unlock(); }
+uint32_t vk_texture_slots_gen(void) { return __atomic_load_n(&slots_gen, __ATOMIC_ACQUIRE); }
 
 uint64_t vk_texture_slot_token(int id) {
     const uint64_t *si = __atomic_load_n(&sinfo, __ATOMIC_ACQUIRE);
@@ -113,22 +117,22 @@ uint64_t vk_texture_slot_token(int id) {
     uint64_t v = __atomic_load_n(&si[id], __ATOMIC_ACQUIRE);
     return v ? (v >> 16) << 32 | __atomic_load_n(&agen[v & 0xffff], __ATOMIC_ACQUIRE) : 0;
 }
-uint32_t vk_sampler_gen(void) { return __atomic_load_n(&samp_gen, __ATOMIC_RELAXED); }
+uint32_t vk_sampler_gen(void) { return __atomic_load_n(&samp_gen, __ATOMIC_ACQUIRE); }
 
 const VkTexImage *vk_texture_by_id(int id, view_t *view, int *has_view) {
-    lock();
+    vk_texture_lock();
     const VkTexImage *r = vk_texture_by_id_locked(id, view, has_view);
-    unlock();
+    vk_texture_unlock();
     return r;
 }
 
 // The NVN format and address the game registered in slot id (the dump compares them with the image the slot resolves
 // to: a slot may resolve to an image another texture at that address made, in its own format). 0 if not registered.
 uint32_t vk_texture_slot_format(int id, uint64_t *addr) {
-    lock();
+    lock_slots();
     uint32_t f = id >= 0 && id < ntslots && tslots[id].used ? tslots[id].t.d.format : 0;
     if (addr) *addr = f ? (uint64_t)(uintptr_t)tslots[id].t.mem : 0;
-    unlock();
+    unlock_slots();
     return f;
 }
 
@@ -152,7 +156,7 @@ static void unresolved_note(int id, const TexSlot *s) {
 // and the first slots.
 uint32_t vk_tex_reg_limit;   // replay thread: the last registration made before the submission being recorded; 0 none
 
-uint32_t vk_texture_reg_serial(void) { return __atomic_load_n(&reg_serial, __ATOMIC_RELAXED); }
+uint32_t vk_texture_reg_serial(void) { return __atomic_load_n(&reg_serial, __ATOMIC_ACQUIRE); }
 
 static void late_note(int id, const TexSlot *s) {
     static struct { uint64_t frame; uint32_t n; int k; char first[160]; } L;
@@ -167,6 +171,7 @@ static void late_note(int id, const TexSlot *s) {
                         s->t.d.depth, s->t.d.format);
 }
 
+// Caller holds tex_lock then slots_lock (vk_texture_lock): slot tables and by_key / by_addr / make_fresh.
 const VkTexImage *vk_texture_by_id_locked(int id, view_t *view, int *has_view) {
     if (id < 0 || id >= ntslots || !tslots[id].used) { unresolved_note(id, NULL); return NULL; }
     TexSlot *s = &tslots[id];
@@ -218,14 +223,14 @@ int vk_texture_checked(int id, uint32_t ep) {
 
 // vk_dump: the swizzle selectors of the descriptor registered in slot id; 0 when the slot is empty.
 int vk_texture_slot_swz(int id, uint8_t swz[4]) {
-    lock();
+    lock_slots();
     int ok = id >= 0 && id < ntslots && tslots[id].used;
     if (ok) {
         const nvn_texdesc *d = &tslots[id].t.d;
         swz[0] = (uint8_t)d->swizzle_r, swz[1] = (uint8_t)d->swizzle_g, swz[2] = (uint8_t)d->swizzle_b;
         swz[3] = (uint8_t)d->swizzle_a;
     }
-    unlock();
+    unlock_slots();
     return ok;
 }
 
@@ -357,7 +362,7 @@ static VkSampler make_sampler(VkCtx *c, const samp_par *d) {
 
 void vk_sampler_register(int id, const samp_par *s) {
     if (id < 0 || id >= (1 << 12)) rt_fatal("vk: sampler slot %d out of range", id);
-    lock();
+    lock_slots();
     if (id >= nsslots) {
         int n = nsslots ? nsslots : 256;
         while (n <= id) n *= 2;
@@ -369,11 +374,11 @@ void vk_sampler_register(int id, const samp_par *s) {
     sslots[id].p = *s;
     sslots[id].s = sslots[id].sp = VK_NULL_HANDLE;
     sslots[id].used = 1;
-    samp_gen++;
-    unlock();
+    __atomic_fetch_add(&samp_gen, 1, __ATOMIC_RELEASE);
+    unlock_slots();
 }
 
-// Caller holds the lock.
+// Caller holds slots_lock (samplers hashmap and sslots cache).
 static VkSampler sampler_for(VkCtx *c, const samp_par *s) {
     samp_par k;
     memset(&k, 0, sizeof k);
@@ -389,13 +394,14 @@ static VkSampler sampler_for(VkCtx *c, const samp_par *s) {
 VkSampler vk_sampler_for(const samp_par *s) {
     VkCtx *c = vk_ctx();
     if (!c || !s) return VK_NULL_HANDLE;
-    lock();
+    lock_slots();
     VkSampler v = sampler_for(c, s);
-    unlock();
+    unlock_slots();
     return v;
 }
 
 // Samplers live until shutdown, so a slot keeps the one its parameters map to until it is registered again.
+// Caller holds slots_lock (vk_texture_lock holds tex then slots).
 VkSampler vk_sampler_by_id_locked(int id) {
     VkCtx *c = vk_ctx();
     if (!c) return VK_NULL_HANDLE;
@@ -424,17 +430,17 @@ VkSampler vk_sampler_point_by_id_locked(int id) {
 }
 
 VkSampler vk_sampler_by_id(int id) {
-    lock();
+    lock_slots();
     VkSampler v = vk_sampler_by_id_locked(id);
-    unlock();
+    unlock_slots();
     return v;
 }
 
 int vk_sampler_params(int id, samp_par *out) {
-    lock();
+    lock_slots();
     int ok = id >= 0 && id < nsslots && sslots[id].used;
     if (ok) *out = sslots[id].p;
-    unlock();
+    unlock_slots();
     return ok;
 }
 

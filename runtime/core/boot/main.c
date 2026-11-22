@@ -666,6 +666,17 @@ int main(int argc, char **argv) {
     // Timed guest waits (kernel.c block_inner) sleep in whole milliseconds; at the default 15.6 ms tick a 1 ms wait
     // costs a full tick. MKW_TIMER_1MS=0 keeps the default for comparison.
     if (cfg_bool("MKW_TIMER_1MS")) plat_timer_1ms();
+    // Hybrid CPUs on Windows: the threads every frame goes through prefer the P-cores (perf_core_thread). MKW_PCORE=0:
+    // off. Linux uses MKW_FAST_CORES (process affinity) instead; plat_perf_core_setup is a no-op there.
+    if (rt_knob("PCORE", "1")) {
+        char why[160];
+        int n = plat_perf_core_setup(why, sizeof why);
+        if (n) rt_log("power: %s; the game's main and render threads and the vk replay, recorder, present and submit "
+                      "threads prefer the %d P-core ones (MKW_PCORE=0 turns it off)", why, n);
+        else rt_log("power: %s: no P-core preference", why);
+    } else {
+        rt_log("power: MKW_PCORE=0: no P-core preference");
+    }
     cfg = (RtConfig){.exefs = rt_default_exefs, .romfs = rt_default_romfs, .profile = rt_default_profile,
                      .gpu = cfg_get("MKW_GPU")};
     portable_paths(&cfg);   // command-line paths below still win

@@ -46,6 +46,12 @@ uint64_t nvn_new_serial(void);                             // next tex_t / prog_
 uint64_t nvn_fence_last(void);                             // fence value of the newest submit (0 before the first)
 void nvn_present_fence_note(void);                         // a present: notes the newest fence (SyncWait census)
 void nvn_sync_wait_window(void);                           // a present: the waits of the last 60, by where the value was
+// MKW_SYNC_AHEAD (nvn_api_core.c): the frame SyncWait lags one present; shadow copies and invalidates use the guard.
+void nvn_sync_ahead_present(void);                         // QueuePresentTexture: newest fence at this present and the one before
+uint64_t nvn_sync_ahead_guard(void);                       // newest value the game was told is done early (0: none)
+int nvn_sync_ahead_on(void);                               // 1 when the lagged wait is in effect
+void gfx_replay_wait_value(uint64_t v);                    // vk_backend.c: the replay thread submitted value v
+void vk_mem_shadow_read(uint64_t addr, uint64_t size);     // vk_mem_shadow.c: invalidate wait under the guard
 int nvn_depth_minus_w(void);                               // 1 after DeviceSetDepthMode(NEAR_IS_MINUS_W), else 0
 void nvn_depth_minus_w_set(int on);                        // the mode of a capture being replayed (runtime/gfx/cap)
 void nvn_guest_written(uint64_t addr, uint64_t size);      // the host or the game wrote pool storage: back end re-reads

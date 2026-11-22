@@ -187,6 +187,7 @@ static void flips_wait_room(int n) {
 
 static void present_main(void *arg) {
     (void)arg;
+    perf_core_thread(PCORE_PRESENT);
     uint64_t last = 0, last_queued = 0;
     plat_mutex_lock(&pl);
     for (;;) {
@@ -374,7 +375,7 @@ static PlatMutex rl = PLAT_MUTEX_INIT;
 static PlatCond rcv = PLAT_COND_INIT;   // item queued, item taken, item done
 static ReplayItem rq[RQ_CAP];
 static int rq_head, rq_n, r_busy, r_started;
-static uint64_t r_presents_queued, r_presents_done, r_submit_done, game_frames;
+static uint64_t r_presents_queued, r_presents_done, r_submit_done, r_value_done, game_frames;
 
 // The id of the frame the game thread is about to simulate: the number its present will get (vk_be_present).
 uint64_t vk_be_next_frame_id(void) {
@@ -408,6 +409,15 @@ uint64_t gfx_replayed_submits(void) {
     uint64_t v = r_submit_done;
     plat_mutex_unlock_shared(&rl);
     return v;
+}
+
+// MKW_SYNC_AHEAD (nvn_api_core.c nvnSyncWait): waits until the replay thread submitted value v, so every shadow copy
+// of v was made before the game writes memory v reads. The caller has given its core up (NVN_BLOCKING).
+void gfx_replay_wait_value(uint64_t v) {
+    if (!gfx_replay_async()) return;
+    plat_mutex_lock(&rl);
+    while (r_value_done < v) plat_cond_wait(&rcv, &rl);
+    plat_mutex_unlock(&rl);
 }
 
 static uint64_t submit_sync(const uint64_t *handles, int n) {
@@ -474,8 +484,9 @@ static void held_wait(Held *h) {
 // i7, but 2 on an i5-1235U (2 P-cores), 3 on Lunar Lake (4 P-cores without SMT), 6 on a Ryzen AI 9 HX 370 (4 Zen 5
 // cores), where the game's ~95 threads and the recording would most likely lose more than the E-cores' slower clock
 // costs them. 8 is a hypothesis, not a measurement: no CPU with few P-cores was tried. With the replay thread kept on
-// a slow core for want of fast ones (#497) it stays off: 0.1.12's split, the one measured there. Off on Windows until measured
-// there: its scheduler places threads by their activity, and its process mask would also hold the background threads.
+// a slow core for want of fast ones (#497) it stays off: 0.1.12's split, the one measured there. Off on Windows: its
+// process mask would also hold the background threads; Windows hybrid CPUs use MKW_PCORE (SetThreadSelectedCpuSets on
+// the frame's threads only, from totk-pc-recomp) instead.
 #define FAST_CORES_MIN 8
 // MKW_SUBMIT_APART (default 1; 0 the old placement; "ab" in the B blocks only): the threads "vk submit" and "vk present"
 // with the frame's threads, not on the replay thread's processor. On Linux a thread starts on its creator's
@@ -560,6 +571,7 @@ static void replay_core(void) {
 static void replay_main(void *arg) {
     (void)arg;
     perf_replay_thread();
+    perf_core_thread(PCORE_REPLAY);
     const char *de = cfg_get("MKW_REPLAY_DELAY_US");
     uint64_t delay_ns = de ? strtoull(de, NULL, 10) * 1000 : 0;
     if (delay_ns) rt_log("vk: the replay waits %llu us before each submission (MKW_REPLAY_DELAY_US)", (unsigned long long)(delay_ns / 1000));
@@ -615,8 +627,13 @@ static void replay_main(void *arg) {
         plat_mutex_lock(&rl);
         // Only presents count: a release counted as one let the frame bound (vk_be_present) pass while the replay was
         // still a frame or more behind (a frame queues up to a few hundred releases).
-        if (it.kind == RI_SUBMIT) r_submit_done = it.submit_no;
-        else if (it.kind == RI_PRESENT) r_presents_done++;
+        if (it.kind == RI_SUBMIT) {
+            r_submit_done = it.submit_no;
+            if (it.value > r_value_done) r_value_done = it.value;   // MKW_SYNC_AHEAD: gfx_replay_wait_value
+        } else if (it.kind == RI_PRESENT) {
+            r_presents_done++;
+            if (it.value > r_value_done) r_value_done = it.value;
+        }
         r_busy = 0;
         plat_cond_broadcast(&rcv);
     }
@@ -722,9 +739,12 @@ static void replay_log(uint64_t frame, int total) {
 void gfx_exit_log(void) {
     static int32_t done;
     if (gfx_replay_async() && r_started && !plat_xchg32(&done, 1)) replay_log(game_frames, 1);
+    vk_mem_shadow_read_log();   // MKW_SYNC_AHEAD: invalidate waits over the run
 }
 
 static void vk_be_present(const tex_t *t, const int crop[4], uint64_t at_ns) {
+    static _Thread_local int pcore;   // the game's render thread: the one that presents
+    if (!pcore) pcore = 1, perf_core_thread(PCORE_RENDER);
     vk_sync_start();
     if (vk_glyphs_due()) {   // the button icons changed: their sheet goes up again, as a WriteTexels would
         replay_drain(DR_WRITE_TEXELS);

@@ -193,11 +193,11 @@ static void tid_note(const uint64_t *h, int n) {
 }
 
 // The once-per-submission check of every texture slot the submission may sample (vk_texture_by_id_locked: upload if
-// the guest wrote it), made here under one texture lock before the chunks start, instead of at each slot's first
-// binding on a chunk's thread, where all of them took the lock (lpc1: 142 ms a second of waits on tex_lock with
-// chunks, 5.5 serial). The check answers from the submission's write-watch snapshot, so making it earlier in the
-// submission changes nothing; a slot bound and never sampled is checked as well. The chunks then find each slot
-// checked (vk_texture_checked) and skip the lock. MKW_REPLAY_PAR_PRECHECK=0: as before, to measure.
+// the guest wrote it), made here under one vk_texture_lock (tex then slots) before the chunks start, instead of at
+// each slot's first binding on a chunk's thread, where all of them took the lock (lpc1: 142 ms a second of waits on
+// tex_lock with chunks, 5.5 serial). The check answers from the submission's write-watch snapshot, so making it
+// earlier in the submission changes nothing; a slot bound and never sampled is checked as well. The chunks then find
+// each slot checked (vk_texture_checked) and skip the lock. MKW_REPLAY_PAR_PRECHECK=0: as before, to measure.
 // With MKW_REPLAY_PAR_PIPE, the slots noted since the last call, before the chunks holding them are handed out.
 static void precheck(void) {
     if (P.pre_from >= P.ntid) return;

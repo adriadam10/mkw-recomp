@@ -220,14 +220,17 @@ VkImageAspectFlags vk_exec_view_aspect(const VkTexImage *img, const view_t *v, i
 }
 
 // Image views of registered textures, kept for their image's lifetime: made per command buffer they were created again
-// every frame (vkCreateImageView took about 8% of the fight replay on the 7900X). Used under the texture lock, as
-// vk_exec_image_gone is (destroy_tex), which hands the views of a destroyed image to the deferred release with it.
+// every frame (vkCreateImageView took about 8% of the fight replay on the 7900X). Own lock (view_lock): REPLAY_PAR
+// binding threads create and look up views without taking the whole texture lock. destroy_tex still holds tex_lock
+// when it calls vk_exec_image_gone, which takes view_lock next to hand the views to the deferred release with the image.
+// Full lock order: tex_lock → slots_lock → view_lock — never reverse. image_gone holds tex then view (slots optional).
 typedef struct ViewNode { struct ViewNode *next; ViewKey k; VkImageView view; } ViewNode;
 static nvn_hmap view_of;                 // ViewKey -> VkImageView
 static nvn_hmap views_by_image;          // VkImage -> its first ViewNode
+static PlatMutex view_lock = PLAT_MUTEX_INIT;   // view_of / views_by_image only (not tex_lock / slots_lock)
 
 // An image view of a registered texture for a shader resource of type `rtype` (GfxShaderRes.type); VK_NULL_HANDLE when
-// the image cannot serve it (the caller binds a stand-in). Texture lock held.
+// the image cannot serve it (the caller binds a stand-in). Takes view_lock for the tables.
 // The atomics of MKW's compute (SURED) treat an RGBA8 texture as one 32-bit integer a texel: the translator declares
 // such images r32ui ("R32Uint" in the reflection, format code 11), and Vulkan needs a R32_UINT view for that
 // (validation of run99). Other 32-bit colour images keep their format; their images are MUTABLE_FORMAT (vk_texture.c).
@@ -335,9 +338,13 @@ static VkImageView get_view(VkExec *ex, const VkTexImage *img, const view_t *v, 
         warn_once(W_LISTED_R32, "a storage view of a listed image (format %d) wants R32_UINT texels: its own format is used",
                   (int)img->format);
     ViewKey k = {img->image, vf, vt, aspect, l0, nl, y0, ny, swz};
+    plat_mutex_lock(&view_lock);
     if (!view_of.klen) nvn_hm_init(&view_of, sizeof(ViewKey)), nvn_hm_init(&views_by_image, sizeof(VkImage));
     VkImageView found = (VkImageView)nvn_hm_get(&view_of, &k);
-    if (found) return found;
+    if (found) {
+        plat_mutex_unlock(&view_lock);
+        return found;
+    }
     VkImageViewCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = img->image, .viewType = vt,
                                 .format = vf,
                                 .components = {swz_of(sw[0]), swz_of(sw[1]), swz_of(sw[2]), swz_of(sw[3])},
@@ -351,24 +358,28 @@ static VkImageView get_view(VkExec *ex, const VkTexImage *img, const view_t *v, 
         ci.pNext = &use;
     }
     VkImageView view;
-    if (vkCreateImageView(vk_ctx()->device, &ci, NULL, &view) != VK_SUCCESS) return VK_NULL_HANDLE;
+    if (vkCreateImageView(vk_ctx()->device, &ci, NULL, &view) != VK_SUCCESS) {
+        plat_mutex_unlock(&view_lock);
+        return VK_NULL_HANDLE;
+    }
     ViewNode *n = malloc(sizeof *n);
     if (!n) rt_fatal("vk: out of memory");
     *n = (ViewNode){nvn_hm_get(&views_by_image, &img->image), k, view};
     nvn_hm_put(&views_by_image, &img->image, n);
     nvn_hm_put(&view_of, &k, (void *)view);
+    plat_mutex_unlock(&view_lock);
     return view;
 }
 
 // An attachment view of a registered texture, kept with its sampled views for the image's lifetime: made per command
 // buffer, every render target's views were created again each frame (vkCreateImageView under vk_exec_pass_begin, 2%
 // of the fight replay on the 7900X). Attachment keys carry a swizzle word no sampled key has (those hold four NVN
-// selectors, each below 8). The texture lock guards the tables, as for get_view; vk_exec_pass_begin may already hold it.
+// selectors, each below 8). view_lock guards the tables, as for get_view: no tex_lock for a view-only lookup.
 VkImageView vk_exec_target_view(const VkTexImage *img, VkFormat format, VkImageViewType type, uint32_t aspect,
                                 uint32_t level, uint32_t base, uint32_t layers, int blocks) {
     if (!blocks) format = vk_texture_view_format(img, format);
     ViewKey k = {img->image, format, type, aspect, level, 1, base, layers, blocks ? 0xfffffffeu : 0xffffffffu};
-    vk_texture_lock();
+    plat_mutex_lock(&view_lock);
     if (!view_of.klen) nvn_hm_init(&view_of, sizeof(ViewKey)), nvn_hm_init(&views_by_image, sizeof(VkImage));
     VkImageView view = (VkImageView)nvn_hm_get(&view_of, &k);
     if (!view) {
@@ -387,18 +398,25 @@ VkImageView vk_exec_target_view(const VkTexImage *img, VkFormat format, VkImageV
         nvn_hm_put(&views_by_image, &img->image, n);
         nvn_hm_put(&view_of, &k, (void *)view);
     }
-    vk_texture_unlock();
+    plat_mutex_unlock(&view_lock);
     return view;
 }
 
+// destroy_tex holds tex_lock; take view_lock here (tex then view; slots may also be held ahead of view). Never call
+// while holding view_lock then take slots_lock or tex_lock.
 void vk_exec_image_gone(VkImage image) {
-    if (!views_by_image.klen) return;
+    plat_mutex_lock(&view_lock);
+    if (!views_by_image.klen) {
+        plat_mutex_unlock(&view_lock);
+        return;
+    }
     for (ViewNode *n = nvn_hm_del(&views_by_image, &image), *next; n; n = next) {
         next = n->next;
         nvn_hm_del(&view_of, &n->k);
         vk_defer_view(n->view);
         free(n);
     }
+    plat_mutex_unlock(&view_lock);
 }
 
 void tex_info_full(VkExec *ex, const GfxShaderRes *r, uint64_t h, int storage, int separate,

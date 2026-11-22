@@ -18,6 +18,8 @@ void nvn_pool_invalidate(const pool_t *p, uint64_t off, uint64_t size) {
     if (!p->mem || nvn_gpu_only((uintptr_t)p->mem) || off >= p->size || !size) return;
     if (size > p->size - off) size = p->size - off;
     mem_early_invalidate((uintptr_t)p->mem + off, size);   // MKW_EARLY_READ: no wait for other bytes of its pages
+    // MKW_SYNC_AHEAD: a range not read lately may still hold no result of a value the game was told is done; wait.
+    vk_mem_shadow_read((uintptr_t)p->mem + off, size);
     gfx_backend()->guest_read((uintptr_t)p->mem + off, size);
 }
 

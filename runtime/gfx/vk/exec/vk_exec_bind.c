@@ -324,9 +324,9 @@ static VkDescriptorBufferInfo ssbo_info(VkExec *ex, int st, const GfxShaderRes *
 // thousands of times a frame (15,000 lookups a frame in the monsters fight); a hit skips the slot lookup, the view key
 // with its hash probe and the sampler lookup. Storage images, which note their binding per submission, are
 // not kept. Direct-mapped, per recording thread; a hit is checked against the generations and the slot token, all read
-// atomically, so it takes no lock: only a miss or the submission's first binding of a slot takes the texture lock (the
-// chunks of MKW_REPLAY_PAR bind on several threads, and the lock around every draw's textures made them wait on it).
-// MKW_TEX_MEMO=0 turns it off; =check computes every hit again and stops on a difference.
+// atomically, so it takes no lock: only a miss or the submission's first binding of a slot takes vk_texture_lock
+// (tex then slots; the chunks of MKW_REPLAY_PAR bind on several threads, and the lock around every draw's textures
+// made them wait on it). MKW_TEX_MEMO=0 turns it off; =check computes every hit again and stops on a difference.
 #define TD_N 8192
 typedef struct {
     uint64_t h, tok;

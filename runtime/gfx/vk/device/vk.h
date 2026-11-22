@@ -320,6 +320,13 @@ void vk_mem_mirror_prologue(VkCommandBuffer cb);
 // which copies the bytes back into guest memory before telling the texture cache (vk_guest_written).
 void vk_mem_shadow_sync(uint64_t fence);   // fence: the submission it is for (later parts skip pools synced for it)
 extern uint64_t vk_replay_submit;          // the submit number the replay thread is recording (vk_mem_capture.c)
+// MKW_SYNC_AHEAD / MKW_SHADOW_DEFER (vk_mem_shadow.c): a sync that would overwrite a shadow a reader still uses is
+// queued for the GPU prologue, or waited for; an invalidate of a range not read lately waits for the guard.
+void vk_mem_shadow_fence(void);            // after raising the guard: wait for a sync that held the old one
+void vk_mem_shadow_read(uint64_t addr, uint64_t size);   // nvn_pool_invalidate: wait for a pending GPU write under the guard
+int vk_mem_shadow_deferred(void);          // 1 when a deferred copy is queued for the next prologue
+void vk_mem_shadow_prologue(VkCommandBuffer cb, uint64_t fence);   // records those GPU copies before the mirror ones
+void vk_mem_shadow_read_log(void);         // at exit with sync_ahead: run total of invalidate waits
 // What backs addr for the CPU's writes (diagnosis): 0 no pool, 1 imported (the GPU reads guest memory), 2 a shadow
 // synced from guest memory, 3 a shadow on the capture list not covered yet, 4 a shadow fed by submit captures.
 int vk_mem_shadow_state(uint64_t addr);
@@ -416,7 +423,7 @@ void vk_upload_work(uint64_t texels);            // ASTC texels the open batch d
 // Deferred destruction: freed once the upload batches recorded so far and the timeline value last noted have completed.
 void vk_defer_image(VkImage img, VmaAllocation alloc);   // alloc NULL: vkDestroyImage only
 void vk_defer_view(VkImageView view);
-void vk_exec_image_gone(VkImage image);   // destroy_tex, texture lock held: the replay's views of image go with it
+void vk_exec_image_gone(VkImage image);   // destroy_tex, tex_lock held: takes view_lock (tex → slots → view order) and drops the replay's views of image
 void vk_defer_buffer(VkBuffer buf, VmaAllocation alloc);
 void vk_defer_buffer_in(VmaAllocator vma, VkBuffer buf, VmaAllocation alloc);   // a buffer of another allocator
 void vk_defer_call(void (*fn)(void *), void *arg);   // fn(arg) when the upload batches recorded so far are done
@@ -442,6 +449,27 @@ void vk_astc_time_enable(int on);
 int vk_astc_time_get(uint32_t bw, uint32_t bh, uint64_t *texels, uint64_t *calls, double *us);   // totals so far
 void vk_astc_time_summary(void);        // logs the totals
 void vk_astc_release(void);             // vk_device.c, before the device goes: frees the decoder's objects
+// ---- Block-linear deswizzle on the GPU (vk_deswizzle.c). MKW_DESWIZZLE = auto | gpu | cpu | check.
+enum { VK_DESWZ_CPU, VK_DESWZ_GPU, VK_DESWZ_CHECK };
+int vk_deswz_mode(void);                // decided once per device (logged); VK_DESWZ_CPU before vk_init
+// One level and layer: its storage starts at byte src of the bound source range and covers segs 16-byte segments
+// (whole blocks, cut at the storage end); its linear copy goes to byte dst of the destination, rows of pitch16 segments,
+// rows x slices of them. th, td, gobs_x, blocks_y: as tex_deswizzle.c nvn_bl_offset.
+typedef struct {
+    VkDeviceSize src, dst;
+    uint32_t segs, pitch16, rows, slices, th, td, gobs_x, blocks_y;
+} VkDeswzRegion;
+// Records into cb a dispatch per region reading [src_off, src_off + src_size) of src (a storage buffer) and writing
+// dst (device-local, dst_size bytes). The caller records the barriers around it. 0 when nothing was recorded: no
+// pipeline, src_off not 16-byte aligned, a range over the device's storage-buffer limit, a region outside the ranges.
+int vk_deswz_record(VkCommandBuffer cb, VkBuffer src, VkDeviceSize src_off, VkDeviceSize src_size, VkBuffer dst,
+                    VkDeviceSize dst_size, const VkDeswzRegion *rg, int n);
+// 1 when vk_deswz_record will take these regions (their dst offsets aside) with destinations of up to max_dst bytes.
+int vk_deswz_fits(VkDeviceSize src_off, VkDeviceSize src_size, const VkDeswzRegion *rg, int n, VkDeviceSize max_dst);
+void vk_deswz_release(void);            // vk_device.c, before the device goes
+// 1 when sp (from vk_mem_resolve) is an imported pool's buffer over guest memory itself, so a GPU read in a submission
+// sees every CPU write made before the submit; 0 for device memory and shadow storage (synced after the upload batch).
+int vk_mem_span_live(const VkMemSpan *sp);
 // ---- precomputed BC7 of ASTC textures (vk_texpre.c; MKW_TEXPRE, MKW_TEXPRE_RECORD)
 typedef struct { uint32_t w, h, slices, level, layer; } VkTexpreRegion;   // one region of an upload, in upload order
 int vk_texpre_on(void);
@@ -529,12 +557,14 @@ VkFormat vk_srgb_twin(VkFormat f);                    // the sRGB / UNORM twin o
 int vk_format_numeric(VkFormat f);                    // GFX_TYPE_* its components read as in a shader
 void vk_sparse_granularity_texels(VkFormat f, uint32_t *gw, uint32_t *gh);   // a driver's imageGranularity as texels
 uint32_t vk_texture_slot_format(int id, uint64_t *addr);   // NVN format the game registered in slot id (0: none)
-// The replay looks up many slots per draw: it takes the texture lock once around them (vk_texture_lock) and uses the
-// _locked lookups; vk_texture_slots_gen changes whenever a slot may resolve to another image or view.
+// The replay looks up many slots per draw: it takes tex_lock then slots_lock once around them (vk_texture_lock) and
+// uses the _locked lookups; vk_texture_slots_gen changes whenever a slot may resolve to another image or view.
+// Lock order with view tables: tex_lock → slots_lock → view_lock (never reverse). Register / sampler slots take
+// slots_lock alone.
 void vk_texture_lock(void);
 void vk_texture_unlock(void);
-const VkTexImage *vk_texture_by_id_locked(int id, view_t *view, int *has_view);
-VkSampler vk_sampler_by_id_locked(int id);
+const VkTexImage *vk_texture_by_id_locked(int id, view_t *view, int *has_view);   // caller holds vk_texture_lock
+VkSampler vk_sampler_by_id_locked(int id);   // caller holds slots_lock (vk_texture_lock includes it)
 // The slot's sampler with nearest filtering and no anisotropy: a depth texture read without a compare lands on one texel
 // on the Switch although the game binds a linear sampler, and MacNativeGames samples it the same way. VK_NULL_HANDLE
 // for an empty slot.

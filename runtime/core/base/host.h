@@ -38,6 +38,10 @@ void perf_end(int kind, uint64_t t0);           // counts render-thread time onl
 void perf_replay(uint64_t t0);                  // replay (NVN -> Vulkan recording) time on any thread, waits inside it included
 void perf_replay_thread(void);                  // the calling thread replays for the render thread: perf_end counts its waits
 void perf_main_thread(void);                    // the calling thread is the guest main thread (MKW_PROFILE_MAIN)
+// The calling thread is one every frame goes through: on a hybrid Windows CPU it prefers the P-cores (main.c,
+// MKW_PCORE); the first thread of each role logs it. From totk-pc-recomp runtime/perf.c.
+enum { PCORE_MAIN, PCORE_RENDER, PCORE_REPLAY, PCORE_RECORDER, PCORE_PRESENT, PCORE_SUBMIT, PCORE_N };
+void perf_core_thread(int role);
 // Events per 60-frame window: graphics pipelines finished by the background workers, draws skipped while pending,
 // first texture uploads and re-uploads after CPU writes, draws that waited for their pending pipeline and got it, draws
 // into a target the previous frame did not render that waited for their pending pipeline instead of being skipped

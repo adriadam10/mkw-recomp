@@ -10,7 +10,7 @@ It comes from LAS Recomp and MacNativeGames (MIT) through totk-pc-recomp; MKW's 
 | [exec/](exec/README.md) | Replay of each submit: passes, copies, draws, dispatches and descriptors; parallel recording |
 | [pipe/](pipe/README.md) | Pipelines: creation, cache, pipeline library, keys and prewarm, SPIR-V |
 | [mem/](mem/README.md) | NVN pools as buffers: shadows, mirrors, uploads, write-backs, constant copies |
-| [tex/](tex/README.md) | Textures: images, uploads, ASTC and BC7, slots and samplers, sparse |
+| [tex/](tex/README.md) | Textures: images under `tex_lock`, slots under `slots_lock` (`tex` → `slots` → `view`), ASTC/BC7, sparse |
 | [diag/](diag/README.md) | Frame dump, GPU time per pass, submit timeline |
 | [spv/](spv/README.md) | Embedded SPIR-V of the runtime's shaders (generated) |
 

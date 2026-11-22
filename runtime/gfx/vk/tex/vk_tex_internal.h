@@ -52,7 +52,8 @@ typedef struct Tex {
 // A slot keeps what vk_texture_by_id resolved for it, so a draw binding skips the key lookup and the address chain: the
 // entry (ce), valid while the generation of its address (agen) is still cgen, the view and has_view handed out with it,
 // and the submit_epoch of the last freshness check through the slot (cepoch). Hot fields first: a lookup that hits
-// touches one or two cache lines.
+// touches one or two cache lines. Slot fields under slots_lock; ce is only used while tex_lock is held too (destroy
+// under tex_lock alone is safe: agen bump forces re-resolve before the next dereference).
 typedef struct {
     struct Tex *ce;               // NULL: nothing cached (registered since, or never resolved)
     uint32_t cgen;                // agen of the slot's address when ce was resolved
@@ -65,9 +66,13 @@ typedef struct {
 typedef struct { samp_par p; VkSampler s, sp; uint8_t used; } SampSlot;   // s: vk_sampler_for(&p) once looked up; sp:
                                                                            // its point-sampled form (vk_sampler_point_by_id_locked)
 
-// vk_texture.c: the cache state, under tex_lock unless noted
+// vk_texture.c: image-cache state under tex_lock; slot-table state under slots_lock (see below).
+// Lock order when more than one is held: tex_lock → slots_lock → view_lock (vk_exec_view.c) — never reverse.
+// slots_lock alone for register / sampler-slot / token-facing table work; when both tex and slots are needed
+// (by_id_locked: resolve + freshness), take tex_lock first then slots_lock (vk_texture_lock does that).
 #define AGEN_N 4096
-extern PlatRMutex tex_lock;
+extern PlatRMutex tex_lock;     // by_key / by_addr / Tex lifetime / uploads / release / evict / tex_gen / agen / submit_epoch
+extern PlatMutex slots_lock;    // tslots / sslots / slots_gen / samp_gen / reg_serial / sinfo / schk / samplers hashmap
 extern PlatOnce tex_once;
 extern volatile int32_t tex_ready;
 extern nvn_hmap by_key, by_addr, samplers;
@@ -103,6 +108,12 @@ static inline void lock(void) {
     plat_rmutex_lock(&tex_lock);
 }
 static inline void unlock(void) { plat_rmutex_unlock(&tex_lock); }
+
+static inline void lock_slots(void) {
+    if (!__atomic_load_n(&tex_ready, __ATOMIC_ACQUIRE)) plat_once(&tex_once, tex_init, NULL);
+    plat_mutex_lock(&slots_lock);
+}
+static inline void unlock_slots(void) { plat_mutex_unlock(&slots_lock); }
 
 static inline uint32_t umax(uint32_t a, uint32_t b) { return a > b ? a : b; }
 static inline uint32_t mip(uint32_t v, unsigned lv) { return umax(v >> lv, 1); }

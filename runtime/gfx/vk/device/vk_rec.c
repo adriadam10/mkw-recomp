@@ -74,6 +74,7 @@ static inline void publish_tail(uint64_t t) {
 static void rec_main(void *arg) {
     (void)arg;
     plat_thread_priority(rec_prio);
+    perf_core_thread(PCORE_RECORDER);
     uint64_t t = 0;
     for (;;) {
         uint64_t h = __atomic_load_n(&head, __ATOMIC_ACQUIRE);

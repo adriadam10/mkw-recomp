@@ -5,7 +5,7 @@ operation logs for the back end (`../../vk/`).
 
 | File | What it is |
 |---|---|
-| `nvn_api.h`, `nvn_api_core.c` | Device, queue, memory pools, buffers, syncs and events |
+| `nvn_api.h`, `nvn_api_core.c` | Device, queue, memory pools, buffers, syncs and events; `MKW_SYNC_AHEAD` lags the per-frame `nvnSyncWait` (wait site TBD; `=discover` logs LRs) |
 | `nvn_api_obj.c` | Descriptor pools, textures, samplers, programs, windows and state objects |
 | `nvn_api_cmd.c`, `nvn_cmd_internal.h` | Command buffers: recording as operation logs and binds deferred to submit; the header, the shared recording helpers |
 | `nvn_api_state.c` | The draw state commands (targets, binds, states), recorded as `nvn_obj.h` loads |

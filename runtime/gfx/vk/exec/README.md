@@ -14,7 +14,7 @@ and dispatches, descriptors, and their parallel recording.
 | `vk_exec_bind.c` | Descriptor sets of each draw or dispatch, with their memos and skipping of repeats (`MKW_BIND_SKIP`) |
 | `vk_exec_cb.c` | About the command buffer being recorded: transient memory, descriptor pools and ranges the GPU writes, and fixed state, vertex buffers and feedback barriers |
 | `vk_exec_written.c` | `MKW_REPLAY_PAR_WSHARE`: the ranges the GPU writes in a submission recorded in chunks, each reported pending and written back by one thread only |
-| `vk_exec_view.c` | Stand-ins for what is not bound (zeros, 1x1 image, sampler) and image views of textures |
+| `vk_exec_view.c` | Stand-ins for what is not bound (zeros, 1x1 image, sampler) and image views of textures (`view_lock`; after `tex_lock` → `slots_lock` when those are held) |
 | `vk_exec_ubuf.c` | Constant bank c0, the submit's UBO updates and addresses read from uniform blocks |
 | `vk_exec_dstat.c` | Draw replay diagnostics: at a device loss, the driver's fault report (`VK_EXT_device_fault`: address and kind on RADV) and the last programs, `MKW_IND_TRACE`, `MKW_BIND_STATS`, time per stage |
 | `vk_exec_dcache.c` | `MKW_DRAW_CACHE`: descriptor sets kept across frames by their contents, with dynamic-offset UBOs; and the probe that measured its hit rate (`MKW_DRAW_CACHE_PROBE`) |
