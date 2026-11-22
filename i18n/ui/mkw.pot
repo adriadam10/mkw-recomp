@@ -922,6 +922,38 @@ msgid ""
 "Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
 msgstr ""
 
+msgctxt "UI_MENU_PHONE_PADS"
+msgid "Phones as controllers"
+msgstr ""
+
+msgctxt "UI_MENU_PHONE_PADS_DESC"
+msgid "A phone on the same Wi-Fi becomes a controller, steering by tilting it like a wheel: scan the code under this row with its camera. Android and iPhone, no app to install. The phone warns once that the connection is not private, because this PC makes its own certificate: choose to continue. If the page does not open, allow the game through the firewall when Windows asks."
+msgstr ""
+
+msgctxt "UI_MENU_PHONE_SCAN"
+msgid "Scan with the phone's camera, or open:"
+msgstr ""
+
+msgctxt "UI_MENU_PHONE_CODE"
+msgid "Code: %s"
+msgstr ""
+
+msgctxt "UI_MENU_PHONE_COUNT"
+msgid "Phones connected: %d"
+msgstr ""
+
+msgctxt "UI_MENU_PHONE_WAITING"
+msgid "The address and its code show here while the game runs."
+msgstr ""
+
+msgctxt "UI_MENU_PHONE_FAILED"
+msgid "No address to give the phones: this PC is on no local network, or port %d is taken."
+msgstr ""
+
+msgctxt "UI_NOTICE_PHONE_JOINED"
+msgid "A phone joined as a controller"
+msgstr ""
+
 msgctxt "UI_MENU_STICK_DEADZONE"
 msgid "Stick dead zone"
 msgstr ""

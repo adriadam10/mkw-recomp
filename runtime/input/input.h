@@ -22,6 +22,9 @@ void input_wheel_map(void);
 enum { INPUT_MAX_PLAYERS = 8 };
 uint32_t input_player_mask(void);   // bit k: player k + 1 has a controller; bit 0 always (the keyboard)
 void input_poll_player(int player, uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry);
+// The player (0-7) whose gamepad is the SDL joystick with that instance id, -1 when no player has it (yet): a phone
+// shows which player it is (phonepad.c). Any thread.
+int input_pad_player(uint32_t joystick);
 // The in-game menu (ui/menu/menu.h): input_menu(1) when it opens (input_poll reports nothing, the cursor is released), (0) when
 // it closes (nothing until every button and stick direction is released). Independent of input_block.
 void input_menu(int open);
