@@ -137,6 +137,7 @@ def fail(code, detail):
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # mods.cpp reads this pipe as UTF-8
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--game", required=True)
     ap.add_argument("--romfs", required=True)
