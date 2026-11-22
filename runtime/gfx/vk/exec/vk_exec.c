@@ -30,6 +30,7 @@
 #include "platform/platform.h"
 
 #include "vk_exec_internal.h"
+#include "vk_passhz.h"
 #include "vk_rec_diff.h"
 #include "vk_reuse.h"
 // Task/mesh draws (VK_EXT_mesh_shader): drawn by default since mesh1 (01/11/2026: 40 s of race without a hang; with
@@ -83,6 +84,7 @@ uint64_t vk_exec_presented;
 void vk_exec_frame_log(const tex_t *p, uint64_t frame) {
     vk_exec_presented = frame;
     vk_mem_lost_log(frame);
+    if (frame % 600 == 0) ph_log();
     if (!(rt_trace & RT_TRACE_GFX)) return;
     VkExecFrame *f = &vk_exec_frame_all;
     int hit = 0;
@@ -183,7 +185,11 @@ static void barrier_to(VkExec *ex, const VkImage *want, const VkImageAspectFlags
             ib[n++] = layout_barrier(want[i], wasp[i], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT);
     for (int i = 0; i < nwant; i++) ex->fbl_img[i] = want[i], ex->fbl_aspect[i] = wasp[i];
     ex->nfbl = nwant;
-    if (ex->barrier_at == ex->recorded && !n) return;
+    if (ex->barrier_at == ex->recorded && !n) {
+        if (pass) ph_pass_begin(ex, 1);
+        return;
+    }
+    if (pass && ph_pass_begin(ex, 0) && !n) return;
     if (pass && pass_nobarrier < 0) {
         pass_nobarrier = rt_knob("PASS_NOBARRIER", "0");
         if (pass_nobarrier) rt_log("vk: no memory barrier before passes%s (MKW_PASS_NOBARRIER, a measurement)",
@@ -200,6 +206,7 @@ static void barrier_to(VkExec *ex, const VkImage *want, const VkImageAspectFlags
                            .imageMemoryBarrierCount = n, .pImageMemoryBarriers = ib};
     vkCmdPipelineBarrier2(ex->cb, &di);
     ex->barrier_at = ++ex->recorded;
+    if (!pass) ph_barrier(ex);   // before a pass: ph_pass_begin
 }
 
 void vk_exec_barrier(VkExec *ex) { barrier_to(ex, NULL, NULL, 0, 0); }
@@ -270,6 +277,7 @@ void vk_exec_pass_end(VkExec *ex) {
     if (pt_on > 0) vk_pt_mark(ex->cb, 0);
     ex->recorded++;
     ex->in_pass = 0;
+    ph_pass_end(ex);
     vk_ind_read_pass_end(ex);
     if (vk_dump_armed) vk_dump_pass_end(ex);
     if (vk_rtstats_on && !split_ending) vk_rtstats_pass_end(ex);
@@ -707,6 +715,7 @@ int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint64_t 
     VkExec *ex = &X;
     if (!x_ready) state_reset(ex), vk_dump_init(), vk_rtstats_init(), x_ready = 1;
     vk_exec_draw_thread();
+    ph_new_cb();
     ex->cb = cb;
     ex->fence = fence;
     ex->recorded = 0;

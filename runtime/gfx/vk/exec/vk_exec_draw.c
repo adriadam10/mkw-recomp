@@ -28,6 +28,7 @@
 #include "vk.h"
 #include "vk_draw_internal.h"
 #include "vk_exec.h"
+#include "vk_passhz.h"
 #include "vk_reuse.h"
 #include "platform/platform.h"
 
@@ -56,6 +57,7 @@ _Thread_local int pd_on;
 
 void vk_exec_draw_new_cb(void) {
     vk_exec_draw_thread();
+    ph_new_cb();
     memset(&B, 0, sizeof B);
 }
 
@@ -271,10 +273,10 @@ static const GfxShader *spec_pick(VkExec *ex, const GfxShader *s, int st) {
 // - VK_FEEDBACK_RESTART: the pass ends and restarts behind the full barrier (vk_exec_pass_begin).
 
 // The image and the levels [l0, l1) and layers [a0, a1) a texture's view covers.
-typedef struct { VkImage image; uint32_t l0, l1, a0, a1; } SubRange;
+typedef PhRange SubRange;   // vk_passhz.h
 
 static SubRange sub_of(const VkTexImage *img, const view_t *v, int hv) {
-    SubRange r = {img->image, 0, img->levels, 0, img->layers};
+    SubRange r = {img->image, 0, img->levels, 0, img->layers, img->bound};
     if (hv && v->set_levels) r.l0 = v->base_level, r.l1 = v->base_level + (v->nlevels ? v->nlevels : img->levels);
     if (hv && v->set_layers) r.a0 = v->min_layer, r.a1 = v->min_layer + (v->nlayers ? v->nlayers : img->layers);
     return r;
@@ -344,6 +346,54 @@ static uint32_t feedback_scan(VkExec *ex, const GfxShader *fs) {
         }
     ex->fb_fs = fs, ex->fb_serial = ex->tex_serial, ex->fb_pass = ex->pass_serial, ex->fb_sampled = m;
     return m;
+}
+
+// MKW_PASS_HAZARDS: 1 when a texture the draw's shader s (stage st) samples was rendered without a barrier since.
+static int ph_textures(VkExec *ex, const GfxShader *s, int st) {
+    const GfxShaderRes *res;
+    int n = gfx_shader_resources(s, GFX_RES_TEX, &res), hit = 0;
+    uint32_t gen = vk_texture_slots_gen();
+    for (int r = 0; r < n; r++)
+        for (int k = 0; k < (res[r].count ? res[r].count : 1); k++) {
+            int slot = res[r].slot + k;
+            uint64_t h = slot >= 0 && slot < 128 ? ex->tex[st][slot] : 0;
+            if (!h) continue;
+            typeof(FM[0]) *f = &FM[(h * 0x9E3779B97F4A7C15ull) >> 51];
+            SubRange sr;
+            if (td_mode() && f->h == h && slot_still(&f->gen, f->tok, h, gen)) sr = f->r;
+            else {
+                uint64_t tok = token_of(h);
+                sr = sampled_sub(h);
+                if (tok) *f = (typeof(*f)){.h = h, .tok = tok, .gen = gen, .r = sr};
+                else f->h = 0;
+            }
+            hit |= ph_sample(&sr);
+        }
+    if (gfx_shader_resources(s, GFX_RES_IMG, &res)) hit |= ph_stores();
+    n = gfx_shader_resources(s, GFX_RES_SSBO, &res);
+    for (int r = 0; r < n; r++)
+        if (res[r].flags & 1) hit |= ph_stores();
+    return hit;
+}
+
+// The draw against the open pass's missing barrier; memo: the same shaders and texture bindings as the last draw checked
+// in this pass.
+static void ph_draw(VkExec *ex, const GfxShader *vs, const GfxShader *fs, const GfxShader *msh) {
+    static _Thread_local struct { const GfxShader *vs, *fs, *msh; uint32_t serial, pass, gen; } m;
+    if (!ex->in_pass) return;
+    if (m.vs == vs && m.fs == fs && m.msh == msh && m.serial == ex->tex_serial && m.pass == ex->pass_serial &&
+        m.gen == ph_gen)
+        return;
+    for (int round = 0; round < 2; round++) {
+        int hit = vs ? ph_textures(ex, vs, NVN_STAGE_VS) : 0;
+        if (fs) hit |= ph_textures(ex, fs, NVN_STAGE_FS);
+        if (msh) hit |= ph_stores();   // its own stages' textures are not followed: a barrier before and after
+        if (!hit || !ph_conflict()) break;
+        vk_exec_pass_end(ex);
+        vk_exec_pass_begin(ex);   // behind the barrier; the textures are noted again after it
+    }
+    ph_drew();
+    m.vs = vs, m.fs = fs, m.msh = msh, m.serial = ex->tex_serial, m.pass = ex->pass_serial, m.gen = ph_gen;
 }
 
 // Before the pipeline lookup of a draw with fragment shader fs: learns and restarts as the mode says. Returns the
@@ -588,6 +638,7 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
     if (!vk_tmp_draw(ex, vs, has_fs ? fs : NULL)) return 0;   // the scene's camera and jitter; DLAA in SMAA's place
     if (SP.n && skip_listed(vs, has_fs ? fs : NULL)) return 0;
     PD_MARK(PD_SHADER);
+    if (ph_following()) ph_draw(ex, vs, has_fs ? fs : NULL, msh);
     uint32_t fbl = feedback_prepare(ex, fs);
     if (ru_cap) ru_note_fbl(fbl);
     PD_MARK(PD_FEEDBACK);

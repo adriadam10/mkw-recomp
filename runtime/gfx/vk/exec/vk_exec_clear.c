@@ -16,6 +16,7 @@
 #include "platform/platform.h"
 
 #include "vk_exec_internal.h"
+#include "vk_passhz.h"
 
 // ---- clears
 
@@ -34,7 +35,7 @@ static int whole_target(const VkExec *ex, const VkExecTarget *t) {
 // recorded between, and of a subresource no clear of the run touched, it orders nothing the run's first barrier did
 // not. The race clears the 5 layers of a 128x128 target one by one and 19 targets a frame, each behind a barrier that
 // drains the GPU (cc1); RADV's own clears need none between them. MKW_CLEAR_RUN=0 puts each barrier back; =ab.
-static void clear_barrier(VkExec *ex, VkImage img, uint32_t level, uint32_t layer0, uint32_t layers) {
+static void clear_barrier(VkExec *ex, VkImage img, uint32_t level, uint32_t layer0, uint32_t layers, int bound) {
     static int mode = -1;
     if (mode < 0) {
         mode = rt_knob("CLEAR_RUN", "1");
@@ -46,8 +47,12 @@ static void clear_barrier(VkExec *ex, VkImage img, uint32_t level, uint32_t laye
         if (ex->clr[i].img == img && ex->clr[i].level == level && layer0 < ex->clr[i].layer0 + ex->clr[i].layers &&
             ex->clr[i].layer0 < layer0 + layers)
             run = 0;
+    // MKW_PASS_HAZARDS follows the clears of the run and the passes before it alike, and decides alone: the run's own list
+    // starts at its first clear, whose barrier may have been left out.
+    int ph = ph_clear(ex, img, level, layer0, layers, bound);
+    if (ph >= 0) run = ph;
     if (!run) vk_exec_barrier(ex), ex->nclr = 0;
-    ex->clr[ex->nclr++] = (typeof(ex->clr[0])){img, level, layer0, layers};
+    if (ex->nclr < (int)(sizeof ex->clr / sizeof ex->clr[0])) ex->clr[ex->nclr++] = (typeof(ex->clr[0])){img, level, layer0, layers};
     ex->clear_run_at = ex->recorded + 1;   // the clear the caller records next
 }
 
@@ -98,12 +103,13 @@ void clear_color(VkExec *ex, const p_clear_color *c) {
     int whole = whole_target(ex, t);
     clear_census(ex, t, whole);
     if (whole) {
-        clear_barrier(ex, t->image, t->level, t->base_layer, t->layers);
+        clear_barrier(ex, t->image, t->level, t->base_layer, t->layers, t->img && t->img->bound);
         VkImageSubresourceRange r = {VK_IMAGE_ASPECT_COLOR_BIT, t->level, 1, t->base_layer, t->layers};
         uint32_t crumb = vk_crumb_op(ex->cb, "colour clear", t->width, t->height);
         vkCmdClearColorImage(ex->cb, t->image, VK_IMAGE_LAYOUT_GENERAL, &cv, 1, &r);
         vk_crumb_end(ex->cb, VK_CRUMB_OP, crumb);
         ex->recorded++;
+        ph_cleared(ex, t->image, t->level, t->base_layer, t->layers, t->img && t->img->bound);
         vk_texture_gpu_written(t->tex);
         return;
     }
@@ -185,6 +191,7 @@ static int dc_layered(VkExec *ex, const VkExecTarget *t, VkImageAspectFlags asp,
     vkCmdClearDepthStencilImage(ex->cb, t->image, VK_IMAGE_LAYOUT_GENERAL, v, 1, &r);
     vk_crumb_end(ex->cb, VK_CRUMB_OP, crumb);
     ex->recorded++;
+    ph_cleared(ex, t->image, 0, 0, t->img->layers, t->img->bound);
     vk_texture_gpu_written(t->tex);
     DC.img = t->image, DC.depth = v->depth, DC.pending = ((t->img->layers == 32 ? 0u : 1u << t->img->layers) - 1u) & ~bit;
     DC.dropped_by = NULL, *done = bit;
@@ -220,12 +227,13 @@ void clear_ds(VkExec *ex, const p_clear_ds *c) {
                                (t->height >> 4 & 0x3fff));
     if (whole_target(ex, t)) {
         if (dc_layered(ex, t, asp, &v)) return;
-        clear_barrier(ex, t->image, t->level, t->base_layer, t->layers);
+        clear_barrier(ex, t->image, t->level, t->base_layer, t->layers, t->img && t->img->bound);
         VkImageSubresourceRange r = {asp, t->level, 1, t->base_layer, t->layers};
         uint32_t crumb = vk_crumb_op(ex->cb, "depth clear", t->width, t->height);
         vkCmdClearDepthStencilImage(ex->cb, t->image, VK_IMAGE_LAYOUT_GENERAL, &v, 1, &r);
         vk_crumb_end(ex->cb, VK_CRUMB_OP, crumb);
         ex->recorded++;
+        ph_cleared(ex, t->image, t->level, t->base_layer, t->layers, t->img && t->img->bound);
         vk_texture_gpu_written(t->tex);
         return;
     }
