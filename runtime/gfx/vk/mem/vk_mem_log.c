@@ -59,6 +59,7 @@ static uint64_t vram_every(void) {
 void vk_mem_replay_log(uint64_t frames) {
     mirror_log(frames);
     shadow_log(frames);
+    zc_log(frames);
 }
 
 void vk_mem_census(uint64_t frame) {
@@ -69,7 +70,7 @@ void vk_mem_census(uint64_t frame) {
     if (((rt_trace & RT_TRACE_PERF) && frame % 150 == 0) || (every && frame % every == 0)) vram_log(frame);
     if (vk_dirty_census && !vk_mirror_on) dirty_frame(frame);
     if ((rt_trace & RT_TRACE_PERF) ? frame % 60 == 0 : frame == 600 || frame == 1800)
-        mirror_log(frame), shadow_log(frame);   // mirror_log also logs the write-watch line
+        mirror_log(frame), shadow_log(frame), zc_log(frame);   // mirror_log also logs the write-watch line
     if (frame == 1200) {   // loading is over: the first window starts here
         for (int c = 0; c < VK_MCLS_N; c++)
             for (int u = 0; u < VK_MUSE_N; u++) plat_xchg64(&traffic[c][u], 0);

@@ -40,7 +40,7 @@ static uint64_t spill_step(const pool_t *key, uint64_t lo, uint64_t hi) {
     vk_mem_changed(lo, hi - lo, 0, &now);
     plat_mutex_lock_shared(&pool_lock);
     const pidx_ent *e = pidx_find(&pool_index, (uintptr_t)lo, 0);
-    if (e && e->key == key && eligible(e->buf)) done = mem_spill(lo, hi);
+    if (e && e->key == key && eligible(e->buf) && !zc_in_use(lo, hi)) done = mem_spill(lo, hi);
     plat_mutex_unlock_shared(&pool_lock);
     return done;
 }

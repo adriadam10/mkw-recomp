@@ -47,6 +47,10 @@ int plat_mem_protect(uint64_t addr, uint64_t n, int prot) {
 
 int plat_mem_drop(uint64_t addr, uint64_t n) { return (void)addr, (void)n, 0; }   // memory_spill.c: Linux only for now
 int plat_mem_poke(uint64_t addr, const void *src, size_t n) { return (void)addr, (void)src, (void)n, 0; }
+int plat_shared_open(uint64_t size, PlatShared *s, const char **why) { return (void)size, (void)s, *why = "not on Windows", 0; }
+void plat_shared_close(PlatShared *s) { (void)s; }
+int plat_mem_share(uint64_t addr, uint64_t n, const PlatShared *s, uint64_t off) { return (void)addr, (void)n, (void)s, (void)off, 0; }
+uint8_t *plat_mem_shared_at(uint64_t addr) { return (void)addr, NULL; }
 int plat_mem_peek(void *dst, uint64_t addr, size_t n) { return memcpy(dst, (const void *)(uintptr_t)addr, n), 1; }   // no read traps here
 
 int plat_mem_state(uint64_t addr, uint64_t limit, uint64_t *end) {

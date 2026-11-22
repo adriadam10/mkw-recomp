@@ -6,6 +6,7 @@
 | `linux.c`, `linux_int.h` | Linux: threads, preemption through signals, fibers; the header is what the `linux_*.c` parts share |
 | `linux_sync.c` | Linux: clock, locks and condition variables on futex |
 | `linux_fs.c` | Linux: files and file system (atomic write, rename without replace) |
+| `linux_share.c` | Linux: guest pages the GPU shares (`PlatShared`): a memfd with a udmabuf the driver imports, mapped over a guest range with the write watch kept |
 | `linux_mem.c` | Linux: virtual memory, write watching with userfaultfd (Linux 6.7+), fault handler; `plat_mem_poke` writes through the protection via `/proc/self/mem` |
 | `linux_sys.c` | Linux: process, local IPC (Unix sockets), desktop, libraries, machine load (CPU, temperature, GPU) and desktop shortcut |
 | `win32.c`, `win32_int.h` | Windows: threads, preemption (SuspendThread), fibers, clock, locks; the header is what the `win32_*.c` parts share |

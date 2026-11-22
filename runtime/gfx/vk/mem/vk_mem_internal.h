@@ -70,6 +70,8 @@ typedef struct PoolRec {
     uint32_t cgen;                     // gen_lock: every page stamped up to this generation is captured
     uint8_t cap_on;                    // shadow_lock: on the capture list (vk_mem_capture.c)
     uint8_t placed;                    // POOL_IMPORT as driver memory mapped at the guest range (placed_pool): mem
+    int zc;                            // zero-copy pool (vk_mem_zc.c): its arena + 1, 0 none; zc_at: its first page there
+    uint32_t zc_at;
     uint8_t lazy;                      // POOL_IMPORT whose GPU storage is made at its first resolve (lazy_back)
     uint32_t born_ms;                  // plat_now_ms at vk_pool_init (vk_mem_spill.c: how long it has been there)
 } PoolRec;
@@ -93,6 +95,13 @@ int import_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size);
 int lazy_on(void);
 void lazy_back(PoolRec *r);
 void destroy_rec(VkCtx *c, PoolRec *r);
+
+// vk_mem_zc.c: zero-copy pools (MKW_UDMABUF)
+int zc_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size);   // pool_lock exclusive; 0: not taken
+void zc_release(PoolRec *r);
+int zc_in_use(uint64_t lo, uint64_t hi);   // a pool record holds a page of [lo, hi): the GPU may be using it
+void zc_log(uint64_t frame);
+void zc_shutdown(VkCtx *c);
 
 // vk_mem_spill.c: MKW_MEM_SPILL's sweep thread, started at the first pool
 void vk_mem_spill_start(void);

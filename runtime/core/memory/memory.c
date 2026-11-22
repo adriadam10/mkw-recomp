@@ -299,6 +299,55 @@ void mem_untrap(uint64_t a, uint64_t n) {
     plat_mutex_unlock(&frz_lock);
 }
 
+// ---- pages the GPU shares (MKW_UDMABUF, gfx/vk/mem/vk_mem_zc.c)
+// A file read in flight writes its buffer from the kernel, at any time until it returns: a range it covers is not
+// swapped for another mapping meanwhile, its bytes would go to the pages that left. Under frz_lock.
+#define IO_N 64
+static struct { uint64_t lo, hi; } io[IO_N];
+static int io_lost;   // reads in flight past IO_N: no range is swapped while there are any
+
+void mem_io_begin(uint64_t a, uint64_t n) {
+    mem_commit_range(a, n);
+    plat_mutex_lock(&frz_lock);
+    thaw_range_locked(a, n, 2);
+    int i = 0;
+    while (i < IO_N && io[i].hi) i++;
+    if (i < IO_N) io[i].lo = a, io[i].hi = a + n;
+    else io_lost++;
+    plat_mutex_unlock(&frz_lock);
+}
+
+void mem_io_end(uint64_t a, uint64_t n) {
+    plat_mutex_lock(&frz_lock);
+    int i = 0;
+    while (i < IO_N && !(io[i].lo == a && io[i].hi == a + n)) i++;
+    if (i < IO_N) io[i].lo = io[i].hi = 0;
+    else io_lost--;
+    plat_mutex_unlock(&frz_lock);
+}
+
+int mem_share(uint64_t lo, uint64_t hi, const PlatShared *s, uint64_t off) {
+    if (!watched(lo, hi - lo)) return 0;
+    int ok = 0;
+    plat_mutex_lock(&frz_lock);
+    for (int i = 0; i < IO_N; i++)
+        if (io_lost || (io[i].hi > lo && io[i].lo < hi)) goto out;
+    thaw_range_locked(lo, hi - lo, 2);
+    uint64_t end;
+    if (plat_mem_state(lo, hi, &end) != PLAT_PROT_RW || end < hi) goto out;   // a hole or a guest protection
+    // Read-only while the bytes are copied: a write waits in thaw_fault on frz_lock, finds the page read-write and retries.
+    if (!plat_mem_protect(lo, hi - lo, PLAT_PROT_READ)) goto out;
+    memcpy(s->map + off, (const void *)(uintptr_t)lo, hi - lo);
+    ok = plat_mem_share(lo, hi - lo, s, off);
+    if (ok < 0) rt_fatal("memory: sharing %#llx+%#llx with the GPU lost the range", (unsigned long long)lo,
+                         (unsigned long long)(hi - lo));
+    if (!ok && !plat_mem_protect(lo, hi - lo, PLAT_PROT_RW))
+        rt_fatal("memory: %#llx+%#llx kept read-only", (unsigned long long)lo, (unsigned long long)(hi - lo));
+out:
+    plat_mutex_unlock(&frz_lock);
+    return ok;
+}
+
 void mem_hold_layout(void) { plat_mutex_lock(&frz_lock); }
 void mem_release_layout(void) { plat_mutex_unlock(&frz_lock); }
 

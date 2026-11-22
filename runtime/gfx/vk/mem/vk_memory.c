@@ -460,6 +460,7 @@ void vk_mem_shutdown(void) {
     pool_index.n = 0;
     shadow_reset();
     mirror_reset(c);
+    zc_shutdown(c);
     __atomic_add_fetch(&pool_gen, 1, __ATOMIC_RELEASE);
     nphys = 0;
     plat_mutex_unlock(&pool_lock);

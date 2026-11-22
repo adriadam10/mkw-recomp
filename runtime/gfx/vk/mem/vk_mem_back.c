@@ -143,6 +143,7 @@ static int import_refused(void) {
 // shadow copy of them (vk_mem_shadow.c).
 int import_pool(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
     if (c->has_placed && placed_pool(c, r, addr, size)) return 1;
+    if (zc_pool(c, r, addr, size)) return 1;
     // A pool whose copy does not fit (MKW: one of 2.4 GB, flags 0x24, over MKW_GPU_MEM_LIMIT; run77-run78 died on it)
     // is imported instead: the other paths check each pool's smap, so imported and shadowed pools mix.
     // (Importing every CPU_NO_ACCESS pool too was tried, run82-run86: the pinned pages count in the process's memory
@@ -400,6 +401,7 @@ void destroy_rec(VkCtx *c, PoolRec *r) {
     if (r->salloc) vmaDestroyBuffer(c->vma, r->buf, r->salloc), r->buf = VK_NULL_HANDLE;
     if (r->placed) placed_release(c, r);
     if (r->buf) vkDestroyBuffer(c->device, r->buf, NULL);
+    if (r->zc) zc_release(r);
     if (r->mem) vkFreeMemory(c->device, r->mem, NULL);
     for (uint32_t i = 0; i < r->nchunks; i++) {
         if (r->chunks[i].buf) vkDestroyBuffer(c->device, r->chunks[i].buf, NULL);

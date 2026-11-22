@@ -875,8 +875,9 @@ static File *file_of(uint64_t h, PlatFile **fh, int *mode) {
 
 // Positional reads: bytes read at off, 0 at the end, -1 on an error.
 static int64_t host_read_at(PlatFile *f, void *buf, uint32_t n, uint64_t off) {
-    mem_thaw((uintptr_t)buf, n);   // the kernel's write would fail on a frozen page instead of faulting
+    mem_io_begin((uintptr_t)buf, n);   // the kernel's write would fail on a frozen page instead of faulting
     int64_t got = plat_file_pread(f, buf, n, off);
+    mem_io_end((uintptr_t)buf, n);
     if (got == -2)   // a read-only page in the buffer: a frozen region missed its thaw
         rt_log("fs: read of %u bytes into %p refused: the buffer is not writable", n, buf);
     return got < 0 ? -1 : got;

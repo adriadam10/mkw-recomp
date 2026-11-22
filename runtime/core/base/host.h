@@ -171,6 +171,12 @@ int mem_frozen(uint64_t a);                                // the 2 MiB region o
 void mem_thaw(uint64_t a, uint64_t n);                     // makes the frozen regions over [a, a+n) writable again;
                                                            // before a kernel write (file read) into guest memory;
                                                            // commits the range first (mem_commit_range)
+void mem_io_begin(uint64_t a, uint64_t n);                 // mem_thaw, and until mem_io_end no page of the range is swapped
+void mem_io_end(uint64_t a, uint64_t n);                   // for the GPU's (mem_share): around a kernel write into it
+struct PlatShared;
+int mem_share(uint64_t lo, uint64_t hi, const struct PlatShared *s, uint64_t off);
+                                                           // the pages [lo, hi) (watched, all read-write) become s's at
+                                                           // off with their bytes kept; 0 refused, nothing changed
 void mem_commit_range(uint64_t a, uint64_t n);             // Windows' lazy commit (MKW_LAZY_COMMIT): the game's
                                                            // pages of [a, a+n) committed now, before something that
                                                            // does not fault into the handler reads or writes them
@@ -356,6 +362,7 @@ int probe_discord(void);                                   // discord_probe.c: R
 int probe_dsu(void);                                       // dsu_probe.c: the DSU motion client against a fake server
 int probe_fps(void);                                       // fps_probe.c: the controller on synthetic frame times
 int probe_merge(void);                                     // merge_probe.c: the shadow write-back's two implementations
+int probe_share(void);                                     // share_probe.c: guest pages the GPU shares
 int probe_spill(void);                                     // spill_probe.c: spilled pages back byte for byte
 void lat_input_read(void);                                 // vk_latency.c MKW_LATENCY: the game read the controller
 void lat_game_present(uint64_t slot);                      // ... and presented the frame shown at slot (pacer, ns)

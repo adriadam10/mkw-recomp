@@ -411,6 +411,14 @@ static int create_device(void) {
         ext[n_ext++] = VK_KHR_MAP_MEMORY_2_EXTENSION_NAME;
         CHAIN(placed, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAP_MEMORY_PLACED_FEATURES_EXT);
     }
+#ifndef _WIN32
+    if (has_ext(ep, ne, VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME) &&   // zero-copy pools (vk_mem_zc.c)
+        has_ext(ep, ne, VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME)) {
+        g_vk.has_dma_buf = 1;
+        ext[n_ext++] = VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME;
+        ext[n_ext++] = VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME;
+    }
+#endif
     if (has_ext(ep, ne, VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME)) {
         g_vk.has_emh = 1;
         ext[n_ext++] = VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME;

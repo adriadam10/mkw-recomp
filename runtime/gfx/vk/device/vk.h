@@ -73,6 +73,7 @@ typedef struct VkCtx {
         has_astc_ldr,                       // textureCompressionASTC_LDR (enabled when reported)
         has_calibrated,                     // VK_KHR_calibrated_timestamps, with MKW_TRACE_TL=1 only
         has_emh,                            // VK_EXT_external_memory_host: pools imported when a shadow does not fit
+        has_dma_buf,                        // VK_EXT_external_memory_dma_buf: zero-copy pools (MKW_UDMABUF, Linux)
         has_placed,                         // VK_EXT_map_memory_placed with unmap-reserve: pools as driver memory
         has_colorspace,                     // VK_EXT_swapchain_colorspace (instance): HDR10 swapchains (gfx_hdr.c)
         has_hdr_metadata;                   // VK_EXT_hdr_metadata: the HDR10 swapchain's mastering metadata

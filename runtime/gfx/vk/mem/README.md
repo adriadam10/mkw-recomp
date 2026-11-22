@@ -7,6 +7,7 @@ submit's copies of constant blocks.
 |---|---|
 | `vk_memory.c`, `vk_mem_internal.h` | NVN pools as Vulkan buffers: pool index, page table of virtual pools and address resolution; the header is what the `vk_mem_*.c` parts share |
 | `vk_mem_back.c` | GPU storage of each pool: placed, imported, physical in chunks, lazy |
+| `vk_mem_zc.c` | Zero-copy pools (`MKW_UDMABUF=1`, default 0, Linux): a pool's guest pages are swapped at its first GPU use for pages of a memfd arena the driver imported through udmabuf, so the game and the GPU use the same memory, with no shadow copy; a shadow where that is not possible |
 | `vk_mem_gen.c` | Write generations per page (all writes, and the CPU's alone: a GPU write reported at its fence stamps only the first, so the mirror, which holds those bytes, skips it), write-watch snapshots and frozen regions |
 | `vk_mem_shadow.c` | Shadow copies of the CPU-visible pools, synced on their own thread as the replay touches them (`MKW_SHADOW_EARLY`) |
 | `vk_mem_shadow_nc.c` | The shadow's memory type: cached, and where the driver has no cached coherent type (ANV on Meteor Lake, #283) not coherent, with explicit flush and invalidate around the CPU's copies (`MKW_SHADOW_CACHED`) |

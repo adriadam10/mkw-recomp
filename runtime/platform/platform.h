@@ -234,6 +234,16 @@ int64_t plat_mem_resident(const void *p, size_t n);
 // kernel would; no fault reaches the hooks. 1 on success; 0 where the platform cannot (Windows).
 int plat_mem_poke(uint64_t addr, const void *src, size_t n);
 int plat_mem_peek(void *dst, uint64_t addr, size_t n);      // reads through the protection (Linux; Windows: memcpy)
+// Memory the GPU can import as a dma-buf and that can stand in for pages of a reservation (Linux: a memfd and its
+// udmabuf; vk_mem_zc.c). dmabuf goes to the importer, which owns it; map is a read-write view kept until the close.
+typedef struct PlatShared { int memfd, dmabuf; uint8_t *map; uint64_t size; } PlatShared;
+int plat_shared_open(uint64_t size, PlatShared *s, const char **why);   // 0: not here, why says what is missing
+void plat_shared_close(PlatShared *s);   // pages still mapped by plat_mem_share keep their memory
+// The committed pages [addr, addr + n) become s's at off, read-write, with every byte as s has it: the caller copied
+// them in and kept writers away meanwhile. The write watch goes on over them with no page marked as written.
+// 1 on success; 0: nothing changed; -1: the range is lost.
+int plat_mem_share(uint64_t addr, uint64_t n, const PlatShared *s, uint64_t off);
+uint8_t *plat_mem_shared_at(uint64_t addr);   // the view of the page of addr when plat_mem_share put it there, or NULL
 int64_t plat_threads_cpu_ns_named(const char *name);   // CPU time of this process's threads so named; -1 unknown
 // A write-fault hook that runs before the others and also gets the faulting host instruction (diagnostic write
 // watches, nvn2.c MKW_GEN_WATCH); 1: handled, the write retries.

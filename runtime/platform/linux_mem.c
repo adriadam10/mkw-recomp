@@ -88,13 +88,11 @@ struct pm_scan_arg {
 // untracked and the back end uploads them in full.
 
 #define PG 4096ull
-#define PS_LIMIT (1ull << 39)
-enum { PS_FREE, PS_RESERVED, PS_NONE, PS_READ, PS_RW };   // PS_NONE.. are committed: PLAT_PROT_* + PS_NONE
 static uint8_t *pstate;
 static int ww_fd = -1, pm_fd = -1;   // userfaultfd and /proc/self/pagemap; -1 when write watch is unavailable
 static PlatMutex vm_lock = PLAT_MUTEX_INIT;
 
-static void ps_set(uint64_t addr, uint64_t n, uint8_t v) {
+void ps_set(uint64_t addr, uint64_t n, uint8_t v) {   // linux_int.h
     if (addr < PS_LIMIT) memset(pstate + addr / PG, v, (size_t)((n + PG - 1) / PG));
 }
 
@@ -114,6 +112,11 @@ static void ww_open(void) {
         return;
     }
     ww_fd = fd;
+}
+
+void ww_register(uint64_t addr, uint64_t n) {   // linux_int.h: the write watch over a fresh mapping of a reservation
+    struct uffdio_register reg = {.range = {addr, n}, .mode = UFFDIO_REGISTER_MODE_WP};
+    if (ww_fd >= 0) ioctl(ww_fd, UFFDIO_REGISTER, &reg);
 }
 
 int plat_mem_reserve(uint64_t addr, uint64_t n, int watch) {
@@ -174,13 +177,17 @@ int plat_mem_commit(uint64_t addr, size_t n) {
     return 1;
 }
 
+// Shared pages (linux_share.c) give their memory up by leaving it: MADV_DONTNEED would keep their bytes.
 int plat_mem_decommit(uint64_t addr, uint64_t n) {
+    if (!plat_mem_unshare(addr, n)) return 0;
     if (madvise((void *)(uintptr_t)addr, n, MADV_DONTNEED) || mprotect((void *)(uintptr_t)addr, n, PROT_NONE)) return 0;
     ps_set(addr, n, PS_RESERVED);
     return 1;
 }
 
-int plat_mem_drop(uint64_t addr, uint64_t n) { return madvise((void *)(uintptr_t)addr, n, MADV_DONTNEED) == 0; }
+int plat_mem_drop(uint64_t addr, uint64_t n) {   // shared pages leave it: only inaccessible ranges are dropped
+    return plat_mem_unshare(addr, n) && madvise((void *)(uintptr_t)addr, n, MADV_DONTNEED) == 0;
+}
 
 int plat_mem_protect(uint64_t addr, uint64_t n, int prot) {
     int p = prot == PLAT_PROT_RW ? PROT_READ | PROT_WRITE : prot == PLAT_PROT_READ ? PROT_READ : PROT_NONE;
@@ -194,6 +201,17 @@ int plat_mem_protect(uint64_t addr, uint64_t n, int prot) {
 static int self_mem(void);
 
 int plat_mem_poke(uint64_t addr, const void *src, size_t n) {
+    if (plat_mem_any_shared(addr, n)) {   // the kernel refuses a forced write into a shared mapping: through its view
+        for (uint64_t x = addr, y; x < addr + n; x = y) {
+            y = (x & ~(PG - 1)) + PG < addr + n ? (x & ~(PG - 1)) + PG : addr + n;
+            const uint8_t *s = (const uint8_t *)src + (x - addr);
+            uint8_t *v = plat_mem_shared_at(x);
+            int fd;
+            if (v) memcpy(v + (x & (PG - 1)), s, y - x);
+            else if ((fd = self_mem()) < 0 || pwrite(fd, s, y - x, (off_t)x) != (ssize_t)(y - x)) return 0;
+        }
+        return 1;
+    }
     int fd = self_mem();
     return fd >= 0 && pwrite(fd, src, n, (off_t)addr) == (ssize_t)n;
 }
@@ -436,12 +454,12 @@ void plat_aligned_free(void *p) { free(p); }
 // Fresh read-write anonymous pages over [addr, addr + n) of a reservation (a placed map undone, vk_memory.c), back
 // under the write watch like the pages they replace.
 int plat_mem_replace_anon(uint64_t addr, uint64_t n) {
+    share_forget(addr, n);
     void *p = mmap((void *)(uintptr_t)addr, n, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED,
                    -1, 0);
     if (p != (void *)(uintptr_t)addr) return 0;
     madvise(p, n, MADV_NOHUGEPAGE);
-    struct uffdio_register reg = {.range = {addr, n}, .mode = UFFDIO_REGISTER_MODE_WP};
-    if (ww_fd >= 0) ioctl(ww_fd, UFFDIO_REGISTER, &reg);
+    ww_register(addr, n);
     ps_set(addr, n, PS_RW);
     return 1;
 }

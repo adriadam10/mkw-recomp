@@ -76,8 +76,9 @@ static double now_s(void) { return (double)plat_now_ns() / 1e9; }
 // ---- positional reads
 // Bytes read at off (0 at or past the end of the file), -1 on an I/O error.
 static int64_t read_at(PlatFile *f, void *buf, uint32_t n, uint64_t off) {
-    mem_thaw((uintptr_t)buf, n);   // the kernel's write would fail on a frozen page instead of faulting
+    mem_io_begin((uintptr_t)buf, n);   // the kernel's write would fail on a frozen page instead of faulting
     int64_t got = plat_file_pread(f, buf, n, off);
+    mem_io_end((uintptr_t)buf, n);
     if (got == -2)   // a read-only page in the buffer: a frozen region missed its thaw
         rt_log("RomFS: read of %u bytes into %p refused: the buffer is not writable", n, buf);
     return got < 0 ? -1 : got;
@@ -746,8 +747,10 @@ uint32_t romfs_read(uint64_t *out, uint64_t h, int64_t offset, void *buffer, uin
     }
     if (!f) {   // a .nx row: only the blocks this range touches are read and decoded
         uint64_t i = handles[h - ROMFS_HANDLE_BASE] - 1;
-        mem_thaw((uintptr_t)buffer, n);
-        if (!pack_read_at(package, &package_rows[i], (uint64_t)offset, buffer, n))
+        mem_io_begin((uintptr_t)buffer, n);
+        int ok = pack_read_at(package, &package_rows[i], (uint64_t)offset, buffer, n);
+        mem_io_end((uintptr_t)buffer, n);
+        if (!ok)
             rt_fatal("RomFS: read of %s at %#llx failed (see the log)", package_rows[i].name, (unsigned long long)offset);
         *out = n;
         return 0;
