@@ -53,8 +53,19 @@ static int mm_active, mm_inited;       // replay: this submission's write-backs 
 static int merged(const PoolRec *r) { return mm_active && (!r->smap || mmerge_all); }
 static uint32_t mepoch;                // replay: its write-watch snapshot epoch (vk_texture_epoch)
 typedef struct { PoolRec *r; uint64_t off, size; } MRange;
-static MRange *pend, *wbl;             // replay: copies for the next prologue; GPU writes into mirrors this submission
+// The replay's chunks record on several threads (MKW_REPLAY_PAR): a pool's first access of the submission (creation,
+// sync) and the lists go under use_lock; a pool already synced in this submission is read without it.
+static PlatMutex use_lock = PLAT_MUTEX_INIT;
+static MRange *pend, *wbl;             // use_lock: copies for the next prologue; GPU writes into mirrors this submission
 static int npend, cpend, nwbl, cwbl;
+// The list a prologue records, swapped with pend under use_lock: the parts of a submission are sent while its later
+// chunks are still being recorded (vk_exec_par.c send_ready), and those threads add to pend meanwhile. Read in place
+// and emptied at the end, the prologue dropped what they added (~260 ranges every 600 frames of a four-player race, so
+// pages whose write never reached VRAM until they were written again) and sorted an array they could move: with the
+// array moved at every add, 3 of 6 chunked replays of such a frame died of it in malloc or copy_ranges, and none of 14
+// with the swap (22/11/2026).
+static MRange *psend;
+static int csend;
 // MKW_MIRROR_REUP=1 (diagnosis, replay only): the GPU writes of the last submission, to count the pages the next sync
 // uploads again although only the GPU wrote them since (NX2navi 6c971b7 saved 57 of 60 MiB a frame that way; here the
 // write-back is a GPU copy that stamps no page, so the count should stay near zero; mir-reup, 14/11/2026).
@@ -193,9 +204,11 @@ static void mirror_create(PoolRec *r) {
     mlist[at] = r;
     nm++;
     plat_mutex_unlock(&pool_lock);
-    r->acc_sub = msub;
-    __atomic_store_n(&r->mstate, MS_ON, __ATOMIC_RELEASE);   // after mbuf: vk_mem_use reads it without use_lock
     range_add(&pend, &npend, &cpend, r, 0, n);
+    __atomic_store_n(&r->acc_sub, msub, __ATOMIC_RELEASE);
+    // After mbuf, the copy queued and acc_sub: vk_mem_use reads it without use_lock, and what it returns goes to the GPU
+    // with the copies queued by then.
+    __atomic_store_n(&r->mstate, MS_ON, __ATOMIC_RELEASE);
     mrep.first_n++, mrep.first_bytes += n;
     plat_inc64(&m_live_n);
     plat_add64(&m_live_bytes, (int64_t)n);
@@ -253,7 +266,6 @@ void mirror_reset(VkCtx *c) {
 // Replay thread, the first access of this submission: queues the copies of the pages written since the last sync.
 static void mirror_sync(PoolRec *r) {
     uint64_t t0 = qpc();
-    r->acc_sub = msub;
     uint64_t lo = r->import_lo, hi = r->import_hi;
     uint64_t r0 = lo >> SNAP_SHIFT, r1 = (hi - 1) >> SNAP_SHIFT;
     int excl = 0;
@@ -306,11 +318,11 @@ static void mirror_sync(PoolRec *r) {
     }
     mrep.syncs++;
     mrep.sync_t += qpc() - t0;
+    // Last: a thread that finds it set uses the mirror without use_lock, and its chunk may be sent at once, so the copies
+    // are in pend by then. Set first, a chunk used a mirror whose copies were not queued yet, ~900 times every 600
+    // frames of a four-player race.
+    __atomic_store_n(&r->acc_sub, msub, __ATOMIC_RELEASE);
 }
-
-// The replay's chunks record on several threads (MKW_REPLAY_PAR): a pool's first access of the submission (creation,
-// sync) and the write-back list go under use_lock; a pool already synced in this submission is read without it.
-static PlatMutex use_lock = PLAT_MUTEX_INIT;
 
 void vk_mem_use(VkMemSpan *sp) {
     PoolRec *r = sp->pool;
@@ -416,10 +428,21 @@ void vk_mem_mirror_begin(void) {
     mrep.presnap_t += qpc() - t0;
 }
 
-int vk_mem_mirror_pending(void) { return npend + mmerge_pending(); }
+int vk_mem_mirror_pending(void) {
+    plat_mutex_lock(&use_lock);
+    int n = npend;
+    plat_mutex_unlock(&use_lock);
+    return n + mmerge_pending();
+}
 
 void vk_mem_mirror_prologue(VkCommandBuffer cb) {
-    if (!npend) {   // only the bases of the merged write-backs (vk_mem_mmerge.c), which need no barrier before them
+    plat_mutex_lock(&use_lock);
+    MRange *a = pend;
+    int n = npend, cap = cpend;
+    pend = psend, cpend = csend, npend = 0;
+    psend = a, csend = cap;
+    plat_mutex_unlock(&use_lock);
+    if (!n) {   // only the bases of the merged write-backs (vk_mem_mmerge.c), which need no barrier before them
         mmerge_prologue(cb, 0);
         return;
     }
@@ -432,21 +455,20 @@ void vk_mem_mirror_prologue(VkCommandBuffer cb) {
     // a pool left untouched (g61d, g61h, 13/11/2026). Capped here, those pages go again at the next mirror sync, once
     // the shadow has them.
     gen_lock_x();
-    for (int i = 0; i < npend; i++) {
-        PoolRec *r = pend[i].r;
+    for (int i = 0; i < n; i++) {
+        PoolRec *r = a[i].r;
         if (r->smap && r->mgen > r->sgen) r->mgen = r->sgen;
     }
     plat_mutex_unlock(&gen_lock);
     // #43 (RX 6650 XT, a discrete card: mirror mode) hung after every marked command had finished
-    uint32_t crumb = vk_crumb_op(cb, "mirror copies at the submission's start", (uint32_t)npend, 0);
+    uint32_t crumb = vk_crumb_op(cb, "mirror copies at the submission's start", (uint32_t)n, 0);
     mbarrier(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
              VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT);
-    copy_ranges(cb, pend, npend, 1, &mrep.upload_bytes, &mrep.upload_copies);
-    mmerge_prologue(cb, npend > 0);   // the bases of the ranges this part writes, from the mirror just uploaded
+    copy_ranges(cb, a, n, 1, &mrep.upload_bytes, &mrep.upload_copies);
+    mmerge_prologue(cb, 1);   // the bases of the ranges this part writes, from the mirror just uploaded
     mbarrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
              VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT);
     vk_crumb_end(cb, VK_CRUMB_OP, crumb);
-    npend = 0;
     mrep.prologues++;
 }
 
