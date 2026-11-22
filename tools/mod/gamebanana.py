@@ -289,6 +289,7 @@ def images(cache: Path, urls: list[str]) -> int:
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # mods_browse.cpp reads this pipe as UTF-8
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--cache", type=Path, required=True)
     sub = ap.add_subparsers(dest="cmd", required=True)
