@@ -63,6 +63,18 @@ def game_build_id(exefs_main):
         return f.read(BUILD_ID_LEN).hex()
 
 
+def tar_tool():
+    """bsdtar (libarchive), which reads rar and 7z: Windows ships it as System32/tar.exe, Linux distributions as bsdtar.
+    Not the first "tar" on PATH on Windows: Git's or MSYS2's usr/bin there is GNU tar, which takes "C:\\..." for a
+    remote host ("Cannot connect to C: resolve failed") and reads no rar or 7z."""
+    if found := shutil.which("bsdtar"):
+        return found
+    system = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "tar.exe"
+    if os.name == "nt" and system.is_file():
+        return str(system)
+    return shutil.which("tar")
+
+
 def unpack(archive, dst):
     """The archive into dst, refusing absolute or .. names and anything past MAX_BYTES / MAX_FILES. Returns an error
     (code, detail) or None."""
@@ -76,8 +88,7 @@ def unpack(archive, dst):
                     return "layout", f"unsafe name {i.filename}"
             z.extractall(dst)
         return None
-    # rar and 7z: bsdtar (libarchive) reads both; Windows ships it as tar.exe, Linux distributions as bsdtar
-    tar = shutil.which("bsdtar") or shutil.which("tar")
+    tar = tar_tool()
     if not tar:
         return "unpack", "no tar to read this archive"
     listing = subprocess.run([tar, "-tf", archive], capture_output=True, text=True, errors="replace")
