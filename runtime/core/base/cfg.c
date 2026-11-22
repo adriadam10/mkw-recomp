@@ -267,6 +267,7 @@ static const CfgRow rows[] = {
     K("GPU_MEM_LIMIT"),
     K("GPU_NAME"),
     K("HDR_FAKE"),
+    K("HDR_FORCE"),
     K("HL_TRACE"),
     K("HUD_PROBE"),
     K("INPUT"),
