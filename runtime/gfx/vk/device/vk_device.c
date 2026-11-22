@@ -225,6 +225,22 @@ void vk_gpu_report(VkInstance inst, VkGpuReport *r) {
     r->n = (int)n;
 }
 
+// A setting in whole MiB: digits only, below 2^40. Why: atoll read "abc" as 0, which lifts MKW_GPU_MEM_LIMIT's cap
+// (on an integrated GPU, the one that keeps the global OOM killer off other programs) and leaves no MKW_VRAM_MARGIN,
+// and read "-300" as a margin that wrapped past every budget, so no heap was capped. Invalid: warns, 0 returned;
+// mib may be NULL to check only.
+static int mib_setting(const char *name, const char *v, uint64_t *mib) {
+    uint64_t n = 0;
+    const char *p = v;
+    for (; *p >= '0' && *p <= '9' && n < (1ull << 40); p++) n = n * 10 + (uint64_t)(*p - '0');
+    if (p == v || *p) {
+        rt_log("vk: %s=%s is not a whole number of MiB: ignored", name, v);
+        return 0;
+    }
+    if (mib) *mib = n;
+    return 1;
+}
+
 // First discrete GPU with Vulkan 1.3, the required extensions and a graphics+present queue; MKW_GPU_INDEX (index) or
 // MKW_GPU_NAME (case-insensitive part of the name) overrides.
 static int pick_device(void) {
@@ -602,6 +618,7 @@ static int create_device(void) {
     VkPhysicalDeviceProperties dp;
     vkGetPhysicalDeviceProperties(g_vk.phys, &dp);
     const char *lim = cfg_get("MKW_GPU_MEM_LIMIT");
+    if (lim && !mib_setting("MKW_GPU_MEM_LIMIT", lim, NULL)) lim = NULL;   // as unset: the default cap
     char lim_ram[24];
     VkPhysicalDeviceIDProperties id = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES};
     VkPhysicalDeviceProperties2 pid = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &id};
@@ -646,7 +663,9 @@ static int create_device(void) {
         VkPhysicalDeviceMemoryProperties2 p2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, .pNext = &b};
         vkGetPhysicalDeviceMemoryProperties2(g_vk.phys, &p2);
         const char *mg = cfg_get("MKW_VRAM_MARGIN");
-        VkDeviceSize margin = (VkDeviceSize)(mg ? atoll(mg) : 300) << 20;
+        uint64_t margin_mib = 300;
+        if (mg) mib_setting("MKW_VRAM_MARGIN", mg, &margin_mib);   // invalid: kept at 300
+        VkDeviceSize margin = (VkDeviceSize)margin_mib << 20;
         int any = 0;
         for (uint32_t h = 0; h < g_vk.mem_props.memoryHeapCount; h++) {
             VkDeviceSize size = g_vk.mem_props.memoryHeaps[h].size;
