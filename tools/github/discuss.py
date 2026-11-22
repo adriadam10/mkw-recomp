@@ -40,7 +40,7 @@ class Topic:
 
 
 def load_topics(path: Path = TOPICS) -> list[Topic]:
-    rows = tomllib.loads(path.read_text())["topic"]
+    rows = tomllib.loads(path.read_text(encoding="utf-8"))["topic"]
     return [
         Topic(
             r["id"],

@@ -162,7 +162,7 @@ class Signature:
 
 
 def load_signatures(path: Path = SIGNATURES) -> list[Signature]:
-    rows = tomllib.loads(path.read_text())["signature"]
+    rows = tomllib.loads(path.read_text(encoding="utf-8"))["signature"]
     return [
         Signature(r["issue"], tuple(s.lower() for s in r["all"]), r["what"], r.get("fixed"), r.get("wiki", ""))
         for r in rows
