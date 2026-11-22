@@ -382,6 +382,7 @@ void vk_sparse_written(VkImage img, uint32_t level, uint32_t layer0, uint32_t la
                        uint32_t h);
 typedef struct { VkSemaphore wsem, ssem; uint64_t wait, signal; } VkSparseOrder;   // a NULL semaphore: no wait / signal
 VkSparseOrder vk_sparse_order(uint64_t fence, int binds);
+void vk_sparse_last_bind_log(void);   // at a device loss: the newest vkQueueBindSparse, its size and age (no lock)
 // Changes whenever vk_mem_resolve plus VK_MEM_USE may give another span for an address: a pool added, finalized or
 // mapped, a mirror created, refused or forgotten, a submission started.
 uint64_t vk_mem_gen(void);

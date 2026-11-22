@@ -232,6 +232,9 @@ void vk_crumbs_report_hang(void) {
     else marker_report();
 }
 
+// Both rings' newest started mark had also finished, and some mark was made: no marked work was running.
+static int crumbs_idle(const volatile uint32_t *w) { return w[0] == w[1] && w[2] == w[3] && (w[0] || w[2]); }
+
 static void marker_report(void) {
     static const char *const what[2] = {"upload batches", "replay passes and dispatches"};
     rt_log("vk: GPU breadcrumbs (%u marks made): the hang lies after the last finished mark and up to the last started",
@@ -250,4 +253,10 @@ static void marker_report(void) {
             rt_log("vk:     between: %s", a);
         }
     }
+    // Why: issue #557 (GTX 1080) lost the device with both rings at started == finished, so the two lines above named
+    // finished work as if it were the hang. Queue work without marks is left: sparse binds, the prologue, the present.
+    if (!crumbs_idle(words)) return;
+    rt_log("vk:   every marked upload batch, pass and dispatch had finished: the hang is in queue work without marks "
+           "(sparse binds, prologues, presents)");
+    vk_sparse_last_bind_log();
 }
