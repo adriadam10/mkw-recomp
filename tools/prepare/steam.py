@@ -220,6 +220,7 @@ def add(vdf: Path, name: str, exe: str, start_dir: str, icon_path: str = "") -> 
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # launcher_tools.cpp reads this pipe as UTF-8
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("add")
