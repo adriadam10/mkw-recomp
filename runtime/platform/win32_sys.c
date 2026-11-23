@@ -18,11 +18,13 @@
 
 #include "platform.h"
 
+#include "renhdrum_host.h"
 #include "win32_int.h"
 
 // ---- process
 
 void plat_exit(int code) {
+    renhdrum_shutdown();   // RenHDrum's worker and the DualSense's haptics stream must stop before ExitProcess (no atexit runs)
     fflush(stdout);
     fflush(stderr);
     ExitProcess((UINT)code);

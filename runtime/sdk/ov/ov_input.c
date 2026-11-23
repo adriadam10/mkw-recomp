@@ -17,6 +17,7 @@
 #include "cfg.h"
 #include "host.h"
 #include "input.h"
+#include "renhdrum_host.h"
 #include "ov.h"
 #include "platform/platform.h"
 #include "ui/menu/menu.h"
@@ -334,7 +335,9 @@ static float light_share(float f) { return f > 160 ? (f < 320 ? log2f(f / 160) :
 static void rumble_update(int player, uint64_t now) {
     float heavy = 0, light = 0;
     rumble_cfg();
-    for (int s = player * 2; s < player * 2 + 2 && vib_allowed; s++) {
+    // RenHDrum plays player 1's gamepad from the raw values (renhdrum_send): the motors stay silent while it does
+    int motors = vib_allowed && !(player == 0 && renhdrum_claims());
+    for (int s = player * 2; s < player * 2 + 2 && motors; s++) {
         if (!vib_at[s] || now - vib_at[s] > RUMBLE_STALE_NS) continue;
         const VibrationValue *v = &vib_last[s];
         float al = clamp01(v->amp_low), ah = clamp01(v->amp_high), sl = light_share(v->freq_low), sh = light_share(v->freq_high);
@@ -348,6 +351,15 @@ static void rumble_update(int player, uint64_t now) {
     if (changed ? on && now - sent_at[player] < RUMBLE_MIN_GAP_NS : !on || now - sent_at[player] < RUMBLE_REFRESH_NS) return;
     input_rumble(player, lo, hi, on ? RUMBLE_MS : 0);
     sent_low[player] = lo, sent_high[player] = hi, sent_at[player] = now;
+}
+
+// Player 1's value (side 0 or 1) to RenHDrum (MKW_RENHDRUM=1, renhdrum_host.h), as the game sent it: its own intensity
+// setting shapes it, not MKW_RUMBLE_CURVE. Neutral while vibration is not permitted or MKW_RUMBLE_STRENGTH is 0. Under vib_lock.
+static void renhdrum_send(int side, const VibrationValue *v) {
+    rumble_cfg();
+    if (!vib_allowed || rumble_strength <= 0) v = &vib_neutral;
+    const float raw[4] = {v->amp_low, v->freq_low, v->amp_high, v->freq_high};
+    renhdrum_vibration(side, raw);
 }
 
 static void play(int side, const VibrationValue *v) {
@@ -366,6 +378,7 @@ static void play(int side, const VibrationValue *v) {
     plat_mutex_lock(&vib_lock);
     vib_last[side] = c;
     vib_at[side] = now;
+    if (side < 2) renhdrum_send(side, &c);
     rumble_update(side / 2, now);
     plat_mutex_unlock(&vib_lock);
 }
@@ -440,6 +453,7 @@ static void ov_vib_permit(Cpu *c) {
     int on = (arg_x(c, 0) & 0xff) != 0;
     plat_mutex_lock(&vib_lock);
     vib_allowed = on;
+    renhdrum_permit(on);
     uint64_t now = kern_now_ns();
     for (int p = 0; p < INPUT_MAX_PLAYERS; p++) rumble_update(p, now);
     plat_mutex_unlock(&vib_lock);

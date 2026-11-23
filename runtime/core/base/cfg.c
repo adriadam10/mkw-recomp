@@ -109,6 +109,7 @@ static const CfgRow rows[] = {
     S("RUMBLE_STRENGTH", "input", "130", "0..300", LIVE),
     S("RUMBLE_CURVE", "input", "0.6", "0.2..1.5", LIVE),
     S("RUMBLE_TRIGGERS", "input", "0", "0|1", LIVE),
+    S("RENHDRUM", "input", "0", "0|1", RESTART),   // Windows: renhdrum.dll beside the exe plays player 1's gamepad (renhdrum_host.h)
     S("PAD_LAYOUT", "input", "auto", "auto|nintendo|xbox", LIVE),
     S("PAD_P2", "input", "0", "0|1", LIVE),
     S("BUTTON_ICONS", "input", "auto", "auto|nintendo|xbox|playstation|keyboard", LIVE),

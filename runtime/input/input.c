@@ -23,6 +23,7 @@
 #include "switch2.h"
 #include "nvn_api.h"
 #include "plugin.h"
+#include "renhdrum_host.h"
 #include "ui/menu/menu.h"
 #include "vk.h"
 #include "platform/platform.h"
@@ -184,6 +185,7 @@ static void extra_adopt(int p) {
 // Close the gamepads that went away and open the new ones (player 1 first, then the first free player); logs each change.
 static void scan_pads(void) {
     if (pad && !SDL_GamepadConnected(pad)) {
+        renhdrum_detach(pad);
         SDL_CloseGamepad(pad); pad = NULL; sensor_pad[0] = 0; sensor_ok[0] = 0;
         pad_lost();
         rt_log("input: gamepad disconnected");
@@ -205,7 +207,7 @@ static void scan_pads(void) {
         if (p == INPUT_MAX_PLAYERS) break;
         SDL_Gamepad *g = SDL_OpenGamepad(ids[i]);
         if (!g) continue;
-        if (!p) { pad = g; pad_adopt(); continue; }
+        if (!p) { pad = g; pad_adopt(); renhdrum_attach(pad); continue; }
         extra[p] = g;
         extra_adopt(p);
         rt_log("input: gamepad \"%s\" for player %d (%s)", SDL_GetGamepadName(g), p + 1,
@@ -347,6 +349,7 @@ static void start(void) {
     if (state == 1) {
         attach_virtual_pads();
         switch2_start();   // Switch 2 controllers over Bluetooth, as virtual gamepads (MKW_SWITCH2)
+        renhdrum_start();  // HD Rumble and DualSense haptics for player 1's gamepad (MKW_RENHDRUM), before it is opened
         scan_pads();
         input_power_start();   // its own thread: the low battery notice
         if (!pad) rt_log("input: no gamepad (keyboard only until one is connected)");
