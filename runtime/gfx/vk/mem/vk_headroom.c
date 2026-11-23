@@ -4,12 +4,13 @@
 // 256 MiB) only when none has room. On the render thread that took 8-19 ms per block, several times in the first
 // minute of play while VRAM grows (textures from create_tex, mirrors). A new VkDeviceMemory made by any other thread
 // (VMA's pfnAllocate callback) wakes this thread for its memory type, which it then checks every 500 ms. A check
-// allocates half a default block of that type (the largest size VMA still places in blocks, not in dedicated memory).
+// allocates half a default block of that type (the largest size VMA still places in blocks, not in dedicated memory),
+// or a sixteenth for a host-visible type on a discrete GPU that does not grow in bursts (anchor_size).
 // When a block has that much room the allocation lands there and is freed at once. When none has, VMA allocates a new
 // block here, and the allocation stays as that block's anchor: VMA deletes an empty block at the next free of its
 // type (VmaBlockVector::Free, "we have another empty block"), so a spare block left empty lasted until the next
-// texture went. The previous anchor is freed then, which gives its half block to the render thread, so at most half
-// a block per memory type is held back.
+// texture went. The previous anchor is freed then, which gives its room to the render thread, so at most one anchor
+// per memory type is held back.
 // Under VRAM pressure no headroom is kept: the spare block counts against the budget that decides whether a pool gets
 // its VRAM mirror (vk_memory.c), so while use plus two blocks passes 85% of the budget the anchor goes and nothing new
 // is allocated.
@@ -18,6 +19,7 @@
 #include "cfg.h"
 #include "host.h"
 #include "vk.h"
+#include "vk_mem_internal.h"
 #include "platform/platform.h"
 
 #define HR_PERIOD_MS 500
@@ -32,7 +34,7 @@ static struct {
     volatile int64_t types;    // memory types a thread other than this one allocated device memory of
     volatile int64_t made;     // blocks this thread brought in
     volatile int64_t other;    // device memory of 32 MiB or more other threads allocated (VMA blocks, large dedicated)
-    VmaAllocation anchor[64]; // per memory type: the half block that keeps the newest spare block from being deleted
+    VmaAllocation anchor[64]; // per memory type: the allocation that keeps the newest spare block from being deleted
 } H;
 
 static void VKAPI_PTR on_allocate(VmaAllocator a, uint32_t type, VkDeviceMemory m, VkDeviceSize size, void *user) {
@@ -58,6 +60,35 @@ static VkDeviceSize block_size(const VkCtx *c, uint32_t type) {
     return heap <= HR_SMALL_HEAP ? heap / 8 : 256ull << 20;   // VMA's default preferredLargeHeapBlockSize
 }
 
+// VRAM near its budget: what VMA cannot place there spills into system memory, a host-visible type on AMD and Intel,
+// which then grows as VRAM did. The largest device-local heap is VRAM; a small one beside it is the BAR's.
+static int vram_tight(const VkCtx *c) {
+    VmaBudget b[VK_MAX_MEMORY_HEAPS];
+    vmaGetHeapBudgets(c->vma, b);
+    uint32_t v = VK_MAX_MEMORY_HEAPS;
+    for (uint32_t h = 0; h < c->mem_props.memoryHeapCount && h < VK_MAX_MEMORY_HEAPS; h++)
+        if (c->mem_props.memoryHeaps[h].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT &&
+            (v == VK_MAX_MEMORY_HEAPS || c->mem_props.memoryHeaps[h].size > c->mem_props.memoryHeaps[v].size))
+            v = h;
+    return v < VK_MAX_MEMORY_HEAPS && b[v].budget && b[v].usage + 2 * (256ull << 20) > b[v].budget / 100 * 85;
+}
+
+// On a discrete GPU a host-visible type (system RAM, or VRAM behind the BAR) that does not grow in bursts is checked
+// with a sixteenth of a block. Half of one made VMA create a whole 256 MiB block (it halves a new block, down to an
+// eighth, only while the half outgrows every block it has and holds twice the request), resident or mapped in full,
+// for users that on Windows are a few fixed-size buffers (merge tables, uniform snapshots, transient chunks): the spare
+// blocks of types 3, 4 and 5 held 512 MiB of resident RAM and 768 MiB of commit at the title (RTX 3080 Ti, 23/11/2026).
+// With a sixteenth VMA makes the block it would make for an allocation of up to 16 MiB anyway, 32-64 MiB, which keeps
+// up with small allocations only. So half a block stays wherever host-visible memory grows in bursts: shadow copies
+// (Linux's default, or a pool whose import failed; the title's load made ~98 MiB of them in 0.6 s) and VRAM spilling
+// into system memory. VRAM keeps half a block too: the spare one then takes any allocation VMA places in blocks.
+static VkDeviceSize anchor_size(const VkCtx *c, uint32_t type, VkDeviceSize block) {
+    int host = (c->mem_props.memoryTypes[type].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
+    int small = c->props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && host &&
+                !__atomic_load_n(&shadow_live, __ATOMIC_RELAXED) && !vram_tight(c);
+    return small ? block / 16 : block / 2;
+}
+
 static int room(const VkCtx *c, uint32_t type, VkDeviceSize block) {
     VmaBudget b[VK_MAX_MEMORY_HEAPS];
     vmaGetHeapBudgets(c->vma, b);
@@ -76,7 +107,7 @@ static void top_up(const VkCtx *c, uint32_t type) {
         drop_anchor(c, type);
         return;
     }
-    VkMemoryRequirements req = {.size = block / 2, .alignment = 256, .memoryTypeBits = 1u << type};
+    VkMemoryRequirements req = {.size = anchor_size(c, type, block), .alignment = 256, .memoryTypeBits = 1u << type};
     VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_UNKNOWN};
     VmaAllocation a;
     int64_t before = H.made;
@@ -88,9 +119,13 @@ static void top_up(const VkCtx *c, uint32_t type) {
     drop_anchor(c, type);
     H.anchor[type] = a;
     static volatile int32_t logged;
+    VmaAllocationInfo2 info;
+    vmaGetAllocationInfo2(c->vma, a, &info);
     if (plat_inc32(&logged) <= 32)
-        rt_log("vk: headroom: a %.0f MiB block of memory type %u allocated ahead (%lld so far; %lld allocations of 32 MiB "
-               "or more on other threads)", (double)block / 1048576.0, type, (long long)H.made, (long long)H.other);
+        rt_log("vk: headroom: a %.0f MiB %s of memory type %u allocated ahead (anchor %.0f MiB; %lld so far; %lld "
+               "allocations of 32 MiB or more on other threads)", (double)info.blockSize / 1048576.0,
+               info.dedicatedMemory ? "dedicated allocation" : "block", type, (double)req.size / 1048576.0,
+               (long long)H.made, (long long)H.other);
 }
 
 static void headroom_main(void *arg) {
