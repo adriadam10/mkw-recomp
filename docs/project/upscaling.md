@@ -17,6 +17,16 @@ run them; the game's own picture and pacing stay).
 | `fg_engine` | `flow`, `dlss`, `fsr3` | Who makes those frames: the port's optical flow, DLSS Frame Generation (RTX 40/50; `nvngx_dlssg.dll`; up to 4x on RTX 50) or FSR 3.1 frame generation (one generated frame, 2x; `amd_fidelityfx_framegeneration_vk.dll`). DLSS-G and FSR FG need `temporal` on: they use its depth and motion vectors. Live, but DLSS-G at the next start when the game started without DLSS |
 | `reflex` | `off`, `on`, `boost` | NVIDIA Reflex through `VK_NV_low_latency2`. Live once the game started with it on; from off, at the next start |
 
+On Linux, DLSS needs NVIDIA's proprietary driver (its `libnvidia-ngx.so.1`) and the DLSS model next to `mkw`:
+`libnvidia-ngx-dlss.so.<version>` from [NVIDIA's DLSS repository](https://github.com/NVIDIA/DLSS/tree/main/lib/Linux_x86_64/rel)
+(the file as it is, or renamed `libnvidia-ngx-dlss.so`), for instance into the Linux package's folder:
+
+```sh
+url=$(curl -s https://api.github.com/repos/NVIDIA/DLSS/contents/lib/Linux_x86_64/rel |
+      grep -oE 'https://raw\.githubusercontent\.com/[^"]+libnvidia-ngx-dlss\.so[^"]*' | head -n 1)
+curl -fL "$url" -o build/dist/linux/libnvidia-ngx-dlss.so
+```
+
 With `resolution = 2160` (or a window taller than 1440 lines with `temporal` on), the upscaler writes the full output
 resolution and the HUD is drawn at it too (`MKW_TEMPORAL_RETARGET=0` turns that off).
 

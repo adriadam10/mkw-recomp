@@ -110,6 +110,9 @@ Beyond the console, all optional and off (or at the console's value) by default:
   vibration, local multiplayer with one controller each. Switch 2 controllers work over Bluetooth and, on Linux, USB
   (Windows USB: see below). Gyro from a Cemuhook / DSU server (DS4Windows, BetterJoy) is supported. Racing wheels
   work as a controller (steering and first buttons); for pedals, put a `gamecontrollerdb.txt` in the game folder.
+  **HD rumble** with [RenHDrum](https://github.com/trzz1214/RenHDrum) on a Switch Pro Controller, DualSense (haptics
+  and adaptive triggers), Xbox One / Series (trigger motors) or Steam Controller: `renhdrum.dll` next to `mkw.exe`, or
+  `librenhdrum.so` next to `mkw` on Linux (`cargo build --release` in RenHDrum); settings in `renhdrum.ini` beside it.
 - **Hacks**: turbo (F2), skip movies, unlock everything, fixed randomness, straight to time trial or free roam.
 - **Languages**: menus in 20 languages; the game also in Catalan, Galician, Basque and Turkish.
 - **Tools**: performance overlay and a one-click system info for bug reports.
