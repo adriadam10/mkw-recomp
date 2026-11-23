@@ -177,7 +177,8 @@ void mem_freeze_stats(uint64_t *frozen, uint64_t *freezes, uint64_t *fault_thaws
 // and frozen regions never hold one: freeze_locked refuses a region with an inaccessible page. Under frz_lock.
 typedef struct { uint64_t lo, hi; const uint8_t *src; } TrapSrc;
 uint8_t *trapped;                     // one byte per guest page, mapped lazily; frz_lock for writes; 1 a read trap,
-                                      // 2 MKW_EARLY_READ's watch (memory_early.c)
+                                      // 2 MKW_EARLY_READ's watch (memory_early.c); NULL where traps cannot work
+                                      // (mem_trap_init: Windows)
 static TrapSrc *tsrc;                 // frz_lock: where trapped pages take their bytes from
 static int ntsrc, ctsrc;
 static int64_t ntrapped;              // frz_lock: pages trapped now
@@ -212,8 +213,14 @@ static void untrap_range_locked(uint64_t a, uint64_t n) {
 int mem_trap_init(void) {   // memory_int.h
     if (trap_ok < 0) {
         uint8_t probe;
-        trapped = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE);
-        trap_ok = trapped && plat_mem_poke((uint64_t)(uintptr_t)&probe, &probe, 1);
+        // The map only where traps work. It is one byte per page of the guest range (128 MiB): Linux maps it lazily,
+        // Windows commits it whole (plat_mem_alloc), and there plat_mem_poke cannot write through a protection, so it
+        // was 128 MiB of commit charge never set, only read as zeros by the thaw faults (census of a 1.8.0 Grand Prix
+        // on Windows, 22/11/2026: 128 MiB committed, under 1 MiB resident; the same title-screen boot with and without
+        // it, 23/11/2026: the allocation gone, private commit less the guest's 11061 -> 10933 MiB). Every reader checks
+        // trap_ok, a count of trapped pages or trapped itself.
+        if (plat_mem_poke((uint64_t)(uintptr_t)&probe, &probe, 1)) trapped = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE);
+        trap_ok = trapped != NULL;
         rt_log("mem: read traps %s", trap_ok ? "on: GPU writes reach guest memory when the game touches them"
                                              : "unavailable: GPU writes are copied back at the fence");
     }
