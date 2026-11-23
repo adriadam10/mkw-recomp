@@ -21,6 +21,8 @@
 // modal does; MKW_LAUNCHER_MODS_CONFLICT_OK=1 presses the picker's OK, MKW_LAUNCHER_MODS_MODAL=1 opens it;
 // MKW_LAUNCHER_MODS_IMPORT=1 runs the import of the picked zip or folder; MKW_LAUNCHER_NO_MERGE=1
 // skips the page-entry merge (pre-merged shots).
+// MKW_LAUNCHER_SHOT_EVERY=<frames> saves <shot out>-<frame>.png every that many frames while the input still works: a
+// run driven by a virtual pad (tools/run/vpad.py) inside gamescope, where nobody watches the window.
 // MKW_LAUNCHER_SHORTCUT=1 makes the desktop shortcut at start, as its button does. MKW_LAUNCHER_PLAY=1 presses Play once
 // the game files are there (with MKW_GPU=x the game's process then stops at once: the save copy before mods, alone).
 // MKW_LAUNCHER_EXIT_AFTER_SETUP=1 quits when that setup ends, after saving the page as <shot out>-end.png (its result
@@ -988,7 +990,9 @@ static void page_main(float w, float h) {
     intro_apply(dl, v0, intro(7));
     ImGui::PopStyleVar();
     v0 = dl->VtxBuffer.Size;
-    if (files && (!shortcut_asked() || steam_card)) {
+    // not offered when Steam started the start screen (Big Picture, Gaming Mode, a library entry): the game is in Steam
+    // already, and a desktop shortcut means nothing in Gaming Mode
+    if (files && ((!shortcut_asked() && !cfg_steam_started()) || steam_card)) {
         shortcut_card(cw);
     } else if (L.shortcut_note[0]) {
         ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + cw);
@@ -1335,7 +1339,12 @@ static void setup_steps(const SetupState &st, bool ready, float act_h) {
     step_end();
     step_head(3, false, menu_text(UI_LAUNCH_SETUP));
     ImGui::BeginDisabled(!L.source[0]);
-    if (accent_button(menu_text(ready ? UI_LAUNCH_SETUP_AGAIN : UI_LAUNCH_SETUP), ImVec2(0, act_h)))
+    // its own ID: the same words as the "Set up again" header around it, the two widgets shared one, and a controller's
+    // A (or Enter) that opened the header also pressed this button: the whole setup started at once (B4, gamescope
+    // with a virtual pad, 23/11/2026; ui_id_check logged the shared ID). A mouse click hit only the header.
+    char go[160];
+    snprintf(go, sizeof go, "%s##setup_go", menu_text(ready ? UI_LAUNCH_SETUP_AGAIN : UI_LAUNCH_SETUP));
+    if (accent_button(go, ImVec2(0, act_h)))
         setup_start(L.exe_dir, cfg_game_dir(), L.source, L.link_romfs);
     ImGui::EndDisabled();
     char to[PLAT_PATH_MAX + 64];
@@ -2321,6 +2330,14 @@ extern "C" int launcher_run(void) {
         if (setup_test && setup_state().finished) {   // the page as the setup left it, then out
             save_shot("-end.png");
             L.result = LAUNCHER_QUIT;
+        }
+        // (test) MKW_LAUNCHER_SHOT_EVERY=<frames>: <shot out>-<frame>.png every that many frames, input still taken, to
+        // follow a run driven by a virtual pad (tools/run/vpad.py) where nobody watches the window
+        static long shot_every = getenv("MKW_LAUNCHER_SHOT_EVERY") ? atol(getenv("MKW_LAUNCHER_SHOT_EVERY")) : 0;
+        if (shot_every > 0 && frame % shot_every == 0) {
+            char suffix[32];
+            snprintf(suffix, sizeof suffix, "-%06ld.png", frame);
+            save_shot(suffix);
         }
         if (L.shot_at && frame == L.shot_at) {   // during a setup test the shot is taken and the setup goes on
             save_shot("");
