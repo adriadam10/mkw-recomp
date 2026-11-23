@@ -188,6 +188,17 @@ static uint8_t *prepared_spv(const uint8_t key[32], uint64_t *size, int log) {
     return prepared_read(key, 0, size);
 }
 
+// From the preload until the release, prepared_load hashes a fragment or compute program while its bytes are in hand
+// (the release may free them). A program loaded after the release keeps its SPIR-V and is hashed from it when asked:
+// hashing it at load would only add a pass to the thread that loads it, often the drawing one.
+static volatile int32_t hash_at_load;
+
+static uint64_t fnv1a(const uint8_t *b, uint64_t n) {
+    uint64_t h = 0xcbf29ce484222325ull;
+    for (uint64_t k = 0; k < n; k++) h = (h ^ b[k]) * 0x100000001b3ull;
+    return h;
+}
+
 static GfxShader *prepared_load(const uint8_t key[32], const uint8_t *control) {
     uint64_t spv_size = 0, res_size = 0;
     uint8_t *res = prepared_read(key, 1, &res_size);
@@ -228,6 +239,11 @@ static GfxShader *prepared_load(const uint8_t key[32], const uint8_t *control) {
         return NULL;
     }
     s->spirv_state = SPIRV_PREPARED;
+    // A fragment or compute program's hash while the bytes are in hand, if the release may free them (hash_at_load):
+    // vk_temporal asks for it on draws and on the upscale's dispatch (with an engine on or a scaled scene), which after
+    // the release would read the program back on the drawing thread. Other stages' only a trace asks for.
+    if ((s->stage == GFX_STAGE_FS || s->stage == GFX_STAGE_CS) && __atomic_load_n(&hash_at_load, __ATOMIC_RELAXED))
+        s->spirv_fnv = fnv1a(spv, spv_size);
     return gfx_shader_insert(s);
 }
 
@@ -324,6 +340,7 @@ PlatThread *gfx_shader_preload_start(void) {
     prepared_paths();
     PL.n = gfx_shader_pack_keys(&PL.ids);
     PL.out = PL.n ? calloc(PL.n, sizeof *PL.out) : NULL;
+    __atomic_store_n(&hash_at_load, 1, __ATOMIC_RELAXED);   // until the release (the thread's start orders it)
     PlatThread *t = PL.out ? plat_thread_new(preload_main, NULL, "shader preload") : NULL;
     if (!t) free(PL.ids), free(PL.out), PL.ids = NULL, PL.out = NULL;
     return t;
@@ -337,27 +354,45 @@ void gfx_shader_preload_join(PlatThread *t) {
 
 // ---- SPIR-V released after the prewarm
 // The pairs prewarm (vk_pipe_pairs.c) loads every program of the copy, 306 MiB of SPIR-V on the 660M (pk-mem,
-// 17/11/2026), to build their libraries; most are never drawn in a session. Those the prewarm alone read are freed
-// after it and read again from their file if a draw asks for one.
+// 17/11/2026), to build their libraries; most are never drawn in a session. The pairs and the key records' prewarm
+// read them quietly, so all but what something else read are freed after both (after a stall the records' shaders
+// stay: gfx_shader_spirv_keep). The hash and the bindings a draw checks are kept on the shader. A program freed is read
+// again from its file when a new pipeline needs it, on its worker (most of the 32 or more read-backs at the title,
+// 23/11/2026), and on the drawing thread when a draw makes a new integer variant (inputs, outputs or images: 2 at the
+// title), builds a compute pipeline at its dispatch, builds the libraries it waits for (MKW_PIPE_WAIT=draw), makes an
+// MKW_SPEC variant or checks a binding of 64 or more.
 static PlatMutex spirv_lock = PLAT_MUTEX_INIT;   // a release against a read back
 static _Thread_local int spirv_quiet;
+static volatile int32_t n_reloads;
 
 void gfx_shader_spirv_quiet(int on) { spirv_quiet = on; }
 
+void gfx_shader_spirv_keep(const GfxShader *s) { plat_cas32(&((GfxShader *)s)->spirv_state, SPIRV_KEPT, SPIRV_PREPARED); }
+
+// The file is read outside spirv_lock, which a read back then holds only to put the bytes in place: a drawing thread's
+// does not wait for the workers' preads.
 static void spirv_reload(GfxShader *s) {
+    uint64_t n = 0;
+    uint8_t *spv = prepared_spv(s->key, &n, 0);
+    char hex[65];
+    gfx_shader_key_hex(s->key, hex);
+    if (!spv || n != s->words * 4)
+        rt_fatal("gfx_shader: %s/%s.spv changed or went missing since it was loaded", prepared_dir, hex);
     plat_mutex_lock(&spirv_lock);
-    if (__atomic_load_n(&s->spirv_state, __ATOMIC_ACQUIRE) == SPIRV_RELEASED) {
-        uint64_t n = 0;
-        uint8_t *spv = prepared_spv(s->key, &n, 0);
-        if (!spv || n != s->words * 4) {
-            char hex[65];
-            gfx_shader_key_hex(s->key, hex);
-            rt_fatal("gfx_shader: %s/%s.spv changed or went missing since it was loaded", prepared_dir, hex);
-        }
+    int ours = __atomic_load_n(&s->spirv_state, __ATOMIC_ACQUIRE) == SPIRV_RELEASED;
+    if (ours) {
         s->spirv = (uint32_t *)spv;
         __atomic_store_n(&s->spirv_state, SPIRV_KEPT, __ATOMIC_RELEASE);
     }
     plat_mutex_unlock(&spirv_lock);
+    if (!ours) {   // another thread read it back first
+        free(spv);
+        return;
+    }
+    int32_t k = plat_inc32(&n_reloads);   // which thread pays for it, and how often
+    if (k <= 16 || !(k & (k - 1)))
+        rt_log("gfx_shader: %s read back after the release, %llu bytes on thread %u (%d so far)", hex, (unsigned long long)n,
+               plat_thread_id(), k);
 }
 
 const uint32_t *gfx_shader_spirv(const GfxShader *cs, uint64_t *words) {
@@ -369,41 +404,87 @@ const uint32_t *gfx_shader_spirv(const GfxShader *cs, uint64_t *words) {
     return s->spirv;
 }
 
-// FNV-1a 64 of the SPIR-V bytes, computed on the first call and kept on the shader: vk_temporal.c identifies the game's
-// SMAA and upscale programs by it on every draw. It was a 512-slot table keyed by pointer, and with the boot prewarm's
+// FNV-1a 64 of the SPIR-V bytes, kept on the shader: a fragment or compute program's computed when it is loaded
+// (prepared_load), the others' on the first call. vk_temporal.c identifies the game's SMAA and upscale programs by it on
+// every draw. It was a 512-slot table keyed by pointer, and with the boot prewarm's
 // ~4700 shaders (or an unlucky heap layout) its collisions rehashed whole programs on the replay thread: +1 ms a frame
 // in the race (pf-fast/pf-slow sampled profiles, 16/11/2026). Concurrent first calls store the same value.
 uint64_t gfx_shader_spirv_fnv(const GfxShader *s) {
     uint64_t h = __atomic_load_n(&s->spirv_fnv, __ATOMIC_RELAXED);
     if (h) return h;
-    h = 0xcbf29ce484222325ull;
     uint64_t words = 0;
     const uint8_t *b = (const uint8_t *)gfx_shader_spirv(s, &words);   // read back if the prewarm's release freed it
-    for (uint64_t k = 0; b && k < words * 4; k++) h = (h ^ b[k]) * 0x100000001b3ull;
+    h = b ? fnv1a(b, words * 4) : 0xcbf29ce484222325ull;
     __atomic_store_n(&((GfxShader *)s)->spirv_fnv, h, __ATOMIC_RELAXED);
     return h;
 }
 
-// Frees the SPIR-V of every prepared shader nothing but the prewarm has read. The caller has joined the prewarm's
-// threads: a quiet read never takes the state, so one running now could read freed memory.
+int gfx_shader_bindings(const GfxShader *s, uint64_t *mask) {
+    *mask = s->binding_mask;
+    return s->binding_known;
+}
+
+// The SPIR-V a release took: freed on a thread of its own, as nothing points at it any more.
+typedef struct { size_t n; uint64_t bytes, before; void *p[]; } Released;
+
+static void release_free(Released *r) {
+    uint64_t t0 = plat_now_ms(), after = 0, priv = 0;
+    for (size_t i = 0; i < r->n; i++) free(r->p[i]);
+    plat_heap_trim();   // ~28 KiB blocks: without it the C heap keeps the pages
+    plat_process_memory(&after, &priv);
+    rt_log("gfx_shader: released %.0f MiB of SPIR-V only the prewarm read; resident %.0f -> %.0f MiB (freed in %llu ms)",
+           (double)r->bytes / (1 << 20), (double)r->before / (1 << 20), (double)after / (1 << 20),
+           (unsigned long long)(plat_now_ms() - t0));
+    free(r);
+}
+
+static PlatEvent release_done;   // manual: set when the release's thread has freed what it took
+static int release_thread;       // that thread was started
+
+static void release_main(void *arg) {
+    plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
+    plat_thread_priority(PLAT_PRIO_BELOW_NORMAL);
+    release_free(arg);
+    plat_event_set(&release_done);
+}
+
+// mkw --prewarm and the probes end right after the pipelines' teardown: not while that thread is in the C heap.
+void gfx_shader_spirv_release_wait(void) {
+    if (release_thread) plat_event_wait(&release_done);
+}
+
+// Releases the SPIR-V of every prepared shader nothing but the prewarm has read. No quiet reader of a prepared shader
+// may still run, as a quiet read never takes the state: the prewarm's threads are joined, or the shaders they read are
+// kept (gfx_shader_spirv_keep). Under the locks only the states change and the pointers are taken, so every shader is
+// released when this returns; the frees come after, on a thread of their own: 340 MiB of ~30 KiB blocks took 126 ms
+// on Windows (each gives its pages back), which the boot waited for, holding a draw's read back and a new shader's
+// insert as long.
 uint64_t gfx_shader_spirv_release(void) {
-    uint64_t bytes = 0, before = 0, after = 0, priv = 0;
-    plat_process_memory(&before, &priv);
+    uint64_t priv = 0;
+    __atomic_store_n(&hash_at_load, 0, __ATOMIC_RELAXED);   // what loads from now on is never released
+    size_t cap = (size_t)gfx_shader_count() + 1024;   // shaders inserted meanwhile stay prepared
+    Released *r = malloc(sizeof *r + cap * sizeof *r->p);
+    if (!r) {
+        rt_log("gfx_shader: no memory for the list of SPIR-V to release: it stays");
+        return 0;
+    }
+    r->n = 0, r->bytes = 0;
+    plat_process_memory(&r->before, &priv);
     plat_mutex_lock(&spirv_lock);
     plat_mutex_lock_shared(&cache_lock);
     for (int b = 0; b < BUCKETS; b++)
-        for (GfxShader *s = buckets[b]; s; s = s->next)
+        for (GfxShader *s = buckets[b]; s && r->n < cap; s = s->next)
             if (plat_cas32(&s->spirv_state, SPIRV_RELEASED, SPIRV_PREPARED) == SPIRV_PREPARED) {
-                bytes += s->words * 4;
-                free(s->spirv);
+                r->bytes += s->words * 4;
+                r->p[r->n++] = s->spirv;
                 s->spirv = NULL;
             }
     plat_mutex_unlock_shared(&cache_lock);
     plat_mutex_unlock(&spirv_lock);
-    plat_heap_trim();   // ~28 KiB blocks: without it the C heap keeps the pages
-    plat_process_memory(&after, &priv);
-    rt_log("gfx_shader: released %.0f MiB of SPIR-V only the prewarm read; resident %.0f -> %.0f MiB",
-           (double)bytes / (1 << 20), (double)before / (1 << 20), (double)after / (1 << 20));
+    uint64_t bytes = r->bytes;
+    plat_event_init(&release_done, 1, 0);
+    release_thread = 1;
+    if (!plat_thread_spawn(release_main, r, "spirv free", 0)) release_thread = 0, release_free(r);   // r: the thread's
     return bytes;
 }
 

@@ -13,7 +13,7 @@ the texts the host shows.
 | `gfx_shader_pack.c` | `spirv/shaders.pack` (`tools/shaders/pack.py`): a program's `.spv`, `.res.json` or `.cs.spv` read from the one file, while its folder was not written after it; `gfx_shader.c` reads the loose file otherwise |
 | `gfx_shader_int.c` | A prepared shader's variants with integer inputs, integer outputs or integer images; failed integer-image conversions name the program and reason and save their input with `MKW_SPIRV_INT_DUMP` |
 | `gfx_shader_internal.h` | The `GfxShader` struct and the memory cache, shared by `gfx_shader.c`, `gfx_shader_int.c` and `gfx_shader_refl.c` |
-| `gfx_shader_refl.c` | Reflection of a prepared shader: its `.res.json` into resource arrays, specialization words and flags, and its SPIR-V's interface Locations and workgroup size |
+| `gfx_shader_refl.c` | Reflection of a prepared shader: its `.res.json` into resource arrays, specialization words and flags, and its SPIR-V's interface Locations, Binding decorations and workgroup size |
 | `gfx_spirv_io.c` | The integer-inputs patch of a vertex shader and the integer-outputs patch of a fragment shader: the inputs whose attribute format, or the outputs whose colour target, is UINT/SINT become u/ivec4, their loads and stores bitcast (issue #64) |
 | `gfx_spirv_img.c` | The integer-images patch of a compute program: the textures and storage images whose bound view is UINT/SINT become integer images, including separate image/sampler construction, their reads and writes bitcast (VUID format-07753, issue #64); failures return a diagnostic reason |
 | `ui_text.c`, `ui_text.h` | Texts the host shows the player (software keyboard, menu and start screen; menu in English, Russian and Spanish) |

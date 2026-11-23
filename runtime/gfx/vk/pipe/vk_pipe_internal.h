@@ -254,4 +254,4 @@ void prebuild_start(void);
 // vk_pipe_pairs.c: the shader libraries of every program pair in pipeline-pairs.bin, at boot
 void pairs_prewarm(void);
 int vk_pipeline_compute_warm(const GfxShader *cs, uint32_t first);   // caller holds P.lock (released while it builds)
-void pairs_release(void);   // after vk_pipeline_prewarm: the SPIR-V only the pairs prewarm read
+void pairs_release(void);   // after vk_pipeline_prewarm: the SPIR-V only the prewarms read (not the records' after a stall)

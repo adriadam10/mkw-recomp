@@ -1,5 +1,6 @@
 // Reflection of a prepared shader: its .res.json (tools/shaders/translate.py) parsed into GfxShaderRes arrays, its
-// specialization words and flags, and its SPIR-V scanned for interface Locations and the workgroup size.
+// specialization words and flags, and its SPIR-V scanned for interface Locations, Binding decorations and the workgroup
+// size.
 //
 // Provenance: the c2 handle ranges of handle_slot are those of MacNativeGames' mkw_xlate Service.cs (MIT).
 #include <ctype.h>
@@ -135,20 +136,22 @@ static void add_res(GfxShader *s, int kind, const char *o, const char *e) {
 // SPIR-V opcodes and enumerants used below (SPIR-V 1.6 specification, section 3).
 enum { OP_EXECUTION_MODE = 16, OP_TYPE_INT = 21, OP_TYPE_FLOAT = 22, OP_TYPE_VECTOR = 23,
        OP_TYPE_ARRAY = 28, OP_TYPE_POINTER = 32, OP_VARIABLE = 59, OP_DECORATE = 71,
-       DEC_LOCATION = 30, DEC_COMPONENT = 31, SC_INPUT = 1, SC_OUTPUT = 3, EM_LOCAL_SIZE = 17 };
+       DEC_LOCATION = 30, DEC_COMPONENT = 31, DEC_BINDING = 33, SC_INPUT = 1, SC_OUTPUT = 3, EM_LOCAL_SIZE = 17 };
 
-// Interface Locations and the compute workgroup size from the module. Ids beyond 2^20 are ignored (Ryujinx modules stay
-// far below).
+// Interface Locations, Binding decorations and the compute workgroup size from the module. Ids beyond 2^20 are ignored
+// (Ryujinx modules stay far below).
 static void reflect_spirv(GfxShader *s) {
     const uint32_t *w = s->spirv;
     uint64_t n = s->words;
     s->local[0] = s->local[1] = s->local[2] = 1;
+    s->binding_mask = 0, s->binding_known = 0;   // until the scan below runs: layout checks read the SPIR-V
     if (n < 5) return;
     uint32_t bound = w[3] < (1u << 20) ? w[3] : (1u << 20);
     // per id: location + 1 (0 = none), component flag, scalar/vector description of types, pointee of pointers
     int32_t *loc = calloc(bound, sizeof *loc);
     uint8_t *packed = calloc(bound, 1), *ttype = calloc(bound, 1), *tcomps = calloc(bound, 1);
     uint32_t *pointee = calloc(bound, sizeof *pointee);
+    int big = 0;   // a binding of 64 or more: the mask cannot hold it
     if (!loc || !packed || !ttype || !tcomps || !pointee) goto out;
     for (uint64_t i = 5; i < n;) {
         uint32_t op = w[i] & 0xffff, len = w[i] >> 16;
@@ -157,6 +160,9 @@ static void reflect_spirv(GfxShader *s) {
         uint32_t id = len > 1 ? a[0] : 0;
         if (op == OP_EXECUTION_MODE && len >= 6 && a[1] == EM_LOCAL_SIZE) {
             s->local[0] = a[2], s->local[1] = a[3], s->local[2] = a[4];
+        } else if (op == OP_DECORATE && len >= 4 && a[1] == DEC_BINDING) {   // what vk_pipe_layout.c checks layouts by
+            if (a[2] < 64) s->binding_mask |= 1ull << a[2];
+            else big = 1;
         } else if (op == OP_DECORATE && len >= 4 && id < bound) {
             if (a[1] == DEC_LOCATION) loc[id] = (int32_t)a[2] + 1;
             else if (a[1] == DEC_COMPONENT) packed[id] = 1;
@@ -182,6 +188,7 @@ static void reflect_spirv(GfxShader *s) {
         }
         i += len;
     }
+    s->binding_known = !big;   // the same decorations module_binding_missing's scan stops at (a malformed instruction)
 out:
     free(loc), free(packed), free(ttype), free(tcomps), free(pointee);
 }

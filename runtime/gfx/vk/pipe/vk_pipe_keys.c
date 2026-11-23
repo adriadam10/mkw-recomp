@@ -207,7 +207,9 @@ static void pipe_worker(void *arg) {
             }
         }
         plat_mutex_unlock(&P.lock);
+        gfx_shader_spirv_quiet(j->prebuild);   // a prewarm job's read, done before K.left counts it (the release waits)
         VkPipeline pipe = create_graphics(&j->s, &j->k, j->l, j->fs_off);
+        gfx_shader_spirv_quiet(0);
         plat_mutex_lock(&P.lock);
         if (pipe || !j->p->fast) j->p->info.pipeline = pipe;   // a failed optimised build keeps the fast-linked one
         if (pipe && j->p->fast) P.g.swaps++;
@@ -613,6 +615,7 @@ static int id_cmp(const void *x, const void *y) { return memcmp(x, y, 32); }
 static void warm_builder(void *arg) {
     plat_thread_background();   // off the frame's fast cores (MKW_FAST_CORES)
     (void)arg;
+    gfx_shader_spirv_quiet(1);   // the prewarm's reads: its shaders' SPIR-V may be released after it
     plat_mutex_lock(&P.lock);
     while (A.low) {
         Job *j = A.low;
@@ -640,6 +643,7 @@ static void warm_builder(void *arg) {
         free(j);
     }
     plat_mutex_unlock(&P.lock);
+    gfx_shader_spirv_quiet(0);   // run inline when no thread was made: the caller's reads count again
     return;
 }
 
@@ -681,7 +685,9 @@ static void prewarm_run(void) {
     if (ok)
         rt_log("vk_pipeline: prewarm: device ready in %.0f ms, %.0f ms after process start", now_ms() - t0,
                (double)plat_process_uptime_ns() / 1e6);
+    double tj = now_ms();
     gfx_shader_preload_join(pre);
+    if (ok && pre) rt_log("vk_pipeline: prewarm: the pack's programs loaded %.0f ms after the device", now_ms() - tj);
     char mark[sizeof K.path + 16];
     if (!ok || !prewarm_mark(mark, sizeof mark)) {
         if (pre) gfx_shader_spirv_release();   // no prewarm reads what the preload loaded
@@ -730,6 +736,7 @@ static void prewarm_run(void) {
                VO.n, VO.n ? (double)uni / VO.n : 0.0, (unsigned long long)pairs, pairs ? (double)pair / pairs : 0.0);
     }
     uint32_t queued = 0, dropped = 0, known = 0;
+    gfx_shader_spirv_quiet(1);   // the records' variants and layout checks below are the prewarm's reads
     plat_mutex_lock(&P.lock);
     K.t0 = t1;
     K.loading = 1;
@@ -759,7 +766,7 @@ static void prewarm_run(void) {
     }
     K.loading = 0;
     plat_mutex_unlock(&P.lock);
-    free(ids), free(sh);
+    gfx_shader_spirv_quiet(0);
 
     PlatThread *t[64];
     int nt = 0;
@@ -800,12 +807,22 @@ static void prewarm_run(void) {
     free(K.file);
     K.file = NULL;
     plat_mutex_unlock(&P.lock);
+    // Builds left running after a stall read the records' shaders quietly: those keep their SPIR-V through the
+    // release, which then frees what only the pairs prewarm read, as before the records' reads were quiet.
+    if (stalled)
+        for (size_t j = 0; j < u; j++)
+            if (sh[j]) gfx_shader_spirv_keep(sh[j]);
+    free(ids), free(sh);
     plat_file_delete(mark);   // the boot got through: a stall above left the rest to the background, not a crash
 }
 
+// The release after both prewarms: the records' builds read quietly too, so their shaders' SPIR-V goes as well. The
+// hash and the bindings a draw checks are on the shader; a new pipeline's build reads its shaders back on its worker.
+// Before, the records' reads kept their 5,549 shaders for the session: 210 of the pack's 340 MiB (Windows, 1.8.0,
+// 23/11/2026: 'released 128 MiB' against 340). After a stall prewarm_run keeps the records' shaders.
 void vk_pipeline_prewarm(void) {
     prewarm_run();
-    pairs_release();   // after the records too: their shaders, drawn in earlier runs, stay
+    pairs_release();
 }
 
 // ensure_init's hook: without a prewarm (MKW_PIPE_PREBUILD=0, or the device came up first elsewhere) the records

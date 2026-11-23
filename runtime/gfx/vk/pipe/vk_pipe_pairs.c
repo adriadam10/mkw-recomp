@@ -340,8 +340,8 @@ void pairs_prewarm(void) {
            (double)plat_now_ns() / 1e6 - t1);
 }
 
-// After the whole prewarm: the SPIR-V only the pairs prewarm read is freed (gfx_shader_spirv_release), unless its
-// threads were left building.
+// After the whole prewarm: the SPIR-V only the prewarms read is freed (gfx_shader_spirv_release; the key records'
+// shaders stay after their stall, vk_pipe_keys.c), unless this prewarm's own threads were left building.
 void pairs_release(void) {
     if (PJ.finished) gfx_shader_spirv_release();
     PJ.finished = 0;

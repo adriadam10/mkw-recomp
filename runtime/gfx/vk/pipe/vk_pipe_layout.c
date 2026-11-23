@@ -82,9 +82,20 @@ int add_stage(Bindings *B, const GfxShader *s, uint32_t off) {
     return 1;
 }
 
-// The first binding a module's resource variables use that the binding list b[0..n) lacks (module bindings >= 1 moved
-// by off), or -1. A reflection that misses a resource would otherwise hand the driver an invalid layout.
+// A binding a module's resource variables use that the binding list b[0..n) lacks (module bindings >= 1 moved by off),
+// or -1. A reflection that misses a resource would otherwise hand the driver an invalid layout. From the bindings the
+// reflection kept (gfx_shader_bindings): a pipeline miss checks it on the drawing thread, and the SPIR-V may be
+// released; the module is read only when a binding is 64 or more.
 static int module_binding_missing(const GfxShader *s, const VkDescriptorSetLayoutBinding *b, uint32_t n, uint32_t off) {
+    uint64_t mask;
+    if (gfx_shader_bindings(s, &mask)) {
+        for (; mask; mask &= mask - 1) {
+            uint32_t raw = (uint32_t)__builtin_ctzll(mask), want = raw + (raw >= 1 ? off : 0), j = 0;
+            while (j < n && b[j].binding != want) j++;
+            if (j == n) return (int)raw;
+        }
+        return -1;
+    }
     uint64_t words = 0;
     const uint32_t *w = gfx_shader_spirv(s, &words);
     for (uint64_t i = 5; w && i < words;) {

@@ -74,10 +74,16 @@ struct PlatThread *gfx_shader_preload_start(void);
 void gfx_shader_preload_join(struct PlatThread *t);
 const uint32_t *gfx_shader_spirv(const GfxShader *s, uint64_t *words);
 uint64_t gfx_shader_spirv_fnv(const GfxShader *s);          // FNV-1a 64 of the SPIR-V bytes, kept on the shader
+// The module's Binding decorations as a mask, from the reflection, so a layout check needs no SPIR-V (the release may
+// have freed it): 1, or 0 when the SPIR-V must be read (a binding of 64 or more, or a shader its scan did not cover).
+int gfx_shader_bindings(const GfxShader *s, uint64_t *mask);
 // The calling thread's reads of SPIR-V are the prewarm's (1) or a use (0, the default): only a use keeps a shader's
-// SPIR-V in memory when gfx_shader_spirv_release, after the prewarm, frees the others'. Returns the bytes freed.
+// SPIR-V in memory when gfx_shader_spirv_release, after the prewarm, frees the others' (on a thread of its own; it
+// returns the bytes it takes). gfx_shader_spirv_keep keeps one as a use would, for a quiet reader still running.
 void gfx_shader_spirv_quiet(int on);
+void gfx_shader_spirv_keep(const GfxShader *s);
 uint64_t gfx_shader_spirv_release(void);
+void gfx_shader_spirv_release_wait(void);                   // until the release's thread has freed what it took
 // Reflection: parsed once per shader from its .res.json and the SPIR-V before it enters the cache.
 enum { GFX_RES_UBO, GFX_RES_SSBO, GFX_RES_TEX, GFX_RES_IMG, GFX_RES_KINDS };
 typedef struct {

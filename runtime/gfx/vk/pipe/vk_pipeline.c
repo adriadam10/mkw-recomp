@@ -1327,6 +1327,7 @@ void vk_pipeline_autosave(void) {
 }
 
 void vk_pipeline_shutdown(void) {
+    gfx_shader_spirv_release_wait();   // mkw --prewarm and the probes end next: not while that thread is in the C heap
     if (!P.ready) return;
     workers_drain();   // jobs point at layouts and Pipe entries freed below
     vk_pipeline_save();
