@@ -24,19 +24,17 @@ what already shipped is in the [CHANGELOG](../../CHANGELOG.md).
 ## 4. 60 fps in races
 
 - A race frame is a chain: the game's frame, then the Vulkan back end records its big submit, then the GPU runs it. Recording is on the critical path, so it needs less CPU.
-- Done: recording overlapped with the game, submits on their own thread, AMD GPU clocks held on Linux, waits by address, hybrid-CPU core placement, the shadow write-back compared with AVX2.
-- Next: recording in parallel (the texture lock has to be split first), the fence's completion work, the kernel's global lock, Windows hybrid-CPU placement. Profile-guided optimization of the game's code was tried ([#722](https://github.com/adriadam10/mkw-recomp/pull/722)) and gained nothing measurable on a Radeon 660M.
+- Done: recording overlapped with the game, submits on their own thread, AMD GPU clocks held on Linux, waits by address, hybrid-CPU core placement, the shadow write-back compared with AVX2, recording split over chunk threads (`MKW_REPLAY_PAR`).
+- Next: the chunk threads' recording cost per draw, about twice the serial recorder's (the texture lock is not contended), the fence's completion work, the kernel's global lock, Windows hybrid-CPU placement. Profile-guided optimization of the game's code was tried ([#722](https://github.com/adriadam10/mkw-recomp/pull/722)) and gained nothing measurable on a Radeon 660M.
 
 ## 5. Loading and the player's side
 
 - Less stutter after a race starts: texture deswizzle and format scans already run on workers; the many small uploads are left.
 - A Linux package for non-rolling distributions and the launcher tested on more Windows machines.
-- A "Detect" preset in the graphics settings, chosen from the GPU.
 - Audio: two known SDK bugs and cuts in the movies' audio.
 
 ## 6. Game versions
 
-- 1.0.0 and 1.8.0 work. Each update is a different executable, so another version needs someone who owns it to run the tools on their own dump and contribute the result ([#19](https://github.com/adriadam10/mkw-recomp/issues/19)).
-- 1.8.0 on par with 1.0.0: ultrawide aspect, shadow map size and fixed seed.
+- 1.0.0 and 1.8.0 work, with the same patch sets (ultrawide aspect, shadow map size, fixed seed). Each update is a different executable, so another version needs someone who owns it to run the tools on their own dump and contribute the result ([#19](https://github.com/adriadam10/mkw-recomp/issues/19)).
 
 <!-- [[[end]]] -->
