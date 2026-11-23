@@ -296,7 +296,10 @@ typedef enum {
     // HELP what to install (HELP_WIN on Windows, where Mesa and the Linux releases mean nothing)
     UI_LAUNCH_GPU_NONE, UI_LAUNCH_GPU_OLD, UI_LAUNCH_GPU_EXT, UI_LAUNCH_GPU_QUEUE, UI_LAUNCH_GPU_SKIPPED,
     UI_LAUNCH_GPU_SOFTWARE, UI_LAUNCH_GPU_NO_DRIVER, UI_LAUNCH_GPU_HELP, UI_LAUNCH_GPU_HELP_WIN,
-    UI_MENU_LAST_ID = UI_LAUNCH_GPU_HELP_WIN,
+    // the start screen's own file browser (launcher_browse.cpp): pick the folder shown, a folder with nothing to show,
+    // one that cannot be listed
+    UI_BROWSE_USE, UI_BROWSE_EMPTY, UI_BROWSE_UNREADABLE,
+    UI_MENU_LAST_ID = UI_BROWSE_UNREADABLE,
     UI_TEXT_COUNT
 } UiTextId;
 

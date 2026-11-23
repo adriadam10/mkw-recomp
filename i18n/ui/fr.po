@@ -3262,3 +3262,15 @@ msgstr ""
 "graphique (AMD, Intel ou NVIDIA ; sur NVIDIA, 510 ou plus récent). Certaines cartes graphiques "
 "anciennes ne peuvent pas l'avoir. La préparation peut se faire dès maintenant : le jeu démarrera "
 "une fois le pilote mis à jour."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Utiliser ce dossier"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "Rien à choisir dans ce dossier"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Impossible de lire ce dossier"

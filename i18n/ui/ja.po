@@ -3089,3 +3089,15 @@ msgid ""
 msgstr ""
 "ゲームには Vulkan 1.3 が必要です。グラフィックカードのメーカー (AMD、Intel、NVIDIA) の最新ドライバーをインストールしてください (NVIDIA は 510 "
 "以降)。古いグラフィックカードの中には対応できないものもあります。準備は今すぐ進められます。ドライバーを更新すればゲームが起動します。"
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "このフォルダーを使う"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "このフォルダーには選べるものがありません"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "このフォルダーを読み込めません"

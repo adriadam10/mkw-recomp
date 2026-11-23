@@ -2987,3 +2987,15 @@ msgctxt "UI_LAUNCH_GPU_HELP_WIN"
 msgid ""
 "The game needs Vulkan 1.3: install the latest driver from your graphics card's maker (AMD, Intel or NVIDIA; on NVIDIA, 510 or newer). Some older graphics cards cannot have it at all. The setup can run now: the game starts once the driver is updated."
 msgstr ""
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr ""
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr ""
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr ""

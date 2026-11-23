@@ -3250,3 +3250,15 @@ msgstr ""
 "grafica (AMD, Intel o NVIDIA; su NVIDIA, 510 o successivo). Alcune schede grafiche vecchie non "
 "possono averlo. La configurazione può partire già ora: il gioco si avvierà una volta aggiornato "
 "il driver."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Usa questa cartella"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "Niente da scegliere in questa cartella"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Impossibile leggere questa cartella"

@@ -3254,3 +3254,15 @@ msgstr ""
 "(AMD, Intel oder NVIDIA; bei NVIDIA 510 oder neuer). Manche ältere Grafikkarten können es gar "
 "nicht haben. Die Einrichtung kann schon jetzt laufen: Das Spiel startet, sobald der Treiber "
 "aktualisiert ist."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Diesen Ordner verwenden"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "In diesem Ordner gibt es nichts zur Auswahl"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Dieser Ordner kann nicht gelesen werden"

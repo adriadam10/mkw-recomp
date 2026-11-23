@@ -3231,3 +3231,15 @@ msgstr ""
 "Грі потрібен Vulkan 1.3: встановіть найновіший драйвер від виробника вашої відеокарти (AMD, Intel "
 "або NVIDIA; для NVIDIA — 510 або новіший). Деякі старі відеокарти не підтримують його взагалі. "
 "Налаштування можна виконати вже зараз: гра запуститься, щойно драйвер буде оновлено."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Використати цю теку"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "У цій теці нічого вибрати"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Не вдається прочитати цю теку"

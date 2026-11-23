@@ -3238,3 +3238,15 @@ msgstr ""
 "gráfica (AMD, Intel ou NVIDIA; em NVIDIA, 510 ou mais recente). Algumas placas gráficas antigas "
 "não o podem ter. A preparação pode ser feita já: o jogo arranca quando o controlador estiver "
 "atualizado."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Usar esta pasta"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "Nada para escolher nesta pasta"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Não é possível ler esta pasta"

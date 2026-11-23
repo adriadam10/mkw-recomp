@@ -3227,3 +3227,15 @@ msgstr ""
 "Oyunun Vulkan 1.3'e ihtiyacı var: ekran kartınızın üreticisinin en yeni sürücüsünü kurun (AMD, "
 "Intel veya NVIDIA; NVIDIA'da 510 veya daha yeni). Bazı eski ekran kartları bunu hiç desteklemez. "
 "Kurulum şimdi yapılabilir: sürücü güncellenince oyun başlar."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Bu klasörü kullan"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "Bu klasörde seçilecek bir şey yok"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Bu klasör okunamıyor"

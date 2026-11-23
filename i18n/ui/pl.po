@@ -3228,3 +3228,15 @@ msgstr ""
 "Gra wymaga Vulkan 1.3: zainstaluj najnowszy sterownik od producenta karty graficznej (AMD, Intel "
 "lub NVIDIA; na NVIDIA 510 lub nowszy). Niektóre starsze karty graficzne w ogóle go nie obsługują. "
 "Konfigurację można zrobić już teraz: gra uruchomi się po aktualizacji sterownika."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Użyj tego folderu"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "W tym folderze nie ma nic do wybrania"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Nie można odczytać tego folderu"

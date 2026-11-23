@@ -3187,3 +3187,15 @@ msgstr ""
 "เกมต้องการ Vulkan 1.3: ติดตั้งไดรเวอร์ล่าสุดจากผู้ผลิตการ์ดจอของคุณ (AMD, Intel หรือ NVIDIA; บน "
 "NVIDIA ต้อง 510 ขึ้นไป) การ์ดจอรุ่นเก่าบางรุ่นไม่รองรับเลย การตั้งค่าทำได้ตั้งแต่ตอนนี้ "
 "เกมจะเริ่มเมื่ออัปเดตไดรเวอร์แล้ว"
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "ใช้โฟลเดอร์นี้"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "ไม่มีอะไรให้เลือกในโฟลเดอร์นี้"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "ไม่สามารถอ่านโฟลเดอร์นี้ได้"

@@ -3057,3 +3057,15 @@ msgid ""
 msgstr ""
 "游戏需要 Vulkan 1.3：请安装显卡厂商（AMD、Intel 或 NVIDIA）的最新驱动（NVIDIA 需 510 "
 "或更新版本）。部分旧显卡完全无法支持。现在就可以进行设置：驱动更新后游戏即可启动。"
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "使用此文件夹"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "此文件夹中没有可选择的内容"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "无法读取此文件夹"

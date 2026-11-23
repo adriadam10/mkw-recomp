@@ -3242,3 +3242,15 @@ msgstr ""
 "gràfica (AMD, Intel o NVIDIA; a NVIDIA, el 510 o posterior). Algunes targetes gràfiques antigues "
 "no el poden tenir. La preparació es pot fer ara: el joc arrencarà quan el controlador estigui "
 "actualitzat."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Fes servir aquesta carpeta"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "No hi ha res per triar en aquesta carpeta"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "No es pot llegir aquesta carpeta"

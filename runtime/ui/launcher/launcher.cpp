@@ -23,6 +23,8 @@
 // skips the page-entry merge (pre-merged shots).
 // MKW_LAUNCHER_SHOT_EVERY=<frames> saves <shot out>-<frame>.png every that many frames while the input still works: a
 // run driven by a virtual pad (tools/run/vpad.py) inside gamescope, where nobody watches the window.
+// MKW_LAUNCHER_BROWSE=folder|file[:<dir>] opens the start screen's own browser (launcher_browse.h) for step 1 at once,
+// as its buttons do; what it picks becomes the copy.
 // MKW_LAUNCHER_SHORTCUT=1 makes the desktop shortcut at start, as its button does. MKW_LAUNCHER_PLAY=1 presses Play once
 // the game files are there (with MKW_GPU=x the game's process then stops at once: the save copy before mods, alone).
 // MKW_LAUNCHER_EXIT_AFTER_SETUP=1 quits when that setup ends, after saving the page as <shot out>-end.png (its result
@@ -52,6 +54,7 @@
 #include "ui/launcher/launcher_players.h"
 #include "ui/launcher/launcher_setup.h"
 #include "ui/launcher/launcher_tools.h"
+#include "ui/launcher/launcher_browse.h"
 #include "ui/launcher/launcher_finddumps.h"
 #include "ui/launcher/launcher_lastrun.h"
 #include "ui/launcher/launcher_update.h"
@@ -1266,7 +1269,8 @@ static void game_dir_button(const SetupState &st, float act_h) {
                          cfg_from_env("MKW_GAME_DIR"));
     if (ImGui::Button(menu_text(UI_LAUNCH_PICK_GAME_DIR), ImVec2(0, act_h))) {
         L.picking = 1;
-        SDL_ShowOpenFolderDialog(picked, &L.directory_restart, L.win, cfg_game_dir(), false);
+        browse_dialog(L.win, BROWSE_FOLDER, menu_text(UI_LAUNCH_PICK_GAME_DIR), cfg_game_dir(), nullptr, nullptr,
+                      picked, &L.directory_restart);
     }
     ImGui::EndDisabled();
 }
@@ -1321,13 +1325,13 @@ static void setup_steps(const SetupState &st, bool ready, float act_h) {
                        L.source[0] ? L.source : menu_text(UI_LAUNCH_NO_SOURCE));
     if (ImGui::Button(menu_text(UI_LAUNCH_PICK), ImVec2(0, act_h))) {
         L.picking = 1;
-        SDL_ShowOpenFolderDialog(picked, nullptr, L.win, nullptr, false);
+        browse_dialog(L.win, BROWSE_FOLDER, menu_text(UI_LAUNCH_PICK), nullptr, nullptr, nullptr, picked, nullptr);
     }
     ImGui::SameLine();
-    static const SDL_DialogFileFilter kPack[] = {{"Switch 2 package (.nup, .nx)", "nup;nx"}};
     if (ImGui::Button(menu_text(UI_LAUNCH_PICK_NUP), ImVec2(0, act_h))) {   // the dump as one file (runtime/sdk/fs/pack.h)
         L.picking = 1;
-        SDL_ShowOpenFileDialog(picked, nullptr, L.win, kPack, 1, nullptr, false);
+        browse_dialog(L.win, BROWSE_FILE, menu_text(UI_LAUNCH_PICK_NUP), nullptr, "Switch 2 package (.nup, .nx)",
+                      "nup;nx", picked, nullptr);
     }
     found_copies();
     step_end();
@@ -1719,12 +1723,13 @@ static void page_mods(float w, float h) {
         ImGui::SameLine();
         if (ImGui::Button(menu_text(UI_LAUNCH_CANCEL))) mods_cancel();
     } else if (!mods_has_pick() && !ms.finished) {
-        static const SDL_DialogFileFilter zip_filter = {"Mod (.zip, .rar, .7z)", "zip;rar;7z"};
         if (ImGui::Button(menu_text(UI_MOD_IMPORT_ZIP)))
-            SDL_ShowOpenFileDialog(pick_zip, nullptr, L.win, &zip_filter, 1, nullptr, false);
+            browse_dialog(L.win, BROWSE_FILE, menu_text(UI_MOD_IMPORT_ZIP), nullptr, "Mod (.zip, .rar, .7z)",
+                          "zip;rar;7z", pick_zip, nullptr);
         ImGui::SameLine();
         if (ImGui::Button(menu_text(UI_MOD_IMPORT_FOLDER)))
-            SDL_ShowOpenFolderDialog(pick_folder, nullptr, L.win, nullptr, false);
+            browse_dialog(L.win, BROWSE_FOLDER, menu_text(UI_MOD_IMPORT_FOLDER), nullptr, nullptr, nullptr, pick_folder,
+                          nullptr);
     } else if (ms.finished) {
         if (ms.finished > 0) {
             char done[128];
@@ -1992,6 +1997,27 @@ static void page_tools(float w, float h) {
 }
 
 // ---- the window
+// Steam's on-screen keyboard for the start screen's text fields (a profile's name, a mod's, GameBanana's search) when
+// Steam's gamepad UI started it: SDL 3.4's X11 driver (gamescope is X11) opens it while a field takes text, with
+// SDL_ENABLE_STEAM_SCREEN_KEYBOARD set. Steam sets it itself for the games it starts in Big Picture; set here too for
+// what it leaves out (a gamescope session, an older client), never over the player's or Steam's own value. Otherwise
+// a controller-only player in Gaming Mode had no way to type a profile's name.
+static void steam_keyboard(void) {
+    const char *deck = getenv("SteamDeck"), *ui = getenv("SteamGamepadUI"), *gs = getenv("GAMESCOPE_WAYLAND_DISPLAY");
+    const char *why = deck && !strcmp(deck, "1") ? "SteamDeck=1"
+                    : ui && !strcmp(ui, "1")     ? "SteamGamepadUI=1"
+                    : gs && *gs                  ? "a gamescope session"
+                                                 : nullptr;
+    if (!why) return;
+    const char *own = getenv(SDL_HINT_ENABLE_STEAM_SCREEN_KEYBOARD);
+    if (own && *own) {
+        rt_log("launcher: Steam's on-screen keyboard: %s=%s as set", SDL_HINT_ENABLE_STEAM_SCREEN_KEYBOARD, own);
+        return;
+    }
+    SDL_SetHint(SDL_HINT_ENABLE_STEAM_SCREEN_KEYBOARD, "1");
+    rt_log("launcher: Steam's on-screen keyboard for text fields (%s)", why);
+}
+
 static bool open_window(void) {
     // MKW_BACKGROUND_WINDOW=1 (agents' shots, never the player's default): the runs' app id, which the KWin rule opens
     // minimized and without focus (tools/run/kwin-rule.sh), as gfx_window_sdl.c does for the game's window.
@@ -2002,6 +2028,7 @@ static bool open_window(void) {
     const char *drv = cfg_steam_video_driver();   // as the game's window (cfg.h)
     if (drv) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, drv);
     input_wheel_hint();
+    steam_keyboard();
     bool video = SDL_Init(SDL_INIT_VIDEO);
     if (!video && drv) {   // the driver asked for Steam's sake: without it
         rt_log("launcher: SDL's %s driver does not start (%s): SDL's own choice", drv, SDL_GetError());
@@ -2234,6 +2261,13 @@ extern "C" int launcher_run(void) {
     // MKW_LAUNCHER_FIND=1 (test): the search in a shot too, as at a plain start
     if (L.tools && (!L.shot_at || getenv("MKW_LAUNCHER_FIND"))) finddumps_start(L.exe_dir, cfg_game_dir());
     if (getenv("MKW_LAUNCHER_SHORTCUT")) make_shortcut();   // (test) as the button does
+    if (const char *t = getenv("MKW_LAUNCHER_BROWSE")) {   // (test) step 1's browser, as its buttons open it
+        bool file = !strncmp(t, "file", 4);
+        const char *at = strchr(t, ':');
+        L.page = PAGE_FILES;
+        browse_dialog(L.win, file ? BROWSE_FILE : BROWSE_FOLDER, menu_text(file ? UI_LAUNCH_PICK_NUP : UI_LAUNCH_PICK),
+                      at ? at + 1 : nullptr, "Switch 2 package (.nup, .nx)", file ? "nup;nx" : nullptr, picked, nullptr);
+    }
     if (const char *t = getenv("MKW_LAUNCHER_SETUP")) {   // (test) the setup started from that folder, as Set up does
         snprintf(L.source, sizeof L.source, "%s", t);
         char *link = strstr(L.source, ":link");
@@ -2309,7 +2343,8 @@ extern "C" int launcher_run(void) {
             read_setup_info();   // a setup may have changed the game files meanwhile
             L.shown = L.page;
         }
-        switch (L.page) {
+        if (browse_active()) browse_draw((float)pw, (float)ph, L.scale);   // in the page's place while it is up
+        else switch (L.page) {
         case PAGE_MAIN: page_main((float)pw, (float)ph); break;
         case PAGE_SETTINGS: page_settings((float)pw, (float)ph); break;
         case PAGE_FILES: page_files((float)pw, (float)ph); break;

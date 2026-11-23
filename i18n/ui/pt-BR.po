@@ -3236,3 +3236,15 @@ msgstr ""
 "O jogo precisa de Vulkan 1.3: instale o driver mais recente do fabricante da sua placa de vídeo "
 "(AMD, Intel ou NVIDIA; em NVIDIA, 510 ou mais novo). Algumas placas de vídeo antigas não podem "
 "tê-lo. A preparação pode ser feita agora: o jogo inicia quando o driver for atualizado."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Usar esta pasta"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "Nada para escolher nesta pasta"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Não é possível ler esta pasta"

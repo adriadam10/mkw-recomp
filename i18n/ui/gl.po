@@ -3229,3 +3229,15 @@ msgstr ""
 "gráfica (AMD, Intel ou NVIDIA; en NVIDIA, o 510 ou posterior). Algunhas tarxetas gráficas antigas "
 "non poden telo. A preparación pódese facer xa: o xogo arrincará cando o controlador estea "
 "actualizado."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Usar este cartafol"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "Non hai nada que escoller neste cartafol"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Non se pode ler este cartafol"

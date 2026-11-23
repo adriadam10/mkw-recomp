@@ -3264,3 +3264,15 @@ msgstr ""
 "berriena (AMD, Intel edo NVIDIA; NVIDIAn, 510 edo berriagoa). Txartel grafiko zahar batzuek ezin "
 "dute izan. Konfigurazioa orain egin daiteke: jokoa kontrolatzailea eguneratzen denean abiaraziko "
 "da."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Erabili karpeta hau"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "Karpeta honetan ez dago ezer aukeratzeko"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Ezin da karpeta hau irakurri"
