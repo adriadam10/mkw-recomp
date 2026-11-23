@@ -1192,13 +1192,6 @@ msgctxt "UI_MENU_PADS_NONE"
 msgid "No controller connected"
 msgstr "Sen mando conectado"
 
-msgctxt "UI_MENU_PAD_MOVE_DESC"
-msgid ""
-"Press it to trade places with the player before: this controller becomes theirs and theirs "
-"becomes this one's. Player 1's controller moves the menu. The order lasts until the game closes. "
-"On the right, the battery the controller reports, if any."
-msgstr ""
-
 msgctxt "UI_POWER_LOW"
 msgid "Low"
 msgstr "Baixa"
