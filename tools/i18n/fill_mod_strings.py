@@ -1321,6 +1321,28 @@ T["UI_MENU_HDR_WHITE_DESC"] = {
     "uk": "Наскільки яскраві білий колір меню та середні тони сцени. «Авто» бере яскравість SDR-контенту Windows, яка часто значно вища, ніж потрібно грі; 203 ніти — еталон HDR. Менші значення залишають більше місця світлам. Застосовується одразу.",
     "th": "ความสว่างของสีขาวในเมนูและโทนกลางของฉาก อัตโนมัติใช้ความสว่างเนื้อหา SDR ของ Windows ซึ่งมักสว่างกว่าที่เกมต้องการมาก 203 nits คือค่าอ้างอิงของ HDR ค่าที่ต่ำลงเหลือที่ว่างให้ไฮไลต์มากขึ้น มีผลทันที",
 }
+T["UI_MENU_PAD_MOVE_DESC"] = {
+    "es": "Púlsalo para cambiarte el sitio con el jugador anterior: este mando pasa a ser el suyo y el suyo pasa a ser este. El mando del jugador 1 mueve el menú. El orden dura hasta que se cierra el juego. A la derecha, la batería que indica el mando, si la indica.",
+    "es-419": "Presiónalo para cambiar de lugar con el jugador anterior: este control pasa a ser el suyo y el suyo pasa a ser este. El control del jugador 1 mueve el menú. El orden dura hasta que se cierra el juego. A la derecha, la batería que indica el control, si la indica.",
+    "ca": "Prem-lo per canviar el lloc amb el jugador anterior: aquest comandament passa a ser el seu i el seu passa a ser aquest. El comandament del jugador 1 mou el menú. L'ordre dura fins que es tanca el joc. A la dreta, la bateria que indica el comandament, si n'indica.",
+    "gl": "Prémeo para cambiar o sitio co xogador anterior: este mando pasa a ser o seu e o seu pasa a ser este. O mando do xogador 1 move o menú. A orde dura ata que se pecha o xogo. Á dereita, a batería que indica o mando, se a indica.",
+    "eu": "Sakatu aurreko jokalariarekin lekua trukatzeko: aginte hau harena bihurtzen da eta harena hau. 1. jokalariaren aginteak mugitzen du menua. Ordenak jokoa itxi arte irauten du. Eskuinean, agintearen bateria, adierazten badu.",
+    "fr": "Appuyez pour échanger votre place avec le joueur précédent : cette manette devient la sienne et la sienne devient celle-ci. La manette du joueur 1 contrôle le menu. L'ordre dure jusqu'à la fermeture du jeu. À droite, la batterie indiquée par la manette, le cas échéant.",
+    "de": "Drücken, um mit dem vorherigen Spieler den Platz zu tauschen: Dieser Controller wird seiner und seiner wird dieser. Der Controller von Spieler 1 steuert das Menü. Die Reihenfolge gilt, bis das Spiel geschlossen wird. Rechts der Akkustand, den der Controller meldet, falls vorhanden.",
+    "it": "Premilo per scambiare il posto con il giocatore precedente: questo controller diventa il suo e il suo diventa questo. Il controller del giocatore 1 muove il menu. L'ordine dura fino alla chiusura del gioco. A destra, la batteria indicata dal controller, se disponibile.",
+    "pt": "Prime para trocar de lugar com o jogador anterior: este comando passa a ser o dele e o dele passa a ser este. O comando do jogador 1 controla o menu. A ordem dura até o jogo fechar. À direita, a bateria que o comando indica, se indicar.",
+    "pt-BR": "Pressione para trocar de lugar com o jogador anterior: este controle passa a ser o dele e o dele passa a ser este. O controle do jogador 1 move o menu. A ordem dura até o jogo fechar. À direita, a bateria informada pelo controle, se houver.",
+    "nl": "Druk hierop om van plaats te wisselen met de vorige speler: deze controller wordt de zijne en de zijne wordt deze. De controller van speler 1 bedient het menu. De volgorde blijft tot het spel wordt gesloten. Rechts de batterij die de controller meldt, als die er is.",
+    "pl": "Naciśnij, aby zamienić się miejscem z poprzednim graczem: ten kontroler staje się jego, a jego tym. Kontroler gracza 1 steruje menu. Kolejność obowiązuje do zamknięcia gry. Po prawej poziom baterii zgłaszany przez kontroler, jeśli jest dostępny.",
+    "tr": "Önceki oyuncuyla yer değiştirmek için bas: bu kumanda onunki olur, onunki de bu olur. Menüyü 1. oyuncunun kumandası yönetir. Sıra oyun kapanana kadar geçerlidir. Sağda, varsa kumandanın bildirdiği pil düzeyi.",
+    "ru": "Нажмите, чтобы поменяться местами с предыдущим игроком: этот контроллер станет его, а его — этим. Меню управляет контроллер игрока 1. Порядок действует до закрытия игры. Справа — заряд батареи, который сообщает контроллер, если сообщает.",
+    "uk": "Натисніть, щоб помінятися місцями з попереднім гравцем: цей контролер стане його, а його — цим. Меню керує контролер гравця 1. Порядок діє до закриття гри. Праворуч — заряд батареї, який повідомляє контролер, якщо повідомляє.",
+    "ja": "押すと前のプレイヤーと入れ替わります。このコントローラーがそのプレイヤーのものになり、そのプレイヤーのものがこちらになります。メニューはプレイヤー1のコントローラーで操作します。順番はゲームを閉じるまで続きます。右側はコントローラーが報告するバッテリー残量です（報告がある場合）。",
+    "ko": "누르면 이전 플레이어와 자리를 바꿉니다. 이 컨트롤러는 그 플레이어의 것이 되고, 그 플레이어의 것은 이것이 됩니다. 메뉴는 플레이어 1의 컨트롤러로 조작합니다. 순서는 게임을 닫을 때까지 유지됩니다. 오른쪽은 컨트롤러가 알려 주는 배터리 잔량입니다(있는 경우).",
+    "zh-Hans": "按下即可与前一位玩家交换位置：这个手柄变成对方的，对方的变成这个。菜单由玩家 1 的手柄操作。此顺序一直保持到关闭游戏。右侧为手柄报告的电量（如有）。",
+    "zh-Hant": "按下即可與前一位玩家交換位置：這個控制器變成對方的，對方的變成這個。選單由玩家 1 的控制器操作。此順序會保持到關閉遊戲為止。右側為控制器回報的電量（如有）。",
+    "th": "กดเพื่อสลับที่กับผู้เล่นก่อนหน้า: คอนโทรลเลอร์นี้จะเป็นของเขา และของเขาจะเป็นอันนี้ คอนโทรลเลอร์ของผู้เล่น 1 ใช้ควบคุมเมนู ลำดับนี้คงอยู่จนกว่าจะปิดเกม ทางขวาคือแบตเตอรี่ที่คอนโทรลเลอร์รายงาน หากมี",
+}
 
 
 def main():

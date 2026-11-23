@@ -1118,6 +1118,7 @@ msgid ""
 "becomes this one's. Player 1's controller moves the menu. The order lasts until the game closes. "
 "On the right, the battery the controller reports, if any."
 msgstr ""
+"押すと前のプレイヤーと入れ替わります。このコントローラーがそのプレイヤーのものになり、そのプレイヤーのものがこちらになります。メニューはプレイヤー1のコントローラーで操作します。順番はゲームを閉じるまで続きます。右側はコントローラーが報告するバッテリー残量です（報告がある場合）。"
 
 msgctxt "UI_POWER_LOW"
 msgid "Low"

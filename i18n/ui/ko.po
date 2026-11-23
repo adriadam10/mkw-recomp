@@ -1138,6 +1138,8 @@ msgid ""
 "becomes this one's. Player 1's controller moves the menu. The order lasts until the game closes. "
 "On the right, the battery the controller reports, if any."
 msgstr ""
+"누르면 이전 플레이어와 자리를 바꿉니다. 이 컨트롤러는 그 플레이어의 것이 되고, 그 플레이어의 것은 이것이 됩니다. 메뉴는 플레이어 1의 컨트롤러로 조작합니다. 순서는 "
+"게임을 닫을 때까지 유지됩니다. 오른쪽은 컨트롤러가 알려 주는 배터리 잔량입니다(있는 경우)."
 
 msgctxt "UI_POWER_LOW"
 msgid "Low"
