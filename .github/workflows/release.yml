@@ -172,7 +172,7 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
       - name: Notes (docs/project/release-template.md with the version's section of CHANGELOG.md)
         run: uv run tools/build/notes.py --version "${GITHUB_REF_NAME#v}" --out notes.md
       - uses: actions/download-artifact@v8

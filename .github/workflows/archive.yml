@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
       - name: Repository and GitHub data
         run: |
           git bundle create "$RUNNER_TEMP/repo.bundle" --all
@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: tools/github
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
       - name: Changed pages
         # Three days back: what archive.org refused on one run is tried on the next two (archive.py, WAYBACK_FRESH)
         run: uv run tools/github/archive.py wayback --hours "${{ inputs.hours || 74 }}" --max "${{ inputs.max || 120 }}" --apply
