@@ -14,6 +14,7 @@ SOURCE = Path(__file__).resolve().parents[2] / "runtime/gfx/vk/device/vk_device.
 
 HARNESS = r"""
 #include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
 
 static int logged;
