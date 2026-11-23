@@ -11,7 +11,7 @@ submit's copies of constant blocks.
 | `vk_mem_gen.c` | Write generations per page (all writes, and the CPU's alone: a GPU write reported at its fence stamps only the first, so the mirror, which holds those bytes, skips it), write-watch snapshots and frozen regions |
 | `vk_mem_shadow.c` | Shadow copies of the CPU-visible pools, synced on their own thread as the replay touches them (`MKW_SHADOW_EARLY`) |
 | `vk_mem_shadow_nc.c` | The shadow's memory type: cached, and where the driver has no cached coherent type (ANV on Meteor Lake, #283) not coherent, with explicit flush and invalidate around the CPU's copies (`MKW_SHADOW_CACHED`) |
-| `vk_mem_wback.c` | GPU writes to shadowed pools: pending from recording and written back to game memory at their fence; `MKW_WB_ORDER`: a part that rewrites a page with its write-back pending waits on the GPU for that write-back |
+| `vk_mem_wback.c` | GPU writes to shadowed pools: pending from recording and written back to game memory at their fence; `MKW_WB_ORDER`: a part that rewrites a page with its write-back pending goes to the queue once that write-back ran (the replay thread waits, `vk_sync.c`); its per-page table grows by 4 KiB leaves |
 | `vk_mem_merge.c` | Byte-wise merge of the shadow in the ranges the GPU may write (`MKW_SHADOW_MERGE`): the CPU's bytes reach the GPU and the write-back does not overwrite them |
 | `vk_mem_capture.c` | Measurement `MKW_SHADOW_SUBMIT`: what the CPU writes, snapshotted at each submit and applied to the shadow when that submit syncs (discarded) |
 | `vk_wb_par.c` | `MKW_WB_PAR=N` (default 4 with 6+ physical cores, else 0; `ab`): the fence's write-backs on N threads besides the completion thread: a callback's ranges shared out, and a range of 512 KiB or more in 128 KiB slices |

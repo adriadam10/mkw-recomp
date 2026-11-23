@@ -109,11 +109,47 @@ int vk_mem_gpu_may_write(uint64_t addr, uint64_t size) {
 // guest memory its half-done state: a dispatch clears counters another one adds to (34331 and 34334, the clouds), and
 // guest memory gets the zeros (tdry1: ~9.5 write-backs a frame with the next writer of their pages queued, over a dozen
 // pages; tnone1, the clouds gone for a frame). On the console the bytes are read where the GPU left them. Here a part
-// writing a page whose earlier writer's write-back is still to come waits on the GPU (vk_sync.c, wb_sem) until the
-// completion thread has done that write-back; no CPU thread waits.
-static uint64_t *wb_last;    // per guest page, the newest submission writing it into a shadow; mapped lazily
+// writing a page whose earlier writer's write-back is still to come is handed to the queue once that write-back ran:
+// the replay thread waits for it (vk_sync.c wb_wait; a GPU wait made RADV defer the queue's work, tdiff1).
+// Per guest page, the newest submission writing it into a shadow: a directory of 4 KiB leaves of 512 pages (2 MiB of
+// guest addresses each), each made on the first write into its range. The flat table was RT_ADDRESS_LIMIT / 4 KiB
+// pages x 8 bytes = 1 GiB, which Linux maps lazily but Windows commits whole (plat_mem_alloc) as soon as one pool falls
+// back to a shadow (an import the driver refuses, #438, #677; MKW_SHADOW=1): at the title with MKW_SHADOW=1 it was a
+// fifth private 1 GiB reservation committed whole beside the driver's four, gone with the leaves (RTX 3080 Ti,
+// 23/11/2026). Recording threads reach the first note together: the directory is made once under wb_init_lock and
+// published before wb_order, and a leaf is installed once.
+#define WB_LEAF 512u
+static uint64_t **wb_dir;    // RT_ADDRESS_LIMIT / 2 MiB leaves, NULL until written; set before wb_order
 static uint64_t wb_need;     // the newest earlier writer the part being recorded must wait for (atomic max)
-static int wb_order = -1;
+static int wb_order = -1;    // MKW_WB_ORDER once wb_init ran
+static PlatMutex wb_init_lock = PLAT_MUTEX_INIT;
+
+static int wb_init(void) {
+    plat_mutex_lock(&wb_init_lock);
+    int o = __atomic_load_n(&wb_order, __ATOMIC_ACQUIRE);
+    if (o < 0) {
+        o = rt_knob("WB_ORDER", "1");
+        uint64_t **d = o ? calloc(RT_ADDRESS_LIMIT / 0x1000 / WB_LEAF, sizeof *d) : NULL;
+        int lost = o && !d;
+        if (lost) o = 0;
+        __atomic_store_n(&wb_dir, d, __ATOMIC_RELEASE);
+        __atomic_store_n(&wb_order, o, __ATOMIC_RELEASE);
+        rt_log("mem: a submission writing bytes of an earlier one waits for its write-back %s (MKW_WB_ORDER)",
+               lost ? "off: no memory for its page table" : o == 2 ? "in the B blocks" : o ? "on" : "off");
+    }
+    plat_mutex_unlock(&wb_init_lock);
+    return o;
+}
+
+static uint64_t *wb_leaf(uint64_t page) {
+    uint64_t **slot = &wb_dir[page / WB_LEAF], *l = __atomic_load_n(slot, __ATOMIC_ACQUIRE);
+    if (l) return l;
+    uint64_t *n = calloc(WB_LEAF, sizeof *n);
+    if (!n) return NULL;
+    if (__atomic_compare_exchange_n(slot, &l, n, 0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) return n;
+    free(n);   // another thread installed one first: l holds it
+    return l;
+}
 
 uint64_t vk_mem_wb_need_take(uint64_t fence) {
     uint64_t n = __atomic_exchange_n(&wb_need, 0, __ATOMIC_ACQ_REL);
@@ -121,16 +157,19 @@ uint64_t vk_mem_wb_need_take(uint64_t fence) {
 }
 
 static void wb_order_note(uint64_t addr, uint64_t size, uint64_t fence) {
-    if (wb_order < 0) {
-        wb_order = rt_knob("WB_ORDER", "1");
-        if (wb_order && !(wb_last = plat_mem_alloc(RT_ADDRESS_LIMIT / 0x1000 * sizeof *wb_last))) wb_order = 0;
-        rt_log("mem: a submission writing bytes of an earlier one waits on the GPU for its write-back %s (MKW_WB_ORDER)",
-               wb_order == 2 ? "in the B blocks" : wb_order ? "on" : "off");
-    }
-    if (!wb_order || !fence || addr + size > RT_ADDRESS_LIMIT) return;
+    int o = __atomic_load_n(&wb_order, __ATOMIC_ACQUIRE);
+    if (o < 0) o = wb_init();
+    if (!o || !fence || addr + size > RT_ADDRESS_LIMIT) return;
     uint64_t need = 0;
     for (uint64_t p = addr >> 12; p <= (addr + size - 1) >> 12; p++) {
-        uint64_t old = __atomic_exchange_n(&wb_last[p], fence, __ATOMIC_RELAXED);
+        uint64_t *leaf = wb_leaf(p);
+        if (!leaf) {   // out of memory: this page waits for no earlier writer, as with MKW_WB_ORDER=0
+            static volatile int32_t told;
+            if (!plat_xchg32(&told, 1))
+                rt_log("mem: MKW_WB_ORDER: out of memory for a page table; some pages go unordered");
+            continue;
+        }
+        uint64_t old = __atomic_exchange_n(&leaf[p % WB_LEAF], fence, __ATOMIC_RELAXED);
         if (old && old < fence && old > need) need = old;
     }
     if (!need || !RT_KNOB_ON(wb_order)) return;
