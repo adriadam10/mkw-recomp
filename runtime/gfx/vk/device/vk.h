@@ -809,7 +809,8 @@ PFN_vkUpdateDescriptorSetWithTemplate vk_pipeline_update_tpl_fn(void);
 int vk_pipeline_draw_cache(void);   // MKW_DRAW_CACHE (vk_pipeline.c)
 typedef struct { uint64_t graphics, compute, failures, hits, layouts, push_layouts, dyn_over, async_built, pending_skips; } VkPipeStats;
 void vk_pipeline_stats(VkPipeStats *s);
-void vk_pipeline_save(void);               // writes the VkPipelineCache to pipeline-cache.bin next to mkw
+void vk_pipeline_save(void);               // writes the VkPipelineCache to pipeline-cache.bin next to mkw when its size
+                                           // changed since it was loaded or last written
 void vk_pipeline_autosave(void);           // vk_pipeline_save at most every 20 s, when pipelines were built since
 void vk_pipeline_shutdown(void);           // waits for background builds, saves, destroys pipelines, layouts and the
                                            // cache; before vk_shutdown

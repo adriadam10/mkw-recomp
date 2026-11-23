@@ -92,6 +92,18 @@ static void cache_tmp_cleanup(void) {
     if (n) rt_log("vk_pipeline: deleted %d unfinished cache writes of ended runs", n);
 }
 
+// The size of the driver's cache when it was loaded or last written: a save that finds the same size writes nothing.
+// The autosave's trigger counts pipelines built, cache hits included, so every boot saved the cache its prewarm had
+// only read and every exit saved it again: 14 of 19 saves in six Windows runs wrote the same 415,172 KiB, each one a
+// 405 MiB malloc, 71-159 ms of copy under the driver's cache lock and 309-426 ms of write and flush (23/11/2026).
+// It takes an unchanged size for an unchanged cache. Vulkan only promises the size query a maximum, but a cache only
+// gains entries: Mesa's common cache (RADV, ANV, NVK, the Deck) counts the bytes it would write over objects it never
+// drops, and NVIDIA 616.56's grew by 56-349 KiB at every save that followed new builds; AMD's and Intel's Windows
+// drivers were not measured. A save skipped wrongly costs those pipelines' compiles at the next boot, whose prewarm
+// rebuilds them from the key file.
+// Set by cache_load before the autosave thread starts, then under save_lock.
+static size_t cache_written;
+
 // Cache data whose header names another device or driver is dropped before Vulkan sees it.
 static void cache_load(VkCtx *c) {
     cache_path_init();
@@ -122,6 +134,8 @@ static void cache_load(VkCtx *c) {
         if (vkCreatePipelineCache(c->device, &ci, NULL, &P.cache) != VK_SUCCESS) P.cache = VK_NULL_HANDLE;
     }
     free(data);
+    // what the driver would write now, not the file's size: it may keep the same entries in other bytes
+    if (P.cache && vkGetPipelineCacheData(c->device, P.cache, &cache_written, NULL) != VK_SUCCESS) cache_written = 0;
 }
 
 int ensure_init(void) {
@@ -1245,10 +1259,13 @@ void vk_pipeline_save(void) {
     size_t size = 0;
     void *data = NULL;
     uint64_t t0 = plat_now_ms();
-    if (vkGetPipelineCacheData(P.device, P.cache, &size, NULL) == VK_SUCCESS && size && (data = malloc(size)) &&
-        vkGetPipelineCacheData(P.device, P.cache, &size, data) == VK_SUCCESS) {
+    if (vkGetPipelineCacheData(P.device, P.cache, &size, NULL) == VK_SUCCESS && size && size == cache_written) {
+        rt_log("vk_pipeline: cache unchanged, %zu KB: not written (size asked in %llu ms)", size >> 10,
+               (unsigned long long)(plat_now_ms() - t0));
+    } else if (size && (data = malloc(size)) && vkGetPipelineCacheData(P.device, P.cache, &size, data) == VK_SUCCESS) {
         uint64_t t1 = plat_now_ms();
-        if (!plat_file_write_atomic(P.cache_path, data, size)) rt_log("vk_pipeline: cannot write %s", P.cache_path);
+        if (plat_file_write_atomic(P.cache_path, data, size)) cache_written = size;
+        else rt_log("vk_pipeline: cannot write %s", P.cache_path);
         // one line per save (every 20 s at most): when and how long, against the frame times (#533)
         rt_log("vk_pipeline: cache saved, %zu KB: copy %llu ms, write %llu ms%s", size >> 10,
                (unsigned long long)(t1 - t0), (unsigned long long)(plat_now_ms() - t1), race_scene_on() ? " (in a race)" : "");
@@ -1258,8 +1275,8 @@ void vk_pipeline_save(void) {
 }
 
 // The game never shuts the device down (boot.c and the window end the process), so the cache is saved while it
-// runs: at most every 20 s, outside races, and only after new pipelines were built. New pipeline keys are appended
-// every 2 s.
+// runs: at most every 20 s, outside races, and only after the count of pipelines built changed (cache hits included);
+// vk_pipeline_save then writes it only when its size changed (cache_written). New pipeline keys are appended every 2 s.
 static void autosave_once(void) {
     static uint64_t last_n, last_ms, last_keys;
     if (!P.ready) return;
