@@ -150,9 +150,11 @@ uint32_t mem_map_physical(uint64_t a, uint64_t n);                              
 uint32_t mem_unmap_physical(uint64_t a, uint64_t n);                            // 0x2D
 int mem_info(uint32_t id, uint64_t *out);                  // GetInfo memory ids 2-7, 12-17, 21, 22, 28; 0 if not a memory id
 void *mem_kernel_alloc(uint64_t size, uint64_t align);     // zeroed, guest-visible, in the kernel region; align <= 64 KiB
-uint64_t mem_runtime_alloc(uint64_t size, const char *what);   // committed, guest-visible, write-watched memory of the
-                                                           // runtime's own above the game's heap (2 MiB multiples,
-                                                           // never freed); 0 with a log line when it does not fit
+uint64_t mem_runtime_alloc(uint64_t size, const char *what);   // guest-visible, write-watched memory of the runtime's
+                                                           // own above the game's heap (2 MiB multiples, never freed);
+                                                           // with Windows' lazy commit committed on first touch like
+                                                           // the heap: a kernel or driver user commits it first
+                                                           // (mem_commit_range); 0 with a log line when it does not fit
 uint64_t mem_written_pages(uint64_t addr, uint64_t size, uint64_t *pages, uint64_t max);
                                                            // GetWriteWatch(RESET): fills pages[] (4 KiB addresses)
                                                            // with the pages of [addr, addr+size) written since the
@@ -177,8 +179,9 @@ struct PlatShared;
 int mem_share(uint64_t lo, uint64_t hi, const struct PlatShared *s, uint64_t off);
                                                            // the pages [lo, hi) (watched, all read-write) become s's at
                                                            // off with their bytes kept; 0 refused, nothing changed
-void mem_commit_range(uint64_t a, uint64_t n);             // Windows' lazy commit (MKW_LAZY_COMMIT): the game's
-                                                           // pages of [a, a+n) committed now, before something that
+void mem_commit_range(uint64_t a, uint64_t n);             // Windows' lazy commit (MKW_LAZY_COMMIT): the game's and
+                                                           // the runtime's regions' pages of [a, a+n) committed now,
+                                                           // before something that
                                                            // does not fault into the handler reads or writes them
                                                            // (the kernel, a driver import); a no-op elsewhere
 void mem_freeze_stats(uint64_t *frozen, uint64_t *freezes, uint64_t *fault_thaws, uint64_t *other_thaws);
