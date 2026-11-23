@@ -283,6 +283,8 @@ uint32_t plat_cpu_count(void) {
 void plat_thread_priority(int prio) { SetThreadPriority(GetCurrentThread(), prio); }
 void plat_thread_set_priority(PlatThread *t, int prio) { SetThreadPriority(t->h, prio); }
 int plat_thread_priority_get(void) { return GetThreadPriority(GetCurrentThread()); }
+int plat_thread_realtime(void) { return 0; }
+void plat_thread_realtime_end(void) {}
 
 void plat_yield(void) { SwitchToThread(); }
 

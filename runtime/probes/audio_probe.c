@@ -108,7 +108,31 @@ static void probe_client(Cpu *c) {
     CHECK(audren_renderers_live() == 0, "SDK CloseAudioRenderer");
 }
 
+// A real-time thread that never sleeps must lose its priority, not end the process (RLIMIT_RTTIME: SIGXCPU at 100 ms,
+// SIGKILL at 200). Skipped without RealtimeKit, as in a container.
+static int rt_got;
+static void realtime_hog(void *arg) {
+    (void)arg;
+    rt_got = plat_thread_realtime();
+    for (uint64_t end = plat_now_ns() + 400000000ull; rt_got && plat_now_ns() < end;) {}
+    plat_thread_realtime_end();
+}
+
+static void probe_realtime(void) {
+    PlatThread *t = plat_thread_new(realtime_hog, NULL, "rt hog");
+    CHECK(t, "no thread");
+    if (!t) return;
+    plat_thread_join(t);
+    if (!rt_got) {
+        printf("  real time: not granted here, not checked\n");
+        return;
+    }
+    CHECK(!plat_thread_realtime(), "real time granted again after an overrun");
+    printf("  real time: 400 ms without sleeping survived\n");
+}
+
 int probe_audio(void) {
+    probe_realtime();
     ldr_load(rt_config()->exefs);
     kern_run_on_guest_main(probe_client);
     RtStats s = rt_stats();

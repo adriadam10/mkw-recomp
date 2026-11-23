@@ -81,6 +81,11 @@ enum { PLAT_PRIO_IDLE = -15, PLAT_PRIO_LOWEST = -2, PLAT_PRIO_BELOW_NORMAL = -1,
 void plat_thread_priority(int prio);
 void plat_thread_set_priority(PlatThread *t, int prio);
 int plat_thread_priority_get(void);       // the calling thread's level
+// Real time for the calling thread, 1 when it got it: one thread at a time, one that works for less than its period and
+// then sleeps (100 ms without sleeping end it). Linux only (linux.c says how); elsewhere 0 and HIGHEST is the way.
+// Before the thread returns it calls plat_thread_realtime_end, for a later thread to be able to ask.
+int plat_thread_realtime(void);
+void plat_thread_realtime_end(void);
 void plat_yield(void);                    // gives the rest of the time slice to another ready thread
 static inline void plat_pause(void) {     // spin-wait hint
 #if defined(__x86_64__) || defined(_M_X64)

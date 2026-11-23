@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "audren.h"
+#include "cfg.h"
 #include "host.h"
 #include "platform/platform.h"
 
@@ -352,9 +353,21 @@ static void advance_voice(AudioRenderer *r, ServerVoice *v, double out_seconds) 
     }
 }
 
+// Real time for the render thread only with MKW_RTKIT=1 (linux.c says what it gains). Opt-in: on 22/11/2026 the PC
+// (Bazzite, kernel 7.3.4) froze one second after rtkit promoted a thread of ours, with nothing in the kernel log; 58
+// promotions that day were fine and a freeze the day before had no rtkit, so the cause is open.
+static int realtime_wanted(void) {
+    const char *e = cfg_get("MKW_RTKIT");
+    int want = e && !strcmp(e, "1");
+    if (e && *e && !want && strcmp(e, "0")) rt_log("audren: MKW_RTKIT=%s is not 0 or 1: 0", e);
+    return want;
+}
+
 static void render_thread(void *p) {
     AudioRenderer *r = p;
     plat_thread_priority(PLAT_PRIO_HIGHEST);
+    // A block not ready when the device asks for it is a gap the player hears
+    if (realtime_wanted() && plat_thread_realtime()) rt_log("audren: the render thread runs in real time (MKW_RTKIT)");
     const uint64_t frame_ns = (uint64_t)r->param.sample_count * 1000000000ull / (uint64_t)r->param.sample_rate;
     const double frame = (double)r->param.sample_count / r->param.sample_rate;
     uint64_t next = kern_now_ns();
@@ -380,6 +393,7 @@ static void render_thread(void *p) {
         if (next > now) plat_wait_ns(next - now);
         else if (now - next > 100000000ull) next = now;   // fell far behind (debugger, sleep): resynchronise
     }
+    plat_thread_realtime_end();
 }
 
 // ---- IAudioRenderer, as the host objects of audren_sf.c call it

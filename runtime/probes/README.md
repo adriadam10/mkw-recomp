@@ -7,7 +7,7 @@ except `texpre_probe.c`, `fg_probe.c`, `fps_probe.c`, `merge_probe.c`, `spill_pr
 | File | Option | What it checks |
 |---|---|---|
 | `astc_probe.c` | `--probe-astc` | The compute ASTC decoder (`vk_astc.c`) against the CPU one, bit for bit, with synthetic blocks; the BC7 and BC1 re-encoders, transparent texels keeping alpha 0 exactly |
-| `audio_probe.c` | `--probe-audio` | MKW's own: the SDK's translated `nn::audio` client against the objects of `audren_sf.c`: parameter, open, 200 updates at 5 ms, device and close (formerly `--probe-ipc`) |
+| `audio_probe.c` | `--probe-audio` | MKW's own: the SDK's translated `nn::audio` client against the objects of `audren_sf.c`: parameter, open, 200 updates at 5 ms, device and close (formerly `--probe-ipc`); first, a real-time thread that never sleeps keeps the process alive (`plat_thread_realtime`, skipped without RealtimeKit) |
 | `cfg_probe.c` | `--probe-cfg` | Reading the `.ini`, environment variables and a missing file (`cfg.c`) |
 | `plugin_probe.c` | `--probe-plugin` | MKW's own: a mod's native plugin (`runtime/plugin`) loaded as at start, its override by name reached through main's PLT and chained to the runtime's handler, its override by address reached by an indirect call and running the game's original; run by `tools/plugin/probe.sh`, which builds the plugin |
 | `fg_probe.c` | `--probe-framegen` | MKW's own: frame generation's passes (`vk_framegen.c`) on two pictures in `MKW_FG_PROBE` (from `tools/imagen/fg_check.py`), the frame halfway and the vectors of each level written back, and its GPU time |

@@ -34,6 +34,8 @@
 #include <unistd.h>
 
 #include <SDL3/SDL_clipboard.h>
+#include <SDL3/SDL_hints.h>
+#include <SDL3/SDL_thread.h>
 
 #include "platform.h"
 #include "linux_int.h"
@@ -588,6 +590,57 @@ int plat_thread_priority_get(void) {
     return nice >= 19 ? PLAT_PRIO_IDLE : nice >= 4 ? PLAT_PRIO_LOWEST : nice >= 2 ? PLAT_PRIO_BELOW_NORMAL
          : nice >= 0 ? PLAT_PRIO_NORMAL : nice >= -2 ? PLAT_PRIO_ABOVE_NORMAL : nice >= -5 ? PLAT_PRIO_HIGHEST
          : PLAT_PRIO_TIME_CRITICAL;
+}
+
+// Real time for a thread that must run every few ms. nice values need a right no desktop gives (RLIMIT_NICE is 0) and
+// only count between threads of one control group: RealtimeKit (or the desktop portal), asked by SDL, gives
+// SCHED_RR, which PipeWire's own threads have, and needs neither. How late a 5 ms thread ran at most on an i7-14700F
+// (28 processors, 22/11/2026), at normal priority, at rtkit's nice -15 and in SCHED_RR: against 84 busy processes in
+// one other group 9.7, 11.9 and 0.03 ms; against 84 busy threads of its own process 15.4, 2.8 and 0.01; against four
+// and eight groups of 56, 26-47 and 51-91 ms at normal priority and 0.01 in SCHED_RR (the output queues about 26 ms).
+// rtkit takes only a process with RLIMIT_RTTIME (SDL sets it): past 100 ms of CPU without sleeping the kernel sends
+// SIGXCPU, past 200 SIGKILL. The handler puts the thread back to normal, so a stall costs its priority, not the game.
+// In the game, booting against 336 busy processes in six groups: 9 and 6 gaps without it, 2 and 1 with it (40-55 s).
+// The caller decides whether to ask (audren.c: only with MKW_RTKIT=1).
+static pid_t rt_tid;   // the real-time thread; 0 none, -1 it was put back to normal (nothing asks again)
+
+static void rt_overrun(int sig) {
+    pid_t tid = __atomic_load_n(&rt_tid, __ATOMIC_ACQUIRE);
+    int keep = errno;
+    if (tid < 0) return;
+    if (!tid) {   // another limit (ulimit -t): its default, the process ends
+        signal(sig, SIG_DFL);
+        raise(sig);
+        return;
+    }
+    __atomic_store_n(&rt_tid, -1, __ATOMIC_RELEASE);
+    struct sched_param sp = {0};
+    static const char told[] = "platform: a real-time thread ran 100 ms without sleeping: back to normal priority\n";
+    sched_setscheduler(0, SCHED_OTHER | SCHED_RESET_ON_FORK, &sp);   // the offender, if it is another (PipeWire's)
+    if (!sched_setscheduler(tid, SCHED_OTHER | SCHED_RESET_ON_FORK, &sp) && write(2, told, sizeof told - 1) < 0) errno = 0;
+    errno = keep;
+}
+
+int plat_thread_realtime(void) {
+    pid_t free_slot = 0, tid = (pid_t)syscall(SYS_gettid);
+    if (!__atomic_compare_exchange_n(&rt_tid, &free_slot, tid, 0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) return 0;
+    struct sigaction sa = {.sa_handler = rt_overrun, .sa_flags = SA_RESTART}, was;
+    sigemptyset(&sa.sa_mask);
+    if (!sigaction(SIGXCPU, &sa, &was)) {
+        SDL_SetHint(SDL_HINT_THREAD_FORCE_REALTIME_TIME_CRITICAL, "1");
+        SDL_SetCurrentThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL);
+        SDL_ResetHint(SDL_HINT_THREAD_FORCE_REALTIME_TIME_CRITICAL);   // SDL's own threads keep its default
+        int policy = sched_getscheduler(0) & ~SCHED_RESET_ON_FORK;
+        if (policy == SCHED_RR || policy == SCHED_FIFO) return 1;
+        sigaction(SIGXCPU, &was, NULL);
+    }
+    __atomic_store_n(&rt_tid, 0, __ATOMIC_RELEASE);
+    return 0;
+}
+
+void plat_thread_realtime_end(void) {
+    pid_t tid = (pid_t)syscall(SYS_gettid);
+    __atomic_compare_exchange_n(&rt_tid, &tid, 0, 0, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED);
 }
 
 void plat_yield(void) { sched_yield(); }
