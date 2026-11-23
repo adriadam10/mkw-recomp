@@ -251,6 +251,11 @@ static void window_main(void *arg) {
     const char *bg = cfg_get("MKW_BACKGROUND_WINDOW");
     SDL_SetHint(SDL_HINT_APP_ID, bg && strcmp(bg, "0") ? "mkw-recomp-run" : "mkw-recomp");
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "0");
+    // A controller keeps working while another window has the focus. SDL drops joystick events for an unfocused
+    // window unless this hint is set, so a pad went dead as soon as the player alt-tabbed to a second screen (couch
+    // play with the game on a TV while the PC is used for something else). The keyboard and mouse stay gated on the
+    // focus in input.c, where ikb_foreground() decides; the gamepad is read whatever the focus says.
+    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     const char *steam_drv = steam_video_driver();   // started by Steam on a Wayland desktop, SDR: XWayland
     if (steam_drv) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, steam_drv);
     g_video_ok = SDL_Init(SDL_INIT_VIDEO);
