@@ -1,4 +1,4 @@
-// The optional third-party libraries (DLSS, FSR 3.1) downloaded when the settings pick them
+// The optional third-party libraries (DLSS, FSR 3.1, RenHDrum) downloaded when the settings pick them
 // (ui/launcher/libs_fetch.cpp): tools/prepare/libs.py in a child process, as launcher_update.cpp runs update.py.
 #pragma once
 

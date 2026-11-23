@@ -884,6 +884,18 @@ msgctxt "UI_MENU_RUMBLE_TRIGGERS_DESC"
 msgid "Vibrates the triggers of an Xbox controller too."
 msgstr "同時讓 Xbox 控制器的扳機震動。"
 
+msgctxt "UI_MENU_RENHDRUM"
+msgid "HD vibration (RenHDrum)"
+msgstr "HD 震動（RenHDrum）"
+
+msgctxt "UI_MENU_RENHDRUM_DESC"
+msgid ""
+"Plays the game's own HD vibration on player 1's DualSense, Pro Controller, Xbox One S or Steam "
+"Controller through RenHDrum, downloaded from its official release when you turn it on. Applies at "
+"the next start."
+msgstr ""
+"透過 RenHDrum 在玩家 1 的 DualSense、Pro 控制器、Xbox One S 或 Steam 控制器上播放遊戲本身的 HD 震動；開啟時會從其官方版本下載。下次啟動時生效。"
+
 msgctxt "UI_MENU_PAD_LAYOUT"
 msgid "Button layout"
 msgstr "按鍵配置"

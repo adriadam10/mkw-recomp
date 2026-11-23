@@ -342,9 +342,10 @@ static void engine_note(int state) {
     else if (state == 2) opt_text(UI_MENU_NOT_AVAILABLE, true);
 }
 
-// The libraries the upscaler and frame generation engine picked now need (tools/prepare/libs.tsv's features), fetched
-// beside the program when that pick changes (ui/launcher/libs_fetch.cpp): players had to download and copy them by
-// hand. Windows only, where the runtime loads them; DLSS only for an NVIDIA card, its licence's condition.
+// The libraries the upscaler, the frame generation engine and RenHDrum picked now need (tools/prepare/libs.tsv's
+// features), fetched beside the program when that pick changes (ui/launcher/libs_fetch.cpp): players had to download
+// and copy them by hand. Windows only, where the runtime loads them; DLSS only for an NVIDIA card, its licence's
+// condition.
 static void libs_sync(void) {
 #ifdef _WIN32
     bool nv = g_gpu_n <= 0 || g_gpu_nvidia[gpu_index()];   // no list yet: the runtime still says when it cannot run
@@ -356,6 +357,7 @@ static void libs_sync(void) {
     if (!strcmp(t, "fsr3")) add("fsr3");
     if (fg && nv && !strcmp(e, "dlss")) add("dlssg");
     if (fg && !strcmp(e, "fsr3")) add("fsr3,fsr3fg");
+    if (!strcmp(cfg_value("MKW_RENHDRUM"), "1")) add("renhdrum");
     static char last[64];
     if (!strcmp(want, last)) return;
     snprintf(last, sizeof last, "%s", want);
@@ -557,6 +559,12 @@ static void tab_controls(float scale) {
     opt_slider("MKW_RUMBLE_STRENGTH", UI_MENU_RUMBLE_STRENGTH, 0, 300, UI_MENU_RUMBLE_STRENGTH_DESC, 10, "%.0f %%");
     opt_slider("MKW_RUMBLE_CURVE", UI_MENU_RUMBLE_CURVE, 0.2f, 1.5f, UI_MENU_RUMBLE_CURVE_DESC, 0.05f, "%.2f");
     opt_toggle("MKW_RUMBLE_TRIGGERS", UI_MENU_RUMBLE_TRIGGERS, UI_MENU_RUMBLE_TRIGGERS_DESC);
+#ifdef _WIN32   // RenHDrum (input/renhdrum_host_win.c) has a Windows DLL only
+    opt_toggle("MKW_RENHDRUM", UI_MENU_RENHDRUM, UI_MENU_RENHDRUM_DESC);
+    libs_sync();
+    // 3: only the download's notes (engine_note has nothing for it); the launcher cannot tell whether the game loaded it
+    libs_note("renhdrum", "RenHDrum", strcmp(cfg_value("MKW_RENHDRUM"), "1") ? 0 : 3);
+#endif
     opt_toggle("MKW_SWITCH2", UI_MENU_SWITCH2, UI_MENU_SWITCH2_DESC);   // input/switch2.c, at the next start
     opt_toggle("MKW_DSU", UI_MENU_DSU, UI_MENU_DSU_DESC);   // input/dsu.c, live
     opt_slider("MKW_STICK_DEADZONE", UI_MENU_STICK_DEADZONE, 0, 40, UI_MENU_STICK_DEADZONE_DESC, 1, "%.0f %%");   // input.c

@@ -1410,6 +1410,52 @@ T["UI_MENU_LIB_READY"] = {
     "th": "ดาวน์โหลด %s แล้ว: ใช้งานได้หลังรีสตาร์ต",
 }
 
+T["UI_MENU_RENHDRUM"] = {
+    "es": "Vibración HD (RenHDrum)",
+    "es-419": "Vibración HD (RenHDrum)",
+    "ca": "Vibració HD (RenHDrum)",
+    "gl": "Vibración HD (RenHDrum)",
+    "eu": "HD bibrazioa (RenHDrum)",
+    "fr": "Vibration HD (RenHDrum)",
+    "de": "HD-Vibration (RenHDrum)",
+    "it": "Vibrazione HD (RenHDrum)",
+    "pt": "Vibração HD (RenHDrum)",
+    "pt-BR": "Vibração HD (RenHDrum)",
+    "nl": "HD-trilling (RenHDrum)",
+    "pl": "Wibracje HD (RenHDrum)",
+    "tr": "HD titreşim (RenHDrum)",
+    "ru": "HD-вибрация (RenHDrum)",
+    "uk": "HD-вібрація (RenHDrum)",
+    "ja": "HD振動（RenHDrum）",
+    "ko": "HD 진동 (RenHDrum)",
+    "zh-Hans": "HD 振动（RenHDrum）",
+    "zh-Hant": "HD 震動（RenHDrum）",
+    "th": "การสั่น HD (RenHDrum)",
+}
+
+T["UI_MENU_RENHDRUM_DESC"] = {
+    "es": "Reproduce la vibración HD del propio juego en el DualSense, Pro Controller, Xbox One S o Steam Controller del jugador 1 mediante RenHDrum, que se descarga de su versión oficial al activarla. Se aplica en el siguiente arranque.",
+    "es-419": "Reproduce la vibración HD del propio juego en el DualSense, Pro Controller, Xbox One S o Steam Controller del jugador 1 mediante RenHDrum, que se descarga de su versión oficial al activarla. Se aplica en el siguiente inicio.",
+    "ca": "Reprodueix la vibració HD del joc al DualSense, Pro Controller, Xbox One S o Steam Controller del jugador 1 mitjançant RenHDrum, que es baixa de la seva versió oficial en activar-la. S'aplica en el següent inici.",
+    "gl": "Reproduce a vibración HD do propio xogo no DualSense, Pro Controller, Xbox One S ou Steam Controller do xogador 1 mediante RenHDrum, que se descarga da súa versión oficial ao activala. Aplícase no seguinte arranque.",
+    "eu": "Jokoaren beraren HD bibrazioa 1. jokalariaren DualSense, Pro Controller, Xbox One S edo Steam Controller-ean jotzen du RenHDrum bidez, aktibatzean bertsio ofizialetik deskargatzen dena. Hurrengo abiaraztean aplikatzen da.",
+    "fr": "Joue la vibration HD du jeu sur la DualSense, la Pro Controller, la manette Xbox One S ou la Steam Controller du joueur 1 grâce à RenHDrum, téléchargé depuis sa version officielle quand vous l'activez. S'applique au prochain démarrage.",
+    "de": "Gibt die HD-Vibration des Spiels auf dem DualSense, Pro Controller, Xbox One S oder Steam Controller von Spieler 1 über RenHDrum wieder, das beim Einschalten aus seiner offiziellen Version heruntergeladen wird. Wirkt beim nächsten Start.",
+    "it": "Riproduce la vibrazione HD del gioco sul DualSense, Pro Controller, Xbox One S o Steam Controller del giocatore 1 tramite RenHDrum, scaricato dalla sua versione ufficiale quando la attivi. Si applica al prossimo avvio.",
+    "pt": "Reproduz a vibração HD do próprio jogo no DualSense, Pro Controller, Xbox One S ou Steam Controller do jogador 1 através do RenHDrum, transferido da sua versão oficial ao ativá-la. Aplica-se no próximo arranque.",
+    "pt-BR": "Reproduz a vibração HD do próprio jogo no DualSense, Pro Controller, Xbox One S ou Steam Controller do jogador 1 por meio do RenHDrum, baixado da versão oficial ao ativá-la. Aplica-se na próxima inicialização.",
+    "nl": "Speelt de eigen HD-trilling van het spel af op de DualSense, Pro Controller, Xbox One S of Steam Controller van speler 1 via RenHDrum, dat bij inschakelen van zijn officiële release wordt gedownload. Werkt bij de volgende start.",
+    "pl": "Odtwarza wibracje HD gry na kontrolerze DualSense, Pro Controller, Xbox One S lub Steam Controller gracza 1 przez RenHDrum, pobierany z oficjalnego wydania po włączeniu. Działa od następnego uruchomienia.",
+    "tr": "Oyunun kendi HD titreşimini 1. oyuncunun DualSense, Pro Controller, Xbox One S veya Steam Controller'ında RenHDrum ile oynatır; açtığınızda resmi sürümünden indirilir. Bir sonraki başlatmada uygulanır.",
+    "ru": "Воспроизводит HD-вибрацию самой игры на DualSense, Pro Controller, Xbox One S или Steam Controller игрока 1 через RenHDrum, который загружается из официального выпуска при включении. Применяется при следующем запуске.",
+    "uk": "Відтворює HD-вібрацію самої гри на DualSense, Pro Controller, Xbox One S або Steam Controller гравця 1 через RenHDrum, який завантажується з офіційного випуску під час увімкнення. Застосовується під час наступного запуску.",
+    "ja": "ゲーム本来のHD振動を、RenHDrumを通じてプレイヤー1のDualSense、Proコントローラー、Xbox One S、Steamコントローラーで再生します。オンにすると公式リリースからダウンロードされます。次回の起動時に適用されます。",
+    "ko": "게임 자체의 HD 진동을 RenHDrum을 통해 플레이어 1의 DualSense, Pro 컨트롤러, Xbox One S 또는 Steam 컨트롤러에서 재생합니다. 켜면 공식 릴리스에서 다운로드됩니다. 다음 실행 시 적용됩니다.",
+    "zh-Hans": "通过 RenHDrum 在玩家 1 的 DualSense、Pro 手柄、Xbox One S 或 Steam 手柄上播放游戏自带的 HD 振动；开启时会从其官方版本下载。下次启动时生效。",
+    "zh-Hant": "透過 RenHDrum 在玩家 1 的 DualSense、Pro 控制器、Xbox One S 或 Steam 控制器上播放遊戲本身的 HD 震動；開啟時會從其官方版本下載。下次啟動時生效。",
+    "th": "เล่นการสั่น HD ของเกมบน DualSense, Pro Controller, Xbox One S หรือ Steam Controller ของผู้เล่น 1 ผ่าน RenHDrum ซึ่งจะดาวน์โหลดจากรุ่นทางการเมื่อเปิดใช้ มีผลเมื่อเริ่มเกมครั้งถัดไป",
+}
+
 
 def main():
     # catalog.py's own reader and writer: a long English id is wrapped over several lines in the .po, which a
