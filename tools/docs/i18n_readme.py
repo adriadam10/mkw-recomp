@@ -24,7 +24,7 @@ REPO = "https://github.com/adriadam10/mkw-recomp"
 # (code, name in its own language, right to left)
 LANGS = [("zh-CN", "简体中文", False), ("es", "Español", False), ("ar", "العربية", True), ("hi", "हिन्दी", False),
          ("pt-BR", "Português (Brasil)", False), ("pt-PT", "Português (Portugal)", False),
-         ("de", "Deutsch", False)]  # fmt: skip
+         ("de", "Deutsch", False), ("vi", "Tiếng Việt", False)]  # fmt: skip
 # per language: tagline, download, latest for Windows / Linux (AppImage) / Linux ARM, and the link row's names
 # fmt: off
 STRINGS = {
@@ -55,6 +55,10 @@ STRINGS = {
            "Download", "neueste für Windows", "neueste für Linux (AppImage)", "neueste für Linux ARM",
            ["Releases", "Hilfe-Wiki", "Discord", "Änderungen", "Mitwirken", "Quellen", "Roadmap", "Leistung", "Issues", "Discussions",
             "Archiv"]),
+    "vi": ("Mario Kart World (Nintendo Switch 2) được biên dịch lại để chạy nguyên bản trên Linux và Windows.",
+           "Tải xuống", "bản mới nhất cho Windows", "bản mới nhất cho Linux (AppImage)", "bản mới nhất cho Linux ARM",
+           ["Bản phát hành", "Wiki trợ giúp", "Discord", "Nhật ký thay đổi", "Đóng góp", "Nguồn", "Lộ trình", "Hiệu năng", "Vấn đề", "Thảo luận",
+            "Lưu trữ"]),
 }
 # fmt: on
 LINKS = [

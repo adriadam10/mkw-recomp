@@ -35,7 +35,8 @@
   <a href="docs/i18n/README.hi.md">हिन्दी</a> ·
   <a href="docs/i18n/README.pt-BR.md">Português (Brasil)</a> ·
   <a href="docs/i18n/README.pt-PT.md">Português (Portugal)</a> ·
-  <a href="docs/i18n/README.de.md">Deutsch</a>
+  <a href="docs/i18n/README.de.md">Deutsch</a> ·
+  <a href="docs/i18n/README.vi.md">Tiếng Việt</a>
 </p>
 <!-- i18n-bar:end -->
 
