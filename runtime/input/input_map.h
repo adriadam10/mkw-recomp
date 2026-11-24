@@ -1,6 +1,6 @@
 // Keyboard, mouse and gamepad bindings, free of any window system: the tables map platform-neutral key and pad ids to
 // Switch actions. input_sdl.c translates SDL scancodes and buttons to these ids (one place). The remapping rows of the menu's Controls tab (ui/menu/binds_page.cpp) edits a copy of the tables and writes
-// the bind_ lines; input_sdl.c applies changed lines while the game runs. Layout in docs/controls.md.
+// the bind_ lines; input_sdl.c applies changed lines while the game runs. Layout in runtime/input/README.md.
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
@@ -57,7 +57,7 @@ typedef struct InputMap {
     int npads[PAD_LAYOUT_COUNT];
 } InputMap;
 
-// The tables in effect. Defaults are the layout in docs/controls.md; input_map_reset restores them.
+// The tables in effect. Defaults are the layout in runtime/input/README.md; input_map_reset restores them.
 extern InputMap input_map;
 
 void input_map_reset(void);

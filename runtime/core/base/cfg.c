@@ -1,4 +1,4 @@
-// mkw.ini: file-backed defaults for the MKW_* environment variables (docs/controls.md, mkw.ini.example).
+// mkw.ini: file-backed defaults for the MKW_* environment variables (the keyboard layout: runtime/input/README.md; each setting: the table below).
 // Format: "key = value" lines, '#' or ';' at the start of a line begins a comment, [sections] only group. A key is a
 // variable name without "MKW_" (an optional MKW_ prefix is accepted), case-insensitive. A value is the rest of the
 // line, trimmed, optionally in double quotes; an empty value counts as unset. The environment wins over the file.
@@ -33,7 +33,7 @@ static int save_ok = 1;                         // the last cfg_save_to wrote (o
 // One row per name the runtime reads (and the patch sets in generated/), without the prefix. A file key outside the
 // table is logged as unknown, so a new variable gets its row here. S: a setting the menu shows (CfgMeta: the value in
 // effect when the key is unset, what the key accepts, whether it applies at once) and the mkw.ini section cfg_set
-// writes it to when the file lacks it (mkw.ini.example's sections; NULL: none). The only place a default lives:
+// writes it to when the file lacks it (mkw.ini's section names; NULL: none). The only place a default lives:
 // consumers read cfg_value / cfg_int / cfg_double / cfg_bool. A row with an empty default has no fixed value (it
 // depends on the machine); its consumer reads cfg_get and keeps an "unset" branch. K: a key with no menu row (add it in
 // alphabetical order, one per line, so two additions rarely meet); KS: the same with an ini section.

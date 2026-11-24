@@ -2,7 +2,7 @@
 // merged into Switch npad button bits and stick axes. Button order follows libnx HidNpadButton (ISC). The key and pad
 // bindings are the tables in input_map.c (mkw.ini overrides them). The keyboard and the mouse come from the window
 // system's back end (input_wsys.h: input_sdl.c), which also owns the cursor capture.
-// Keys and their map: docs/controls.md.
+// Keys and their map: runtime/input/README.md.
 // The gamepad also rumbles (input_rumble) and, when it has a gyro and an accelerometer, feeds the six-axis sensor from a
 // thread of its own (input_motion_start). Every SDL call on the gamepad is made under `lock`.
 #include <math.h>
