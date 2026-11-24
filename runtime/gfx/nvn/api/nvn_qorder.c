@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cfg.h"
 #include "gfx.h"
 #include "host.h"
 #include "nvn_api.h"
@@ -47,12 +48,23 @@ static int nslots;
 static struct { uint8_t *b; size_t n, cap; const void *queue; } out;   // the episode's stream
 static uint64_t st_waits, st_unmet, st_episodes, st_held, st_forced, st_cpu, st_bytes;
 
+// MKW_QUEUE_WAITS=auto (the default stays 1): the order only while more than one view is drawn, a census otherwise. The
+// order is there for split screen (above); with one player it costs the frame on a 4-core CPU: Steam Deck, 24-kart
+// race, MKW_QUEUE_WAITS=ab in one run and its inverted twin (q15-ab, q15-abi, 24/11/2026): +1.84 ms a frame with the
+// order on (means, scene balanced; +2.10 medians), with the GPU clocks held, so not #496's clock. The views are the
+// shadow-map runs MKW_SHADOW_DRAWS counts (vk_exec_draw.c: one per player's view), published by the replay thread:
+// unknown starts ordered, a frame without a run keeps the last choice, 60 frames in a row with one run leave the
+// order and a second run in a frame brings it back at once. The choice never changes while an episode is open.
+static int player_views = 2;
+void nvn_qorder_views(int views) { __atomic_store_n(&player_views, views, __ATOMIC_RELAXED); }
+
 static int mode(void) {
     static int m = -1;
     if (m < 0) {
-        m = rt_knob("QUEUE_WAITS", "1");
+        const char *e = cfg_get("MKW_QUEUE_WAITS");
+        m = e && !strcmp(e, "auto") ? 3 : rt_knob("QUEUE_WAITS", "1");
         rt_log("nvn: the queues' work ordered by their event waits%s (MKW_QUEUE_WAITS)",
-               !m ? ": off, a census only" : m == 2 ? " in the B blocks" : "");
+               !m ? ": off, a census only" : m == 3 ? " with multiple views (auto)" : m == 2 ? " in the B blocks" : "");
     }
     return m;
 }
@@ -252,7 +264,11 @@ int nvn_qorder_submit(const void *queue, const uint64_t *handles, int n, void **
     int m = mode(), held = 0;
     plat_mutex_lock(&qo);
     log_line();
-    if (!RT_KNOB_ON(m)) {
+    // Never change auto's choice during an open episode: finish its held work in order first.
+    static int auto_order = 1;
+    if (m == 3 && !nslots) auto_order = __atomic_load_n(&player_views, __ATOMIC_RELAXED) > 1;
+    int order = m == 3 ? auto_order : RT_KNOB_ON(m);
+    if (!order) {
         if (nslots) force();   // (the B block ended)
         if (nvn_sub_events || nvn_sub_waits)
             for (int i = 0; i < n; i++) {

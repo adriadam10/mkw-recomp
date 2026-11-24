@@ -564,10 +564,16 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
     static uint64_t sh_frame, sh_hist[10], sh_frames;
     static int sh_runs, sh_was, sh_nmaps, sh_prev_maps;
     static const void *sh_maps[8];
+    static int qo_few;   // same sticky view census for MKW_QUEUE_WAITS=auto
     static int sh_many, sh_few;   // auto: 3+ views seen (sticky), and frames since with 1 to auto_runs-1 runs
     if (vk_exec_presented != sh_frame) {   // a new frame: the last one's counts decide this one
         if (sh_frame) {
             sh_prev_maps = sh_nmaps;
+            if (sh_runs > 1) qo_few = 0, nvn_qorder_views(sh_runs);
+            else if (sh_runs == 1 && ++qo_few >= 60) {
+                qo_few = 60;
+                nvn_qorder_views(1);
+            }
             // A frame with fewer runs (a camera cut, a frame that does not redraw the map) must not draw the shadows
             // for one frame between frames without them: a flicker. Back to drawing them only after 60 frames in a
             // row with 1 or 2 runs; frames without any leave it as it is.
@@ -587,7 +593,11 @@ int prepare_draw_ex(VkExec *ex, int prim, int32_t count, int restart, int mesh) 
         sh_frame = vk_exec_presented, sh_runs = 0, sh_nmaps = 0, sh_was = 0;
     }
     if (is_shadow) {
-        if (!sh_was) sh_runs++;
+        if (!sh_was) {
+            sh_runs++;
+            // Publish a second view as soon as observed, including before the next present.
+            if (sh_runs > 1) qo_few = 0, nvn_qorder_views(sh_runs);
+        }
         int k = 0;
         while (k < sh_nmaps && sh_maps[k] != (const void *)ex->rt.depth) k++;
         if (k == sh_nmaps && sh_nmaps < 8) sh_maps[sh_nmaps++] = ex->rt.depth;

@@ -96,6 +96,7 @@ void nvn_event_cpu_signal(volatile uint32_t *val);   // nvnEventSignal: nvn_qord
 // end as it is; 1, it waits for another queue's work and is held (*fe: nvn_qorder_attach it to the back end's slot).
 int nvn_qorder_submit(const void *queue, const uint64_t *handles, int n, void **fe);
 void nvn_qorder_attach(void *fe, void *slot);
+void nvn_qorder_views(int views);   // replay: shadow-map runs, MKW_QUEUE_WAITS=auto
 uint64_t nvn_stream_handle(const uint8_t *ops, size_t n);   // nvn_api_cmd.c: a replay-only recording of these ops
 typedef struct { uint64_t type, addr; } p_report_counter;  // OP_REPORT_COUNTER: NVNcounterType, NVNcounterData address
 typedef struct { uint64_t type; } p_reset_counter;         // OP_RESET_COUNTER
