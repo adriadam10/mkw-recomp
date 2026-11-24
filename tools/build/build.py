@@ -125,7 +125,10 @@ LINUX = Target(
     "clang", "clang++", "llvm-ar", ROOT / "build/mkw",
     ["-D_GNU_SOURCE"],
     # -no-pie: the function tables (hundreds of thousands of pointers) need no load-time relocation.
-    ["-fuse-ld=lld", "-no-pie", "-Wl,-z,noexecstack", "-Wl,-Map=$builddir/mkw.map"],
+    # -rpath $ORIGIN/lib: ./mkw finds the lib/ beside it (libvpx.so.6, SDL3 ...) without the AppRun's LD_LIBRARY_PATH, as a
+    # launcher that unpacks the AppImage and runs mkw itself does (#825, #839, #840: code 127 on a distro without libvpx.so.6).
+    # Quoted for the shell, $$ for ninja; LD_LIBRARY_PATH still comes first (a RUNPATH, not an RPATH).
+    ["-fuse-ld=lld", "-no-pie", "-Wl,-z,noexecstack", "-Wl,-Map=$builddir/mkw.map", "'-Wl,-rpath,$$ORIGIN/lib'"],
     ["-lvulkan", "-lSDL3", "-lopus", "-lvpx", "-lzstd", "-l:libstdc++.a", "-lm", "-lpthread", "-ldl"],
     ROOT / "scratchpad/vma",  # vk_mem_alloc.h 3.4.0 (AUR only on Arch); fetched as in tools/build/README.md
 )  # fmt: skip
