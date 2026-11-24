@@ -429,9 +429,11 @@ static void hack_listening(int on[3]) {
     on[HACK_KEY_FREEZE] = on[HACK_KEY_STEP] = cfg_bool("MKW_FREEZE_KEYS");
 }
 
+// `b` is the controller's own buttons, never the merged input: a keyboard key, a script or a recording mapped to Minus+ZR
+// does not fire a hack. With the menu open nothing listens: the latches clear and the menu keeps every button.
 static void hack_gate(uint64_t *b) {
-    int on[3];
-    hack_listening(on);
+    int on[3] = {0, 0, 0};
+    if (!menu_is_open()) hack_listening(on);
     plat_xchg32(&hack_keys, (int32_t)input_hack_gate(hack_latch, b, on));
     hack_seen_ns = plat_now_ns();
 }
@@ -463,7 +465,9 @@ static void poll_merged(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx
         int32_t pl[2] = {0, 0}, pr[2] = {0, 0};
         if (state == 1) {
             pad_read(&pb, pl, pr);
-            b = pb, sl[0] = pl[0], sl[1] = pl[1], sr[0] = pr[0], sr[1] = pr[1];
+            uint64_t pg = pb;   // the pad's buttons less a hack pair (input_hack_gate); pb stays whole for the icons below
+            hack_gate(&pg);
+            b = pg,sl[0] = pl[0], sl[1] = pl[1], sr[0] = pr[0], sr[1] = pr[1];
         }
         uint64_t kb = 0;
         if (ikb_foreground() && kbm_get()) {
@@ -507,7 +511,6 @@ static void poll_merged(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx
     // A plugin's filter first (MkwPluginApi.input_filter): what it takes reaches neither the shortcut below nor the game
     plugins_input_filter(0, &b, st, &guide);
     int toggle = input_menu_gate(&combo_held, menu_is_open(), &b, st, guide);
-    hack_gate(&b);   // after the menu's: an open menu leaves nothing to latch
     static int overlay_held;   // L3+R3 step the performance overlay (F10)
     int overlay = input_overlay_gate(&overlay_held, &b);
     sl[0] = st[0], sl[1] = st[1], sr[0] = st[2], sr[1] = st[3];
