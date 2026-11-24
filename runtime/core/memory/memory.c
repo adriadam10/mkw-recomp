@@ -911,6 +911,35 @@ uint32_t mem_query(uint64_t a, RtMemoryInfo *out) {
     return R_OK;
 }
 
+// For the runtime's own reads through a pointer it does not trust (patches.c's UI hooks): 1 when every byte of
+// [a, a+n) is in the game's heap below its size or in mapped pages of the alias region, in no moved stack's source and
+// on no trapped page, from this file's books, with no system call. Those pages are committed, or committed by
+// lazy_fault on a first read (Windows), as for the game's own reads. A moved stack's source has no access and no fault
+// gives it back (stack_move). A trapped page (Linux) stays with the platform's test, as before: it refuses the
+// no-access ones (read traps, early reads' watches, spilled pages), where a read would fill the page or wait for the
+// GPU, and accepts a base's read-only page. Only the pages of the range are looked at: mem_query also measures the
+// whole run around a, which in the alias region means scanning its map. 0 means these books cannot vouch for the
+// range (the kernel region, a module, the host's memory, a trap): ask the platform there (plat_mem_readable).
+int mem_guest_readable(uint64_t a, uint64_t n) {
+    if (!n) n = 1;
+    int ok = 0;
+    plat_mutex_lock_shared(&lock);
+    if (inside(a, n, (RtRange){L.heap.base, heap_size})) {
+        ok = 1;
+    } else if (inside(a, n, L.alias)) {
+        ok = 1;
+        for (uint64_t p = (a - L.alias.base) / PAGE, e = (a + n - 1 - L.alias.base) / PAGE; ok && p <= e; p++)
+            ok = alias_pages[p] != 0;
+    }
+    for (unsigned i = 0; ok && i < nstack_maps; i++) ok = !overlaps(a, n, stack_maps[i].src, stack_maps[i].size);
+    plat_mutex_unlock_shared(&lock);
+    // the trap map changes under frz_lock: a page trapped after this look faults on the read and is filled, as when the
+    // platform's test came before a trap (the heap and the alias region are below RT_ADDRESS_LIMIT, the map's end)
+    for (uint64_t p = a / PAGE, e = (a + n - 1) / PAGE; ok && trapped && p <= e; p++)
+        ok = !__atomic_load_n(&trapped[p], __ATOMIC_RELAXED);
+    return ok;
+}
+
 // ---- GetInfo memory ids
 int mem_info(uint32_t id, uint64_t *out) {
     uint64_t v;

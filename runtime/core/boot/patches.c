@@ -367,6 +367,87 @@ static int is_16x9(const float *m) {
     return d < 0.008f && d > -0.008f;
 }
 
+// Whether the UI hooks may read what they are handed. ui_full_screen, ui_tall_backdrop and host_ui_proj test x22 and
+// x23 on every 2D draw setup of an output that is not 16:9, a pane's or not, before reading the pane's first 0xa0 or
+// 0xe0 bytes. The platform's test (plat_mem_readable) is a VirtualQuery on Windows, which walks the page tables from
+// that page to the end of its committed run (a bench of ours: 5 us for 2 MiB, 195 us for 64 MiB, 7.2 ms for 1 GiB)
+// inside the reservation the replay thread's GetWriteWatch reads, and the two contend. A pane is a nn::ui2d object in
+// the game's memory, which memory.c's books answer with no system call (mem_guest_readable); the platform is asked
+// only where they cannot vouch for the range. Windows, 1.8.0 at 3440x1440, a session of two races with MKW_AB=10
+// (25/11/2026): about 3 800 checks a second, whose VirtualQuery calls took 0.49 s of the game's threads a second;
+// with the books, GetWriteWatch took 11 us a query instead of 81 (the same ~175 queries a race frame) and the replay
+// 9.0 ms a race frame instead of 21.1. In check mode (the title, then a Grand Prix) the books answered all 2.9 million
+// checks, the same as the platform each time.
+// MKW_UI_PANE_MAP (default 1; "ab": the books in the MKW_AB B blocks only): 0 asks the platform every time, as before;
+// check asks both and keeps the platform's answer, counting where they differ. With MKW_TRACE=perf, or in check mode,
+// a line every 10 s counts the checks, those the books answered and the platform's calls with their time.
+enum { PANE_CHECKS, PANE_BOOKS, PANE_ASKED, PANE_ASK_NS, PANE_ASK_MAX_NS, PANE_BOOKS_ONLY, PANE_PLAT_ONLY, PANE_STATS };
+static volatile int64_t pane_stat[2][PANE_STATS];   // [rt_ab()]
+static volatile int64_t pane_report_ns;              // plat_now_ns of the last line, 0 before the first check
+static volatile int pane_mode_v = -1;                // 0, 1, 2 (ab), 3 (check)
+
+static int pane_mode(void) {
+    int m = __atomic_load_n(&pane_mode_v, __ATOMIC_ACQUIRE);
+    if (m >= 0) return m;
+    const char *e = cfg_get("MKW_UI_PANE_MAP");
+    m = e && !strcmp(e, "check") ? 3 : rt_knob("UI_PANE_MAP", "1");
+    int unset = -1;
+    if (!__atomic_compare_exchange_n(&pane_mode_v, &unset, m, 0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) return unset;
+    if (e && *e && strcmp(e, "0") && strcmp(e, "1") && strcmp(e, "ab") && strcmp(e, "check"))
+        rt_log("patches: MKW_UI_PANE_MAP=%s is not 0, 1, ab or check: 1", e);
+    if (m != 1)
+        rt_log("patches: UI pane checks by %s (MKW_UI_PANE_MAP)", m == 0 ? "the platform"
+                                                                  : m == 2 ? "the game's books in the B blocks"
+                                                                           : "both, the platform's answer kept");
+    return m;
+}
+
+static void pane_report(void) {
+    int64_t now = (int64_t)plat_now_ns(), last = __atomic_load_n(&pane_report_ns, __ATOMIC_RELAXED);
+    if (last && now - last < 10000000000ll) return;
+    if (!__atomic_compare_exchange_n(&pane_report_ns, &last, now, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED) || !last)
+        return;
+    const char *ab = cfg_get("MKW_AB");
+    int ab_on = ab && atof(ab) > 0;   // the lines name the blocks
+    for (int b = 0; b < 2; b++) {
+        int64_t v[PANE_STATS];
+        for (int k = 0; k < PANE_STATS; k++) v[k] = plat_xchg64(&pane_stat[b][k], 0);
+        if (!v[PANE_CHECKS]) continue;
+        char differ[96] = "";
+        if (pane_mode() == 3)
+            snprintf(differ, sizeof differ, "; readable to the books only %lld, to the platform only %lld",
+                     (long long)v[PANE_BOOKS_ONLY], (long long)v[PANE_PLAT_ONLY]);
+        rt_log("patches: UI pane checks%s in %.1f s: %lld, %lld by the game's books, %lld asked the platform (%.2f ms, "
+               "max %.0f us)%s",
+               ab_on ? (b ? " (B blocks)" : " (A blocks)") : "", (now - last) / 1e9, (long long)v[PANE_CHECKS],
+               (long long)v[PANE_BOOKS], (long long)v[PANE_ASKED], v[PANE_ASK_NS] / 1e6, v[PANE_ASK_MAX_NS] / 1e3,
+               differ);
+    }
+}
+
+static int pane_readable(uint64_t a, uint64_t n) {
+    if (a + n < a) return 0;   // past 2^64: Linux's plat_mem_readable says 1 to such a range (its loop never runs)
+    int mode = pane_mode();
+    if (mode != 3 && !(rt_trace & RT_TRACE_PERF))
+        return (RT_KNOB_ON(mode) && mem_guest_readable(a, n)) || plat_mem_readable(a, n);
+    int b = rt_ab(), books = (mode == 3 || (mode == 2 ? b : mode)) && mem_guest_readable(a, n), plat = 0;
+    volatile int64_t *s = pane_stat[b];
+    if (mode == 3 || !books) {
+        uint64_t t0 = plat_now_ns();
+        plat = plat_mem_readable(a, n);
+        int64_t ns = (int64_t)(plat_now_ns() - t0), max = __atomic_load_n(&s[PANE_ASK_MAX_NS], __ATOMIC_RELAXED);
+        plat_inc64(&s[PANE_ASKED]);
+        plat_add64(&s[PANE_ASK_NS], ns);
+        while (ns > max && !__atomic_compare_exchange_n(&s[PANE_ASK_MAX_NS], &max, ns, 1, __ATOMIC_RELAXED,
+                                                        __ATOMIC_RELAXED)) {}
+    }
+    plat_inc64(&s[PANE_CHECKS]);
+    if (books) plat_inc64(&s[PANE_BOOKS]);
+    if (mode == 3 && books != plat) plat_inc64(&s[books ? PANE_BOOKS_ONLY : PANE_PLAT_ONLY]);
+    pane_report();
+    return mode == 3 ? plat : books || plat;
+}
+
 // The pane whose material host_ui_proj sets up: the panes' draws (main+0x16ac070...) pass its global matrix (pane +
 // 0x70) and its size (pane + 0x50) as the setup's x5 and x6, which keeps them in x23 and x22; the text setup
 // (main+0x169ada0, returning to main+0x169aeb4) holds the pane itself in x21 (uw15-split: the HUD's digits stayed
@@ -377,7 +458,7 @@ static int ui_full_screen(const Cpu *c, float *tx) {
     int text = rt_version()->ui_text_lr && c->x[30] == rt_main_addr(rt_version()->ui_text_lr);
     uint64_t mtx = text ? c->x[21] + 0x70 : c->x[23], size = text ? c->x[21] + 0x50 : c->x[22], pane = mtx - 0x70;
     *tx = 0;
-    if (size != mtx - 0x20 || (mtx & 3) || mtx < 0x70 || !plat_mem_readable(pane, 0xa0)) return -1;
+    if (size != mtx - 0x20 || (mtx & 3) || mtx < 0x70 || !pane_readable(pane, 0xa0)) return -1;
     const float *g = (const float *)(uintptr_t)mtx, *sz = (const float *)(uintptr_t)size;
     float w = fabsf(g[0] * sz[0]), h = fabsf(g[5] * sz[1]);
     *tx = g[3];
@@ -400,7 +481,7 @@ static int ui_tall_backdrop(const Cpu *c) {
     if (!(aspect_scale > 0 && aspect_scale < 1)) return 0;
     uint64_t mtx = c->x[23];
     if (mtx < 0x70 || (mtx & 3) || c->x[22] != mtx - 0x20 ||
-        !plat_mem_readable(mtx - 0x70, 0xe0)) return 0;
+        !pane_readable(mtx - 0x70, 0xe0)) return 0;
     const float *sz = (const float *)(uintptr_t)c->x[22];
     const char *name = (const char *)(uintptr_t)(mtx + 0x40);
     if (fabsf(sz[0] - 1080) < 0.01f && fabsf(sz[1] - 1080) < 0.01f && !memcmp(name, "P_BG_00", 8)) return 1;
@@ -991,7 +1072,7 @@ static void host_ui_proj(Cpu *c) {
     if ((full == 1 || ui_tall_backdrop(c)) && !ov_movie_playing()) {
         if (aspect_scale < 1) m[5] /= aspect_scale, m[7] /= aspect_scale;
         else m[0] *= aspect_scale, m[3] *= aspect_scale;
-    } else if (full == 0 && aspect_scale > 1 && c->x[22] == c->x[23] - 0x20 && plat_mem_readable(c->x[23] - 0x70, 0xe0) &&
+    } else if (full == 0 && aspect_scale > 1 && c->x[22] == c->x[23] - 0x20 && pane_readable(c->x[23] - 0x70, 0xe0) &&
                ui_mask_mark(c->x[23] - 0x70, 0)) {
         m[0] *= aspect_scale, m[3] *= aspect_scale;   // a list mask placed by host_pane_matrix: drawn wide, where it was
     }

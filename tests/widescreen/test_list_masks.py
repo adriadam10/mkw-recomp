@@ -60,7 +60,7 @@ static int ov_movie_playing(void) { return movie; }
 static int seqwatch_probe(void) { return 0; }
 static void rt_log(const char *fmt, ...) { (void)fmt; }
 static unsigned char anc[4][0xe0], parent[0xe0], pane[0xe0], icon[0xe0];
-static int plat_mem_readable(uint64_t p, size_t n) {
+static int pane_readable(uint64_t p, uint64_t n) {
     return p >= (uint64_t)(uintptr_t)pane && p + n <= (uint64_t)(uintptr_t)(pane + sizeof pane);
 }
 static float built[12];

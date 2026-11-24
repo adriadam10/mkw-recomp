@@ -431,7 +431,9 @@ static void bench(const RtModule *mods, int n) {
     if (total) printf("lookup: %.1f ns per function start (address order)\n", dt * 1e9 / (double)total);
 }
 
-// Memory SVCs without modules: heap, physical memory in the alias region, a stack move, QueryMemory, GetInfo.
+// Memory SVCs without modules: heap, physical memory in the alias region, a stack move, QueryMemory, GetInfo; and at
+// each step what memory.c's books vouch for (mem_guest_readable, patches.c's UI hooks): never a moved stack's source,
+// unmapped alias pages or host memory.
 static void check_memory(void) {
     const RtGuestLayout *g = mem_layout();
     RtMemoryInfo q;
@@ -441,6 +443,9 @@ static void check_memory(void) {
     memset((void *)(uintptr_t)heap, 0xAB, 0x400000);
     mem_query(heap + 0x1000, &q);
     CHECK(q.base == heap && q.size == 0x400000 && q.state == 5 && q.perm == 3, "QueryMemory on the heap");
+    CHECK(mem_guest_readable(heap, 0x400000) && mem_guest_readable(heap + 0x3fffff, 0) &&
+              !mem_guest_readable(heap + 0x3fff80, 0x100) && !mem_guest_readable(heap + 0x400000, 1),
+          "the books (mem_guest_readable) do not end at the heap's size");
     CHECK(mem_set_heap_size(0x300000, &heap) != 0, "SetHeapSize accepts a size that is not a 2 MiB multiple");
 
     uint64_t a = g->alias.base + 0x100000;
@@ -450,6 +455,9 @@ static void check_memory(void) {
           "MapPhysicalMemory over a mapped range lost its contents");
     mem_query(a, &q);
     CHECK(q.base == a - 0x4000 && q.size == 0x20000 && q.state == 5, "QueryMemory on mapped alias pages");
+    CHECK(mem_guest_readable(a - 0x4000, 0x20000) && !mem_guest_readable(a - 0x4010, 0x20) &&
+              !mem_guest_readable(a + 0x1c000 - 0x10, 0x20),
+          "the books (mem_guest_readable) do not end at the mapped alias pages");
     mem_info(7, &v);
     CHECK(v == 0x400000 + 0x20000, "GetInfo 7 (used memory) %#llx", (unsigned long long)v);
 
@@ -461,12 +469,16 @@ static void check_memory(void) {
     CHECK(q.base == stack && q.size == 0x4000 && q.state == 0xB, "QueryMemory on a moved stack");
     mem_query(a, &q);
     CHECK(q.base == a && q.state == 5 && q.perm == 0, "QueryMemory on a moved stack's source");
+    CHECK(!mem_guest_readable(a, 8) && !mem_guest_readable(a + 0x3ff0, 0x20) && mem_guest_readable(a + 0x4000, 0x100),
+          "the books (mem_guest_readable) vouch for a moved stack's source");
     CHECK(mem_unmap_physical(a, 0x4000) != 0, "UnmapPhysicalMemory under a moved stack");
     CHECK(mem_unmap(stack, a, 0x4000) == 0 && LD64(a + 0x10) == 0x5678, "UnmapMemory did not copy the stack back");
+    CHECK(mem_guest_readable(a, 0x4000), "the books (mem_guest_readable) left out a stack's source after UnmapMemory");
 
     CHECK(mem_unmap_physical(a - 0x4000, 0x20000) == 0, "UnmapPhysicalMemory");
     mem_query(a, &q);
     CHECK(q.state == 0 && q.base == g->alias.base && q.size == g->alias.size, "QueryMemory on the free alias region");
+    CHECK(!mem_guest_readable(a, 1), "the books (mem_guest_readable) vouch for unmapped alias pages");
     CHECK(mem_map_physical(a, 0x1000) == 0 && LD64(a + 0x10) == 0 && mem_unmap_physical(a, 0x1000) == 0,
           "remapped physical memory is not zeroed");
     // More than the whole pool (MKW's 9.6 GiB; TotK's test mapped 4 GiB), inside the 64 GiB alias region.
@@ -477,8 +489,13 @@ static void check_memory(void) {
     CHECK(q.state == 0x10 && q.base == RT_HOSTFN_BASE, "QueryMemory on the host-function window");
     mem_query(g->alias.base + g->alias.size + 0x1000, &q);
     CHECK(q.state == 3 && q.base == g->alias.base + g->alias.size, "QueryMemory on host memory");
+    CHECK(!mem_guest_readable(RT_HOSTFN_BASE + 0x40, 8) && !mem_guest_readable(g->alias.base + g->alias.size, 8) &&
+              !mem_guest_readable(~0ull - 0x10, 0x100),
+          "the books (mem_guest_readable) vouch for host memory");
     CHECK(mem_set_heap_size(0, &heap) == 0, "SetHeapSize 0");
-    printf("memory: heap, physical memory, stack move, QueryMemory, GetInfo: %s\n", failures > before ? "FAIL" : "ok");
+    CHECK(!mem_guest_readable(g->heap.base, 1), "the books (mem_guest_readable) vouch for a freed heap");
+    printf("memory: heap, physical memory, stack move, QueryMemory, GetInfo, the books: %s\n",
+           failures > before ? "FAIL" : "ok");
 }
 
 static int selftest(void) {

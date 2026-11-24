@@ -18,7 +18,7 @@ def capture_strip(tmp_path_factory):
 #include "cpu/cpu.h"
 static float aspect_scale;
 static unsigned char pane[0xe0];
-static int plat_mem_readable(uint64_t p, size_t n) {
+static int pane_readable(uint64_t p, uint64_t n) {
     return p >= (uint64_t)(uintptr_t)pane && p + n <= (uint64_t)(uintptr_t)(pane + sizeof pane);
 }
 """
@@ -106,7 +106,7 @@ static int ov_movie_playing(void) { return movie; }
 static int seqwatch_probe(void) { return 0; }
 #define rt_log(...) ((void)0)
 static unsigned char pane[0xe0];
-static int plat_mem_readable(uint64_t p, size_t n) {
+static int pane_readable(uint64_t p, uint64_t n) {
     return p >= (uint64_t)(uintptr_t)pane && p + n <= (uint64_t)(uintptr_t)(pane + sizeof pane);
 }
 """

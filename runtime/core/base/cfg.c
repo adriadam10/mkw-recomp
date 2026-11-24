@@ -350,6 +350,7 @@ static const CfgRow rows[] = {
     K("TRACE_UBO"),
     K("TRACE_UBO_OUT"),
     K("UBO_SNAPSHOT"),
+    K("UI_PANE_MAP"),
     K("UPDATE_AS"),
     K("UPDATE_REPO"),
     K("USNAP_CMP"),
