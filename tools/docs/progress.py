@@ -41,7 +41,9 @@ SDK_PROC = re.compile(r'nvn2_use_sdk_proc\(const char \*name\) \{ return !strncm
 
 
 def runtime_source() -> str:
-    return "\n".join(p.read_text() for p in sorted((ROOT / "runtime").rglob("*.c")) if "third_party" not in p.parts)
+    return "\n".join(
+        p.read_text(encoding="utf-8") for p in sorted((ROOT / "runtime").rglob("*.c")) if "third_party" not in p.parts
+    )
 
 
 # ---- --update: the measured lists, from build/
@@ -153,7 +155,7 @@ def group_table(title: str, rows: dict[str, list[int]], limit: int = 25) -> list
 
 
 def emit(cog) -> None:
-    data = json.loads(DATA.read_text())
+    data = json.loads(DATA.read_text(encoding="utf-8"))
     src = runtime_source()
     impl = set(NVN_DEF.findall(src)) | {"nvnDeviceGetProcAddress"}  # (nvn_procs.c defines that one by hand)
     overrides = set(OVERRIDE.findall(src))
@@ -230,7 +232,7 @@ def main() -> None:
     if not args.update or not args.census:
         ap.error("nothing to do: --update --census FILE refreshes the measurements; cog renders the README block")
     data = measure(args.census)
-    DATA.write_text(json.dumps(data, indent=1, ensure_ascii=False, sort_keys=True) + "\n")
+    DATA.write_text(json.dumps(data, indent=1, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     counts = Counter({k: len(v) for k, v in data.items() if isinstance(v, (list, dict))})
     print(f"{DATA.relative_to(ROOT)}: {dict(counts)}")
 

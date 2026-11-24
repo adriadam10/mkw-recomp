@@ -22,7 +22,7 @@ TEXT = {".md", ".py", ".sh", ".tsv", ".c", ".h", ".cpp", ".inc", ".toml", ".txt"
 
 def read_map(path: Path, folder: Path) -> dict[str, str]:
     moves = {}
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         sub, *names = line.split()
@@ -60,8 +60,10 @@ def main() -> None:
     changed = {}
     for p in tracked_text():
         try:
-            s = p.read_text()
+            with p.open(encoding="utf-8", newline="") as f:  # as written: UTF-8, line endings kept
+                s = f.read()
         except UnicodeDecodeError:
+            print(f"mover: not UTF-8, its paths are not rewritten: {p.relative_to(ROOT)}")
             continue
         t = pat.sub(lambda m: f"{rel}/{moves[m.group(1)]}/{m.group(1)}", s)
         if t != s:
@@ -77,7 +79,8 @@ def main() -> None:
     for p, t in changed.items():
         if p.parent == folder and p.name in moves:  # a moved file that cites itself: written at its new place
             p = folder / moves[p.name] / p.name
-        p.write_text(t)
+        with p.open("w", encoding="utf-8", newline="") as f:
+            f.write(t)
 
 
 if __name__ == "__main__":
