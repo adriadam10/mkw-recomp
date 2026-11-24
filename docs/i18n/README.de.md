@@ -17,14 +17,15 @@
 <p align="center">
   <b><a href="https://github.com/adriadam10/mkw-recomp/releases">Releases</a></b> ·
   <b><a href="https://github.com/adriadam10/mkw-recomp/wiki">Hilfe-Wiki</a></b> ·
-  <b><a href="https://discord.gg/8uYBkjQkEg">Änderungen</a></b> ·
-  <a href="../../CHANGELOG.md">Mitwirken</a> ·
-  <a href="../../CONTRIBUTING.md">Quellen</a> ·
-  <a href="../../docs/project/research.md#sources">Roadmap</a> ·
-  <a href="../../docs/project/roadmap.md">Leistung</a> ·
-  <a href="../../docs/project/performance.md">Issues</a> ·
-  <a href="https://github.com/adriadam10/mkw-recomp/issues">Discussions</a> ·
-  <a href="https://github.com/adriadam10/mkw-recomp/discussions">Archiv</a>
+  <b><a href="https://discord.gg/8uYBkjQkEg">Discord</a></b> ·
+  <a href="../../CHANGELOG.md">Änderungen</a> ·
+  <a href="../../CONTRIBUTING.md">Mitwirken</a> ·
+  <a href="../../docs/project/research.md#sources">Quellen</a> ·
+  <a href="../../docs/project/roadmap.md">Roadmap</a> ·
+  <a href="../../docs/project/performance.md">Leistung</a> ·
+  <a href="https://github.com/adriadam10/mkw-recomp/issues">Issues</a> ·
+  <a href="https://github.com/adriadam10/mkw-recomp/discussions">Discussions</a> ·
+  <a href="https://archive.org/search?query=subject%3A%22mkw-recomp%22">Archiv</a>
 </p>
 
 <!-- i18n-bar:start -->

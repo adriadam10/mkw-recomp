@@ -53,7 +53,7 @@ STRINGS = {
                "Arquivo"]),
     "de": ("Mario Kart World (Nintendo Switch 2), rekompiliert, um nativ unter Linux und Windows zu laufen.",
            "Download", "neueste für Windows", "neueste für Linux (AppImage)", "neueste für Linux ARM",
-           ["Releases", "Hilfe-Wiki", "Änderungen", "Mitwirken", "Quellen", "Roadmap", "Leistung", "Issues", "Discussions",
+           ["Releases", "Hilfe-Wiki", "Discord", "Änderungen", "Mitwirken", "Quellen", "Roadmap", "Leistung", "Issues", "Discussions",
             "Archiv"]),
 }
 # fmt: on
