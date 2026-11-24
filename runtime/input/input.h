@@ -36,6 +36,11 @@ void input_menu(int open);
 // sticks are lx, ly, rx, ry. Returns 1 in the poll where the shortcut goes down (toggle the menu once).
 int input_menu_gate(int *held, int menu_open, uint64_t *buttons, int32_t sticks[4], int guide);
 int input_overlay_gate(int *held, uint64_t *buttons);   // L3+R3: 1 in the poll both go down
+// The hacks' pairs on the controller (MKW_HACK_PAD: Minus or L3 with ZR, ZL, R; input_map.c): consumed while latched,
+// on[HACK_KEY_*] the hacks that listen; returns the HACK_KEY_* bits down. input_pad_hack: that key on player 1's
+// controller now, read here when the game has stopped polling (frozen in its present).
+uint32_t input_hack_gate(int latch[3], uint64_t *buttons, const int on[3]);
+int input_pad_hack(int which);
 int input_script_inject(const char *line);   // MKW_CTL: "<ticks from now> <button> [hold]", 1 when queued
 void input_script_phase(const char *node);   // seqwatch.c: a phase started (script lines "<node>+<ticks> ...")
 int input_pad_read(uint64_t *buttons, int32_t *lx, int32_t *ly);
@@ -65,7 +70,8 @@ int input_capture(int reset, int *id);
 uint32_t input_key_char(int key);
 // F8, the flight recorder's key (no KEY_ id), held while the game window is in front.
 int input_flight_key(void);
-// The hacks' keys (core/hacks/), held while the game window is in front: F2 turbo, F3 freeze, F4 one frame on.
+// The hacks' keys (core/hacks/), held while the game window is in front: F2 turbo, F3 freeze, F4 one frame on; or
+// their pairs on player 1's controller (input_pad_hack).
 enum { HACK_KEY_TURBO, HACK_KEY_FREEZE, HACK_KEY_STEP };
 int input_hack_key(int which);
 

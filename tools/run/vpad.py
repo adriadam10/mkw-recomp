@@ -12,8 +12,9 @@ The pad exists from start to end: SDL needs a moment to open it (--settle) befor
 Usage: uv run tools/run/vpad.py [--settle S] STEP...
   STEP: BUTTON[+BUTTON...][:MS]  hold those buttons together MS ms (default 120), then release
         wait:MS                  do nothing MS ms (default 300)
-  BUTTON: a b x y lb rb back start guide ls rs up down left right
+  BUTTON: a b x y lb rb back start guide ls rs up down left right lt rt (lt, rt: the triggers pulled all the way)
 Example: uv run tools/run/vpad.py back+start:600 wait:800 right wait:500 b
+         uv run tools/run/vpad.py back+rt:1500   (turbo held, MKW_TURBO=hold and MKW_HACK_PAD=minus)
 Needs write access to /dev/uinput (group input or an ACL).
 """
 
@@ -26,6 +27,7 @@ from evdev import ecodes as e
 
 BUTTONS = {"a": e.BTN_A, "b": e.BTN_B, "x": e.BTN_X, "y": e.BTN_Y, "lb": e.BTN_TL, "rb": e.BTN_TR,
            "back": e.BTN_SELECT, "start": e.BTN_START, "guide": e.BTN_MODE, "ls": e.BTN_THUMBL, "rs": e.BTN_THUMBR}
+TRIGGERS = {"lt": e.ABS_Z, "rt": e.ABS_RZ}   # Xbox 360: ZL and ZR
 HAT = {"left": (e.ABS_HAT0X, -1), "right": (e.ABS_HAT0X, 1), "up": (e.ABS_HAT0Y, -1), "down": (e.ABS_HAT0Y, 1)}
 STICK = AbsInfo(value=0, min=-32768, max=32767, fuzz=16, flat=128, resolution=0)
 TRIGGER = AbsInfo(value=0, min=0, max=255, fuzz=0, flat=0, resolution=0)
@@ -45,7 +47,7 @@ def parse(step: str) -> tuple[list[str], int]:
     names, _, ms = step.partition(":")
     parts = names.split("+")
     for n in parts:
-        if n != "wait" and n not in BUTTONS and n not in HAT:
+        if n != "wait" and n not in BUTTONS and n not in HAT and n not in TRIGGERS:
             raise SystemExit(f"vpad: unknown button {n!r} in {step!r}")
     return parts, int(ms) if ms else (300 if names == "wait" else 120)
 
@@ -58,6 +60,8 @@ def play(pad: UInput, parts: list[str], ms: int) -> None:
         for n in parts:
             if n in BUTTONS:
                 pad.write(e.EV_KEY, BUTTONS[n], value)
+            elif n in TRIGGERS:
+                pad.write(e.EV_ABS, TRIGGERS[n], 255 * value)
             else:
                 axis, direction = HAT[n]
                 pad.write(e.EV_ABS, axis, direction * value)

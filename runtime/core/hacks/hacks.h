@@ -25,7 +25,7 @@ int seed_random(uint64_t sub, uint64_t *out);   // svc.c GetInfo 11: 1 and *out 
 int seed_time(int64_t *out);                    // ov_system.c: the clock with MKW_SEED; 0 without it
 uint64_t seed_tick(uint64_t lr);                // patches.c set seed: the clock value the game seeds with at lr
 
-// ---- freeze (freeze.c): F3 / F4 with MKW_FREEZE_KEYS=1, or ctl pause | step [N] | resume
+// ---- freeze (freeze.c): F3 / F4 with MKW_FREEZE_KEYS=1 (or Minus + ZL / R, MKW_HACK_PAD), or ctl pause | step [N] | resume
 void freeze_set(int on, int64_t steps);  // on: stop after `steps` more frames
 void freeze_present(void);               // the game's present: waits while frozen
 

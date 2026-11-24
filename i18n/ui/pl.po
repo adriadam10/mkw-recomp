@@ -124,6 +124,28 @@ msgstr ""
 "F3 zatrzymuje grę na wyświetlanej klatce i wznawia ją; F4 przesuwa ją o jedną klatkę. Do "
 "dokładnego obejrzenia chwili."
 
+msgctxt "UI_MENU_HACK_PAD"
+msgid "Controller shortcuts"
+msgstr "Skróty kontrolera"
+
+msgctxt "UI_MENU_HACK_PAD_DESC"
+msgid ""
+"Turbo and the freeze keys without a keyboard: hold this button and press ZR (RT) for turbo, ZL "
+"(LT) to freeze, R (RB) for one more frame. The game does not see the pair. Only while those hacks "
+"are on."
+msgstr ""
+"Turbo i klawisze zatrzymania bez klawiatury: przytrzymaj ten przycisk i naciśnij ZR (RT), by "
+"włączyć turbo, ZL (LT), by zatrzymać, R (RB), by przejść o jedną klatkę. Gra nie dostaje tej "
+"pary. Działa tylko, gdy te hacki są włączone."
+
+msgctxt "UI_MENU_HACK_PAD_MINUS"
+msgid "Select + ZR, ZL, R"
+msgstr "Select + ZR, ZL, R"
+
+msgctxt "UI_MENU_HACK_PAD_LSTICK"
+msgid "Left stick click + ZR, ZL, R"
+msgstr "Naciśnięcie lewej gałki + ZR, ZL, R"
+
 msgctxt "UI_MENU_UNLOCK_ALL"
 msgid "Unlock everything"
 msgstr "Odblokuj wszystko"

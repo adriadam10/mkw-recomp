@@ -779,6 +779,9 @@ static void tab_hacks(float scale) {
     static const UiTextId quick[] = {UI_MENU_OFF, UI_MENU_QUICK_RACE_TT, UI_MENU_QUICK_RACE_GP, UI_MENU_QUICK_RACE_FREE};
     opt_choice("MKW_QUICK_RACE", UI_MENU_QUICK_RACE, quick, 4, UI_MENU_QUICK_RACE_DESC);
     opt_toggle("MKW_FREEZE_KEYS", UI_MENU_FREEZE_KEYS, UI_MENU_FREEZE_KEYS_DESC);
+    // turbo's and freeze's keys on the controller, for Steam's Gaming Mode (input/input_map.c input_hack_gate)
+    static const UiTextId pad[] = {UI_MENU_OFF, UI_MENU_HACK_PAD_MINUS, UI_MENU_HACK_PAD_LSTICK};
+    opt_choice("MKW_HACK_PAD", UI_MENU_HACK_PAD, pad, 3, UI_MENU_HACK_PAD_DESC);
     opt_toggle("MKW_CLASSIC_GP", UI_MENU_CLASSIC_GP, UI_MENU_CLASSIC_GP_DESC);
     opt_toggle("MKW_CLASSIC_VS", UI_MENU_CLASSIC_VS, UI_MENU_CLASSIC_VS_DESC);
     opt_end();

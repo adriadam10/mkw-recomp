@@ -124,6 +124,28 @@ msgstr ""
 "F3 останавливает игру на текущем кадре и запускает снова; F4 продвигает на один кадр. Чтобы "
 "рассмотреть момент."
 
+msgctxt "UI_MENU_HACK_PAD"
+msgid "Controller shortcuts"
+msgstr "Сочетания на контроллере"
+
+msgctxt "UI_MENU_HACK_PAD_DESC"
+msgid ""
+"Turbo and the freeze keys without a keyboard: hold this button and press ZR (RT) for turbo, ZL "
+"(LT) to freeze, R (RB) for one more frame. The game does not see the pair. Only while those hacks "
+"are on."
+msgstr ""
+"Турбо и клавиши паузы кадра без клавиатуры: удерживайте эту кнопку и нажмите ZR (RT) для турбо, "
+"ZL (LT) для паузы, R (RB) для следующего кадра. Игра не получает это сочетание. Работает, только "
+"пока эти хаки включены."
+
+msgctxt "UI_MENU_HACK_PAD_MINUS"
+msgid "Select + ZR, ZL, R"
+msgstr "Select + ZR, ZL, R"
+
+msgctxt "UI_MENU_HACK_PAD_LSTICK"
+msgid "Left stick click + ZR, ZL, R"
+msgstr "Нажатие левого стика + ZR, ZL, R"
+
 msgctxt "UI_MENU_UNLOCK_ALL"
 msgid "Unlock everything"
 msgstr "Открыть всё"

@@ -915,6 +915,60 @@ static void probe_menu_gate(void) {
     printf("menu gate (guide): Minus+Plus passes through, Guide toggles once per press, an open menu gives a neutral pad\n");
 }
 
+// ---- the hacks' pairs on the controller (MKW_HACK_PAD): Minus + ZR / ZL / R are F2 / F3 / F4 while their hack listens
+static void probe_hack_gate(void) {
+    const uint64_t minus = 1ull << 11, zr = 1ull << 9, zl = 1ull << 8, r = 1ull << 7, a = 1ull, l3 = 1ull << 4;
+    const int all[3] = {1, 1, 1}, none[3] = {0, 0, 0};
+    int latch[3] = {0, 0, 0};
+    cfg_set("MKW_HACK_PAD", "minus");
+    uint64_t b = minus | zr | a;   // the hacks off: the pair is the game's
+    uint32_t k = input_hack_gate(latch, &b, none);
+    CHECK(!k && b == (minus | zr | a), "hacks off: keys %#x buttons %#llx", k, (unsigned long long)b);
+    b = minus | a;                 // Minus alone, before its partner: the game's
+    k = input_hack_gate(latch, &b, all);
+    CHECK(!k && b == (minus | a), "Minus alone: keys %#x buttons %#llx", k, (unsigned long long)b);
+    b = minus | zr | a;            // Minus + ZR: turbo's key, the game sees neither
+    k = input_hack_gate(latch, &b, all);
+    CHECK(k == 1u << HACK_KEY_TURBO && b == a, "Minus+ZR: keys %#x buttons %#llx", k, (unsigned long long)b);
+    b = zr;                        // Minus let go first: ZR must not leak, the key is still down
+    k = input_hack_gate(latch, &b, all);
+    CHECK(k == 1u << HACK_KEY_TURBO && b == 0, "ZR after Minus: keys %#x buttons %#llx", k, (unsigned long long)b);
+    b = 0;
+    input_hack_gate(latch, &b, all);
+    b = zr;                        // both up, then ZR alone: the game's again
+    k = input_hack_gate(latch, &b, all);
+    CHECK(!k && b == zr, "ZR after the release: keys %#x buttons %#llx", k, (unsigned long long)b);
+    // Minus held: R pressed, released, pressed again gives two key presses (one frame each), Minus never leaks
+    b = 0;
+    input_hack_gate(latch, &b, all);
+    uint64_t seq[] = {minus | r, minus, minus | r, minus, 0};
+    uint32_t want[] = {1u << HACK_KEY_STEP, 0, 1u << HACK_KEY_STEP, 0, 0};
+    for (int i = 0; i < 5; i++) {
+        b = seq[i];
+        k = input_hack_gate(latch, &b, all);
+        CHECK(k == want[i] && b == 0, "step %d: keys %#x buttons %#llx", i, k, (unsigned long long)b);
+    }
+    b = minus | zl;                // freeze.s pair
+    k = input_hack_gate(latch, &b, all);
+    CHECK(k == 1u << HACK_KEY_FREEZE && !b, "Minus+ZL: keys %#x buttons %#llx", k, (unsigned long long)b);
+    b = 0;
+    input_hack_gate(latch, &b, all);
+    cfg_set("MKW_HACK_PAD", "lstick");   // the other modifier: Minus + ZR is the game's, L3 + ZR is turbo
+    b = minus | zr;
+    k = input_hack_gate(latch, &b, all);
+    CHECK(!k && b == (minus | zr), "lstick mode, Minus+ZR: keys %#x buttons %#llx", k, (unsigned long long)b);
+    b = l3 | zr;
+    k = input_hack_gate(latch, &b, all);
+    CHECK(k == 1u << HACK_KEY_TURBO && !b, "lstick mode, L3+ZR: keys %#x buttons %#llx", k, (unsigned long long)b);
+    cfg_set("MKW_HACK_PAD", "off");
+    b = minus | zr;
+    k = input_hack_gate(latch, &b, all);
+    CHECK(!k && b == (minus | zr) && !latch[0], "off: keys %#x buttons %#llx", k, (unsigned long long)b);
+    cfg_set("MKW_HACK_PAD", "minus");
+    printf("hack gate: Minus + ZR/ZL/R are the turbo/freeze/step keys only while their hack listens, the pair never "
+           "reaches the game, Minus alone does, R repeats under a held Minus; lstick and off\n");
+}
+
 // ---- shared fonts: the extracted files when present (the missing case is a fatal child)
 static void probe_fonts(void) {
     char dir[PLAT_PATH_MAX], path[PLAT_PATH_MAX + 32];
@@ -986,6 +1040,7 @@ static void probe_main(Cpu *c) {
     probe_swkbd();
     probe_menu_text();
     probe_menu_gate();
+    probe_hack_gate();
     probe_fonts();
     probe_mkw_services();
 }

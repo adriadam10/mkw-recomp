@@ -118,7 +118,7 @@ int input_flight_key(void) { return focused && f8_held; }
 
 int input_hack_key(int which) {
     static const int keys[] = {[HACK_KEY_TURBO] = KEY_F2, [HACK_KEY_FREEZE] = KEY_F3, [HACK_KEY_STEP] = KEY_F4};
-    return focused && key_held[keys[which]];
+    return (focused && key_held[keys[which]]) || input_pad_hack(which);
 }
 
 // ---- the cursor (window thread)

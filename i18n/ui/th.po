@@ -118,6 +118,28 @@ msgid ""
 "look at a moment closely."
 msgstr "F3 หยุดเกมที่เฟรมบนหน้าจอและเล่นต่อ F4 เดินหน้าทีละหนึ่งเฟรม ไว้ดูช่วงเวลาใกล้ ๆ"
 
+msgctxt "UI_MENU_HACK_PAD"
+msgid "Controller shortcuts"
+msgstr "ปุ่มลัดบนคอนโทรลเลอร์"
+
+msgctxt "UI_MENU_HACK_PAD_DESC"
+msgid ""
+"Turbo and the freeze keys without a keyboard: hold this button and press ZR (RT) for turbo, ZL "
+"(LT) to freeze, R (RB) for one more frame. The game does not see the pair. Only while those hacks "
+"are on."
+msgstr ""
+"ใช้เทอร์โบและปุ่มหยุดภาพได้โดยไม่ต้องมีคีย์บอร์ด: กดปุ่มนี้ค้างไว้แล้วกด ZR (RT) เพื่อเทอร์โบ ZL "
+"(LT) เพื่อหยุดภาพ R (RB) เพื่อเลื่อนไปหนึ่งเฟรม เกมจะไม่ได้รับปุ่มคู่นี้ "
+"ใช้ได้เฉพาะตอนที่แฮ็กเหล่านั้นเปิดอยู่"
+
+msgctxt "UI_MENU_HACK_PAD_MINUS"
+msgid "Select + ZR, ZL, R"
+msgstr "Select + ZR, ZL, R"
+
+msgctxt "UI_MENU_HACK_PAD_LSTICK"
+msgid "Left stick click + ZR, ZL, R"
+msgstr "กดสติ๊กซ้าย + ZR, ZL, R"
+
 msgctxt "UI_MENU_UNLOCK_ALL"
 msgid "Unlock everything"
 msgstr "ปลดล็อกทั้งหมด"

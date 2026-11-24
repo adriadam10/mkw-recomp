@@ -7,6 +7,7 @@
 
 #include "cfg.h"
 #include "host.h"
+#include "input.h"
 #include "input_map.h"
 
 #define STICK_MAX 32767
@@ -364,6 +365,34 @@ int input_menu_gate(int *held, int menu_open, uint64_t *buttons, int32_t sticks[
         sticks[0] = sticks[1] = sticks[2] = sticks[3] = 0;
     }
     return edge;
+}
+
+// The hacks' controller shortcuts (MKW_HACK_PAD), for a player without a keyboard (Steam's Gaming Mode): the modifier
+// (Minus, or the left stick click) held with ZR is F2 (turbo), with ZL F3 (freeze), with R F4 (one more frame), each
+// only while its hack listens (on[i]): with the hacks off the game gets every pair as before. A pair latches when both
+// buttons are down and stays latched until both are up; while it is latched the game sees neither button, so letting go
+// of one first leaks nothing, and the modifier alone, before its partner, reaches the game as the menu's Minus does.
+// A key is down while its pair is latched and its second button is held: with the modifier kept down, each new press
+// of R lets one more frame through. latch[] is the caller's memory; returns the HACK_KEY_* bits down.
+uint32_t input_hack_gate(int latch[3], uint64_t *buttons, const int on[3]) {
+    static const int second[3] = {[HACK_KEY_TURBO] = B_ZR, [HACK_KEY_FREEZE] = B_ZL, [HACK_KEY_STEP] = B_R};
+    const char *m = cfg_value("MKW_HACK_PAD");
+    uint64_t mod = !strcmp(m, "minus") ? 1ull << B_MINUS : !strcmp(m, "lstick") ? 1ull << B_STICK_L : 0;
+    uint64_t raw = *buttons;   // every pair is judged on what the pad holds, not on what an earlier pair took
+    uint32_t keys = 0;
+    for (int i = 0; i < 3; i++) {
+        uint64_t bit = 1ull << second[i];
+        if (!mod || !on[i]) {
+            latch[i] = 0;
+            continue;
+        }
+        if (latch[i]) latch[i] = (raw & (mod | bit)) != 0;
+        else latch[i] = (raw & mod) && (raw & bit);
+        if (!latch[i]) continue;
+        *buttons &= ~(mod | bit);
+        if (raw & bit) keys |= 1u << i;
+    }
+    return keys;
 }
 
 // Both stick clicks held together step the performance overlay as F10 does (a gamepad has no F10: the Steam Deck in

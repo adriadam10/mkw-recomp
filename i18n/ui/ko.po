@@ -116,6 +116,27 @@ msgid ""
 "look at a moment closely."
 msgstr "F3은 현재 프레임에서 게임을 멈추고 다시 재생하며, F4는 한 프레임씩 진행합니다. 한 순간을 자세히 볼 때 사용합니다."
 
+msgctxt "UI_MENU_HACK_PAD"
+msgid "Controller shortcuts"
+msgstr "컨트롤러 단축키"
+
+msgctxt "UI_MENU_HACK_PAD_DESC"
+msgid ""
+"Turbo and the freeze keys without a keyboard: hold this button and press ZR (RT) for turbo, ZL "
+"(LT) to freeze, R (RB) for one more frame. The game does not see the pair. Only while those hacks "
+"are on."
+msgstr ""
+"키보드 없이 터보와 정지 키를 씁니다. 이 버튼을 누른 채 ZR (RT)로 터보, ZL (LT)로 정지, R (RB)로 한 프레임 진행합니다. 게임은 이 조합을 받지 "
+"않습니다. 해당 기능이 켜져 있을 때만 작동합니다."
+
+msgctxt "UI_MENU_HACK_PAD_MINUS"
+msgid "Select + ZR, ZL, R"
+msgstr "Select + ZR, ZL, R"
+
+msgctxt "UI_MENU_HACK_PAD_LSTICK"
+msgid "Left stick click + ZR, ZL, R"
+msgstr "왼쪽 스틱 누르기 + ZR, ZL, R"
+
 msgctxt "UI_MENU_UNLOCK_ALL"
 msgid "Unlock everything"
 msgstr "모두 해금"

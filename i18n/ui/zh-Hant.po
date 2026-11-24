@@ -116,6 +116,25 @@ msgid ""
 "look at a moment closely."
 msgstr "F3 在目前幀暫停遊戲並可再次繼續；F4 前進一幀。用於仔細查看某一瞬間。"
 
+msgctxt "UI_MENU_HACK_PAD"
+msgid "Controller shortcuts"
+msgstr "手把快捷鍵"
+
+msgctxt "UI_MENU_HACK_PAD_DESC"
+msgid ""
+"Turbo and the freeze keys without a keyboard: hold this button and press ZR (RT) for turbo, ZL "
+"(LT) to freeze, R (RB) for one more frame. The game does not see the pair. Only while those hacks "
+"are on."
+msgstr "不用鍵盤使用加速和暫停鍵：按住此按鈕，再按 ZR (RT) 加速，ZL (LT) 暫停，R (RB) 前進一格。遊戲收不到這組按鍵。僅在這些實驗功能開啟時有效。"
+
+msgctxt "UI_MENU_HACK_PAD_MINUS"
+msgid "Select + ZR, ZL, R"
+msgstr "Select + ZR, ZL, R"
+
+msgctxt "UI_MENU_HACK_PAD_LSTICK"
+msgid "Left stick click + ZR, ZL, R"
+msgstr "左搖桿按下 + ZR, ZL, R"
+
 msgctxt "UI_MENU_UNLOCK_ALL"
 msgid "Unlock everything"
 msgstr "全部解鎖"

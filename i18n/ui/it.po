@@ -124,6 +124,28 @@ msgstr ""
 "F3 ferma il gioco sul fotogramma a schermo e lo fa ripartire; F4 lo fa avanzare di uno. Per "
 "osservare un momento da vicino."
 
+msgctxt "UI_MENU_HACK_PAD"
+msgid "Controller shortcuts"
+msgstr "Scorciatoie del controller"
+
+msgctxt "UI_MENU_HACK_PAD_DESC"
+msgid ""
+"Turbo and the freeze keys without a keyboard: hold this button and press ZR (RT) for turbo, ZL "
+"(LT) to freeze, R (RB) for one more frame. The game does not see the pair. Only while those hacks "
+"are on."
+msgstr ""
+"Il turbo e i tasti blocco senza tastiera: tieni premuto questo pulsante e premi ZR (RT) per il "
+"turbo, ZL (LT) per bloccare, R (RB) per avanzare di un fotogramma. Il gioco non riceve la coppia. "
+"Solo con questi hack attivi."
+
+msgctxt "UI_MENU_HACK_PAD_MINUS"
+msgid "Select + ZR, ZL, R"
+msgstr "Select + ZR, ZL, R"
+
+msgctxt "UI_MENU_HACK_PAD_LSTICK"
+msgid "Left stick click + ZR, ZL, R"
+msgstr "Clic stick sinistro + ZR, ZL, R"
+
 msgctxt "UI_MENU_UNLOCK_ALL"
 msgid "Unlock everything"
 msgstr "Sblocca tutto"

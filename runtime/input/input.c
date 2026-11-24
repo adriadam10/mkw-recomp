@@ -417,6 +417,41 @@ static int pad_read(uint64_t *b, int32_t sl[2], int32_t sr[2]) {
     return 1;
 }
 
+// The hacks' pairs on player 1's controller (input_hack_gate), under lock: the latches, the keys down at the last
+// poll and when that was.
+static int hack_latch[3];
+static volatile int32_t hack_keys;
+static uint64_t hack_seen_ns;
+
+static void hack_listening(int on[3]) {
+    const char *t = cfg_value("MKW_TURBO");
+    on[HACK_KEY_TURBO] = !strcmp(t, "hold") || !strcmp(t, "toggle");
+    on[HACK_KEY_FREEZE] = on[HACK_KEY_STEP] = cfg_bool("MKW_FREEZE_KEYS");
+}
+
+static void hack_gate(uint64_t *b) {
+    int on[3];
+    hack_listening(on);
+    plat_xchg32(&hack_keys, (int32_t)input_hack_gate(hack_latch, b, on));
+    hack_seen_ns = plat_now_ns();
+}
+
+// A frozen game (core/hacks/freeze.c) waits in its present and polls no more: after 100 ms without a poll the pad is
+// read here, so its pair can start the game again. The pad alone then: the keyboard has its F keys.
+int input_pad_hack(int which) {
+    if ((unsigned)which >= 3) return 0;
+    plat_mutex_lock(&lock);
+    if (state == 1 && plat_now_ns() - hack_seen_ns > 100000000ull) {
+        uint64_t b = 0;
+        int32_t sl[2], sr[2];
+        if (pad_read(&b, sl, sr)) hack_gate(&b);
+        else plat_xchg32(&hack_keys, 0), hack_seen_ns = plat_now_ns();
+    }
+    int down = (hack_keys >> which) & 1;
+    plat_mutex_unlock(&lock);
+    return down;
+}
+
 static void poll_merged(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry) {
     uint64_t b = 0;
     int32_t sl[2] = {0, 0}, sr[2] = {0, 0};
@@ -472,6 +507,7 @@ static void poll_merged(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx
     // A plugin's filter first (MkwPluginApi.input_filter): what it takes reaches neither the shortcut below nor the game
     plugins_input_filter(0, &b, st, &guide);
     int toggle = input_menu_gate(&combo_held, menu_is_open(), &b, st, guide);
+    hack_gate(&b);   // after the menu's: an open menu leaves nothing to latch
     static int overlay_held;   // L3+R3 step the performance overlay (F10)
     int overlay = input_overlay_gate(&overlay_held, &b);
     sl[0] = st[0], sl[1] = st[1], sr[0] = st[2], sr[1] = st[3];

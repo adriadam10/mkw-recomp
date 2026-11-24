@@ -177,6 +177,9 @@ static const CfgRow rows[] = {
     S("SEED", "hacks", "", NULL, RESTART),
     S("UNLOCK_ALL", "hacks", "0", "0|1", RESTART),
     S("FREEZE_KEYS", "hacks", "0", "0|1", LIVE),
+    // input/input_map.c input_hack_gate: the modifier of the controller's pairs for the keys above (with ZR, ZL, R);
+    // they act only while turbo is hold/toggle or the freeze keys are on, so the console's pad is unchanged by default
+    S("HACK_PAD", "hacks", "minus", "off|minus|lstick", LIVE),
     S("QUICK_RACE", "hacks", "off", "off|tt|gp|free", RESTART),
     S("CLASSIC_GP", "hacks", "0", "0|1", LIVE),   // core/hacks/classic.c: the cups' intermissions become laps on one course
     S("CLASSIC_VS", "hacks", "0", "0|1", LIVE),   // core/hacks/classic.c: VS races' routes become laps on one course
