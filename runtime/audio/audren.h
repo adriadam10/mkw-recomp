@@ -158,7 +158,7 @@ typedef struct AudioRenderer {
     volatile int32_t running;
     uint32_t state, revision, time_limit, event;   // state 0 started, 1 stopped; event: writable handle
     float voice_drop;                              // SetVoiceDropParameter (stored only)
-    int logged;
+    int logged, held;                              // held: stopped while the game is suspended (render thread)
     uint64_t behavior_flags, elapsed_frames;
     uint64_t stop_released, empty_played, flushed, logged_released;
     ServerVoice *voices;

@@ -13,6 +13,7 @@
 
 #include "audren.h"
 #include "cfg.h"
+#include "gfx.h"
 #include "host.h"
 #include "platform/platform.h"
 
@@ -373,6 +374,22 @@ static void render_thread(void *p) {
     uint64_t next = kern_now_ns();
     while (plat_cas32(&r->running, 0, 0)) {
         plat_mutex_lock(&r->lock);
+        // A suspended game (a hold: the pause key, a plugin's overlay; ov_system.c) has its renderer stopped, as the
+        // console stops a suspended application's audio: no voice advances and the game's audio thread, waiting on
+        // the event, waits with it, so the sound goes on where it stopped. The output stops as at a Stop (silence, no
+        // underrun counted) and starts again with its prefill.
+        int held = oe_suspended();
+        if (held != r->held) {
+            r->held = held;
+            audio_mixer_set_running(r, !held && r->state == 0);
+            rt_log("audren: the renderer %s with the game", held ? "stops" : "goes on");
+        }
+        if (held) {
+            plat_mutex_unlock(&r->lock);
+            plat_wait_ns(frame_ns);
+            next = kern_now_ns();
+            continue;
+        }
         if (r->state == 0) {
             voices_prepare(r);
             audio_mixer_render(r, frame);
@@ -430,7 +447,7 @@ void audren_update(AudioRenderer *r, const AudrenBuffer *out, const AudrenBuffer
 void audren_set_running(AudioRenderer *r, int on) {   // Start / Stop
     plat_mutex_lock(&r->lock);
     r->state = on ? 0 : 1;
-    audio_mixer_set_running(r, on);
+    audio_mixer_set_running(r, on && !r->held);   // a suspended game's Start waits for the end of the suspension
     plat_mutex_unlock(&r->lock);
 }
 

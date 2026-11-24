@@ -201,7 +201,8 @@ static void ov_focus_mode(Cpu *c) {
 // FinishStartupLogo; MKW handles one with a manager it makes later (main+0x26380c4 reads main+0x33e54b0, null
 // then): a window that lost the focus during the boot ended the run reading 0xd8 (issues #83 #89 #92, 11/11/2026).
 // Until the logo is done the game sees 1 and no message; the change waiting is told at FinishStartupLogo.
-// A plugin's overlay over the game (MkwPluginApi.focus_set, oe_hold_focus) is the console's HOME menu to the game:
+// A plugin's overlay over the game (MkwPluginApi.focus_set, oe_hold_focus), and the pause key (core/hacks/pause.c,
+// added to it in gfx_present.c), is the console's HOME menu to the game:
 // out of focus while it is held, whatever the window says and also with MKW_ASSUME_FOCUS, which is about the window.
 // The console also suspends the application then, unless the game asked to be only notified (FocusHandlingMode 1,
 // Notify; 0, 2 and 3 suspend). MKW sets the mode itself, frame by frame: 2 (SuspendAndNotify) normally, 1 while it
@@ -216,7 +217,7 @@ static void hold_apply(void) {
     plat_mutex_lock(&hold_lock);
     int want = focus_hold == 2 && focus_mode != 1 && __atomic_load_n(&logo_done, __ATOMIC_ACQUIRE);
     if (plat_xchg32(&hold_suspended, want) != want) {
-        rt_log("oe: the game is %s (a plugin's hold; focus handling mode %d)", want ? "suspended" : "resumed",
+        rt_log("oe: the game is %s (a hold; focus handling mode %d)", want ? "suspended" : "resumed",
                (int)focus_mode);
         freeze_set(want, 0);
     }
@@ -249,10 +250,11 @@ int oe_hold_focus(int out, int suspend) {
     }
     hold_apply();
     if (!was && hold && !hold_suspended)
-        rt_log("oe: the game runs on out of focus (a plugin's hold; focus handling mode %d%s)", (int)focus_mode,
+        rt_log("oe: the game runs on out of focus (a hold; focus handling mode %d%s)", (int)focus_mode,
                hold == 2 ? focus_mode == 1 ? ": notified only" : "" : ", no suspension asked");
     return hold_suspended;
 }
+int oe_suspended(void) { return __atomic_load_n(&hold_suspended, __ATOMIC_ACQUIRE); }
 static void ov_focus_state(Cpu *c) { ret_x(c, (uint64_t)focus_state); }
 
 static volatile int32_t notify_resume, notify_operation, notify_performance;

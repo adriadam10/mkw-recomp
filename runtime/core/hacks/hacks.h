@@ -29,6 +29,9 @@ uint64_t seed_tick(uint64_t lr);                // patches.c set seed: the clock
 void freeze_set(int on, int64_t steps);  // on: stop after `steps` more frames
 void freeze_present(void);               // the game's present: waits while frozen
 
+// ---- pause (pause.c): F5 stops the game and starts it again, as the console's HOME button does (always on)
+void pause_poll(void);                   // freeze.c, once per present and while frozen: the key
+
 // ---- unlock everything (unlock.c): MKW_UNLOCK_ALL=1 edits Play/account.sav when the game opens it
 int unlock_save(uint8_t *save, uint64_t size);  // the changes made; 0 for a save of another layout
 

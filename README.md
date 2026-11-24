@@ -120,6 +120,7 @@ Beyond the console, all optional and off (or at the console's value) by default:
   vibration, local multiplayer with one controller each. Switch 2 controllers work over Bluetooth and, on Linux, USB
   (Windows USB: see below). Gyro from a Cemuhook / DSU server (DS4Windows, BetterJoy) is supported. Racing wheels
   work as a controller (steering and first buttons); for pedals, put a `gamecontrollerdb.txt` in the game folder.
+- **Pause**: F5 pauses and resumes the game at any moment, as the console's HOME button does.
 - **Hacks**: turbo (F2), skip movies, unlock everything, fixed randomness, straight to time trial or free roam.
 - **Languages**: menus in 20 languages; the game also in Catalan, Galician, Basque and Turkish.
 - **Tools**: performance overlay and a one-click system info for bug reports.

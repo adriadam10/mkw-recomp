@@ -1,7 +1,9 @@
 // Freeze: stops the game on a frame to look at it, and steps one frame at a time. F3 freezes and
 // unfreezes, F4 lets one more frame through, with MKW_FREEZE_KEYS=1; tools/run/ctl.sh NAME pause | step [N] | resume do
 // the same from a script. The game thread waits in its present (nvn_api_obj.c nvnQueuePresentTexture), after the frame
-// went to the back end, so the window holds that frame; the game's other threads (audio, loading) go on.
+// went to the back end, so the window holds that frame; the game's other threads (audio, loading) go on. The pause key
+// (pause.c) and a plugin's hold suspend the game through here too (ov_system.c hold_apply); its key is polled here, so
+// it is read also while the game waits.
 #include <stdatomic.h>
 
 #include "cfg.h"
@@ -21,6 +23,7 @@ void freeze_set(int on, int64_t n) {
 }
 
 static void keys(void) {
+    pause_poll();
     if (!cfg_bool("MKW_FREEZE_KEYS")) return;
     int f3 = input_hack_key(HACK_KEY_FREEZE), f4 = input_hack_key(HACK_KEY_STEP);
     if (f3 && !f3_was) freeze_set(!atomic_load(&frozen), 0);

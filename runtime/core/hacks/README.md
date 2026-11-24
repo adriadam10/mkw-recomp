@@ -1,7 +1,8 @@
 # runtime/core/hacks
 
 Shortcuts the console does not have, for playing and above all for developing faster. All off by default, each with
-its `MKW_*` and its row in the "Hacks" tab (`ui/menu/settings_tabs.cpp`).
+its `MKW_*` and its row in the "Hacks" tab (`ui/menu/settings_tabs.cpp`), but the pause key, which does nothing until
+it is pressed.
 
 | File | What it is |
 |---|---|
@@ -11,4 +12,5 @@ its `MKW_*` and its row in the "Hacks" tab (`ui/menu/settings_tabs.cpp`).
 | `seed.c` | Same randomness (`MKW_SEED=<number>`): the system entropy (svc `GetInfo 11`) and the 21 clock seedings of sead's generator (patch set `seed`) come from that seed: the title screen always shows the same course |
 | `unlock.c`, `unlock.h`, `unlock_ids.c` | Unlock everything (`MKW_UNLOCK_ALL`): edits `Play/account.sav` when it is opened, like Ca1nM's save editor (MIT) |
 | `freeze.c` | Freeze (`MKW_FREEZE_KEYS`, F3/F4 or Minus + ZL/R on the controller; `ctl.sh NAME pause`, `step [N]`, `resume`): the game thread waits in its present |
+| `pause.c` | Pause (F5, always on): the console's HOME button to the game (`gfx_present.c` `gfx_window_pause`, `ov_system.c` `oe_hold_focus`), suspended in its present through `freeze.c` with the audio renderer stopped (`audio/audren.c`); online, where the game asks to be only notified, it runs on out of focus and silent |
 | `classic.c` | Classic Grand Prix (`MKW_CLASSIC_GP`): every race of the 8 Grand Prix cups is laps on one course; Classic VS (`MKW_CLASSIC_VS`): so is every VS race, each area's routes (CourseEx) becoming their destinations' courses; each intermission's CourseId becomes its destination's course, in the `general_format` archive as the host zstd decoder writes it (on at start) and, switched in the menu, in the game's own copies of the cups after a background scan; races started before it finishes keep their course |

@@ -68,14 +68,36 @@ void gfx_window_focus_changed(int in) {
 // A plugin's overlay covers the game (MkwPluginApi.focus_set(0, ..)), as the console's HOME menu does: the game hears
 // out of focus until the hold ends and is suspended if it lets the console do that (ov_system.c oe_hold_focus), and
 // the output is silent meanwhile (audio_mixer.c), with any MKW_BACKGROUND_MUTE.
-static volatile int32_t g_focus_hold;
-int gfx_window_focus_hold(int out, int suspend) {
-    out = out != 0;
-    if (plat_xchg32(&g_focus_hold, out) != out)
-        rt_log("gfx: a plugin %s", out ? "holds the game out of focus" : "gives the focus back to the window");
+// The pause key (core/hacks/pause.c) is a second hold of the same kind, one that always asks for the suspension, as an
+// emulator's pause: the game hears HOME, waits in its present and the audio renderer stops (audren.c), unless the game
+// asked to be only notified (online), when it runs on out of focus and silent, as behind the console's HOME menu. The
+// two holds add up: the plugin's ending keeps a pause, and the other way round. hold_lock orders the two callers.
+static volatile int32_t g_focus_hold, g_hold_suspend, g_paused;
+static PlatMutex hold_lock = PLAT_MUTEX_INIT;
+static int focus_hold_apply(void) {
+    int out = g_focus_hold || g_paused, suspend = g_paused || (g_focus_hold && g_hold_suspend);
     return oe_hold_focus(out, suspend);
 }
-int gfx_window_focus_held(void) { return g_focus_hold; }
+int gfx_window_focus_hold(int out, int suspend) {
+    out = out != 0;
+    plat_mutex_lock(&hold_lock);
+    if (plat_xchg32(&g_focus_hold, out) != out)
+        rt_log("gfx: a plugin %s", out ? "holds the game out of focus" : "gives the focus back to the window");
+    plat_xchg32(&g_hold_suspend, suspend != 0);
+    int r = focus_hold_apply();
+    plat_mutex_unlock(&hold_lock);
+    return r;
+}
+int gfx_window_pause(int on) {
+    on = on != 0;
+    plat_mutex_lock(&hold_lock);
+    plat_xchg32(&g_paused, on);
+    int r = focus_hold_apply();
+    plat_mutex_unlock(&hold_lock);
+    return r;
+}
+int gfx_window_paused(void) { return g_paused; }
+int gfx_window_focus_held(void) { return g_focus_hold || g_paused; }
 
 // The window was closed: the process ends with it, as in MNG, once a save Commit still running in the background is
 // done.
