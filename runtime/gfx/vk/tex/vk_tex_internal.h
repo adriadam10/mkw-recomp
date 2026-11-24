@@ -25,6 +25,7 @@ typedef struct Tex {
     VmaAllocation alloc;          // own memory; NULL when bound into pool memory
     VmaAllocation bound_to;       // the pool memory it is bound into
     uint32_t wgen;                // page generation of the last upload check
+    uint64_t texpre_ticket;       // vk_texpre.c: the queued cache read that filled it (0 none), checked by make_fresh
     uint32_t checked;             // submit_epoch of the last check from a draw binding
     uint32_t seen;                // submit_epoch of the last lookup of any kind (evict_idle: idle since then)
     int uploaded, released;

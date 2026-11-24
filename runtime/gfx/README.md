@@ -19,7 +19,7 @@ MKW's own environment variables:
 | `MKW_GPU_HANG_MS=<ms>` | When the breadcrumbs report a GPU that stopped without a device loss (`vk/device/vk_sync.c`; `0`: never) |
 | `MKW_VK_FORMAT_LIST=0/1` | Render targets list their view formats so RADV keeps DCC compression (smo-recomp `dcc-format-list`); on by default on integrated GPUs |
 | `MKW_VK_PLACED=1` | Experiment: every CPU-visible pool as driver memory mapped at its address (`VK_EXT_map_memory_placed`), without a shadow copy; one run reached frame 300 against 151 |
-| `MKW_TEXPRE=1` / `<dir>` | Precomputed BC7 of the ASTC textures (`vk_texpre.c`; `1`: `<exe>/texpre`). Off by default: slower than the GPU encoder; the ones it lacks are recorded in `<dir>/src` for `build/mkw --texpre` (`MKW_TEXPRE_RECORD=0`: don't; `MKW_TEXPRE_JOBS`: threads) |
+| `MKW_TEXPRE=1` / `<dir>` | Precomputed BC7 of the ASTC textures (`vk_texpre.c`; `1`: `<exe>/texpre`). Off by default: slower than the GPU encoder; the ones it lacks are recorded in `<dir>/src` for `build/mkw --texpre` (`MKW_TEXPRE_RECORD=0`: don't; `MKW_TEXPRE_JOBS`: threads). With it, the BC7/BC1 blocks the GPU encoder makes are stored raw as `<dir>/<hash>.bc7.raw` / `.bc1.raw` and uploaded as they are at the next launch, read off the replay thread (`MKW_TEXPRE_WRITEBACK=0`, `MKW_TEXPRE_ASYNC=0`: off); recording `src` is then off unless `MKW_TEXPRE_RECORD=1` |
 | `MKW_ASTC_BC7=0` | ASTC of 256x256 or more stays RGBA8 (by default it is recompressed to BC7 on the GPU) |
 | `MKW_PHYS_LAZY=0` | Physical pools get memory at `MapVirtual`, not at the GPU's first use (4 MiB chunks) |
 | `MKW_SPARSE_IMAGES=0` | Sparse textures without a Vulkan sparse image: a whole image, like the ones that cannot be sparse (depth on RADV) |

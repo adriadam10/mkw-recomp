@@ -427,6 +427,17 @@ static VmaAllocator svma(void) {
 static VkBuffer fx_buf;
 static VmaAllocation fx_alloc;
 static int fx_tried;
+// vk_texpre.c write-back (MKW_TEXPRE_WRITEBACK): the next vk_astc_record also copies the BC blocks its encoder wrote into
+// this host-visible buffer, the regions one after the other (the layout vk_texpre_load_bc fills). The caller holds the
+// upload lock from vk_astc_bc_readback to vk_astc_bc_readback_take.
+static VkBuffer bc_back;
+static VkDeviceSize bc_back_bytes;
+void vk_astc_bc_readback(VkBuffer buf) { bc_back = buf, bc_back_bytes = 0; }
+VkDeviceSize vk_astc_bc_readback_take(void) {
+    VkDeviceSize n = bc_back_bytes;
+    bc_back = VK_NULL_HANDLE, bc_back_bytes = 0;
+    return n;
+}
 
 // Scratch per vk_astc_record: texels of at most this many bytes at a time (or one region, when larger), so a large
 // texture array (169 M texels, 677 MB as RGBA8, on monsters2) does not need its whole RGBA8 copy as scratch.
@@ -479,20 +490,22 @@ static VkAstcRegion *split_regions(const VkAstcRegion *rg, int n, uint32_t bw, u
 }
 
 static int astc_record(VkCommandBuffer cb, VkBuffer src, const VkAstcRegion *rg, int n, uint32_t bw, uint32_t bh,
-                       int srgb, VkImage img, VkImageAspectFlags aspect, int bc7, VkBuffer readback);
+                       int srgb, VkImage img, VkImageAspectFlags aspect, int bc7, VkBuffer readback, VkBuffer bcback);
 
 int vk_astc_record(VkCommandBuffer cb, VkBuffer src, VkDeviceSize src_size, const VkAstcRegion *rg, int n, uint32_t bw,
                    uint32_t bh, int srgb, VkImage img, VkImageAspectFlags aspect, int bc7, VkBuffer readback) {
     (void)src_size;
     int m = n;
     VkAstcRegion *split = split_regions(rg, n, bw, bh, &m);
-    int ok = astc_record(cb, src, split ? split : rg, m, bw, bh, srgb, img, aspect, bc7, readback);
+    VkBuffer bb = bc_back;
+    bc_back = VK_NULL_HANDLE;
+    int ok = astc_record(cb, src, split ? split : rg, m, bw, bh, srgb, img, aspect, bc7, readback, bb);
     free(split);
     return ok;
 }
 
 static int astc_record(VkCommandBuffer cb, VkBuffer src, const VkAstcRegion *rg, int n, uint32_t bw, uint32_t bh,
-                       int srgb, VkImage img, VkImageAspectFlags aspect, int bc7, VkBuffer readback) {
+                       int srgb, VkImage img, VkImageAspectFlags aspect, int bc7, VkBuffer readback, VkBuffer bcback) {
     static volatile int32_t n_fail;
     VkCtx *c = vk_ctx();
     if (!c || !vk_astc_gpu() || bw < 4 || bh < 4 || bw > 12 || bh > 12) return 0;
@@ -645,6 +658,7 @@ static int astc_record(VkCommandBuffer cb, VkBuffer src, const VkAstcRegion *rg,
         }
         if (slot >= 0)
             vkCmdWriteTimestamp2(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, tpool, 2 * (uint32_t)slot + 1);
+        VkDeviceSize chunk_bc = 0;   // this chunk's BC bytes, at cap_in + cap_out
         if (enc) {   // RGBA8 texels -> BC7 or BC1 blocks, copied instead of the texels
             mem_barrier(cb, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
                         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
@@ -669,10 +683,16 @@ static int astc_record(VkCommandBuffer cb, VkBuffer src, const VkAstcRegion *rg,
                 }
                 ob2 += region_out(r), eb += region_bc(r, blk);
             }
+            chunk_bc = eb;
         }
         mem_barrier(cb, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
                     VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT);
         vkCmdCopyBufferToImage(cb, sb, img, VK_IMAGE_LAYOUT_GENERAL, (uint32_t)(i1 - i0), copies);
+        if (bcback && chunk_bc) {   // the blocks also go to the write-back buffer (the barrier before the image copy covers it)
+            VkBufferCopy bcc = {cap_in + cap_out, bc_back_bytes, chunk_bc};
+            vkCmdCopyBuffer(cb, sb, bcback, 1, &bcc);
+            bc_back_bytes += chunk_bc;
+        }
         if (readback) {
             VkBufferCopy rc = {cap_in, rb_off, out};
             vkCmdCopyBuffer(cb, sb, readback, 1, &rc);
@@ -680,7 +700,7 @@ static int astc_record(VkCommandBuffer cb, VkBuffer src, const VkAstcRegion *rg,
         }
         i0 = i1;
     }
-    if (readback)
+    if (readback || bcback)
         mem_barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_HOST_BIT,
                     VK_ACCESS_2_HOST_READ_BIT);
     if (whole >= 0) vkCmdWriteTimestamp2(cb, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, tpool, 2 * (uint32_t)whole + 1);
