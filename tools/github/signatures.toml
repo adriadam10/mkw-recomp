@@ -202,3 +202,10 @@ issue = 502
 all = ["reading address 0x198", "main+0x5cf6e0"]
 what = "the game's code at main+0x5cf6e0 reads a field of a resource that is not there (access violation at 0x198)"
 wiki = "180-with-mods-crash-while-an-area-loads-reading-address-0x198-main0x5cf6e0"
+
+[[signature]]
+issue = 825
+wiki = "linux-error-while-loading-shared-libraries-libvpxso6"
+all = ["libvpx.so.6", "cannot open shared object file"]
+fixed = "v0.1.19"
+what = "Linux: the game closes at once (code 127) because the system has no libvpx.so.6, which the package's lib/ folder holds"

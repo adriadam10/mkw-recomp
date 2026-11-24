@@ -104,6 +104,22 @@ def test_known_errors_and_regressions():
     assert classify.known_error(94, LAUNCHER, "v0.1.7", SIGS) is None
 
 
+def test_a_missing_libvpx_is_a_duplicate_of_its_issue_until_the_release_that_fixes_it():
+    # #825, #839 and #840: RecompLauncher's crash report, one line of the loader's error in its fence (no log to ask for)
+    report = (
+        "Crash: closed with code 127 after 0 s\n"
+        "/run/media/Games/mkw-recomp/mkw: error while loading shared libraries: libvpx.so.6: "
+        "cannot open shared object file: No such file or directory"
+    )
+    assert classify.known_error(839, report, "v0.1.17", SIGS).issue == 825
+    assert classify.known_error(839, report, "v0.1.18", SIGS).issue == 825
+    assert classify.known_error(825, report, "v0.1.17", SIGS) is None  # the tracking issue is not its own duplicate
+    # on the release that carries the -rpath fix, the same text is a regression and stays open for a person
+    assert classify.known_error(839, report, "v0.1.19", SIGS) is None
+    # another library the loader cannot find is not this one
+    assert classify.known_error(839, report.replace("libvpx.so.6", "libSDL3.so.0"), "v0.1.17", SIGS) is None
+
+
 def test_every_signature_links_its_wiki_section():
     # the bot's duplicate reply sends the player to what they can do (wiki Troubleshooting, one section per row)
     for s in SIGS:
