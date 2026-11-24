@@ -449,6 +449,8 @@ typedef struct { VkDeviceSize src; uint32_t w, h, slices, level, layer; VkOffset
 // 0 when the decoder is unavailable or the scratch buffer cannot be allocated (nothing recorded).
 int vk_astc_record(VkCommandBuffer cb, VkBuffer src, VkDeviceSize src_size, const VkAstcRegion *rg, int n, uint32_t bw,
                    uint32_t bh, int srgb, VkImage img, VkImageAspectFlags aspect, int bc7, VkBuffer readback);   // bc7: img is BC7
+void vk_astc_bc_readback(VkBuffer buf);        // the next vk_astc_record also copies its BC blocks into buf (host-visible)
+VkDeviceSize vk_astc_bc_readback_take(void);   // the bytes it copied there; clears the request
 // MKW_ASTC_TIME=1: GPU timestamps around each vk_astc_record's dispatches (logged per footprint and the largest one)
 void vk_astc_time_enable(int on);
 int vk_astc_time_get(uint32_t bw, uint32_t bh, uint64_t *texels, uint64_t *calls, double *us);   // totals so far
@@ -462,6 +464,19 @@ uint64_t vk_texpre_region_bytes(const VkTexpreRegion *r);   // BC7 bytes of a re
 int vk_texpre_has(uint64_t h);          // 1: the directory held BC7 for h when it was listed
 int vk_texpre_load(uint64_t h, void *dst, uint64_t size);   // 1: dst holds the size bytes of BC7 stored for h
 void vk_texpre_record(uint64_t h, const nvn_texdesc *d, const VkTexpreRegion *rg, int n, const void *mem, uint64_t size);
+int vk_texpre_has_bc(uint64_t h, int bc);   // bc: 1 BC7, 2 BC1 (TexVkFormat.astc_bc7)
+int vk_texpre_load_bc(uint64_t h, int bc, void *dst, uint64_t size);
+int vk_texpre_raw(uint64_t h, int bc, uint64_t size);   // 1: a raw write-back file of size bytes for h
+int vk_texpre_read_at(uint64_t h, int bc, void *dst, uint64_t off, uint64_t n, uint64_t fsize, uint64_t ticket);
+uint64_t vk_texpre_ticket(void);         // a new ticket for the queued reads of one texture
+int vk_texpre_failed(uint64_t ticket);   // make_fresh: 1 once when a queued read of that ticket failed
+void vk_texpre_shutdown(void);   // upload_shutdown: queued reads done, write-back writers finished
+void vk_texpre_reads_wait(void);   // vk_upload_flush: the queued reads are done
+typedef struct VkTexpreWb VkTexpreWb;   // MKW_TEXPRE_WRITEBACK: the GPU-encoded blocks of one upload, in parts
+VkTexpreWb *vk_texpre_wb_begin(uint64_t h, int bc, uint64_t size);
+VkBuffer vk_texpre_wb_part(VkTexpreWb *w, uint64_t size);
+void vk_texpre_wb_got(VkTexpreWb *w, uint64_t bytes, int recorded);
+void vk_texpre_wb_end(VkTexpreWb *w);
 void vk_mem_note_submit(uint64_t part_value);      // vk_sync.c: after each submit, the part value it signals
 void vk_mem_recording(uint64_t fence);             // this thread records submission fence (0: done): what it destroys
                                                    // waits for the whole submission

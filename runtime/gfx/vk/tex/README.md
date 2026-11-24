@@ -19,4 +19,4 @@ sparse and precomputed BC7.
 | `vk_tex_wb.c` | CPU reads of what the GPU wrote: mirrored textures written back to their storage (at an invalidate, memcpy or ReadTexels, and the small ones at their fence) |
 | `vk_astc.c` | ASTC on the GPU: decoded by compute and recompressed to BC7 (`MKW_ASTC_BC7`) |
 | `vk_sparse.c` | MKW's own: sparse textures as Vulkan sparse images, tiles bound at each `MapVirtual`; cube compatibility only for cube targets; private small-mip backing initialized separately from shared tiles and sparse resources released before allocator shutdown |
-| `vk_texpre.c` | MKW's own: BC7 of the ASTC textures encoded offline (`MKW_TEXPRE`, off) |
+| `vk_texpre.c` | MKW's own: BC7 of the ASTC textures encoded offline (`MKW_TEXPRE`, off), and the GPU encoder's BC7/BC1 blocks kept from an earlier run (`MKW_TEXPRE_WRITEBACK`), read on threads of their own (`MKW_TEXPRE_ASYNC`) |

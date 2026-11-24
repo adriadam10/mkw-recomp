@@ -258,6 +258,7 @@ static void *staging(VkDeviceSize size, VkBuffer *buf, VmaAllocation *alloc, int
 }
 
 void *vk_staging(VkDeviceSize size, VkBuffer *buf, VmaAllocation *alloc) { return staging(size, buf, alloc, 1); }
+void *vk_staging_try(VkDeviceSize size, VkBuffer *buf, VmaAllocation *alloc) { return staging(size, buf, alloc, 0); }
 
 void *vk_staging_try(VkDeviceSize size, VkBuffer *buf, VmaAllocation *alloc) {
     VkCtx *c = vk_ctx();
@@ -341,6 +342,7 @@ uint64_t vk_upload_flush(int wait) {
     VkCtx *c = vk_ctx();
     uint64_t seq = next_seq;
     if (c && open_active) {
+        vk_texpre_reads_wait();   // texture cache reads into this batch's staging (vk_texpre.c)
         for (int i = 0; i < open_b.nstg; i++) vmaFlushAllocation(c->vma, open_b.stg[i].alloc, 0, VK_WHOLE_SIZE);
         vk_uptime_end(open_b.cb, open_b.ut);
         vk_crumb_end(open_b.cb, VK_CRUMB_UPLOAD, open_b.crumb);
@@ -460,6 +462,7 @@ uint64_t upload_batches(void) { return next_seq; }
 
 // vk_mem_shutdown, the device idle: every batch and dead object goes, and the staging pool.
 void upload_shutdown(VkCtx *c) {
+    vk_texpre_shutdown();   // its writers hold staging buffers until they finish
     plat_rmutex_lock(&cmd_lock);
     retire(c, 1);
     uint64_t keep = tl_noted;

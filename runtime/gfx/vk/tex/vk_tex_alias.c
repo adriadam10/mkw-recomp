@@ -204,7 +204,16 @@ int vk_texture_capture_state(const tex_t *t, uint32_t recent) {
 // e was written by the GPU in the submission being recorded (texture lock held): no re-upload from storage, and a
 // mirrored texture is written back to it (small ones at the fence, wb_at_fence)
 static void gpu_written_locked(Tex *e) {
+    // Its queued cache reads land (or fail, and it is uploaded anew through the GPU encoder) before it is GPU-owned:
+    // make_fresh does not look at a GPU-owned texture again, and a partial write would keep a failed read's zeros around
+    // it. Checked before make_fresh and again after it, which may have queued a new read; then the ticket is done with.
+    if (e->texpre_ticket) vk_texpre_reads_wait();
     make_fresh(e);   // a partial write keeps what the storage held before
+    if (e->texpre_ticket) {
+        vk_texpre_reads_wait();
+        if (vk_texpre_failed(e->texpre_ticket)) upload_again(e);   // its key is bad now: the GPU encoder, no ticket
+    }
+    e->texpre_ticket = 0;
     e->pub.gpu_owned = 1;
     uint64_t f = vk_exec_recording_fence();
     if (f > e->wr_fence) e->wr_fence = f;

@@ -348,6 +348,8 @@ static const CfgRow rows[] = {
     K("TEMPORAL_KART_CIRCLE"),
     K("TEMPORAL_KART_DEPTH"),
     K("TEMPORAL_NGX"),
+    K("TEXPRE_ASYNC"),
+    K("TEXPRE_WRITEBACK"),
     K("TEX_OVERWRITTEN"),
     K("TEX_PRESSURE"),
     K("TEX_RACE_PURGE"),

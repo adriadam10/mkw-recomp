@@ -105,37 +105,45 @@ static uint32_t up_group(VkBufferImageCopy *rg, uint32_t g0, uint32_t n, VkDevic
     return g1;
 }
 
-// An ASTC texture re-encoded as BC7: the BC7 encoded offline for these storage bytes (vk_texpre.c) straight into the
-// image. Without one, the storage is recorded for the offline encoder and 0 sends the upload on through the GPU encoder.
-static int upload_texpre(Tex *e, uint32_t levels, uint32_t layers) {
+// An ASTC texture re-encoded as BC7 or BC1: the blocks stored for these storage bytes (vk_texpre.c: encoded offline, or
+// the GPU encoder's own from an earlier run) straight into the image. Without them, a BC7 texture's storage is recorded
+// for the offline encoder (MKW_TEXPRE_RECORD) and 0 sends the upload on through the GPU encoder; *hash and *bytes tell
+// the write-back (MKW_TEXPRE_WRITEBACK) what to store.
+static int upload_texpre(Tex *e, uint32_t levels, uint32_t layers, uint64_t *hash, uint64_t *bytes) {
     const tex_t *t = &e->t;
     const nvn_texdesc *d = &t->d;
     int is3d = d->target == NVN_TEXTURE_TARGET_3D, one_d = e->pub.type == VK_IMAGE_TYPE_1D;
     uint32_t n = levels * layers, k = 0;
     VkTexpreRegion *pr = calloc(n, sizeof *pr);
     VkBufferImageCopy *rg = calloc(n, sizeof *rg);
-    VkDeviceSize total = 0;
+    VkDeviceSize total = 0, blk = e->f.astc_bc7 == 2 ? 8 : 16;
     for (uint32_t lv = 0; lv < levels; lv++)
         for (uint32_t ly = 0; ly < layers; ly++, k++) {
             uint32_t w = mip(d->width, lv), h = one_d ? 1 : mip(d->height, lv), sl = is3d ? mip(d->depth, lv) : 1;
             pr[k] = (VkTexpreRegion){w, h, sl, lv, ly};
             rg[k] = (VkBufferImageCopy){.bufferOffset = total, .imageSubresource = {e->pub.aspect, lv, ly, 1},
                                         .imageExtent = {w, h, sl}};
-            total += vk_texpre_region_bytes(&pr[k]);
+            total += vk_texpre_region_bytes(&pr[k]) / 16 * blk;
         }
     uint64_t h = vk_texpre_hash(t->mem, t->L.size);
-    int ok = 0;
-    if (vk_texpre_has(h)) {   // over UP_CHUNK, decoded into memory first and staged in groups
-        uint8_t *bc = total > UP_CHUNK ? malloc(total) : NULL;
-        ok = total > UP_CHUNK ? bc && vk_texpre_load(h, bc, total) : 1;
+    int ok = 0, fmt = e->f.astc_bc7;
+    *hash = h, *bytes = total;
+    if (vk_texpre_has_bc(h, fmt)) {   // over UP_CHUNK, decoded into memory first and staged in groups; a raw write-back
+                                       // file is read straight into each group's staging, on the reader threads
+        int raw = vk_texpre_raw(h, fmt, total);
+        // Queued reads only for a texture make_fresh checks again (vk_texpre_failed): a failed one is uploaded anew.
+        uint64_t ticket = raw && e->pub.mirrored && !e->pub.gpu_owned ? vk_texpre_ticket() : 0;
+        uint8_t *bc = !raw && total > UP_CHUNK ? malloc(total) : NULL;
+        ok = !raw && total > UP_CHUNK ? bc && vk_texpre_load_bc(h, fmt, bc, total) : 1;
         VkDeviceSize done = 0, gtotal;
         for (uint32_t g0 = 0, g1; ok && g0 < n; g0 = g1, done += gtotal) {
-            g1 = up_group(rg, g0, n, total, !bc, &gtotal);
+            g1 = up_group(rg, g0, n, total, !bc && !raw, &gtotal);
             if (g0) vk_upload_flush_over(UP_FLUSH);
             VkBuffer sb;
             uint8_t *stg;
             VkCommandBuffer cb = vk_upload_begin_staging(gtotal, &sb, (void **)&stg);
-            ok = stg && (bc ? (memcpy(stg, bc + done, gtotal), 1) : vk_texpre_load(h, stg, total));
+            ok = stg && (raw ? vk_texpre_read_at(h, fmt, stg, done, gtotal, total, ticket)
+                         : bc ? (memcpy(stg, bc + done, gtotal), 1) : vk_texpre_load_bc(h, fmt, stg, total));
             if (ok) {
                 barrier(cb, ALL_RW, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT);
                 vkCmdCopyBufferToImage(cb, sb, e->pub.image, VK_IMAGE_LAYOUT_GENERAL, g1 - g0, rg + g0);
@@ -144,8 +152,9 @@ static int upload_texpre(Tex *e, uint32_t levels, uint32_t layers) {
             vk_upload_end();
         }
         free(bc);
+        if (ok) e->texpre_ticket = ticket;
     }
-    if (!ok) vk_texpre_record(h, d, pr, (int)n, t->mem, t->L.size);
+    if (!ok && fmt == 1) vk_texpre_record(h, d, pr, (int)n, t->mem, t->L.size);
     free(pr), free(rg);
     return ok;
 }
@@ -242,6 +251,7 @@ static void upload(Tex *e) {
 
 static void upload_(Tex *e) {
     static volatile int32_t n_bad, n_undecoded;
+    e->texpre_ticket = 0;
     if (tracing(e->pub.addr))
         rt_log("vk: trace %#llx: upload %u of entry %p (%ux%u target %d), submit epoch %u", (unsigned long long)e->pub.addr,
                e->n_up + 1, (void *)e, e->t.d.width, e->t.d.height, e->t.d.target, submit_epoch);
@@ -259,8 +269,9 @@ static void upload_(Tex *e) {
         acheck = agpu && vk_astc_mode() == VK_ASTC_CHECK && (uint64_t)e->pub.width * e->pub.height * e->pub.layers * 4 <= (16ull << 20);
     uint32_t n = levels * layers, k = 0;
     uint32_t drop = e->pub.drop;   // NVN level = image level + drop
-    if (agpu && e->f.astc_bc7 == 1 && !acheck && !linear && !drop && vk_texpre_on() && upload_texpre(e, levels, layers))
-        goto counted;
+    uint64_t wb_h = 0, wb_size = 0;   // the cache missed: the texture's hash and BC bytes, for the write-back
+    int wb_try = agpu && e->f.astc_bc7 && !acheck && !linear && !drop && vk_texpre_on();
+    if (wb_try && upload_texpre(e, levels, layers, &wb_h, &wb_size)) goto counted;
     VkBufferImageCopy *rg = calloc(n, sizeof *rg);
     VkAstcRegion *ar = agpu ? calloc(n, sizeof *ar) : NULL;
     VkDeviceSize total = 0, decoded = 0;
@@ -284,6 +295,7 @@ static void upload_(Tex *e) {
     uint8_t *stg, *raw_copy = NULL;
     uint8_t *rmap = acheck ? vk_staging(decoded, &rbuf, &ralloc) : NULL;
     int checked = 0;
+    VkTexpreWb *wb = wb_try ? vk_texpre_wb_begin(wb_h, e->f.astc_bc7, wb_size) : NULL;   // MKW_TEXPRE_WRITEBACK
     for (uint32_t g0 = 0, g1; g0 < n; g0 = g1) {
         VkDeviceSize gtotal;
         g1 = up_group(rg, g0, n, total, acheck, &gtotal);
@@ -386,8 +398,17 @@ static void upload_(Tex *e) {
         barrier(cb, ALL_RW, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT);
         if (agpu) {
             uint64_t a0 = perf_begin(), tq = tt_begin();
+            VkBuffer wbp = VK_NULL_HANDLE;   // the group's BC blocks, read back for the write-back
+            if (wb) {
+                VkDeviceSize gbc = 0;
+                for (uint32_t i = g0; i < g1; i++)
+                    gbc += (VkDeviceSize)((rg[i].imageExtent.width + 3) / 4) * ((rg[i].imageExtent.height + 3) / 4) *
+                           rg[i].imageExtent.depth * (e->f.astc_bc7 == 2 ? 8 : 16);
+                if ((wbp = vk_texpre_wb_part(wb, gbc))) vk_astc_bc_readback(wbp);
+            }
             checked = vk_astc_record(cb, sb, gtotal, ar + g0, (int)(g1 - g0), e->f.astc_bw, e->f.astc_bh,
                                      e->f.astc_srgb, e->pub.image, e->pub.aspect, e->f.astc_bc7, rbuf);
+            if (wbp) vk_texpre_wb_got(wb, vk_astc_bc_readback_take(), checked);
             perf_end(PERF_ASTC, a0);
             tt_end(TT_ASTC, tq);
             if (!checked)
@@ -400,6 +421,7 @@ static void upload_(Tex *e) {
         barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, ALL_RW);
         vk_upload_end();
     }
+    if (wb) vk_texpre_wb_end(wb);
     if (acheck) {   // waits for the GPU
         vk_upload_flush(1);
         if (checked) {
@@ -633,6 +655,7 @@ void make_fresh(Tex *e) {
     int ch = vk_mem_changed(e->pub.addr, size, e->wgen, &now);
     e->wgen = now;
     e->last_ch = ch;
+    if (e->texpre_ticket && vk_texpre_failed(e->texpre_ticket)) e->texpre_ticket = 0, ch = 1;   // its cache read failed
     if (ch < 0 && e->t.mem && same_storage(e)) return;   // not tracked: the hash decides
     if (ch) upload(e);   // 1 written, -1 not tracked and rewritten: both upload again
 }
@@ -659,6 +682,7 @@ void make_fresh_snap(Tex *e) {
         return;
     }
     e->last_ch = ch;
+    if (e->texpre_ticket && vk_texpre_failed(e->texpre_ticket)) e->texpre_ticket = 0, ch = 1;   // its cache read failed
     if (!(ch < 0 && e->t.mem && same_storage(e)) && ch) upload(e);   // not tracked: the hash decides
     if (sd0) __atomic_fetch_add(&vk_exec_sd_fresh_ns, kern_now_ns() - sd0, __ATOMIC_RELAXED);
 }
