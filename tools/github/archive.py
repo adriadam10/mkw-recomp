@@ -70,7 +70,10 @@ query($owner: String!, $name: String!, $after: String) {
 
 def api(path: str) -> list | dict:
     out = subprocess.run(
-        ["gh", "api", "--paginate", "--slurp", f"repos/{REPO}/{path}"], capture_output=True, text=True, check=True
+        ["gh", "api", "--paginate", "--slurp", f"repos/{REPO}/{path}"],
+        capture_output=True,
+        encoding="utf-8",
+        check=True,  # gh writes UTF-8, whatever the code page
     ).stdout
     pages = json.loads(out)
     return [x for p in pages for x in p] if pages and isinstance(pages[0], list) else pages[0]
@@ -83,7 +86,7 @@ def discussions() -> list[dict]:
         args = ["gh", "api", "graphql", "-f", f"query={DISCUSSIONS}", "-f", f"owner={owner}", "-f", f"name={name}"]
         if after:
             args += ["-f", f"after={after}"]
-        page = json.loads(subprocess.run(args, capture_output=True, text=True, check=True).stdout)
+        page = json.loads(subprocess.run(args, capture_output=True, encoding="utf-8", check=True).stdout)
         d = page["data"]["repository"]["discussions"]
         found += d["nodes"]
         if not d["pageInfo"]["hasNextPage"]:
