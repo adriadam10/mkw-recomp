@@ -1,4 +1,4 @@
-<!-- translated from README.md e52b1eaf6b6a body 53c7fdf62c0f -->
+<!-- translated from README.md 7b79005459a3 body d1063a4c7816 -->
 
 <p align="center"><img src="../images/logo.svg" width="128" alt="mkw-recomp logo"></p>
 
@@ -94,7 +94,7 @@ Các công việc còn mở, theo thứ tự (chi tiết: [docs/project/roadmap.
    Linux: `~/.local/share/mkw-recomp`, hoặc thư mục bạn đã giải nén AppImage vào bằng `--appimage-extract`), chỉ nó
    đến bản dump của bạn và nhấn **Set up**. Lần thiết lập đầu tiên mất một lúc: nó biên dịch toàn bộ game và tải xuống
    `nvdisasm` và `ptxas` của NVIDIA (84 MB trên Linux, 126 MB trên Windows). Sau đó nhấn **Play**.
-4. Các bản phát hành mới được chào trên màn hình bắt đầu (**Update to vX**); **Settings → Menu → Check for updates** sẽ
+4. Các bản phát hành mới được chào trên màn hình bắt đầu (**Update to vX**); **Cài đặt → Menu → Kiểm tra cập nhật** sẽ
    tắt điều đó.
 
 Với [RecompLauncher](https://github.com/elripalda/RecompLauncher), hãy dùng **Easy Setup** và chọn tệp `.nup`, `.nx`
@@ -137,7 +137,7 @@ Vượt ngoài console, tất cả đều tùy chọn và mặc định tắt (h
   trên console.
 - **Hacks**: turbo (F2), bỏ qua các đoạn phim, mở khóa mọi thứ, ngẫu nhiên cố định, đi thẳng vào đua tính giờ hoặc
   chạy tự do.
-- **Ngôn ngữ**: các menu bằng 20 ngôn ngữ; game còn có thêm tiếng Catalan, Galicia, Basque và Thổ Nhĩ Kỳ.
+- **Ngôn ngữ**: các menu bằng 25 ngôn ngữ; game còn có thêm tiếng Catalan, Galicia, Basque, Thổ Nhĩ Kỳ, Việt, Ukraina, Indonesia, Ả Rập và Hindi.
 - **Công cụ**: lớp phủ hiệu năng và thông tin hệ thống bằng một cú nhấp cho các báo cáo lỗi.
 
 ### Tay cầm Switch 2 qua USB trên Windows
@@ -218,7 +218,7 @@ SM86, được tạo ra từ `nvdisasm` của NVIDIA (không đi kèm): [tools/s
 | Hệ thống | Các hàm `nn::*` của SDK được thay thế theo tên; chữ ký lấy từ các tên đã mangle của 1 289 hàm import của `main` | Không có dịch vụ console nào để giả lập |
 | Đồ họa | NVN2 trên Vulkan: 529 trong số 699 hàm của nó trùng tên với NVN1; 170 hàm là mới | Biên dịch lại, không phải giả lập GPU |
 | Shaders | Bộ dịch SM86→SPIR-V riêng, chạy ngoại tuyến, với một bộ giải mã được tạo từ đặc tả của DocumentSASS / nvsass-disassembler | Phủ được mesh/task và những gì Maxwell thiếu |
-| Các tính năng thêm của Switch 2 | HDR tự động khi màn hình là HDR (Settings > Screen > HDR); DLSS, ray tracing và cảm ứng mặc định tắt, các hàm NVN2 của chúng có tồn tại nhưng không làm gì | Các tính năng phần cứng thêm của console, không cần cho việc chơi |
+| Các tính năng thêm của Switch 2 | HDR tự động khi màn hình là HDR (Cài đặt > Màn hình > HDR); DLSS, ray tracing và cảm ứng mặc định tắt, các hàm NVN2 của chúng có tồn tại nhưng không làm gì | Các tính năng phần cứng thêm của console, không cần cho việc chơi |
 | Mặc định | Vẻ ngoài và độ phân giải của console; các thiết lập thấp hơn là các tùy chọn | Người chơi quyết định |
 
 ## Cách nó được làm ra
