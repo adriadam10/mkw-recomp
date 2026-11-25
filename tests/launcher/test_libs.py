@@ -83,3 +83,23 @@ def test_shipped_table_is_well_formed():
     assert {r.feature for r in rows} == {"dlss", "dlssg", "fsr3", "fsr3fg", "renhdrum"}
     for r in rows:
         assert r.url.startswith("https://") and len(r.sha256) == 64 and r.size > 0
+
+
+def test_fetch_retries_transient_network_error(server, monkeypatch, tmp_path, capsys):
+    libs = load_libs()
+    real_urlopen = libs.urllib.request.urlopen
+    attempts = 0
+
+    def flaky_urlopen(*a, **k):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise OSError("temporary DNS failure")
+        return real_urlopen(*a, **k)
+
+    monkeypatch.setattr(libs.urllib.request, "urlopen", flaky_urlopen)
+    monkeypatch.setattr(libs.time, "sleep", lambda _: None)
+    dest = tmp_path / "game"
+    code, out = run(libs, monkeypatch, tmp_path, server, capsys, "fetch", "--features", "good", "--dir", str(dest))
+    assert code == 0 and attempts == 2 and out[-2:] == ["ready good.dll", "done"]
+    assert (dest / "good.dll").read_bytes() == GOOD

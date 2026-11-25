@@ -23,6 +23,7 @@ import hashlib
 import http.client
 import platform
 import sys
+import time
 import urllib.request
 from contextlib import suppress
 from pathlib import Path
@@ -69,25 +70,30 @@ def missing(args: argparse.Namespace) -> None:
     emit("done")
 
 
-def download(lib: Lib, dest: Path, done: int, total: int) -> int:
+def download(lib: Lib, dest: Path, done: int, total: int, retries: int = 3) -> int:
     """lib into dest through a .part file renamed only once its size and sha256 match; returns done + its bytes."""
     part = dest / (lib.file + ".part")
-    h, got, step = hashlib.sha256(), 0, max(1, total // 200)
+    step = max(1, total // 200)
     req = urllib.request.Request(lib.url, headers={"User-Agent": "mkw-recomp-launcher"})
-    try:
-        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT, context=ssl_context()) as r, part.open("wb") as f:
-            while chunk := r.read(1 << 20):
-                f.write(chunk)
-                h.update(chunk)
-                if (done + got) // step != (done + got + len(chunk)) // step:
-                    emit("progress", done + got + len(chunk), total)
-                got += len(chunk)
-                if got > lib.size:
-                    break
-    except OSError, http.client.HTTPException:
-        with suppress(OSError):
-            part.unlink(missing_ok=True)
-        raise
+    for attempt in range(retries):
+        h, got = hashlib.sha256(), 0
+        try:
+            with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT, context=ssl_context()) as r, part.open("wb") as f:
+                while chunk := r.read(1 << 20):
+                    f.write(chunk)
+                    h.update(chunk)
+                    if (done + got) // step != (done + got + len(chunk)) // step:
+                        emit("progress", done + got + len(chunk), total)
+                    got += len(chunk)
+                    if got > lib.size:
+                        break
+            break
+        except (OSError, http.client.HTTPException):
+            with suppress(OSError):
+                part.unlink(missing_ok=True)
+            if attempt + 1 == retries:
+                raise
+            time.sleep(1)
     if got != lib.size or h.hexdigest() != lib.sha256:
         part.unlink()
         raise ValueError(f"{lib.file} came damaged ({got} of {lib.size} bytes or another sha256): try again")
