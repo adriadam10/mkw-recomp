@@ -80,6 +80,24 @@ def test_add_refuses_unexpected_shortcut_structure(tmp_path: Path, data: bytes) 
     assert vdf.read_bytes() == data
 
 
+@pytest.mark.parametrize("field", [b"AppName\x00Bad\xffname", b"Bad\xffkey\x00value"])
+def test_add_refuses_invalid_utf8_without_changing_shortcuts(tmp_path: Path, field: bytes) -> None:
+    vdf = tmp_path / "shortcuts.vdf"
+    data = b"\x00shortcuts\x00\x000\x00\x01" + field + b"\x00\x08\x08\x08"
+    vdf.write_bytes(data)
+    with pytest.raises(ValueError, match="invalid Steam shortcut data"):
+        steam.add(vdf, NAME, EXE, "/games/mkw")
+    assert vdf.read_bytes() == data
+
+
+def test_add_preserves_unicode_shortcuts(tmp_path: Path) -> None:
+    vdf = tmp_path / "shortcuts.vdf"
+    original = row("Café 田中", "/games/田中")
+    vdf.write_bytes(vdf_with([original]))
+    steam.add(vdf, NAME, EXE, "/games/mkw")
+    assert steam.read_map(vdf.read_bytes(), 0)[0]["shortcuts"]["0"] == original
+
+
 def test_add_creates_the_file(tmp_path: Path) -> None:
     p = tmp_path / "config" / "shortcuts.vdf"
     p.parent.mkdir()
@@ -90,10 +108,11 @@ def test_add_creates_the_file(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "data",
-    [b"\x00shortcuts\x00", b"\x00shortcuts\x00\x02appid\x00\x01"],
-    ids=["truncated-map", "truncated-integer"],
+    [b"\x00shortcuts\x00", b"\x00shortcuts\x00\x02appid\x00\x01",
+     b"\x00shortcuts\x00\x000\x00\x01AppName\x00Bad\xffname\x00\x08\x08\x08"],
+    ids=["truncated-map", "truncated-integer", "invalid-utf8"],
 )
-def test_add_reports_truncated_shortcuts(
+def test_add_reports_invalid_shortcuts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], data: bytes,
 ) -> None:
     config = tmp_path / "userdata/123/config"

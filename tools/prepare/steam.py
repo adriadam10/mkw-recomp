@@ -79,12 +79,12 @@ def read_map(b: bytes, i: int) -> tuple[dict, int]:
     while b[i] != 0x08:
         t, i = b[i], i + 1
         end = b.index(0, i)
-        key, i = b[i:end].decode("utf-8", "replace"), end + 1
+        key, i = b[i:end].decode("utf-8"), end + 1
         if t == 0x00:
             out[key], i = read_map(b, i)
         elif t == 0x01:
             end = b.index(0, i)
-            out[key], i = b[i:end].decode("utf-8", "replace"), end + 1
+            out[key], i = b[i:end].decode("utf-8"), end + 1
         elif t == 0x02:
             out[key], i = struct.unpack_from("<i", b, i)[0], i + 4
         elif t == 0x07:
@@ -186,7 +186,7 @@ def write_new(path: Path, data: bytes) -> None:
 def add(vdf: Path, name: str, exe: str, start_dir: str, icon_path: str = "") -> None:
     try:
         root = read_map(vdf.read_bytes(), 0)[0] if vdf.is_file() and vdf.stat().st_size else {}
-    except (IndexError, struct.error) as e:
+    except (IndexError, struct.error, UnicodeDecodeError) as e:
         raise ValueError(f"{vdf.name} contains incomplete or invalid Steam shortcut data") from e
     shortcuts = root.get("shortcuts", {})
     if root.keys() - {"shortcuts"} or not isinstance(shortcuts, dict) or any(
