@@ -328,8 +328,19 @@ static void probe_codec(void) {
            "pools, slots, sync point events and NV12 reads\n", W, H, good, FRAMES + 1);
 }
 
+// Region k of a heap of at least k + 1 regions, frozen (memory.c mem_freeze): read-only until a write or mem_thaw.
+// The kernel's write into it fails (EFAULT, WSAEFAULT) instead of faulting into the thaw, so every override that has
+// the kernel write guest memory thaws the buffer first. A region thawed by mem_thaw stays thawed 5 s: one each.
+static uint8_t *frozen_region(uint64_t heap, int k) {
+    uint64_t a = heap + ((uint64_t)k << 21);
+    *(volatile uint8_t *)(uintptr_t)a = 1;   // committed (Windows' lazy commit takes the whole 2 MiB) and written
+    CHECK(mem_freeze(a) == 1 && mem_frozen(a), "freeze of heap region %d", k);
+    return (uint8_t *)(uintptr_t)a;
+}
+
 // ---- socket (ov_socket.c): datagrams over the host's loopback with the console's sockaddr, flags and errno, an
-// empty nonblocking read, poll, eventfd, and every overload once
+// empty nonblocking read, poll, eventfd, a receive, an eventfd read and random bytes into a frozen region, and every
+// overload once
 static void probe_socket(void) {
     enum { AF = 2, DGRAM = 2, UDP = 17, NONBLOCK = 2 << 28, SOL = 0xffff, EAGAIN_ = 11, EBADF_ = 9 };
     uint8_t *b = ovp_alloc(0x400);
@@ -384,6 +395,19 @@ static void probe_socket(void) {
     CHECK((int64_t)CALL("socket::SendTo", sa, U(buf), 3, 0x80, U(ab), 16) == 3, "SendTo with MSG_DONTWAIT");
     *fromlen = 16;
     CHECK((int64_t)CALL("socket::RecvFrom", sb, U(buf), 64, 0, U(from), U(fromlen)) == 3, "RecvFrom 2");
+    // the game's receive buffer in a frozen region: the datagram lands and the region is thawed
+    uint64_t heap = 0;
+    CHECK(mem_set_heap_size(3ull << 21, &heap) == 0, "SetHeapSize 6 MiB");
+    uint8_t *fz = frozen_region(heap, 0);
+    CHECK((int64_t)CALL("socket::SendTo", sa, U("frozen"), 6, 0, U(ab), 16) == 6, "SendTo for the frozen buffer");
+    pfd[0] = sb, pfd[1] = 1;
+    CHECK((int)CALL("socket::Poll", U(pfd), 1, 1000) == 1, "Poll before the frozen receive");
+    *fromlen = 16;
+    got = (int64_t)CALL("socket::RecvFrom", sb, U(fz + 0x100), 64, 0, U(from), U(fromlen));
+    int64_t err = got < 0 ? (int64_t)CALL("socket::GetLastErrno") : 0;
+    CHECK(got == 6 && !memcmp(fz + 0x100, "frozen", 6) && !mem_frozen(U(fz)),
+          "RecvFrom into a frozen region: %lld bytes, errno %lld, still frozen %d", (long long)got, (long long)err,
+          mem_frozen(U(fz)));
     // LAN only: an internet address is refused before anything is sent (8.8.8.8:53, a public one), and so is a bind to it
     const uint8_t pub[4] = {8, 8, 8, 8};
     memset(from, 0, 16);
@@ -400,11 +424,20 @@ static void probe_socket(void) {
     *val = 0;
     CHECK(e >= 0 && (int)CALL("socket::EventFdWrite", e, 3) == 0 && (int)CALL("socket::EventFdRead", e, U(val)) == 0 &&
               *val == 3, "EventFd: %d, read %llu", e, (unsigned long long)*val);
+    uint64_t *fv = (uint64_t *)(frozen_region(heap, 1) + 0x200);   // the counter read into a frozen region
+    CHECK((int)CALL("socket::EventFdWrite", e, 5) == 0 && (int)CALL("socket::EventFdRead", e, U(fv)) == 0 && *fv == 5 &&
+              !mem_frozen(U(fv)), "EventFdRead into a frozen region: read %llu", (unsigned long long)*fv);
     CHECK((int)CALL("socket::Close", e) == 0, "Close eventfd");
 #else
     CHECK((int)CALL("socket::EventFd", 0, 4) == -1 && (int)CALL("socket::EventFdWrite", 0, 1) == -1 &&
               (int)CALL("socket::EventFdRead", 0, U(val)) == -1, "EventFd unsupported on Windows");
 #endif
+    // random bytes into a frozen region, whose fresh pages read as zeros (Linux: getrandom is the kernel's write, which
+    // failed into a fatal; Windows' BCryptGenRandom writes from user mode and faults into the thaw)
+    uint8_t *fr = frozen_region(heap, 2) + 0x300;
+    CALL("crypto.GenerateCryptographicallyRandomBytes", U(fr), 32);
+    CHECK(memcmp(fr, (uint8_t[32]){0}, 32) && !mem_frozen(U(fr)), "random bytes into a frozen region: all zero");
+    CHECK(mem_set_heap_size(0, &heap) == 0, "SetHeapSize 0");
     CHECK((int)CALL("socket::Close", sa) == 0 && (int)CALL("socket::Close", sb) == 0, "Close");
     CHECK((int)CALL("socket::Close", sa) == -1 && CALL("socket::GetLastErrno") == EBADF_, "Close twice: EBADF");
     *res = b;

@@ -51,8 +51,9 @@ static uint64_t ww_query(uint64_t addr, uint64_t size) {
 // 8th-gen i7), so this keeps the queries to the regions the CPU writes. The region need not lie wholly in pools: NVN
 // pools are small and not 2 MiB aligned, so most regions also hold other guest memory, and a rule that refused those
 // left 340 of 436 queried MiB a frame unfrozen in town although nothing had written them for 300 submissions. The
-// other memory is safe to freeze for the same reason pools are: the only kernel writes into guest memory are file
-// reads, which thaw their buffer first (fs_host.c, romfs.c), and every user-mode write faults and thaws.
+// other memory is safe to freeze for the same reason pools are: the kernel's writes into guest memory (file reads,
+// socket receives, eventfd reads, Linux's random bytes) thaw their buffer first (mem_io_begin: fs_host.c, romfs.c,
+// ov_socket.c, ov_system.c), and every user-mode write faults and thaws.
 #define FREEZE_PER_SUB 32
 int freeze_idle;                       // 0: off
 uint32_t ww_ep = 1;                    // gen_lock: the submission being recorded (vk_mem_mirror_begin)

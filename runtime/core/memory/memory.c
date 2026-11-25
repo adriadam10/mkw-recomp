@@ -67,9 +67,10 @@ static int reserve_at(uint64_t at, uint64_t size, int watch) { return plat_mem_r
 // A 2 MiB region of the watched reservations that nothing wrote for a while can be made read-only (mem_freeze), so the
 // back end's write-watch queries skip it: no page of a frozen region changes before a thaw. The first write faults and
 // thaw_handler makes the region writable again before the write retries. A kernel write into guest memory (a file
-// read) fails on a read-only page instead of faulting, so file reads thaw their buffer first (mem_thaw), and so does
-// every commit, decommit and protection change here. A region stays thawed for FRZ_HOLD_MS after a mem_thaw: a file
-// read still in flight writes its buffer later. frz_lock is a leaf lock: nothing writes guest memory under it.
+// read, a socket receive, an eventfd read, Linux's random bytes) fails on a read-only page instead of faulting, so
+// those thaw their buffer first (mem_io_begin), and so does every commit, decommit and protection change here. A
+// region stays thawed for FRZ_HOLD_MS after a mem_thaw: a file read still in flight writes its buffer later. frz_lock
+// is a leaf lock: nothing writes guest memory under it.
 #define FRZ_SHIFT 21
 #define FRZ_SIZE (1ull << FRZ_SHIFT)
 #define FRZ_HOLD_MS 5000u

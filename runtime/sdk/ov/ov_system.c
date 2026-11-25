@@ -363,8 +363,11 @@ static void ov_show_error_variant(Cpu *c) {
 static void ov_random_bytes(Cpu *c) {
     void *out = (void *)(uintptr_t)arg_x(c, 0);
     size_t n = (size_t)arg_x(c, 1);
-    mem_commit_range((uint64_t)(uintptr_t)out, n);   // BCryptGenRandom writes it (Windows' lazy commit, memory.c)
+    // Linux's getrandom writes it from the kernel: a frozen page would fail it (EFAULT) into the fatal below. Windows'
+    // BCryptGenRandom writes from user mode, but still needs the lazy commit (memory.c).
+    mem_io_begin((uint64_t)(uintptr_t)out, n);
     if (n && (!out || !plat_random(out, n))) rt_fatal("crypto: no %zu random bytes from the system", n);
+    mem_io_end((uint64_t)(uintptr_t)out, n);
 }
 
 // ==== SDK-internal initialisation (services.c)

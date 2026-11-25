@@ -477,12 +477,14 @@ static void ov_recvfrom(Cpu *c) {
     }
     struct sockaddr_in a;
     socklen_t alen = sizeof a;
-    mem_commit_range(arg_x(c, 1), arg_x(c, 2));
+    // the kernel writes the datagram: on a frozen page it fails (EFAULT, WSAEFAULT) instead of faulting into the thaw
+    mem_io_begin(arg_x(c, 1), arg_x(c, 2));
 #ifdef _WIN32
     int n = recvfrom(sl.s, arg_p(c, 1), (int)arg_x(c, 2), hf, (struct sockaddr *)&a, &alen);
 #else
     ssize_t n = recvfrom(sl.s, arg_p(c, 1), (size_t)arg_x(c, 2), hf | MSG_DONTWAIT, (struct sockaddr *)&a, &alen);
 #endif
+    mem_io_end(arg_x(c, 1), arg_x(c, 2));
     if (n < 0) fail(host_errno());
     else addr_out(&a, arg_p(c, 4), arg_p(c, 5));
     ret_x(c, (uint64_t)(int64_t)n);
@@ -607,8 +609,10 @@ static void ov_eventfd_read(Cpu *c) {
     int ok = !slot_get((int)arg_x(c, 0), &sl), r = -1;
 #ifndef _WIN32
     if (ok && (sl.nonblock || wait_readable(sl.s, -1))) {
+        mem_io_begin(arg_x(c, 1), 8);   // the kernel writes the counter: a frozen page would fail it (EFAULT)
         r = read(sl.s, arg_p(c, 1), 8) == 8 ? 0 : -1;
         if (r < 0) fail(errno);
+        mem_io_end(arg_x(c, 1), 8);
     }
 #else
     if (ok) fail(G_ENOSYS);

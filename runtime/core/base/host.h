@@ -176,7 +176,8 @@ int mem_freeze(uint64_t a);                                // makes the 2 MiB re
 int mem_frozen(uint64_t a);                                // the 2 MiB region of a is frozen: no page in it changed
                                                            // since its freeze
 void mem_thaw(uint64_t a, uint64_t n);                     // makes the frozen regions over [a, a+n) writable again;
-                                                           // before a kernel write (file read) into guest memory;
+                                                           // before a kernel write (file read, socket receive) into
+                                                           // guest memory (mem_io_begin);
                                                            // commits the range first (mem_commit_range)
 void mem_io_begin(uint64_t a, uint64_t n);                 // mem_thaw, and until mem_io_end no page of the range is swapped
 void mem_io_end(uint64_t a, uint64_t n);                   // for the GPU's (mem_share): around a kernel write into it
