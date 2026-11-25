@@ -1516,6 +1516,16 @@ T["UI_BIND_DESC_MUTE"] = {
     "zh-Hans": "随时开关声音，与“声音”标签页的静音相同。仅限按键：不能使用鼠标按键和 F2 至 F5。",
     "zh-Hant": "隨時開關聲音，與「聲音」分頁的靜音相同。僅限按鍵：不能使用滑鼠按鍵和 F2 至 F5。",
 }
+# Vietnamese (vi.po came to main after these strings were written, #873)
+T["UI_MENU_MUTE"]["vi"] = "Tắt tiếng"
+T["UI_BIND_MUTE"]["vi"] = "Bật/tắt tiếng"
+T["UI_MENU_MUTE_DESC"]["vi"] = (
+    "Không có âm thanh. Phím Bật/tắt tiếng (mặc định là \\\\, trong thẻ Điều khiển) bật và tắt nó bất cứ lúc nào."
+)
+T["UI_BIND_DESC_MUTE"]["vi"] = (
+    "Bật và tắt âm thanh bất cứ lúc nào, như Tắt tiếng trong thẻ Âm thanh. Chỉ dùng phím: không dùng được các nút"
+    " chuột và F2 đến F5."
+)
 
 
 def main():
