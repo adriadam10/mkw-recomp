@@ -3,8 +3,11 @@
 Why: one refresh per flip runs 60 -> 120 at 240 Hz twice as fast, while a step that is not a whole number of refreshes
 has to alternate one and two refreshes. Late slots also must not reuse a refresh, or mailbox drops one of the pictures.
 Without the clock (immediate), a picture must not follow the flip before it within half a step, or a late game frame
-is replaced almost at once. The production helper is cut out of vk_backend.c and built with a deterministic vblank
-clock; the harness keeps the flip before's call time as flip_main does.
+is replaced almost at once. A job's first picture keeps the slot of the first call, which ready_slack waited for:
+asked for again it went a refresh late, and in a job of one picture (frame generation's first frame after a pause)
+that picture is the game's frame. The production helpers are cut out of vk_backend.c and built with a deterministic
+vblank clock; the harness asks for the pictures in flip_main's order and keeps the flip before's call time as
+flip_main does.
 Usage: uv run --with ziglang pytest tests/runtime/test_flip_pace.py
 """
 
@@ -45,9 +48,11 @@ int main(int argc, char **argv) {
     test_refresh = strtoull(argv[6], NULL, 10);
     test_vblank = strtoull(argv[7], NULL, 10) + strtoll(argv[9], NULL, 10);
     p.clock = atoi(argv[8]);
+    /* flip_main's order: the first call places picture 0 before ready_slack's wait, then each picture is flipped */
+    uint64_t at0 = flip_pace_next(&p, 0, late == 0 ? p.first + delay : 0, 1);
     for (int k = 0; k < n; k++) {
         uint64_t now = k == late ? p.first + (uint64_t)k * p.step + delay : 0;
-        uint64_t at = flip_pace_next(&p, k, now, k == 0);
+        uint64_t at = flip_pace_picture(&p, k, at0, now);
         printf("%llu%c", (unsigned long long)at, k + 1 == n ? '\n' : ' ');
         p.last = at > now ? at : now;   /* flip_main: the flip's call time, after waiting for `at` */
         held += p.held, p.held = 0;
@@ -133,10 +138,27 @@ def test_240hz_60_to_120_uses_two_refreshes(scheduler: Path) -> None:
 
 
 def test_flip_main_uses_each_job_picture_once() -> None:
+    # the harness's order: the first call, then flip_pace_picture for each made frame and for the game's
     source = SRC.read_text(encoding="utf-8")
-    assert "flip_pace_next(&pace, 0, t0, 1)" in source
-    assert "if (k > 1) at = flip_pace_next(&pace, k - 1, kern_now_ns(), 0)" in source
-    assert "target = flip_pace_next(&pace, f.nf - 1, kern_now_ns(), 0)" in source
+    assert "at0 = flip_pace_next(&pace, 0, t0, 1)" in source
+    assert "at = flip_pace_picture(&pace, k - 1, at0, kern_now_ns())" in source
+    assert "target = flip_pace_picture(&pace, f.nf - 1, at0, kern_now_ns())" in source
+    assert source.count("flip_pace_next(&pace") == 1
+
+
+def test_one_picture_job_flips_the_game_frame_at_its_slot(scheduler: Path) -> None:
+    # frame generation's first frame after a pause, a menu or a gap makes no frame: the job is the game's frame alone,
+    # picture 0, which the first call placed and ready_slack waited for. Asked for again, the slot was taken and the
+    # game frame went a refresh late (at 30 fps with 2x on 60 Hz it was shown one refresh instead of two).
+    for hz in (60, 119.88, 144):
+        (call,) = schedule(scheduler, hz, 1, 16_666_667)
+        assert 0 <= call - job_first(hz) < round(1_000_000_000 / hz)   # the first slot at or after its time
+
+
+def test_late_one_picture_job_keeps_the_slot_after_now(scheduler: Path) -> None:
+    # its time had passed when the flip thread took it: the first slot after now, not the one after that
+    refresh = 16_666_667
+    assert schedule(scheduler, 60, 1, refresh, late=0, delay=5_000_000) == [job_first(60) + refresh]
 
 
 def test_119_88hz_two_flips_use_two_vblanks(scheduler: Path) -> None:

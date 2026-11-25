@@ -126,6 +126,18 @@ static uint64_t flip_pace_next(FlipPace *p, int k, uint64_t now, int first) {
     return at;
 }
 
+// Picture j of a job, its made frames first and the game's own last (j = nf - 1). Picture 0 keeps the first call's
+// flip, which ready_slack waited for (flip_main): asked for again, that slot had just passed and was taken, so it went
+// a refresh late. Every first made frame did (19 % of flips two refreshes apart, the game at 50 fps instead of 60 with
+// 2x; merged-fsr-display75 against old89aa-current-display75 and ab-fg, 16/11/2026), and so did the game frame of a
+// job of one picture (frame generation's first after a pause, a menu over the scene or a gap: no frame before it to
+// make one from), shown one refresh instead of two at 30 fps with 2x on 60 Hz. In menus with FIFO the flip thread
+// waited 17-30 ms for it, 0.7-16 ms at its slot (fg1main-old against fg1main-new and fg1-old against fg1-new,
+// 25/11/2026).
+static uint64_t flip_pace_picture(FlipPace *p, int j, uint64_t at0, uint64_t now) {
+    return j ? flip_pace_next(p, j, now, 0) : at0;
+}
+
 static void trace_present(uint64_t frame, uint64_t t1, uint64_t t0, uint64_t target, uint64_t queued, int made) {
     static uint64_t last, last_queued;
     // MKW_TRACE=present: one line per present: the host present's interval, the interval of the game's present
@@ -166,14 +178,12 @@ static void flip_main(void *arg) {
         static unsigned jobs, flips, held;  // flip_pace_free's holds over 600 game frames
         if (on_clock < 0) on_clock = !(cfg_get("MKW_FG_VBLANK") && !strcmp(cfg_get("MKW_FG_VBLANK"), "0"));
         FlipPace pace = {.first = f.first, .step = f.step, .last = last_flip, .clock = on_clock};
-        uint64_t at = flip_pace_next(&pace, 0, t0, 1);
-        // The first flip's wait is ready_slack's (it also measures MKW_LOW_LATENCY's slack), so the late test below is
-        // for the flips after it: after that wait `at` has always just passed, and tested there it moved every first
-        // made frame a refresh late (19 % of flips two refreshes apart, the game at 50 fps instead of 60 with 2x;
-        // merged-fsr-display75 against old89aa-current-display75 and ab-fg, 16/11/2026).
-        frame_jit_slack(f.slot, ready_slack(at ? at : f.first, f.value));   // MKW_LOW_LATENCY (core/boot/frame_jit.c)
+        uint64_t at0 = flip_pace_next(&pace, 0, t0, 1);
+        // The first picture's wait is ready_slack's (it also measures MKW_LOW_LATENCY's slack), so flip_pace_next's
+        // late test is for the pictures after it (flip_pace_picture)
+        frame_jit_slack(f.slot, ready_slack(at0 ? at0 : f.first, f.value));   // MKW_LOW_LATENCY (core/boot/frame_jit.c)
         for (int k = 1; k < f.nf; k++) {
-            if (k > 1) at = flip_pace_next(&pace, k - 1, kern_now_ns(), 0);
+            uint64_t at = flip_pace_picture(&pace, k - 1, at0, kern_now_ns());
             wait_until(at);
             uint64_t tm = kern_now_ns();
             uint64_t rfx = vk_rfx_oob_present_start(f.frame);
@@ -188,7 +198,7 @@ static void flip_main(void *arg) {
             plat_cond_broadcast(&fl_cv);
             plat_mutex_unlock(&fl_m);
         }
-        uint64_t target = flip_pace_next(&pace, f.nf - 1, kern_now_ns(), 0);
+        uint64_t target = flip_pace_picture(&pace, f.nf - 1, at0, kern_now_ns());
         wait_until(target);
         uint64_t t1 = kern_now_ns();
         uint64_t pid = vk_rfx_present_start(f.frame);   // Reflex: the game frame's present carries its id
@@ -197,7 +207,7 @@ static void flip_main(void *arg) {
         vk_rfx_present_end(pid);
         trace_present(f.frame, t1, t0, target, f.queued, f.nf - 1);
         last_flip = t1;
-        flips += (unsigned)f.nf, held += (unsigned)pace.held;   // (a job of one picture asks twice for the same flip)
+        flips += (unsigned)f.nf, held += (unsigned)pace.held;
         if (++jobs == 600) {
             if (held)
                 rt_log("present: %u of %u flips held half a step after the flip before (no vblank clock)", held, flips);
