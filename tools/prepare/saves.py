@@ -46,6 +46,10 @@ def backup(profile: Path, dest: Path, name: str) -> str:
             with stream, zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as z:
                 # Skipping an unreadable directory would publish a ZIP with missing saves.
                 for folder, dirs, files in profile.walk(on_error=raise_scan_error):
+                    for entry in dirs + files:
+                        path = folder / entry
+                        if (path.is_symlink() or path.is_junction()) and path.is_dir():
+                            raise OSError(f"cannot back up linked directory: {path}")
                     dirs.sort()
                     for filename in sorted(files):
                         path = folder / filename

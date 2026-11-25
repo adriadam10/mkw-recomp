@@ -51,6 +51,29 @@ def test_repeated_backup_retains_both_snapshots(profile, tmp_path):
     assert not list(dest.glob("*.part"))
 
 
+def test_linked_save_directory_does_not_produce_incomplete_backup(tmp_path):
+    profile = tmp_path / "profile"
+    profile.mkdir()
+    target = tmp_path / "actual-saves"
+    target.mkdir()
+    (target / "slot.dat").write_bytes(b"save data")
+    dest = tmp_path / "backups"
+    earlier = Path(saves.backup(profile, dest, "Player"))
+    original = earlier.read_bytes()
+    link = profile / "save"
+    if os.name == "nt":
+        result = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)], capture_output=True)
+        if result.returncode:
+            pytest.skip("cannot create a junction")
+    else:
+        link.symlink_to(target, target_is_directory=True)
+    with pytest.raises(OSError, match="linked directory"):
+        saves.backup(profile, dest, "Player")
+    assert list(dest.glob("*.zip")) == [earlier]
+    assert earlier.read_bytes() == original
+    assert not list(dest.glob("*.part"))
+
+
 def test_concurrent_processes_keep_each_profile(tmp_path):
     dest = tmp_path / "backups"
     driver = (
