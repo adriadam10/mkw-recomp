@@ -29,7 +29,7 @@ POT = I18N / "mkw.pot"
 # The catalog languages after English, as ui_text.c's rows name them (Switch language codes: ui_text_lang): the game's,
 # then menu languages it does not ship
 LANGS = ["ja", "fr", "de", "it", "es", "nl", "pt", "pt-BR", "ru", "zh-Hans", "zh-Hant", "ko"]
-LANGS += ["es-419", "ca", "gl", "eu", "pl", "tr", "uk", "th"]
+LANGS += ["es-419", "ca", "gl", "eu", "pl", "tr", "uk", "th", "vi"]
 WRAP = 100
 
 

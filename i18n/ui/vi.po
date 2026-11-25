@@ -1,0 +1,3273 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: mkw-recomp\nLanguage: vi\nMIME-Version: 1.0\nContent-Type: text/plain; "
+"charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+#. The software keyboard's starting text: at most 9 UTF-16 units, no '@' '%' '\'.
+msgctxt "UI_SWKBD_DEFAULT_NAME"
+msgid "Player"
+msgstr "Game thủ"
+
+#. The on-screen number pad the game opens to ask for a number: its confirm key (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_OK"
+msgid "OK"
+msgstr "OK"
+
+#. The on-screen number pad: the wide button under the keys that closes it without a number
+msgctxt "UI_KEYPAD_CANCEL"
+msgid "Cancel"
+msgstr "Hủy"
+
+#. The on-screen number pad: the key that erases the last digit (keep it short, it fits a small key)
+msgctxt "UI_KEYPAD_DELETE"
+msgid "Delete"
+msgstr "Xóa"
+
+msgctxt "UI_MENU_TITLE"
+msgid "Settings"
+msgstr "Cài đặt"
+
+msgctxt "UI_MENU_TAB_SCREEN"
+msgid "Screen"
+msgstr "Màn hình"
+
+#. The settings tab with the game's and the menu's language, LAN play and the update check.
+msgctxt "UI_MENU_TAB_GENERAL"
+msgid "General"
+msgstr "Chung"
+
+msgctxt "UI_MENU_TAB_SOUND"
+msgid "Sound"
+msgstr "Âm thanh"
+
+msgctxt "UI_MENU_TAB_CONTROLS"
+msgid "Controls"
+msgstr "Điều khiển"
+
+msgctxt "UI_MENU_TAB_ADVANCED"
+msgid "Advanced"
+msgstr "Nâng cao"
+
+msgctxt "UI_MENU_TAB_GRAPHICS"
+msgid "Graphics"
+msgstr "Đồ họa"
+
+msgctxt "UI_MENU_TAB_HACKS"
+msgid "Hacks"
+msgstr "Thủ thuật"
+
+msgctxt "UI_MENU_HACKS_WARNING"
+msgid ""
+"Experimental: shortcuts the console does not have, for playing and testing faster. They can "
+"change how the game behaves."
+msgstr ""
+"Thử nghiệm: các phím tắt mà máy console không có, để chơi và kiểm tra nhanh hơn. Chúng có thể làm "
+"thay đổi cách game vận hành."
+
+msgctxt "UI_MENU_TURBO"
+msgid "Turbo"
+msgstr "Turbo"
+
+msgctxt "UI_MENU_TURBO_DESC"
+msgid ""
+"The whole game runs faster: menus, movies, loads and races. Hold or press F2. The screen shows at "
+"most 60 frames a second."
+msgstr ""
+"Toàn bộ game chạy nhanh hơn: menu, phim, tải và đua. Giữ hoặc nhấn F2. Màn hình hiển thị tối đa "
+"60 khung hình mỗi giây."
+
+msgctxt "UI_MENU_TURBO_HOLD"
+msgid "Hold F2"
+msgstr "Giữ F2"
+
+msgctxt "UI_MENU_TURBO_TOGGLE"
+msgid "F2 on/off"
+msgstr "F2 bật/tắt"
+
+msgctxt "UI_MENU_TURBO_SPEED"
+msgid "Turbo speed"
+msgstr "Tốc độ Turbo"
+
+msgctxt "UI_MENU_TURBO_SPEED_DESC"
+msgid "How many times faster. A slow PC may not reach it."
+msgstr "Nhanh hơn bao nhiêu lần. Máy tính yếu có thể không đạt được."
+
+msgctxt "UI_MENU_SKIP_MOVIES"
+msgid "Skip movies"
+msgstr "Bỏ qua phim"
+
+msgctxt "UI_MENU_SKIP_MOVIES_DESC"
+msgid "Skips the cup and course openings as soon as they start."
+msgstr "Bỏ qua phần mở đầu cúp và đường đua ngay khi chúng bắt đầu."
+
+msgctxt "UI_MENU_SEED"
+msgid "Same randomness every time"
+msgstr "Ngẫu nhiên cố định"
+
+msgctxt "UI_MENU_SEED_DESC"
+msgid ""
+"The game draws the same random numbers in every session: the same title course, the same items. "
+"For testing."
+msgstr ""
+"Game rút ra cùng các số ngẫu nhiên trong mọi phiên chơi: cùng đường đua ở màn hình tiêu đề, cùng "
+"vật phẩm. Dùng để kiểm tra."
+
+msgctxt "UI_MENU_FREEZE_KEYS"
+msgid "Freeze keys"
+msgstr "Phím đóng băng"
+
+msgctxt "UI_MENU_FREEZE_KEYS_DESC"
+msgid ""
+"F3 stops the game on the frame on screen and starts it again; F4 moves it on by one frame. To "
+"look at a moment closely."
+msgstr ""
+"F3 dừng game ở khung hình đang hiển thị và chạy lại; F4 tiến thêm một khung hình. Để xem kỹ một "
+"khoảnh khắc."
+
+msgctxt "UI_MENU_HACK_PAD"
+msgid "Controller shortcuts"
+msgstr "Phím tắt trên tay cầm"
+
+msgctxt "UI_MENU_HACK_PAD_DESC"
+msgid ""
+"Turbo and the freeze keys without a keyboard: hold this button and press ZR (RT) for turbo, ZL "
+"(LT) to freeze, R (RB) for one more frame. The game does not see the pair. Only while those hacks "
+"are on."
+msgstr ""
+"Turbo và các phím đóng băng không cần bàn phím: giữ nút này và nhấn ZR (RT) để tăng tốc, ZL (LT) "
+"để đóng băng, R (RB) để thêm một khung hình. Game không nhận thấy cặp nút này. Chỉ khi các thủ "
+"thuật đó đang bật."
+
+msgctxt "UI_MENU_HACK_PAD_MINUS"
+msgid "Select + ZR, ZL, R"
+msgstr "Select + ZR, ZL, R"
+
+msgctxt "UI_MENU_HACK_PAD_LSTICK"
+msgid "Left stick click + ZR, ZL, R"
+msgstr "Nhấn cần trái + ZR, ZL, R"
+
+msgctxt "UI_MENU_UNLOCK_ALL"
+msgid "Unlock everything"
+msgstr "Mở khóa mọi thứ"
+
+msgctxt "UI_MENU_UNLOCK_ALL_DESC"
+msgid ""
+"Every driver and outfit, vehicle and sticker, the Special Cup and Mirror. It goes into your save "
+"when the game saves: turning it off does not lock them again."
+msgstr ""
+"Mọi tay đua và trang phục, xe và nhãn dán, Cúp Đặc biệt và chế độ Gương. Nó được ghi vào bản lưu "
+"khi game lưu: tắt nó đi không khóa lại."
+
+msgctxt "UI_MENU_QUICK_RACE"
+msgid "Straight to"
+msgstr "Đi thẳng tới"
+
+msgctxt "UI_MENU_QUICK_RACE_DESC"
+msgid ""
+"Goes through the menus by itself at start. Time trial: Mario, standard kart and the course the "
+"game offers (always the same with «Same randomness every time»), no rivals. Free roam: the open "
+"world. The controller still works."
+msgstr ""
+"Tự đi qua các menu khi bắt đầu. Đua tính giờ: Mario, xe kart tiêu chuẩn và đường đua game đưa ra "
+"(luôn giống nhau khi bật «Ngẫu nhiên cố định»), không có đối thủ. Dạo chơi tự do: thế giới mở. "
+"Tay cầm vẫn hoạt động."
+
+msgctxt "UI_MENU_QUICK_RACE_TT"
+msgid "Time trial"
+msgstr "Đua tính giờ"
+
+msgctxt "UI_MENU_QUICK_RACE_GP"
+msgid "Grand Prix"
+msgstr "Grand Prix"
+
+msgctxt "UI_MENU_QUICK_RACE_FREE"
+msgid "Free roam"
+msgstr "Dạo chơi tự do"
+
+msgctxt "UI_MENU_CLASSIC_GP"
+msgid "Classic Grand Prix"
+msgstr "Grand Prix cổ điển"
+
+msgctxt "UI_MENU_CLASSIC_GP_DESC"
+msgid ""
+"Grand Prix races take place on each course instead of the road to it. Knockout Tour is unchanged. "
+"Changes take several seconds and affect races started afterward."
+msgstr ""
+"Các chặng Grand Prix diễn ra trên từng đường đua thay vì trên đường tới đó. Knockout Tour không "
+"thay đổi. Thay đổi mất vài giây và áp dụng cho các chặng đua bắt đầu sau đó."
+
+msgctxt "UI_MENU_CLASSIC_VS"
+msgid "Classic VS races"
+msgstr "Đua VS cổ điển"
+
+msgctxt "UI_MENU_CLASSIC_VS_DESC"
+msgid ""
+"VS races after the first take place on the next course instead of the road to it, whatever the "
+"course rule. Changes take several seconds and affect races started afterward."
+msgstr ""
+"Các chặng đua VS sau chặng đầu tiên diễn ra trên đường đua tiếp theo thay vì trên đường tới đó, "
+"bất kể luật đường đua nào. Thay đổi mất vài giây và áp dụng cho các chặng đua bắt đầu sau đó."
+
+msgctxt "UI_MENU_ANISO"
+msgid "Texture filtering"
+msgstr "Lọc texture"
+
+msgctxt "UI_MENU_ANISO_DESC"
+msgid ""
+"Sharpness of textures seen far away or at a low angle, such as the road ahead. Game uses what "
+"each texture asks for. Impact on frame rate: low."
+msgstr ""
+"Độ sắc nét của các texture nhìn từ xa hoặc ở góc thấp, như mặt đường phía trước. Game dùng những "
+"gì từng texture yêu cầu. Ảnh hưởng đến tốc độ khung hình: thấp."
+
+msgctxt "UI_MENU_ANISO_GAME"
+msgid "Game"
+msgstr "Theo game"
+
+msgctxt "UI_MENU_TEX_QUALITY"
+msgid "Texture quality"
+msgstr "Chất lượng texture"
+
+msgctxt "UI_MENU_TEX_QUALITY_DESC"
+msgid ""
+"Detail of the game's own textures. Half and Quarter skip their finest levels: less memory traffic "
+"on the graphics card, blurrier surfaces up close. Impact on frame rate: low."
+msgstr ""
+"Độ chi tiết của các texture của chính game. Một nửa và Một phần tư bỏ qua các mức chi tiết nhất: "
+"ít lưu lượng bộ nhớ trên card đồ họa hơn, bề mặt gần bị mờ hơn. Ảnh hưởng đến tốc độ khung hình: "
+"thấp."
+
+msgctxt "UI_MENU_TEX_QUALITY_FULL"
+msgid "Full"
+msgstr "Đầy đủ"
+
+msgctxt "UI_MENU_TEX_QUALITY_HALF"
+msgid "Half"
+msgstr "Một nửa"
+
+msgctxt "UI_MENU_TEX_QUALITY_QUARTER"
+msgid "Quarter"
+msgstr "Một phần tư"
+
+msgctxt "UI_MENU_DETAIL"
+msgid "Detail distance"
+msgstr "Khoảng cách chi tiết"
+
+msgctxt "UI_MENU_DETAIL_DESC"
+msgid ""
+"How far objects keep their detailed models before switching to simpler ones. Console is the "
+"Switch 2's. Impact on frame rate: low."
+msgstr ""
+"Vật thể giữ mô hình chi tiết ở khoảng cách bao xa trước khi chuyển sang mô hình đơn giản hơn. "
+"Console là của Switch 2. Ảnh hưởng đến tốc độ khung hình: thấp."
+
+msgctxt "UI_MENU_DETAIL_LOW"
+msgid "Low"
+msgstr "Thấp"
+
+msgctxt "UI_MENU_DETAIL_MEDIUM"
+msgid "Medium"
+msgstr "Trung bình"
+
+msgctxt "UI_MENU_DETAIL_CONSOLE"
+msgid "Console"
+msgstr "Console"
+
+msgctxt "UI_MENU_DETAIL_HIGH"
+msgid "High"
+msgstr "Cao"
+
+msgctxt "UI_MENU_DETAIL_ULTRA"
+msgid "Very high"
+msgstr "Rất cao"
+
+msgctxt "UI_MENU_SHADOW"
+msgid "Shadow quality"
+msgstr "Chất lượng bóng đổ"
+
+msgctxt "UI_MENU_SHADOW_DESC"
+msgid ""
+"Size of the map the game draws shadows from. Smaller is lighter for the graphics card, with "
+"blurrier shadow edges. Console is 3072 docked and 2048 handheld. Impact on frame rate: low."
+msgstr ""
+"Kích thước của bản đồ mà game vẽ bóng đổ từ đó. Nhỏ hơn thì nhẹ cho card đồ họa hơn, nhưng mép "
+"bóng mờ hơn. Console là 3072 khi cắm đế và 2048 khi cầm tay. Ảnh hưởng đến tốc độ khung hình: "
+"thấp."
+
+msgctxt "UI_MENU_CONTINUE"
+msgid "Continue"
+msgstr "Tiếp tục"
+
+msgctxt "UI_MENU_QUIT"
+msgid "Quit game"
+msgstr "Thoát game"
+
+msgctxt "UI_MENU_ON"
+msgid "On"
+msgstr "Bật"
+
+msgctxt "UI_MENU_OFF"
+msgid "Off"
+msgstr "Tắt"
+
+msgctxt "UI_MENU_AUTO"
+msgid "Automatic"
+msgstr "Tự động"
+
+msgctxt "UI_MENU_DEFAULT_MARK"
+msgid "default"
+msgstr "mặc định"
+
+msgctxt "UI_MENU_AFTER_RESTART"
+msgid "after restart"
+msgstr "sau khi khởi động lại"
+
+msgctxt "UI_MENU_SET_BY_ENV"
+msgid "set by environment variable"
+msgstr "đặt bằng biến môi trường"
+
+msgctxt "UI_MENU_SAVE_FAILED"
+msgid "could not save settings"
+msgstr "không lưu được cài đặt"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_VERSION"
+msgid "MKW Recomp %s, game %s"
+msgstr "MKW Recomp %s, game %s"
+
+msgctxt "UI_MENU_FULLSCREEN"
+msgid "Fullscreen"
+msgstr "Toàn màn hình"
+
+msgctxt "UI_MENU_FULLSCREEN_DESC"
+msgid "Fills the screen with the game; F11 toggles it."
+msgstr "Lấp đầy màn hình bằng game; F11 bật/tắt."
+
+msgctxt "UI_MENU_WINDOW_SIZE"
+msgid "Window size"
+msgstr "Kích thước cửa sổ"
+
+msgctxt "UI_MENU_WINDOW_SIZE_DESC"
+msgid "Size of the game window when not fullscreen."
+msgstr "Kích thước cửa sổ game khi không ở chế độ toàn màn hình."
+
+msgctxt "UI_MENU_QUALITY"
+msgid "Quality"
+msgstr "Chất lượng"
+
+msgctxt "UI_MENU_QUALITY_DESC"
+msgid ""
+"Sets the rows below at once. Console looks like the Switch 2; Low and Medium are lighter for the "
+"graphics card, High and Very high sharper. Changing a row makes it Custom. The internal "
+"resolution is what changes the frame rate most."
+msgstr ""
+"Đặt các hàng bên dưới cùng lúc. Console trông như Switch 2; Thấp và Trung bình nhẹ cho card đồ "
+"họa hơn, Cao và Rất cao sắc nét hơn. Thay đổi một hàng sẽ biến nó thành Tùy chỉnh. Độ phân giải "
+"nội bộ là yếu tố thay đổi tốc độ khung hình nhiều nhất."
+
+msgctxt "UI_MENU_QUALITY_CUSTOM"
+msgid "Custom"
+msgstr "Tùy chỉnh"
+
+msgctxt "UI_MENU_RESOLUTION"
+msgid "Internal resolution"
+msgstr "Độ phân giải nội bộ"
+
+msgctxt "UI_MENU_RESOLUTION_DESC"
+msgid ""
+"Lines the game renders its scenes at, then scaled to the window. Lower is faster: 720p suits "
+"integrated graphics. Original is the console's (up to 1440p)."
+msgstr ""
+"Số dòng mà game kết xuất các cảnh của nó, rồi phóng lên cửa sổ. Thấp hơn thì nhanh hơn: 720p phù "
+"hợp với đồ họa tích hợp. Gốc là của máy console (tối đa 1440p)."
+
+msgctxt "UI_MENU_RESOLUTION_ORIGINAL"
+msgid "Original"
+msgstr "Gốc"
+
+msgctxt "UI_MENU_ASPECT"
+msgid "Aspect ratio"
+msgstr "Tỷ lệ khung hình"
+
+msgctxt "UI_MENU_ASPECT_DESC"
+msgid ""
+"Wider than 16:9 shows more of the course at the sides, for ultrawide screens. 16:9 is the "
+"console's; Window takes the window's or monitor's shape. Menus stay stretched for now."
+msgstr ""
+"Rộng hơn 16:9 cho thấy nhiều đường đua hơn ở hai bên, dành cho màn hình siêu rộng. 16:9 là của "
+"máy console; Cửa sổ lấy hình dạng của cửa sổ hoặc màn hình. Menu hiện vẫn bị kéo giãn."
+
+msgctxt "UI_MENU_ASPECT_WINDOW"
+msgid "Window"
+msgstr "Cửa sổ"
+
+msgctxt "UI_MENU_HUD_POSITION"
+msgid "HUD position"
+msgstr "Vị trí HUD"
+
+msgctxt "UI_MENU_HUD_POSITION_DESC"
+msgid ""
+"On a picture wider or taller than 16:9, keep the race HUD in the middle 16:9 area (the console's "
+"place) or put it at the screen's edges and corners. Takes effect at the next start."
+msgstr ""
+"Trên hình ảnh rộng hơn hoặc cao hơn 16:9, giữ HUD của cuộc đua trong vùng 16:9 ở giữa (vị trí của "
+"máy console) hoặc đặt nó ở các mép và góc màn hình. Có hiệu lực ở lần khởi động tiếp theo."
+
+msgctxt "UI_MENU_HUD_POSITION_16X9"
+msgid "16:9 area"
+msgstr "Vùng 16:9"
+
+msgctxt "UI_MENU_HUD_POSITION_EDGES"
+msgid "Screen edges"
+msgstr "Mép màn hình"
+
+msgctxt "UI_MENU_PRESENT"
+msgid "Presentation"
+msgstr "Cách trình bày"
+
+msgctxt "UI_MENU_PRESENT_DESC"
+msgid "How finished frames reach the screen."
+msgstr "Các khung hình hoàn thiện đến màn hình bằng cách nào."
+
+msgctxt "UI_MENU_PRESENT_MAILBOX"
+msgid "Mailbox"
+msgstr "Mailbox"
+
+msgctxt "UI_MENU_PRESENT_VSYNC"
+msgid "VSync"
+msgstr "VSync"
+
+msgctxt "UI_MENU_PRESENT_IMMEDIATE"
+msgid "Immediate"
+msgstr "Ngay lập tức"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PRESENT_IN_USE"
+msgid "in use: %s"
+msgstr "đang dùng: %s"
+
+msgctxt "UI_MENU_GPU"
+msgid "Graphics card"
+msgstr "Card đồ họa"
+
+msgctxt "UI_MENU_GPU_DESC"
+msgid "The Vulkan device that draws the game."
+msgstr "Thiết bị Vulkan vẽ game."
+
+msgctxt "UI_MENU_GPU_AUTO"
+msgid "Automatic"
+msgstr "Tự động"
+
+msgctxt "UI_MENU_PERF_OVERLAY"
+msgid "Performance overlay"
+msgstr "Lớp phủ hiệu năng"
+
+msgctxt "UI_MENU_PERF_OVERLAY_DESC"
+msgid ""
+"Frame rate in the top right corner. Full adds frame times with a graph, CPU, GPU and memory load, "
+"temperatures and the render thread's waits. F10 cycles the modes."
+msgstr ""
+"Tốc độ khung hình ở góc trên bên phải. Đầy đủ thêm thời gian khung hình kèm biểu đồ, tải CPU, GPU "
+"và bộ nhớ, nhiệt độ và thời gian chờ của luồng kết xuất. F10 chuyển qua các chế độ."
+
+msgctxt "UI_MENU_PERF_OFF"
+msgid "Off"
+msgstr "Tắt"
+
+msgctxt "UI_MENU_PERF_FPS"
+msgid "FPS"
+msgstr "FPS"
+
+msgctxt "UI_MENU_PERF_FULL"
+msgid "Full"
+msgstr "Đầy đủ"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_PERF_LINE_FPS"
+msgid "%.0f fps"
+msgstr "%.0f fps"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_PERF_LINE_FPS_FG"
+msgid "%.0f/%.0f fps"
+msgstr "%.0f/%.0f fps"
+
+msgctxt "UI_MENU_FPS"
+msgid "Frame rate"
+msgstr "Tốc độ khung hình"
+
+msgctxt "UI_MENU_FPS_DESC"
+msgid ""
+"Frames per second the game aims for. Automatic lowers it from 60 to 30, 20 or 15 when frames take "
+"too long, so the race always runs at its real speed. At 20 or 15, Frame generation can show the "
+"frames in between. 20 and 15 apply only in races: menus, movies and loading screens go at 30 at "
+"most, as on the console."
+msgstr ""
+"Số khung hình mỗi giây mà game hướng tới. Tự động hạ nó từ 60 xuống 30, 20 hoặc 15 khi khung hình "
+"tốn quá nhiều thời gian, để cuộc đua luôn chạy ở tốc độ thật của nó. Ở 20 hoặc 15, Tạo khung hình "
+"có thể hiển thị các khung hình ở giữa. 20 và 15 chỉ áp dụng trong cuộc đua: menu, phim và màn "
+"hình tải chạy tối đa 30, như trên máy console."
+
+msgctxt "UI_MENU_FPS_AUTO"
+msgid "Automatic"
+msgstr "Tự động"
+
+msgctxt "UI_MENU_LOGIC_HZ"
+msgid "Logic rate"
+msgstr "Tần suất logic"
+
+msgctxt "UI_MENU_LOGIC_HZ_DESC"
+msgid ""
+"How many times a second the game updates karts, physics and timers. 60 is the console's rate; "
+"120, 144 or 240 make movement smoother on a high refresh rate screen but need a faster PC. Time "
+"trials and LAN games always run at 60."
+msgstr ""
+"Số lần mỗi giây game cập nhật xe kart, vật lý và bộ đếm giờ. 60 là tần suất của máy console; 120, "
+"144 hoặc 240 làm chuyển động mượt hơn trên màn hình tần số quét cao nhưng cần máy tính nhanh hơn. "
+"Đua tính giờ và game LAN luôn chạy ở 60."
+
+msgctxt "UI_MENU_FRAMEGEN"
+msgid "Frame generation"
+msgstr "Tạo khung hình"
+
+msgctxt "UI_MENU_FRAMEGEN_DESC"
+msgid ""
+"Shows frames made between the game's own: 2x turns 30 fps into 60. Automatic makes only as many "
+"as divide your monitor's refresh rate evenly. Adds up to one frame of delay, and fast motion can "
+"smear. Not on the console."
+msgstr ""
+"Hiển thị các khung hình được tạo ra giữa các khung hình của chính game: 2x biến 30 fps thành 60. "
+"Tự động chỉ tạo số khung hình chia đều tần số quét của màn hình. Thêm tối đa một khung hình độ "
+"trễ, và chuyển động nhanh có thể bị nhòe. Không có trên máy console."
+
+msgctxt "UI_MENU_FRAMEGEN_UNEVEN"
+msgid ""
+"At the game's frame rate now, this factor does not divide your screen's refresh rate evenly: "
+"motion judders. Automatic avoids it."
+msgstr ""
+"Ở tốc độ khung hình của game hiện tại, hệ số này không chia đều tần số quét của màn hình: chuyển "
+"động bị giật. Tự động tránh được điều đó."
+
+msgctxt "UI_MENU_VRR"
+msgid "Variable refresh screen"
+msgstr "Màn hình tần số quét biến thiên"
+
+msgctxt "UI_MENU_VRR_DESC"
+msgid ""
+"Turn on if your screen has FreeSync or G-Sync and it is enabled. Off, Automatic frame generation "
+"only makes the frames that divide the refresh rate evenly, so motion does not judder."
+msgstr ""
+"Bật nếu màn hình của bạn có FreeSync hoặc G-Sync và nó đang được bật. Khi tắt, Tạo khung hình tự "
+"động chỉ tạo các khung hình chia đều tần số quét, để chuyển động không bị giật."
+
+msgctxt "UI_MENU_LOW_LATENCY"
+msgid "Low latency"
+msgstr "Độ trễ thấp"
+
+msgctxt "UI_MENU_LOW_LATENCY_DESC"
+msgid ""
+"Starts each frame as late as your computer allows, so what you press reaches the screen sooner. "
+"Matters most at 20 or 15 fps and with Frame generation. Turn it off if the picture stutters."
+msgstr ""
+"Bắt đầu mỗi khung hình muộn nhất có thể trong khả năng của máy tính, để thao tác của bạn đến màn "
+"hình sớm hơn. Quan trọng nhất ở 20 hoặc 15 fps và với Tạo khung hình. Tắt nó nếu hình ảnh bị giật."
+
+msgctxt "UI_MENU_FG_ENGINE"
+msgid "Frame generation by"
+msgstr "Tạo khung hình bằng"
+
+msgctxt "UI_MENU_FG_ENGINE_DESC"
+msgid ""
+"Who makes the frames between the game's own. The port's own works everywhere. NVIDIA DLSS Frame "
+"Generation (RTX 40 and 50) and AMD FSR 3.1 use the scene's depth and motion and need DLSS or FSR "
+"3.1 upscaling on."
+msgstr ""
+"Ai tạo ra các khung hình giữa các khung hình của chính game. Của bản port tự làm thì hoạt động ở "
+"mọi nơi. NVIDIA DLSS Frame Generation (RTX 40 và 50) và AMD FSR 3.1 dùng độ sâu và chuyển động "
+"của cảnh và cần bật nâng phân giải DLSS hoặc FSR 3.1."
+
+msgctxt "UI_MENU_REFLEX"
+msgid "NVIDIA Reflex"
+msgstr "NVIDIA Reflex"
+
+msgctxt "UI_MENU_REFLEX_DESC"
+msgid ""
+"Starts each frame as late as the GPU allows, so what you press reaches the screen sooner. Boost "
+"also keeps the GPU's clocks up. NVIDIA GPUs only."
+msgstr ""
+"Bắt đầu mỗi khung hình muộn nhất có thể trong khả năng của GPU, để thao tác của bạn đến màn hình "
+"sớm hơn. Boost còn giữ xung nhịp của GPU ở mức cao. Chỉ dành cho GPU NVIDIA."
+
+msgctxt "UI_MENU_REFLEX_BOOST"
+msgid "On + Boost"
+msgstr "Bật + Boost"
+
+msgctxt "UI_MENU_TEMPORAL"
+msgid "AI upscaling"
+msgstr "Nâng phân giải bằng AI"
+
+msgctxt "UI_MENU_NOT_AVAILABLE"
+msgid "Not available on this PC: the game's own picture stays."
+msgstr "Không khả dụng trên máy tính này: hình ảnh của chính game được giữ nguyên."
+
+msgctxt "UI_MENU_LIB_FETCHING"
+msgid "Downloading %s from its official source: %d %%"
+msgstr "Đang tải %s từ nguồn chính thức của nó: %d %%"
+
+msgctxt "UI_MENU_LIB_FAILED"
+msgid "Could not download %s (%s). Pick it again to try once more."
+msgstr "Không tải được %s (%s). Chọn lại nó để thử một lần nữa."
+
+msgctxt "UI_MENU_LIB_READY"
+msgid "%s downloaded: it works after a restart."
+msgstr "Đã tải %s: nó hoạt động sau khi khởi động lại."
+
+msgctxt "UI_MENU_TEMPORAL_DESC"
+msgid ""
+"Renders the race at a lower resolution and rebuilds it from several frames: NVIDIA DLSS (RTX "
+"GPUs) or AMD FSR 3.1 (any GPU). Sharper and steadier edges than the game's own scaling; the HUD "
+"stays sharp."
+msgstr ""
+"Kết xuất cuộc đua ở độ phân giải thấp hơn và dựng lại từ nhiều khung hình: NVIDIA DLSS (GPU RTX) "
+"hoặc AMD FSR 3.1 (mọi GPU). Các cạnh sắc nét và ổn định hơn so với cách phóng của chính game; HUD "
+"vẫn sắc nét."
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY"
+msgid "Upscaling quality"
+msgstr "Chất lượng nâng phân giải"
+
+msgctxt "UI_MENU_TEMPORAL_QUALITY_DESC"
+msgid ""
+"The share of the screen's resolution the race renders at: Native (DLAA) 100 %, Quality 67 %, "
+"Balanced 58 %, Performance 50 %, Ultra performance 33 %. Applies at the next start."
+msgstr ""
+"Tỷ lệ độ phân giải của màn hình mà cuộc đua được kết xuất ở đó: Gốc (DLAA) 100 %, Chất lượng 67 "
+"%, Cân bằng 58 %, Hiệu năng 50 %, Hiệu năng tối đa 33 %. Áp dụng ở lần khởi động tiếp theo."
+
+msgctxt "UI_MENU_TQ_NATIVE"
+msgid "Native (DLAA)"
+msgstr "Gốc (DLAA)"
+
+msgctxt "UI_MENU_TQ_QUALITY"
+msgid "Quality"
+msgstr "Chất lượng"
+
+msgctxt "UI_MENU_TQ_BALANCED"
+msgid "Balanced"
+msgstr "Cân bằng"
+
+msgctxt "UI_MENU_TQ_PERFORMANCE"
+msgid "Performance"
+msgstr "Hiệu năng"
+
+msgctxt "UI_MENU_TQ_ULTRA"
+msgid "Ultra performance"
+msgstr "Hiệu năng tối đa"
+
+msgctxt "UI_MENU_DLSS_PRESET"
+msgid "DLSS model"
+msgstr "Mô hình DLSS"
+
+msgctxt "UI_MENU_DLSS_PRESET_DESC"
+msgid ""
+"NVIDIA's model DLSS uses: the default of the DLSS version next to the game, or presets J, K, L, M."
+msgstr ""
+"Mô hình của NVIDIA mà DLSS dùng: mặc định của phiên bản DLSS bên cạnh game, hoặc các preset J, K, "
+"L, M."
+
+msgctxt "UI_MENU_DLSS_PRESET_DEFAULT"
+msgid "Default"
+msgstr "Mặc định"
+
+msgctxt "UI_MENU_CAS"
+msgid "CAS sharpening"
+msgstr "Làm sắc nét CAS"
+
+msgctxt "UI_MENU_CAS_DESC"
+msgid ""
+"AMD's contrast adaptive sharpening of the race after DLSS or FSR 3.1, before the HUD is drawn. "
+"Needs AI upscaling on."
+msgstr ""
+"Làm sắc nét thích ứng theo độ tương phản của AMD lên cuộc đua sau DLSS hoặc FSR 3.1, trước khi "
+"HUD được vẽ. Cần bật nâng phân giải bằng AI."
+
+msgctxt "UI_MENU_CAS_SHARPNESS"
+msgid "CAS strength"
+msgstr "Cường độ CAS"
+
+msgctxt "UI_MENU_CAS_SHARPNESS_DESC"
+msgid "How strongly CAS sharpens: 0 is the lightest touch, 100 the strongest."
+msgstr "CAS làm sắc nét mạnh đến mức nào: 0 là nhẹ nhất, 100 là mạnh nhất."
+
+msgctxt "UI_MENU_GRAPHICS"
+msgid "Picture"
+msgstr "Hình ảnh"
+
+msgctxt "UI_MENU_UPSCALER"
+msgid "Scaling to the window"
+msgstr "Phóng lên cửa sổ"
+
+msgctxt "UI_MENU_UPSCALER_DESC"
+msgid ""
+"How the picture is scaled when the window is larger than the game resolution. FSR keeps edges and "
+"detail sharper than bilinear."
+msgstr ""
+"Hình ảnh được phóng như thế nào khi cửa sổ lớn hơn độ phân giải game. FSR giữ các cạnh và chi "
+"tiết sắc nét hơn song tuyến."
+
+msgctxt "UI_MENU_UPSCALER_FSR"
+msgid "AMD FSR 1"
+msgstr "AMD FSR 1"
+
+msgctxt "UI_MENU_UPSCALER_BILINEAR"
+msgid "Bilinear"
+msgstr "Song tuyến"
+
+msgctxt "UI_MENU_PICTURE_FIT"
+msgid "Picture shape"
+msgstr "Hình dạng hình ảnh"
+
+msgctxt "UI_MENU_PICTURE_FIT_DESC"
+msgid ""
+"When the window's shape differs from the game resolution's (a 16:9 game on the Steam Deck's 16:10 "
+"screen), keep the picture's proportions with black bars, or stretch it over the whole window."
+msgstr ""
+"Khi hình dạng của cửa sổ khác với của độ phân giải game (game 16:9 trên màn hình 16:10 của Steam "
+"Deck), giữ tỷ lệ của hình ảnh với các dải đen, hoặc kéo giãn nó khắp cửa sổ."
+
+msgctxt "UI_MENU_PICTURE_FIT_KEEP"
+msgid "Keep (bars)"
+msgstr "Giữ (dải đen)"
+
+msgctxt "UI_MENU_PICTURE_FIT_STRETCH"
+msgid "Stretch"
+msgstr "Kéo giãn"
+
+msgctxt "UI_MENU_HDR"
+msgid "HDR"
+msgstr "HDR"
+
+msgctxt "UI_MENU_HDR_DESC"
+msgid ""
+"Automatic shows the game's own HDR picture when the display is in HDR (on Windows, Settings > "
+"Display > Use HDR), as the console does; its brightness follows the system's HDR settings. Off "
+"always shows the standard picture. Applies at once."
+msgstr ""
+"Tự động hiển thị hình ảnh HDR của chính game khi màn hình đang ở chế độ HDR (trên Windows, Cài "
+"đặt > Màn hình > Dùng HDR), như máy console làm; độ sáng của nó theo cài đặt HDR của hệ thống. "
+"Tắt luôn hiển thị hình ảnh tiêu chuẩn. Áp dụng ngay lập tức."
+
+msgctxt "UI_MENU_HDR_TONEMAP"
+msgid "HDR tone mapper"
+msgstr "Bộ ánh xạ tông HDR"
+
+msgctxt "UI_MENU_HDR_TONEMAP_DESC"
+msgid ""
+"How the scene's brightness is fitted to the display in HDR. Vanilla is the game's own curve, "
+"which never goes above 1.5 times paper white. PsychoV35 is RenoDX's: the same mid-tones and "
+"colour grade, with highlights that roll off smoothly up to the display's peak. Applies after a "
+"restart, as do peak and paper white changes while it is on."
+msgstr ""
+"Độ sáng của cảnh được khớp vào màn hình trong HDR bằng cách nào. Gốc là đường cong của chính "
+"game, không bao giờ vượt quá 1,5 lần độ trắng giấy. PsychoV35 là của RenoDX: cùng tông giữa và "
+"thang màu, với các vùng sáng tắt dần mượt mà tới đỉnh của màn hình. Áp dụng sau khi khởi động "
+"lại, cũng như các thay đổi đỉnh và độ trắng giấy khi nó đang bật."
+
+msgctxt "UI_MENU_HDR_TONEMAP_VANILLA"
+msgid "Vanilla"
+msgstr "Gốc"
+
+msgctxt "UI_MENU_HDR_TONEMAP_PSYCHOV"
+msgid "PsychoV35"
+msgstr "PsychoV35"
+
+msgctxt "UI_MENU_HDR_TONEMAP_MISSING"
+msgid "Its programs are made by the setup. Set the game up again (an update does it) to add them."
+msgstr ""
+"Các chương trình của nó do quá trình thiết lập tạo ra. Thiết lập lại game (một bản cập nhật sẽ "
+"làm việc đó) để thêm chúng."
+
+msgctxt "UI_MENU_HDR_NEEDS_PSYCHOV"
+msgid "Only with the PsychoV35 tone mapper. Vanilla uses the display's own values, as the console."
+msgstr "Chỉ với bộ ánh xạ tông PsychoV35. Gốc dùng các giá trị của chính màn hình, như máy console."
+
+msgctxt "UI_MENU_HDR_PEAK"
+msgid "HDR peak brightness"
+msgstr "Độ sáng đỉnh HDR"
+
+msgctxt "UI_MENU_HDR_PEAK_DESC"
+msgid ""
+"The brightest the game draws. Automatic uses the display's peak as Windows reports it. Applies at "
+"once."
+msgstr ""
+"Mức sáng nhất game vẽ. Tự động dùng đỉnh của màn hình như Windows báo cáo. Áp dụng ngay lập tức."
+
+msgctxt "UI_MENU_HDR_WHITE"
+msgid "HDR paper white"
+msgstr "Độ trắng giấy HDR"
+
+msgctxt "UI_MENU_HDR_WHITE_DESC"
+msgid ""
+"How bright white menus and the scene's mid-tones are. Automatic uses Windows' SDR content "
+"brightness, which is often much brighter than a game wants; 203 nits is the HDR reference. Lower "
+"values leave the highlights more room. Applies at once."
+msgstr ""
+"Các menu trắng và tông giữa của cảnh sáng đến mức nào. Tự động dùng độ sáng nội dung SDR của "
+"Windows, thường sáng hơn nhiều so với mức một game muốn; 203 nit là mức tham chiếu HDR. Giá trị "
+"thấp hơn để lại nhiều khoảng cho các vùng sáng hơn. Áp dụng ngay lập tức."
+
+msgctxt "UI_MENU_HDR_NITS"
+msgid "%s nits"
+msgstr "%s nit"
+
+msgctxt "UI_MENU_SHARPNESS"
+msgid "FSR sharpness"
+msgstr "Độ sắc nét FSR"
+
+msgctxt "UI_MENU_SHARPNESS_DESC"
+msgid "Sharpening after FSR scaling; 0 turns it off."
+msgstr "Làm sắc nét sau khi phóng FSR; 0 tắt nó đi."
+
+#. Under Sharpness, greyed out, when the upscaler is not AMD FSR 1.
+msgctxt "UI_MENU_SHARPNESS_FSR_ONLY"
+msgid "With AMD FSR 1 only"
+msgstr "Chỉ với AMD FSR 1"
+
+#. Group heading on the Graphics tab: internal resolution and upscaling.
+msgctxt "UI_MENU_GROUP_RESOLUTION"
+msgid "Resolution"
+msgstr "Độ phân giải"
+
+#. Group heading on the Graphics tab: frame rate, frame generation, overlay.
+msgctxt "UI_MENU_GROUP_PERFORMANCE"
+msgid "Performance"
+msgstr "Hiệu năng"
+
+#. Graphics tab button: Auto-set.
+msgctxt "UI_MENU_AUTOSET"
+msgid "Best settings for this PC"
+msgstr "Cài đặt tốt nhất cho máy tính này"
+
+#. Description of Best settings for this PC.
+msgctxt "UI_MENU_AUTOSET_DESC"
+msgid ""
+"Picks the Quality preset, the internal resolution and AMD FSR 1 from your graphics card and "
+"screen. A first guess: change anything afterwards."
+msgstr ""
+"Chọn preset Chất lượng, độ phân giải nội bộ và AMD FSR 1 từ card đồ họa và màn hình của bạn. Một "
+"phỏng đoán đầu tiên: thay đổi bất cứ điều gì sau đó."
+
+#. Puts back what Best settings for this PC changed.
+msgctxt "UI_MENU_AUTOSET_UNDO"
+msgid "Undo best settings"
+msgstr "Hoàn tác cài đặt tốt nhất"
+
+#. Description of Undo best settings.
+msgctxt "UI_MENU_AUTOSET_UNDO_DESC"
+msgid "Puts back the rows Best settings for this PC changed."
+msgstr "Đặt lại các hàng mà Cài đặt tốt nhất cho máy tính này đã thay đổi."
+
+msgctxt "UI_MENU_GAME_LANG"
+msgid "Game language"
+msgstr "Ngôn ngữ game"
+
+msgctxt "UI_MENU_GAME_LANG_DESC"
+msgid "Language of the game's text and voices."
+msgstr "Ngôn ngữ của văn bản và giọng nói của game."
+
+msgctxt "UI_MENU_GAME_LANG_AUTO"
+msgid "Automatic"
+msgstr "Tự động"
+
+msgctxt "UI_MENU_OPERATION_MODE"
+msgid "Console mode"
+msgstr "Chế độ máy console"
+
+msgctxt "UI_MENU_OPERATION_MODE_DESC"
+msgid ""
+"Whether the game thinks it runs docked or handheld. Docked, it draws the scene smaller and "
+"enlarges it with its own scaler; handheld, at the full internal resolution with smaller shadows: "
+"sharper, but more work for the graphics card."
+msgstr ""
+"Game nghĩ nó đang chạy cắm đế hay cầm tay. Cắm đế, nó vẽ cảnh nhỏ hơn và phóng to bằng bộ phóng "
+"của chính nó; cầm tay, ở độ phân giải nội bộ đầy đủ với bóng đổ nhỏ hơn: sắc nét hơn, nhưng card "
+"đồ họa vất vả hơn."
+
+msgctxt "UI_MENU_MODE_DOCKED"
+msgid "Docked"
+msgstr "Cắm đế"
+
+msgctxt "UI_MENU_MODE_HANDHELD"
+msgid "Handheld"
+msgstr "Cầm tay"
+
+msgctxt "UI_MENU_LAN"
+msgid "LAN play"
+msgstr "Chơi LAN"
+
+msgctxt "UI_MENU_LAN_DESC"
+msgid ""
+"The title menu's Wireless Play becomes LAN Play, to race other PCs on the same local network (UDP "
+"ports 49152 and 35000). It only reaches local network addresses, never the internet. Applies at "
+"the next start."
+msgstr ""
+"Chơi không dây ở menu tiêu đề trở thành Chơi LAN, để đua với các máy tính khác trên cùng mạng nội "
+"bộ (cổng UDP 49152 và 35000). Nó chỉ tới các địa chỉ mạng nội bộ, không bao giờ ra internet. Áp "
+"dụng ở lần khởi động tiếp theo."
+
+msgctxt "UI_MENU_LAN_NET"
+msgid "LAN network"
+msgstr "Mạng LAN"
+
+msgctxt "UI_MENU_LAN_NET_DESC"
+msgid ""
+"The network LAN play uses, for ZeroTier, N2N, Tailscale or a VPN: pick the one the other players "
+"are on. Automatic picks the best network by itself. Applies at the next start."
+msgstr ""
+"Mạng mà chơi LAN dùng, cho ZeroTier, N2N, Tailscale hoặc một VPN: chọn mạng mà những người chơi "
+"khác đang ở trên đó. Tự động tự chọn mạng tốt nhất. Áp dụng ở lần khởi động tiếp theo."
+
+msgctxt "UI_MENU_VOLUME"
+msgid "Volume"
+msgstr "Âm lượng"
+
+msgctxt "UI_MENU_VOLUME_DESC"
+msgid "Master volume of the game."
+msgstr "Âm lượng tổng của game."
+
+msgctxt "UI_MENU_SPEAKERS"
+msgid "Speakers"
+msgstr "Loa"
+
+msgctxt "UI_MENU_SPEAKERS_STEREO"
+msgid "Stereo"
+msgstr "Stereo"
+
+msgctxt "UI_MENU_SPEAKERS_51"
+msgid "5.1 surround"
+msgstr "Âm thanh vòm 5.1"
+
+msgctxt "UI_MENU_BACKGROUND_MUTE"
+msgid "Mute in background"
+msgstr "Tắt tiếng khi ở nền"
+
+msgctxt "UI_MENU_BACKGROUND_MUTE_DESC"
+msgid "No sound while the game window is not in front."
+msgstr "Không có âm thanh khi cửa sổ game không ở phía trước."
+
+msgctxt "UI_MENU_SPEAKERS_DESC"
+msgid ""
+"Automatic gives the game's 5.1 surround mix when the system's sound output has 6 channels or "
+"more, and stereo otherwise. Applies at the next start."
+msgstr ""
+"Tự động cho bản phối âm thanh vòm 5.1 của game khi đầu ra âm thanh của hệ thống có từ 6 kênh trở "
+"lên, và stereo trong các trường hợp còn lại. Áp dụng ở lần khởi động tiếp theo."
+
+msgctxt "UI_MENU_MOTION"
+msgid "Motion controls"
+msgstr "Điều khiển chuyển động"
+
+msgctxt "UI_MENU_MOTION_DESC"
+msgid "Steering by tilting the controller."
+msgstr "Lái bằng cách nghiêng tay cầm."
+
+msgctxt "UI_MENU_RUMBLE_STRENGTH"
+msgid "Vibration strength"
+msgstr "Cường độ rung"
+
+msgctxt "UI_MENU_RUMBLE_STRENGTH_DESC"
+msgid "How strong the controller vibrates."
+msgstr "Tay cầm rung mạnh đến mức nào."
+
+msgctxt "UI_MENU_RUMBLE_CURVE"
+msgid "Vibration curve"
+msgstr "Đường cong rung"
+
+msgctxt "UI_MENU_RUMBLE_CURVE_DESC"
+msgid "Lower values make weak vibration stronger."
+msgstr "Giá trị thấp hơn làm rung yếu mạnh lên."
+
+msgctxt "UI_MENU_RUMBLE_TRIGGERS"
+msgid "Trigger vibration (Xbox)"
+msgstr "Rung cò (Xbox)"
+
+msgctxt "UI_MENU_RUMBLE_TRIGGERS_DESC"
+msgid "Vibrates the triggers of an Xbox controller too."
+msgstr "Cũng rung các cò của tay cầm Xbox."
+
+msgctxt "UI_MENU_RENHDRUM"
+msgid "HD vibration (RenHDrum)"
+msgstr "Rung HD (RenHDrum)"
+
+msgctxt "UI_MENU_RENHDRUM_DESC"
+msgid ""
+"Plays the game's own HD vibration on player 1's DualSense, Pro Controller, Xbox One S or Steam "
+"Controller through RenHDrum, downloaded from its official release when you turn it on. Applies at "
+"the next start."
+msgstr ""
+"Phát rung HD của chính game trên DualSense, Pro Controller, Xbox One S hoặc Steam Controller của "
+"người chơi 1 qua RenHDrum, tải từ bản phát hành chính thức của nó khi bạn bật. Áp dụng ở lần khởi "
+"động tiếp theo."
+
+msgctxt "UI_MENU_PAD_LAYOUT"
+msgid "Button layout"
+msgstr "Bố cục nút"
+
+msgctxt "UI_MENU_PAD_LAYOUT_DESC"
+msgid ""
+"Which button is A. Nintendo: the right one, as on a Switch. Xbox: the bottom one, as labelled on "
+"an Xbox controller (cross on a PlayStation controller). Automatic picks Nintendo for controllers "
+"with Nintendo labels and Xbox for the others."
+msgstr ""
+"Nút nào là A. Nintendo: nút bên phải, như trên Switch. Xbox: nút bên dưới, như được ghi trên tay "
+"cầm Xbox (nút chéo trên tay cầm PlayStation). Tự động chọn Nintendo cho tay cầm có nhãn Nintendo "
+"và Xbox cho các tay cầm còn lại."
+
+msgctxt "UI_MENU_PAD_LAYOUT_AUTO"
+msgid "Automatic"
+msgstr "Tự động"
+
+msgctxt "UI_MENU_PAD_LAYOUT_NINTENDO"
+msgid "Nintendo (A right)"
+msgstr "Nintendo (A bên phải)"
+
+msgctxt "UI_MENU_PAD_LAYOUT_XBOX"
+msgid "Xbox (A bottom)"
+msgstr "Xbox (A bên dưới)"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_LAYOUT_IN_USE"
+msgid "in use: %s"
+msgstr "đang dùng: %s"
+
+msgctxt "UI_MENU_KEYBOARD_MOUSE"
+msgid "Keyboard and mouse"
+msgstr "Bàn phím và chuột"
+
+msgctxt "UI_MENU_KEYBOARD_MOUSE_DESC"
+msgid ""
+"Off: the game ignores the keyboard and the mouse (controllers only) and the mouse cursor stays "
+"free. Esc still opens this menu."
+msgstr ""
+"Tắt: game bỏ qua bàn phím và chuột (chỉ tay cầm) và con trỏ chuột vẫn tự do. Esc vẫn mở menu này."
+
+msgctxt "UI_MENU_MOUSE_SENS"
+msgid "Mouse camera sensitivity"
+msgstr "Độ nhạy camera của chuột"
+
+msgctxt "UI_MENU_MOUSE_SENS_DESC"
+msgid "How fast the mouse turns the camera."
+msgstr "Chuột xoay camera nhanh đến mức nào."
+
+msgctxt "UI_MENU_SWITCH2"
+msgid "Switch 2 controllers (Bluetooth)"
+msgstr "Tay cầm Switch 2 (Bluetooth)"
+
+msgctxt "UI_MENU_SWITCH2_DESC"
+msgid ""
+"Joy-Con 2 and Pro Controller 2 over Bluetooth. To pair one, hold its Sync button with the game "
+"open. Applies at the next start."
+msgstr ""
+"Joy-Con 2 và Pro Controller 2 qua Bluetooth. Để ghép nối một cái, giữ nút Sync của nó khi game "
+"đang mở. Áp dụng ở lần khởi động tiếp theo."
+
+msgctxt "UI_MENU_DSU"
+msgid "Motion from a DSU server"
+msgstr "Chuyển động từ máy chủ DSU"
+
+msgctxt "UI_MENU_JOYCON_COMBINE"
+msgid "Join left and right Joy-Con"
+msgstr "Gộp Joy-Con trái và phải"
+
+msgctxt "UI_MENU_JOYCON_COMBINE_DESC"
+msgid ""
+"On: a left and a right Joy-Con paired together act as one controller. Off: each Joy-Con stays its "
+"own small controller, so two players can share the pair. Applies at the next start."
+msgstr ""
+"Bật: một Joy-Con trái và một Joy-Con phải được ghép nối cùng nhau hoạt động như một tay cầm. Tắt: "
+"mỗi Joy-Con giữ vai trò tay cầm nhỏ của riêng nó, để hai người chơi có thể chia sẻ cặp tay cầm. "
+"Áp dụng ở lần khởi động tiếp theo."
+
+msgctxt "UI_MENU_DSU_DESC"
+msgid ""
+"The gyro of a controller that gives none to the game, such as one in XInput mode, read from a "
+"Cemuhook / DSU server (DS4Windows, BetterJoy...) at 127.0.0.1:26760 (dsu_server in mkw.ini)."
+msgstr ""
+"Con quay hồi chuyển của một tay cầm không cung cấp gì cho game, như tay cầm ở chế độ XInput, được "
+"đọc từ máy chủ Cemuhook / DSU (DS4Windows, BetterJoy...) tại 127.0.0.1:26760 (dsu_server trong "
+"mkw.ini)."
+
+msgctxt "UI_MENU_STICK_DEADZONE"
+msgid "Stick dead zone"
+msgstr "Vùng chết của cần"
+
+msgctxt "UI_MENU_STICK_DEADZONE_DESC"
+msgid ""
+"How far a stick must tilt before it counts. Raise it if the kart drifts with the stick at rest."
+msgstr ""
+"Cần phải nghiêng bao xa thì mới được tính. Tăng nó lên nếu xe kart tự trôi khi cần ở trạng thái "
+"nghỉ."
+
+msgctxt "UI_MENU_BUTTON_ICONS"
+msgid "Button icons"
+msgstr "Biểu tượng nút"
+
+msgctxt "UI_MENU_BUTTON_ICONS_DESC"
+msgid ""
+"Which buttons the game's prompts show. Automatic follows the device you used last: the "
+"controller's own buttons (Xbox or PlayStation), or your keys and mouse. The icons follow your "
+"remapped buttons."
+msgstr ""
+"Game hiển thị nút nào trong các gợi ý của nó. Tự động theo thiết bị bạn dùng gần nhất: các nút "
+"của chính tay cầm (Xbox hoặc PlayStation), hoặc phím và chuột của bạn. Các biểu tượng theo các "
+"nút bạn đã gán lại."
+
+msgctxt "UI_MENU_ICONS_NINTENDO"
+msgid "Nintendo"
+msgstr "Nintendo"
+
+msgctxt "UI_MENU_ICONS_XBOX"
+msgid "Xbox"
+msgstr "Xbox"
+
+msgctxt "UI_MENU_ICONS_PLAYSTATION"
+msgid "PlayStation"
+msgstr "PlayStation"
+
+msgctxt "UI_MENU_ICONS_KEYBOARD"
+msgid "Keyboard"
+msgstr "Bàn phím"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_ICONS_IN_USE"
+msgid "in use: %s"
+msgstr "đang dùng: %s"
+
+msgctxt "UI_MENU_MENU_SHORTCUT"
+msgid "Menu shortcut"
+msgstr "Phím tắt menu"
+
+msgctxt "UI_MENU_MENU_SHORTCUT_DESC"
+msgid ""
+"Choose which controller input opens this menu (Start + Select or the Guide button). Keyboard "
+"defaults to F1 or Esc."
+msgstr ""
+"Chọn thao tác tay cầm nào mở menu này (Start + Select hoặc nút Guide). Bàn phím mặc định là F1 "
+"hoặc Esc."
+
+msgctxt "UI_MENU_SHORTCUT_MINUS_PLUS"
+msgid "Start + Select"
+msgstr "Start + Select"
+
+msgctxt "UI_MENU_SHORTCUT_GUIDE"
+msgid "Guide button"
+msgstr "Nút Guide"
+
+msgctxt "UI_MENU_SHORTCUT_STEAM_NOTE"
+msgid ""
+"Note: If using the Guide button, turn off 'Guide button focuses Steam' in Steam (Settings -> "
+"Controller -> Advanced Settings).\n\nOn Windows, also turn off 'Allow your controller to open "
+"Game Bar' (Settings -> Gaming -> Game Bar)."
+msgstr ""
+"Lưu ý: Nếu dùng nút Guide, hãy tắt 'Guide button focuses Steam' trong Steam (Cài đặt -> "
+"Controller -> Advanced Settings).\n\nTrên Windows, cũng tắt 'Allow your controller to open Game "
+"Bar' (Cài đặt -> Gaming -> Game Bar)."
+
+msgctxt "UI_BINDS_HELP"
+msgid ""
+"Select a cell and press A or Enter, then the key, mouse button or controller button. Delete or X "
+"clears a cell. A key in use moves here; a controller button swaps with the one it replaces."
+msgstr ""
+"Chọn một ô và nhấn A hoặc Enter, rồi nhấn phím, nút chuột hoặc nút tay cầm. Delete hoặc X xóa một "
+"ô. Một phím đang được dùng sẽ chuyển tới đây; một nút tay cầm sẽ hoán đổi với nút nó thay thế."
+
+msgctxt "UI_BINDS_COL_KEY1"
+msgid "Key 1"
+msgstr "Phím 1"
+
+msgctxt "UI_BINDS_COL_KEY2"
+msgid "Key 2"
+msgstr "Phím 2"
+
+msgctxt "UI_BINDS_COL_PAD"
+msgid "Controller"
+msgstr "Tay cầm"
+
+msgctxt "UI_BINDS_GROUP_BUTTONS"
+msgid "Buttons"
+msgstr "Các nút"
+
+msgctxt "UI_BINDS_GROUP_MOVE"
+msgid "Movement"
+msgstr "Di chuyển"
+
+msgctxt "UI_BINDS_GROUP_CAMERA"
+msgid "Camera"
+msgstr "Camera"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_BINDS_PRESS_KEY"
+msgid "Press a key or mouse button for %s"
+msgstr "Nhấn một phím hoặc nút chuột cho %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_BINDS_PRESS_PAD"
+msgid "Press a controller button for %s"
+msgstr "Nhấn một nút tay cầm cho %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_BINDS_CANCEL_HINT"
+msgid "Esc cancels, or wait %d s"
+msgstr "Esc để hủy, hoặc chờ %d giây"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_BINDS_TAKEN"
+msgid "%s was taken from %s"
+msgstr "%s đã được lấy từ %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_BINDS_SWAPPED"
+msgid "%s swapped with %s"
+msgstr "%s đã hoán đổi với %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_PADS_MISSING"
+msgid "%d players need a controller each: %d connected. The keyboard only counts for player 1."
+msgstr "%d người chơi mỗi người cần một tay cầm: %d đã kết nối. Bàn phím chỉ tính cho người chơi 1."
+
+msgctxt "UI_MENU_PADS"
+msgid "Controllers"
+msgstr "Tay cầm"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_PAD_PLAYER"
+msgid "Player %d: %s"
+msgstr "Người chơi %d: %s"
+
+msgctxt "UI_MENU_PAD_BATTERY_DESC"
+msgid ""
+"The battery of each player's controller, as the controller reports it. Some controllers report "
+"none. A Switch 2 controller over Bluetooth reports a voltage and an Xbox controller on Linux's "
+"xone driver a level, each shown as high, medium or low."
+msgstr ""
+"Pin của tay cầm từng người chơi, như tay cầm báo cáo. Một số tay cầm không báo cáo gì. Tay cầm "
+"Switch 2 qua Bluetooth báo cáo một điện áp và tay cầm Xbox trên driver xone của Linux báo cáo một "
+"mức, mỗi loại được hiển thị là cao, trung bình hoặc thấp."
+
+msgctxt "UI_MENU_PADS_NONE"
+msgid "No controller connected"
+msgstr "Không có tay cầm nào được kết nối"
+
+msgctxt "UI_MENU_PAD_MOVE_DESC"
+msgid ""
+"Press it to trade places with the player before: this controller becomes theirs and theirs "
+"becomes this one's. Player 1's controller moves the menu. The order lasts until the game closes. "
+"On the right, the battery the controller reports, if any."
+msgstr ""
+"Nhấn nó để đổi chỗ với người chơi phía trước: tay cầm này trở thành của họ và của họ trở thành "
+"của tay cầm này. Tay cầm của người chơi 1 điều khiển menu. Thứ tự kéo dài đến khi game đóng. Ở "
+"bên phải, pin mà tay cầm báo cáo, nếu có."
+
+msgctxt "UI_POWER_LOW"
+msgid "Low"
+msgstr "Thấp"
+
+msgctxt "UI_POWER_MEDIUM"
+msgid "Medium"
+msgstr "Trung bình"
+
+msgctxt "UI_POWER_HIGH"
+msgid "High"
+msgstr "Cao"
+
+msgctxt "UI_POWER_CHARGING"
+msgid "Charging"
+msgstr "Đang sạc"
+
+msgctxt "UI_POWER_CHARGED"
+msgid "Charged"
+msgstr "Đã sạc đầy"
+
+msgctxt "UI_POWER_WIRED"
+msgid "Wired"
+msgstr "Cắm dây"
+
+msgctxt "UI_POWER_UNKNOWN"
+msgid "Battery not reported"
+msgstr "Không có thông tin pin"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_NOTICE_BATTERY_LOW"
+msgid "Player %d's controller is running out of battery (%s)"
+msgstr "Tay cầm của người chơi %d sắp hết pin (%s)"
+
+msgctxt "UI_BINDS_RESET"
+msgid "Reset all buttons"
+msgstr "Đặt lại mọi nút"
+
+msgctxt "UI_BINDS_RESET_DESC"
+msgid ""
+"Back to the default keys and controller buttons. The button layout above applies again: remapped "
+"controller buttons stay where you put them until this reset."
+msgstr ""
+"Trở về các phím và nút tay cầm mặc định. Bố cục nút ở trên áp dụng lại: các nút tay cầm đã gán "
+"lại ở nguyên nơi bạn đặt cho đến lần đặt lại này."
+
+msgctxt "UI_BIND_A"
+msgid "A"
+msgstr "A"
+
+msgctxt "UI_BIND_B"
+msgid "B"
+msgstr "B"
+
+msgctxt "UI_BIND_X"
+msgid "X"
+msgstr "X"
+
+msgctxt "UI_BIND_Y"
+msgid "Y"
+msgstr "Y"
+
+msgctxt "UI_BIND_LCLICK"
+msgid "Left stick click"
+msgstr "Nhấn cần trái"
+
+msgctxt "UI_BIND_RCLICK"
+msgid "Right stick click"
+msgstr "Nhấn cần phải"
+
+msgctxt "UI_BIND_L"
+msgid "L"
+msgstr "L"
+
+msgctxt "UI_BIND_R"
+msgid "R"
+msgstr "R"
+
+msgctxt "UI_BIND_ZL"
+msgid "ZL"
+msgstr "ZL"
+
+msgctxt "UI_BIND_ZR"
+msgid "ZR"
+msgstr "ZR"
+
+msgctxt "UI_BIND_PLUS"
+msgid "Plus"
+msgstr "Plus"
+
+msgctxt "UI_BIND_MINUS"
+msgid "Minus"
+msgstr "Minus"
+
+msgctxt "UI_BIND_LEFT"
+msgid "D-pad left"
+msgstr "Phím điều hướng trái"
+
+msgctxt "UI_BIND_UP"
+msgid "D-pad up"
+msgstr "Phím điều hướng lên"
+
+msgctxt "UI_BIND_RIGHT"
+msgid "D-pad right"
+msgstr "Phím điều hướng phải"
+
+msgctxt "UI_BIND_DOWN"
+msgid "D-pad down"
+msgstr "Phím điều hướng xuống"
+
+msgctxt "UI_BIND_LSTICK_LEFT"
+msgid "Steer left"
+msgstr "Lái sang trái"
+
+msgctxt "UI_BIND_LSTICK_UP"
+msgid "Stick up"
+msgstr "Cần lên"
+
+msgctxt "UI_BIND_LSTICK_RIGHT"
+msgid "Steer right"
+msgstr "Lái sang phải"
+
+msgctxt "UI_BIND_LSTICK_DOWN"
+msgid "Stick down"
+msgstr "Cần xuống"
+
+msgctxt "UI_BIND_RSTICK_LEFT"
+msgid "Camera left"
+msgstr "Camera sang trái"
+
+msgctxt "UI_BIND_RSTICK_UP"
+msgid "Camera up"
+msgstr "Camera lên"
+
+msgctxt "UI_BIND_RSTICK_RIGHT"
+msgid "Camera right"
+msgstr "Camera sang phải"
+
+msgctxt "UI_BIND_RSTICK_DOWN"
+msgid "Camera down"
+msgstr "Camera xuống"
+
+msgctxt "UI_BIND_DESC_A"
+msgid "Accelerate; confirm in menus."
+msgstr "Tăng tốc; xác nhận trong menu."
+
+msgctxt "UI_BIND_DESC_B"
+msgid "Brake, reverse; back in menus."
+msgstr "Phanh, lùi; quay lại trong menu."
+
+msgctxt "UI_BIND_DESC_X"
+msgid "Rear view."
+msgstr "Nhìn phía sau."
+
+msgctxt "UI_BIND_DESC_Y"
+msgid "World map (free roam)."
+msgstr "Bản đồ thế giới (dạo chơi tự do)."
+
+msgctxt "UI_BIND_DESC_LCLICK"
+msgid "No action in the game's control list."
+msgstr "Không có hành động nào trong danh sách điều khiển của game."
+
+msgctxt "UI_BIND_DESC_RCLICK"
+msgid "No action in the game's control list."
+msgstr "Không có hành động nào trong danh sách điều khiển của game."
+
+msgctxt "UI_BIND_DESC_L"
+msgid "Use an item."
+msgstr "Dùng một vật phẩm."
+
+msgctxt "UI_BIND_DESC_R"
+msgid "Hop, drift, charge jump, trick."
+msgstr "Nhảy, drift, nhảy tích lực, trick."
+
+msgctxt "UI_BIND_DESC_ZL"
+msgid "Use an item."
+msgstr "Dùng một vật phẩm."
+
+msgctxt "UI_BIND_DESC_ZR"
+msgid "Hop, drift, charge jump, trick."
+msgstr "Nhảy, drift, nhảy tích lực, trick."
+
+msgctxt "UI_BIND_DESC_PLUS"
+msgid "Pause, settings."
+msgstr "Tạm dừng, cài đặt."
+
+msgctxt "UI_BIND_DESC_MINUS"
+msgid "Photo mode."
+msgstr "Chế độ chụp ảnh."
+
+msgctxt "UI_BIND_DESC_DPAD"
+msgid "Down rewinds; all four move in menus."
+msgstr "Xuống là tua lại; cả bốn đều di chuyển trong menu."
+
+msgctxt "UI_BIND_DESC_MOVE"
+msgid "Steers like the left stick. The controller's left stick always works too."
+msgstr "Lái như cần trái. Cần trái của tay cầm cũng luôn hoạt động."
+
+msgctxt "UI_BIND_DESC_CAMERA"
+msgid ""
+"Turns the camera like the right stick. The mouse and the controller's right stick always work too."
+msgstr "Xoay camera như cần phải. Chuột và cần phải của tay cầm cũng luôn hoạt động."
+
+msgctxt "UI_KEY_SPACE"
+msgid "Space"
+msgstr "Phím cách"
+
+msgctxt "UI_KEY_TAB"
+msgid "Tab"
+msgstr "Tab"
+
+msgctxt "UI_KEY_LSHIFT"
+msgid "Left Shift"
+msgstr "Shift trái"
+
+msgctxt "UI_KEY_LCTRL"
+msgid "Left Ctrl"
+msgstr "Ctrl trái"
+
+msgctxt "UI_KEY_UP"
+msgid "Up arrow"
+msgstr "Mũi tên lên"
+
+msgctxt "UI_KEY_DOWN"
+msgid "Down arrow"
+msgstr "Mũi tên xuống"
+
+msgctxt "UI_KEY_LEFT"
+msgid "Left arrow"
+msgstr "Mũi tên trái"
+
+msgctxt "UI_KEY_RIGHT"
+msgid "Right arrow"
+msgstr "Mũi tên phải"
+
+msgctxt "UI_KEY_MOUSE_L"
+msgid "Left mouse"
+msgstr "Chuột trái"
+
+msgctxt "UI_KEY_MOUSE_R"
+msgid "Right mouse"
+msgstr "Chuột phải"
+
+msgctxt "UI_KEY_MOUSE_M"
+msgid "Middle mouse"
+msgstr "Chuột giữa"
+
+msgctxt "UI_KEY_MOUSE_X1"
+msgid "Mouse 4"
+msgstr "Chuột 4"
+
+msgctxt "UI_KEY_MOUSE_X2"
+msgid "Mouse 5"
+msgstr "Chuột 5"
+
+msgctxt "UI_KEY_ENTER"
+msgid "Enter"
+msgstr "Enter"
+
+msgctxt "UI_KEY_BACKSPACE"
+msgid "Backspace"
+msgstr "Backspace"
+
+msgctxt "UI_KEY_RSHIFT"
+msgid "Right Shift"
+msgstr "Shift phải"
+
+msgctxt "UI_KEY_RCTRL"
+msgid "Right Ctrl"
+msgstr "Ctrl phải"
+
+msgctxt "UI_KEY_LALT"
+msgid "Alt"
+msgstr "Alt"
+
+msgctxt "UI_KEY_CAPSLOCK"
+msgid "Caps Lock"
+msgstr "Caps Lock"
+
+msgctxt "UI_KEY_INSERT"
+msgid "Insert"
+msgstr "Insert"
+
+msgctxt "UI_KEY_DELETE"
+msgid "Delete"
+msgstr "Delete"
+
+msgctxt "UI_KEY_HOME"
+msgid "Home"
+msgstr "Home"
+
+msgctxt "UI_KEY_END"
+msgid "End"
+msgstr "End"
+
+msgctxt "UI_KEY_PAGEUP"
+msgid "Page Up"
+msgstr "Page Up"
+
+msgctxt "UI_KEY_PAGEDOWN"
+msgid "Page Down"
+msgstr "Page Down"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_KEY_NUM_FMT"
+msgid "Num %s"
+msgstr "Num %s"
+
+msgctxt "UI_PAD_SOUTH"
+msgid "Bottom button"
+msgstr "Nút dưới"
+
+msgctxt "UI_PAD_EAST"
+msgid "Right button"
+msgstr "Nút phải"
+
+msgctxt "UI_PAD_WEST"
+msgid "Left button"
+msgstr "Nút trái"
+
+msgctxt "UI_PAD_NORTH"
+msgid "Top button"
+msgstr "Nút trên"
+
+msgctxt "UI_PAD_LSTICK"
+msgid "Left stick"
+msgstr "Cần trái"
+
+msgctxt "UI_PAD_RSTICK"
+msgid "Right stick"
+msgstr "Cần phải"
+
+msgctxt "UI_PAD_L"
+msgid "Left bumper"
+msgstr "Nút vai trái"
+
+msgctxt "UI_PAD_R"
+msgid "Right bumper"
+msgstr "Nút vai phải"
+
+msgctxt "UI_PAD_START"
+msgid "Start"
+msgstr "Start"
+
+msgctxt "UI_PAD_BACK"
+msgid "Back"
+msgstr "Back"
+
+msgctxt "UI_PAD_DPAD_LEFT"
+msgid "D-pad left"
+msgstr "Phím điều hướng trái"
+
+msgctxt "UI_PAD_DPAD_UP"
+msgid "D-pad up"
+msgstr "Phím điều hướng lên"
+
+msgctxt "UI_PAD_DPAD_RIGHT"
+msgid "D-pad right"
+msgstr "Phím điều hướng phải"
+
+msgctxt "UI_PAD_DPAD_DOWN"
+msgid "D-pad down"
+msgstr "Phím điều hướng xuống"
+
+msgctxt "UI_PAD_ZL"
+msgid "Left trigger"
+msgstr "Cò trái"
+
+msgctxt "UI_PAD_ZR"
+msgid "Right trigger"
+msgstr "Cò phải"
+
+msgctxt "UI_PAD_CROSS"
+msgid "Cross"
+msgstr "Chéo"
+
+msgctxt "UI_PAD_CIRCLE"
+msgid "Circle"
+msgstr "Tròn"
+
+msgctxt "UI_PAD_SQUARE"
+msgid "Square"
+msgstr "Vuông"
+
+msgctxt "UI_PAD_TRIANGLE"
+msgid "Triangle"
+msgstr "Tam giác"
+
+msgctxt "UI_MENU_MENU_LANG"
+msgid "Menu language"
+msgstr "Ngôn ngữ menu"
+
+msgctxt "UI_MENU_MENU_LANG_DESC"
+msgid "Language of this menu and the overlay."
+msgstr "Ngôn ngữ của menu này và lớp phủ."
+
+msgctxt "UI_MENU_MENU_LANG_AUTO"
+msgid "Automatic (from the system)"
+msgstr "Tự động (từ hệ thống)"
+
+msgctxt "UI_MENU_ADV_WARNING"
+msgid "These settings are for testing and troubleshooting. Change them only when you know why."
+msgstr "Các cài đặt này dành cho kiểm tra và xử lý sự cố. Chỉ thay đổi chúng khi bạn biết lý do."
+
+msgctxt "UI_MENU_GROUP_SCHED"
+msgid "Scheduling"
+msgstr "Lập lịch"
+
+msgctxt "UI_MENU_GROUP_SHADERS"
+msgid "Shaders and pipelines"
+msgstr "Shader và pipeline"
+
+msgctxt "UI_MENU_GROUP_TEXMEM"
+msgid "Textures and memory"
+msgstr "Texture và bộ nhớ"
+
+msgctxt "UI_MENU_GROUP_FIXES"
+msgid "Render fixes"
+msgstr "Sửa lỗi kết xuất"
+
+msgctxt "UI_MENU_GROUP_VULKAN"
+msgid "Vulkan"
+msgstr "Vulkan"
+
+msgctxt "UI_MENU_GROUP_DIAG"
+msgid "Diagnostics"
+msgstr "Chẩn đoán"
+
+msgctxt "UI_MENU_ASYNC_PREEMPT"
+msgid "Virtual core preemption"
+msgstr "Quyền ưu tiên lõi ảo"
+
+msgctxt "UI_MENU_ASYNC_PREEMPT_DESC"
+msgid "Lets a game thread interrupt another one on the same virtual core."
+msgstr "Cho phép một luồng game ngắt một luồng khác trên cùng lõi ảo."
+
+msgctxt "UI_MENU_PREEMPT_OFF"
+msgid "Off"
+msgstr "Tắt"
+
+msgctxt "UI_MENU_PREEMPT_ON"
+msgid "On"
+msgstr "Bật"
+
+msgctxt "UI_MENU_PREEMPT_INHERIT"
+msgid "Inheritance only"
+msgstr "Chỉ kế thừa"
+
+msgctxt "UI_MENU_REPLAY_ASYNC"
+msgid "GPU frame prep on its own thread"
+msgstr "Chuẩn bị khung hình GPU trên luồng riêng"
+
+msgctxt "UI_MENU_REPLAY_ASYNC_DESC"
+msgid ""
+"Prepares frames for the GPU on a separate thread instead of the game thread. Adds up to one frame "
+"of latency."
+msgstr ""
+"Chuẩn bị các khung hình cho GPU trên một luồng riêng thay vì luồng game. Thêm tối đa một khung "
+"hình độ trễ."
+
+msgctxt "UI_MENU_FREE_CORES"
+msgid "Virtual core gate"
+msgstr "Cổng lõi ảo"
+
+msgctxt "UI_MENU_FREE_CORES_DESC"
+msgid "Lets only one thread run per virtual core, as on the console."
+msgstr "Chỉ cho một luồng chạy trên mỗi lõi ảo, như trên máy console."
+
+msgctxt "UI_MENU_TIMER_1MS"
+msgid "1 ms Windows timer"
+msgstr "Bộ đếm giờ Windows 1 ms"
+
+msgctxt "UI_MENU_TIMER_1MS_DESC"
+msgid "Raises the system timer resolution to 1 ms for steadier frame pacing."
+msgstr "Nâng độ phân giải của bộ đếm giờ hệ thống lên 1 ms để nhịp khung hình ổn định hơn."
+
+msgctxt "UI_MENU_PIPE_WAIT"
+msgid "Waiting draw handling"
+msgstr "Xử lý lệnh vẽ chờ"
+
+msgctxt "UI_MENU_PIPE_WAIT_DESC"
+msgid ""
+"Default keeps the current scheduling with a reserved worker for waiting draws; Old (draw) uses "
+"the previous scheduling."
+msgstr ""
+"Mặc định giữ cách lập lịch hiện tại với một worker dự phòng cho các lệnh vẽ chờ; Cũ (vẽ) dùng "
+"cách lập lịch trước."
+
+msgctxt "UI_MENU_PIPE_WAIT_DEFAULT"
+msgid "Default"
+msgstr "Mặc định"
+
+msgctxt "UI_MENU_PIPE_WAIT_DRAW"
+msgid "Old (draw)"
+msgstr "Cũ (vẽ)"
+
+msgctxt "UI_MENU_PIPE_SKIP"
+msgid "Draws skipped while a pipeline builds"
+msgstr "Các lệnh vẽ bị bỏ qua khi pipeline đang dựng"
+
+msgctxt "UI_MENU_PIPE_SKIP_DESC"
+msgid "Which draws are dropped instead of waiting for their pipeline."
+msgstr "Những lệnh vẽ nào bị loại bỏ thay vì chờ pipeline của chúng."
+
+msgctxt "UI_MENU_PIPE_SKIP_STRICT"
+msgid "Strict"
+msgstr "Nghiêm ngặt"
+
+msgctxt "UI_MENU_PIPE_SKIP_ANY"
+msgid "Any"
+msgstr "Bất kỳ"
+
+msgctxt "UI_MENU_PIPE_SKIP_FULLSCREEN"
+msgid "Fullscreen passes"
+msgstr "Các lượt toàn màn hình"
+
+msgctxt "UI_MENU_PIPE_PREBUILD"
+msgid "Pipeline prebuild"
+msgstr "Dựng trước pipeline"
+
+msgctxt "UI_MENU_PIPE_PREBUILD_DESC"
+msgid "Builds known pipelines ahead of time."
+msgstr "Dựng các pipeline đã biết trước thời hạn."
+
+msgctxt "UI_MENU_GPL"
+msgid "Graphics pipeline library"
+msgstr "Thư viện pipeline đồ họa"
+
+msgctxt "UI_MENU_GPL_DESC"
+msgid "Uses the Vulkan pipeline library extension; turn off if your driver misbehaves with it."
+msgstr ""
+"Dùng phần mở rộng thư viện pipeline của Vulkan; tắt nếu driver của bạn hoạt động sai với nó."
+
+msgctxt "UI_MENU_ASTC"
+msgid "ASTC texture decoding"
+msgstr "Giải mã texture ASTC"
+
+msgctxt "UI_MENU_ASTC_DESC"
+msgid "Where compressed ASTC textures are decoded."
+msgstr "Các texture ASTC nén được giải mã ở đâu."
+
+msgctxt "UI_MENU_ASTC_AUTO"
+msgid "Automatic"
+msgstr "Tự động"
+
+msgctxt "UI_MENU_ASTC_GPU"
+msgid "GPU shader"
+msgstr "Shader GPU"
+
+msgctxt "UI_MENU_ASTC_NATIVE"
+msgid "Native"
+msgstr "Nguyên bản"
+
+msgctxt "UI_MENU_ASTC_CPU"
+msgid "CPU"
+msgstr "CPU"
+
+msgctxt "UI_MENU_MEMORY"
+msgid "GPU memory mode"
+msgstr "Chế độ bộ nhớ GPU"
+
+msgctxt "UI_MENU_MEMORY_DESC"
+msgid "How game memory is shared with the GPU."
+msgstr "Bộ nhớ game được chia sẻ với GPU như thế nào."
+
+msgctxt "UI_MENU_MEMORY_AUTO"
+msgid "Automatic"
+msgstr "Tự động"
+
+msgctxt "UI_MENU_MEMORY_IMPORT"
+msgid "Import"
+msgstr "Nhập"
+
+msgctxt "UI_MENU_MEMORY_MIRROR"
+msgid "Mirror"
+msgstr "Phản chiếu"
+
+msgctxt "UI_MENU_MEMORY_VERIFY"
+msgid "Verify"
+msgstr "Kiểm chứng"
+
+msgctxt "UI_MENU_TEX_ALIAS"
+msgid "Texture aliasing"
+msgstr "Gán chồng texture"
+
+msgctxt "UI_MENU_TEX_ALIAS_DESC"
+msgid ""
+"A new texture created over a live texture's memory starts with that content instead of empty."
+msgstr ""
+"Một texture mới được tạo trên bộ nhớ của một texture đang sống bắt đầu với nội dung đó thay vì "
+"trống."
+
+msgctxt "UI_MENU_FIX_C0"
+msgid "Constant buffer fix"
+msgstr "Sửa bộ đệm hằng số"
+
+msgctxt "UI_MENU_FIX_C0_DESC"
+msgid ""
+"Fills the driver-reserved constant bank c0 (storage sizes, dispatch size, point size, base "
+"instance) instead of reading zeros."
+msgstr ""
+"Lấp đầy bank hằng số c0 do driver dự phòng (kích thước lưu trữ, kích thước dispatch, kích thước "
+"điểm, thực thể cơ sở) thay vì đọc các số 0."
+
+msgctxt "UI_MENU_FIX_ZERO"
+msgid "Zero new GPU memory"
+msgstr "Bộ nhớ GPU mới bằng 0"
+
+msgctxt "UI_MENU_FIX_ZERO_DESC"
+msgid "New GPU memory pools start zero-filled, as Switch memory does."
+msgstr "Các vùng bộ nhớ GPU mới bắt đầu được lấp bằng 0, như bộ nhớ của Switch."
+
+msgctxt "UI_MENU_BIND_SKIP"
+msgid "Skip repeated binds"
+msgstr "Bỏ qua các lần gắn lặp lại"
+
+msgctxt "UI_MENU_BIND_SKIP_DESC"
+msgid "Optimisation: skips bindings that did not change."
+msgstr "Tối ưu: bỏ qua các gắn kết không thay đổi."
+
+msgctxt "UI_MENU_SHADER_MEMO"
+msgid "Shader memo"
+msgstr "Ghi nhớ shader"
+
+msgctxt "UI_MENU_SHADER_MEMO_DESC"
+msgid "Optimisation: remembers shader lookups."
+msgstr "Tối ưu: ghi nhớ các lần tra cứu shader."
+
+msgctxt "UI_MENU_PIPE_MEMO"
+msgid "Pipeline memo"
+msgstr "Ghi nhớ pipeline"
+
+msgctxt "UI_MENU_PIPE_MEMO_DESC"
+msgid "Optimisation: reuses the previous draw's pipeline when its state repeats."
+msgstr "Tối ưu: dùng lại pipeline của lệnh vẽ trước khi trạng thái của nó lặp lại."
+
+msgctxt "UI_MENU_TEX_MEMO"
+msgid "Texture binding memo"
+msgstr "Ghi nhớ gắn texture"
+
+msgctxt "UI_MENU_TEX_MEMO_DESC"
+msgid "Optimisation: remembers texture descriptors between draws."
+msgstr "Tối ưu: ghi nhớ các mô tả texture giữa các lệnh vẽ."
+
+msgctxt "UI_MENU_DESC_TEMPLATE"
+msgid "Descriptor templates"
+msgstr "Mẫu mô tả"
+
+msgctxt "UI_MENU_DESC_TEMPLATE_DESC"
+msgid "Optimisation: updates descriptors in bulk."
+msgstr "Tối ưu: cập nhật các mô tả hàng loạt."
+
+msgctxt "UI_MENU_PUSH_SKIP"
+msgid "Skip repeated push constants"
+msgstr "Bỏ qua các push constant lặp lại"
+
+msgctxt "UI_MENU_PUSH_SKIP_DESC"
+msgid "Optimisation: skips push constants that did not change."
+msgstr "Tối ưu: bỏ qua các push constant không thay đổi."
+
+msgctxt "UI_MENU_SPLIT_DRAWS"
+msgid "Early GPU submission"
+msgstr "Gửi GPU sớm"
+
+msgctxt "UI_MENU_SPLIT_DRAWS_DESC"
+msgid ""
+"Submits GPU work in parts every N draws between passes so the GPU starts earlier; 0 turns it off."
+msgstr ""
+"Gửi công việc GPU thành từng phần mỗi N lệnh vẽ giữa các lượt để GPU bắt đầu sớm hơn; 0 tắt nó đi."
+
+msgctxt "UI_MENU_VK_VALIDATION"
+msgid "Validation layer"
+msgstr "Lớp kiểm tra"
+
+msgctxt "UI_MENU_VK_VALIDATION_DESC"
+msgid "Checks every Vulkan call and slows the game down a lot."
+msgstr "Kiểm tra mọi lời gọi Vulkan và làm game chậm đi rất nhiều."
+
+msgctxt "UI_MENU_VK_VALIDATION_MISSING"
+msgid "The validation layer is not installed."
+msgstr "Lớp kiểm tra chưa được cài đặt."
+
+msgctxt "UI_MENU_VK_DYN_VERTEX"
+msgid "Dynamic vertex state"
+msgstr "Trạng thái đỉnh động"
+
+msgctxt "UI_MENU_VK_DYN_VERTEX_DESC"
+msgid "Forces dynamic vertex input on or off; the default depends on the GPU."
+msgstr "Buộc đầu vào đỉnh động bật hoặc tắt; mặc định tùy thuộc vào GPU."
+
+msgctxt "UI_MENU_VK_SUBGROUP_PIN"
+msgid "Pin subgroup size"
+msgstr "Ghim kích thước subgroup"
+
+msgctxt "UI_MENU_VK_SUBGROUP_PIN_DESC"
+msgid "Fixes the shader subgroup size."
+msgstr "Cố định kích thước subgroup của shader."
+
+msgctxt "UI_MENU_TRACE"
+msgid "Performance log"
+msgstr "Nhật ký hiệu năng"
+
+msgctxt "UI_MENU_TRACE_DESC"
+msgid "Writes frame timings to a file."
+msgstr "Ghi thời gian khung hình vào một tệp."
+
+msgctxt "UI_MENU_FLIGHT"
+msgid "Flight recorder"
+msgstr "Hộp đen"
+
+msgctxt "UI_MENU_FLIGHT_DESC"
+msgid "Keeps a short history and saves it when a frame freezes."
+msgstr "Giữ một lịch sử ngắn và lưu nó khi một khung hình bị đóng băng."
+
+msgctxt "UI_MENU_FLIGHT_SPIKE_MS"
+msgid "Freeze threshold (ms)"
+msgstr "Ngưỡng đóng băng (ms)"
+
+msgctxt "UI_MENU_FLIGHT_SPIKE_MS_DESC"
+msgid "Frame time that counts as a freeze."
+msgstr "Thời gian khung hình được tính là đóng băng."
+
+msgctxt "UI_MENU_INPUT_RECORD"
+msgid "Input recording"
+msgstr "Ghi lại thao tác"
+
+msgctxt "UI_MENU_INPUT_RECORD_DESC"
+msgid "Writes your inputs to a file for bug reports."
+msgstr "Ghi các thao tác của bạn vào một tệp để báo lỗi."
+
+msgctxt "UI_MENU_OPEN_LOG"
+msgid "Open log folder"
+msgstr "Mở thư mục nhật ký"
+
+msgctxt "UI_MENU_OPEN_LOG_DESC"
+msgid "Shows the folder with the log files."
+msgstr "Hiển thị thư mục chứa các tệp nhật ký."
+
+msgctxt "UI_MENU_COPY_INFO"
+msgid "Copy system info"
+msgstr "Sao chép thông tin hệ thống"
+
+msgctxt "UI_MENU_COPY_INFO_DESC"
+msgid "Copies GPU, driver, CPU, RAM and changed settings to the clipboard."
+msgstr "Sao chép GPU, driver, CPU, RAM và các cài đặt đã thay đổi vào bảng tạm."
+
+msgctxt "UI_MENU_COPY_INFO_DONE"
+msgid "Copied"
+msgstr "Đã sao chép"
+
+msgctxt "UI_MENU_ACTION_FAILED"
+msgid "did not work"
+msgstr "không hoạt động"
+
+msgctxt "UI_MENU_RESET"
+msgid "Reset all settings to defaults"
+msgstr "Đặt lại mọi cài đặt về mặc định"
+
+msgctxt "UI_MENU_RESET_DESC"
+msgid "Applies to every tab."
+msgstr "Áp dụng cho mọi tab."
+
+msgctxt "UI_MENU_RESET_CONFIRM"
+msgid "Reset every setting to its default?"
+msgstr "Đặt lại mọi cài đặt về mặc định của nó?"
+
+msgctxt "UI_MENU_RESET_YES"
+msgid "Reset"
+msgstr "Đặt lại"
+
+msgctxt "UI_MENU_RESET_NO"
+msgid "Cancel"
+msgstr "Hủy"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FPS"
+msgid "%.0f FPS"
+msgstr "%.0f FPS"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FRAME_MS"
+msgid "%.1f ms"
+msgstr "%.1f ms"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_GAME_PCT"
+msgid "game %.0f%%"
+msgstr "game %.0f%%"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_MAX_MS"
+msgid "max %.1f ms"
+msgstr "tối đa %.1f ms"
+
+msgctxt "UI_MENU_OV_GPU"
+msgid "GPU"
+msgstr "GPU"
+
+msgctxt "UI_MENU_OV_CPU"
+msgid "CPU"
+msgstr "CPU"
+
+msgctxt "UI_MENU_OV_RAM"
+msgid "RAM"
+msgstr "RAM"
+
+msgctxt "UI_MENU_OV_VRAM"
+msgid "VRAM"
+msgstr "VRAM"
+
+msgctxt "UI_MENU_OV_NONE"
+msgid "-"
+msgstr "-"
+
+msgctxt "UI_MENU_OV_REPLAY"
+msgid "GPU frame prep"
+msgstr "Chuẩn bị khung hình GPU"
+
+msgctxt "UI_MENU_OV_GPU_TIME"
+msgid "GPU busy per frame"
+msgstr "GPU bận mỗi khung hình"
+
+msgctxt "UI_MENU_OV_PIPE_WAIT"
+msgid "Pipeline waits"
+msgstr "Thời gian chờ pipeline"
+
+msgctxt "UI_MENU_OV_TEX_UPLOADS"
+msgid "Texture uploads"
+msgstr "Tải lên texture"
+
+msgctxt "UI_MENU_OV_MAIN_CPU"
+msgid "Game main thread CPU"
+msgstr "CPU luồng chính của game"
+
+msgctxt "UI_MENU_OV_RENDER_CPU"
+msgid "Render thread CPU"
+msgstr "CPU luồng kết xuất"
+
+msgctxt "UI_MENU_OV_SLOW"
+msgid "Frames over 33 ms"
+msgstr "Các khung hình trên 33 ms"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_PER_MIN"
+msgid "%.0f last minute"
+msgstr "%.0f trong phút qua"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_PCT"
+msgid "%.0f%%"
+msgstr "%.0f%%"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_TEMP"
+msgid "%.0f °C"
+msgstr "%.0f °C"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_POWER"
+msgid "%.0f W"
+msgstr "%.0f W"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_MHZ"
+msgid "%.0f MHz"
+msgstr "%.0f MHz"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_GB"
+msgid "%.1f GB"
+msgstr "%.1f GB"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_GB_OF"
+msgid "/ %.1f GB"
+msgstr "/ %.1f GB"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_GAME_GB"
+msgid "game %.1f GB"
+msgstr "game %.1f GB"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_MS"
+msgid "%.2f ms"
+msgstr "%.2f ms"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_PER_FRAME"
+msgid "%.1f per frame"
+msgstr "%.1f mỗi khung hình"
+
+msgctxt "UI_MENU_OV_WINDOW"
+msgid "Window"
+msgstr "Cửa sổ"
+
+msgctxt "UI_MENU_OV_OUTPUT"
+msgid "Game image"
+msgstr "Hình ảnh game"
+
+msgctxt "UI_MENU_OV_INTERNAL"
+msgid "Internal resolution"
+msgstr "Độ phân giải nội bộ"
+
+msgctxt "UI_MENU_OV_SCALING"
+msgid "Scaling"
+msgstr "Phóng"
+
+msgctxt "UI_MENU_OV_PRESENT"
+msgid "Presentation"
+msgstr "Cách trình bày"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_SIZE"
+msgid "%ux%u"
+msgstr "%ux%u"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MENU_OV_FMT_FSR"
+msgid "AMD FSR 1, sharpness %d%%"
+msgstr "AMD FSR 1, độ sắc nét %d%%"
+
+msgctxt "UI_MENU_OV_SCALE_NONE"
+msgid "none (1:1)"
+msgstr "không (1:1)"
+
+msgctxt "UI_MENU_OV_SCALE_BILINEAR"
+msgid "bilinear"
+msgstr "song tuyến"
+
+msgctxt "UI_LAUNCH_SUBTITLE"
+msgid "Static recompilation for PC"
+msgstr "Biên dịch lại tĩnh cho PC"
+
+msgctxt "UI_LAUNCH_PLAY"
+msgid "Play"
+msgstr "Chơi"
+
+msgctxt "UI_LAUNCH_SETTINGS"
+msgid "Settings"
+msgstr "Cài đặt"
+
+msgctxt "UI_LAUNCH_FILES"
+msgid "Game files"
+msgstr "Tệp game"
+
+msgctxt "UI_LAUNCH_QUIT"
+msgid "Quit"
+msgstr "Thoát"
+
+msgctxt "UI_LAUNCH_BACK"
+msgid "Back"
+msgstr "Quay lại"
+
+msgctxt "UI_LAUNCH_FILES_READY"
+msgid "Game files ready (version 1.0.0 or 1.8.0)"
+msgstr "Tệp game đã sẵn sàng (phiên bản 1.0.0 hoặc 1.8.0)"
+
+msgctxt "UI_LAUNCH_FILES_MISSING"
+msgid "Game files not set up"
+msgstr "Tệp game chưa được thiết lập"
+
+msgctxt "UI_LAUNCH_FILES_FOLDER"
+msgid "Game folder"
+msgstr "Thư mục game"
+
+msgctxt "UI_LAUNCH_PICK_GAME_DIR"
+msgid "Choose game folder"
+msgstr "Chọn thư mục game"
+
+msgctxt "UI_LAUNCH_GAME_DIR_HELP"
+msgid ""
+"Choose where to install the game, or select an existing installation. The launcher reopens with "
+"that folder. Existing files are kept where they are."
+msgstr ""
+"Chọn nơi cài đặt game, hoặc chọn một bản cài đặt hiện có. Trình khởi chạy mở lại với thư mục đó. "
+"Các tệp hiện có được giữ nguyên tại chỗ."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GAME_DIR_INVALID"
+msgid ""
+"This game folder could not be selected. Choose a folder whose full path is at most %d UTF-8 bytes "
+"and contains no line breaks."
+msgstr ""
+"Không thể chọn thư mục game này. Chọn một thư mục mà đường dẫn đầy đủ của nó tối đa %d byte UTF-8 "
+"và không chứa ngắt dòng."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GAME_DIR_INVALID_WIN32"
+msgid ""
+"This game folder could not be selected. On Windows, choose a folder without line breaks whose "
+"full path is at most %d UTF-16 units to leave room for the game's files."
+msgstr ""
+"Không thể chọn thư mục game này. Trên Windows, chọn một thư mục không có ngắt dòng mà đường dẫn "
+"đầy đủ của nó tối đa %d đơn vị UTF-16 để chừa chỗ cho các tệp của game."
+
+msgctxt "UI_LAUNCH_FILES_HELP"
+msgid ""
+"The game does not come with the port: it needs your own copy of Mario Kart World 1.0.0 or 1.8.0, "
+"dumped from your console (the exefs and romfs folders). The setup checks its version, builds the "
+"game code on this computer and translates the shaders."
+msgstr ""
+"Game không đi kèm với bản port: nó cần bản sao Mario Kart World 1.0.0 hoặc 1.8.0 của chính bạn, "
+"trích xuất từ máy console của bạn (các thư mục exefs và romfs). Quá trình thiết lập kiểm tra "
+"phiên bản của nó, dựng mã game trên máy tính này và dịch các shader."
+
+msgctxt "UI_LAUNCH_NO_TOOLS"
+msgid "The setup tools are missing: the setup/ folder that comes with the program."
+msgstr "Thiếu các công cụ thiết lập: thư mục setup/ đi kèm với chương trình."
+
+msgctxt "UI_LAUNCH_SOURCE"
+msgid "Your copy"
+msgstr "Bản sao của bạn"
+
+msgctxt "UI_LAUNCH_PICK"
+msgid "Choose folder"
+msgstr "Chọn thư mục"
+
+msgctxt "UI_LAUNCH_PICK_NUP"
+msgid "Choose .nup or .nx file"
+msgstr "Chọn tệp .nup hoặc .nx"
+
+msgctxt "UI_LAUNCH_ROMFS_MODE"
+msgid "RomFS (23 GB)"
+msgstr "RomFS (23 GB)"
+
+msgctxt "UI_LAUNCH_ROMFS_COPY"
+msgid "Copy into the game folder"
+msgstr "Sao chép vào thư mục game"
+
+msgctxt "UI_LAUNCH_ROMFS_LINK"
+msgid "Use it where it is"
+msgstr "Dùng ngay tại chỗ"
+
+msgctxt "UI_LAUNCH_SETUP"
+msgid "Set up"
+msgstr "Thiết lập"
+
+msgctxt "UI_LAUNCH_SETUP_AGAIN"
+msgid "Set up again"
+msgstr "Thiết lập lại"
+
+msgctxt "UI_LAUNCH_CANCEL"
+msgid "Cancel"
+msgstr "Hủy"
+
+msgctxt "UI_LAUNCH_SETUP_DONE"
+msgid "Set up finished: the game is ready."
+msgstr "Thiết lập xong: game đã sẵn sàng."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_SETUP_FAILED"
+msgid "Set up failed: %s"
+msgstr "Thiết lập thất bại: %s"
+
+#. No %s: the detail is not shown.
+msgctxt "UI_SETUP_ERR_SOURCE"
+msgid "there is no earlier setup in this folder: choose the folder of your copy"
+msgstr "không có lần thiết lập nào trước đó trong thư mục này: chọn thư mục của bản sao của bạn"
+
+#. %s: the folder the player chose.
+msgctxt "UI_SETUP_ERR_NOGAME"
+msgid "no exefs/main and romfs/ in %s: choose the folder of your copy of the game"
+msgstr "không có exefs/main và romfs/ trong %s: chọn thư mục của bản sao game của bạn"
+
+#. %s: the path of the exefs/main file.
+msgctxt "UI_SETUP_ERR_ENCRYPTED"
+msgid "%s is encrypted: the game's exefs must be decrypted"
+msgstr "%s đã bị mã hóa: exefs của game phải được giải mã"
+
+#. %s: the build id of the player's exefs/main (hexadecimal).
+msgctxt "UI_SETUP_ERR_VERSION"
+msgid ""
+"the game is not Mario Kart World 1.0.0 or 1.8.0 (build id %s): only those versions are supported"
+msgstr ""
+"game không phải Mario Kart World 1.0.0 hoặc 1.8.0 (build id %s): chỉ những phiên bản đó được hỗ "
+"trợ"
+
+#. %s: how many files the player's RomFS has.
+msgctxt "UI_SETUP_ERR_ROMFS"
+msgid "the RomFS has only %s files: the copy is incomplete, copy it again"
+msgstr "RomFS chỉ có %s tệp: bản sao chưa đầy đủ, hãy sao chép lại"
+
+#. %s: the failing tool's message, in English. logs/setup.log is a file name: keep it.
+msgctxt "UI_SETUP_ERR_FAILED"
+msgid "%s (more in logs/setup.log)"
+msgstr "%s (xem thêm trong logs/setup.log)"
+
+#. %s: the system's error message, in English. logs/setup.log is a file name: keep it.
+msgctxt "UI_SETUP_ERR_IO"
+msgid "file error: %s (more in logs/setup.log)"
+msgstr "lỗi tệp: %s (xem thêm trong logs/setup.log)"
+
+msgctxt "UI_SETUP_ERR_STOPPED"
+msgid "the setup stopped (more in logs/setup.log)"
+msgstr "quá trình thiết lập đã dừng (xem thêm trong logs/setup.log)"
+
+msgctxt "UI_SETUP_ERR_CANCELLED"
+msgid "cancelled"
+msgstr "đã hủy"
+
+msgctxt "UI_SETUP_ERR_NO_SETUP"
+msgid "the setup tools are missing (setup/ next to the program): extract the release again"
+msgstr "thiếu các công cụ thiết lập (setup/ bên cạnh chương trình): giải nén bản phát hành lại"
+
+#. %s: the folder of the last setup's game files, which no longer exists.
+msgctxt "UI_SETUP_ERR_MOVED"
+msgid "your game files are no longer in %s: if you moved or renamed that folder, choose it again"
+msgstr ""
+"tệp game của bạn không còn ở %s: nếu bạn đã di chuyển hoặc đổi tên thư mục đó, hãy chọn lại nó"
+
+#. %s: the two versions, e.g. "RomFS 1.8.0, exefs/main 1.0.0".
+msgctxt "UI_SETUP_ERR_MISMATCH"
+msgid ""
+"the game files and the program are from different versions (%s): take exefs and romfs from the "
+"same dump, with the update applied to both"
+msgstr ""
+"tệp game và chương trình thuộc các phiên bản khác nhau (%s): lấy exefs và romfs từ cùng một bản "
+"trích xuất, với bản cập nhật áp dụng cho cả hai"
+
+msgctxt "UI_LAUNCH_STEP_CHECK"
+msgid "Check the copy"
+msgstr "Kiểm tra bản sao"
+
+msgctxt "UI_LAUNCH_STEP_EXEFS"
+msgid "Copy exefs"
+msgstr "Sao chép exefs"
+
+msgctxt "UI_LAUNCH_STEP_ROMFS"
+msgid "RomFS"
+msgstr "RomFS"
+
+msgctxt "UI_LAUNCH_STEP_GENERATE"
+msgid "Generate the game code"
+msgstr "Tạo mã game"
+
+msgctxt "UI_LAUNCH_STEP_COMPILE"
+msgid "Compile the game code"
+msgstr "Biên dịch mã game"
+
+msgctxt "UI_LAUNCH_STEP_SHADERS"
+msgid "Translate the shaders"
+msgstr "Dịch các shader"
+
+msgctxt "UI_LAUNCH_STEP_WARM"
+msgid "Warm up the graphics (one minute)"
+msgstr "Làm nóng đồ họa (một phút)"
+
+msgctxt "UI_LAUNCH_STEP_CLEANUP"
+msgid "Clean up"
+msgstr "Dọn dẹp"
+
+msgctxt "UI_LAUNCH_STEP_KEPT"
+msgid "kept"
+msgstr "đã giữ"
+
+msgctxt "UI_LAUNCH_SHORTCUT"
+msgid "Desktop shortcut"
+msgstr "Lối tắt trên màn hình nền"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_SHORTCUT_DONE"
+msgid "Shortcut made: %s"
+msgstr "Đã tạo lối tắt: %s"
+
+msgctxt "UI_LAUNCH_SHORTCUT_FAILED"
+msgid "Could not make the shortcut"
+msgstr "Không tạo được lối tắt"
+
+msgctxt "UI_LAUNCH_MODS"
+msgid "Mods"
+msgstr "Mod"
+
+msgctxt "UI_LAUNCH_MODS_EMPTY"
+msgid "No mods yet: import a zip or a folder below"
+msgstr "Chưa có mod nào: nhập một tệp zip hoặc một thư mục bên dưới"
+
+msgctxt "UI_MOD_IMPORT_ZIP"
+msgid "Import zip..."
+msgstr "Nhập zip..."
+
+msgctxt "UI_MOD_IMPORT_FOLDER"
+msgid "Import folder..."
+msgstr "Nhập thư mục..."
+
+msgctxt "UI_MOD_NAME"
+msgid "Name"
+msgstr "Tên"
+
+msgctxt "UI_MOD_IMPORT"
+msgid "Import"
+msgstr "Nhập"
+
+msgctxt "UI_MOD_DELETE"
+msgid "Delete"
+msgstr "Xóa"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MOD_CONFIRM"
+msgid "Delete %s?"
+msgstr "Xóa %s?"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MOD_ROMFS"
+msgid "%d files"
+msgstr "%d tệp"
+
+msgctxt "UI_MOD_ROMFS_1"
+msgid "1 file"
+msgstr "1 tệp"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MOD_CODE_BUILD"
+msgid "code: built for %s"
+msgstr "code: dựng cho %s"
+
+msgctxt "UI_MOD_CODE_PORT"
+msgid "code: needs a ported build"
+msgstr "code: cần một bản dựng đã port"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_MOD_CODE_SWITCHES"
+msgid "code: %d switches"
+msgstr "code: %d switch"
+
+msgctxt "UI_MOD_CODE_SWITCH_1"
+msgid "code: 1 switch"
+msgstr "code: 1 switch"
+
+msgctxt "UI_MOD_MERGING"
+msgid "Merging mods..."
+msgstr "Đang gộp các mod..."
+
+msgctxt "UI_MOD_CONFLICTS"
+msgid "Conflicts: click the winner to change it"
+msgstr "Xung đột: nhấp vào bên thắng để thay đổi"
+
+msgctxt "UI_MOD_VANILLA"
+msgid "Vanilla"
+msgstr "Gốc"
+
+msgctxt "UI_MOD_IMPORTED"
+msgid "Imported %s"
+msgstr "Đã nhập %s"
+
+msgctxt "UI_MOD_RESOLVE"
+msgid "Resolve conflicts"
+msgstr "Giải quyết xung đột"
+
+msgctxt "UI_MOD_OK"
+msgid "OK"
+msgstr "OK"
+
+msgctxt "UI_MOD_ERR_LAYOUT"
+msgid "Not a mod: no romfs/ or exefs/ inside"
+msgstr "Không phải mod: không có romfs/ hoặc exefs/ bên trong"
+
+msgctxt "UI_MOD_ERR_NAME"
+msgid "That name is taken or empty"
+msgstr "Tên đó đã được dùng hoặc trống"
+
+msgctxt "UI_MOD_ERR_IO"
+msgid "Could not copy the files"
+msgstr "Không sao chép được các tệp"
+
+msgctxt "UI_MOD_ERR_NOPORT"
+msgid "Not ported yet: no code patches for this game"
+msgstr "Chưa được port: không có bản vá code cho game này"
+
+msgctxt "UI_MOD_ERR_NOGAME"
+msgid "Game files not set up: do that on the Files page first"
+msgstr "Tệp game chưa được thiết lập: làm việc đó ở trang Tệp trước"
+
+#. Above one button per mod found in the archive (its folder inside the archive).
+msgctxt "UI_MOD_VARIANTS"
+msgid "This archive holds several mods: pick the one to import"
+msgstr "Kho lưu trữ này chứa nhiều mod: chọn cái để nhập"
+
+msgctxt "UI_MOD_ERR_BIG"
+msgid "Too large to be a mod (over 4 GB or 50000 files)"
+msgstr "Quá lớn để là một mod (trên 4 GB hoặc 50000 tệp)"
+
+msgctxt "UI_MOD_ERR_UNPACK"
+msgid "Cannot open this archive: .rar and .7z need bsdtar (libarchive) installed"
+msgstr "Không mở được kho lưu trữ này: .rar và .7z cần cài bsdtar (libarchive)"
+
+#. The Mods page's two tabs: the player's mods, and GameBanana's.
+msgctxt "UI_MOD_TAB_INSTALLED"
+msgid "Installed"
+msgstr "Đã cài đặt"
+
+msgctxt "UI_MOD_TAB_FIND"
+msgid "Find on GameBanana"
+msgstr "Tìm trên GameBanana"
+
+#. Shown above the GameBanana list: the project hosts no mods.
+msgctxt "UI_GB_NOTE"
+msgid ""
+"Mods are made by their authors and downloaded from GameBanana when you install them. This project "
+"is not affiliated with GameBanana or the mods' authors, and does not host, review or endorse "
+"mods. Each mod has its own license."
+msgstr ""
+"Các mod do tác giả của chúng tạo ra và được tải từ GameBanana khi bạn cài đặt chúng. Dự án này "
+"không liên kết với GameBanana hay các tác giả của mod, và không lưu trữ, xét duyệt hay xác nhận "
+"các mod. Mỗi mod có giấy phép riêng của nó."
+
+msgctxt "UI_GB_SEARCH"
+msgid "Search"
+msgstr "Tìm kiếm"
+
+msgctxt "UI_GB_SORT_DOWNLOADS"
+msgid "Most downloaded"
+msgstr "Tải nhiều nhất"
+
+msgctxt "UI_GB_SORT_NEW"
+msgid "Newest"
+msgstr "Mới nhất"
+
+msgctxt "UI_GB_SORT_LIKES"
+msgid "Most liked"
+msgstr "Được thích nhất"
+
+msgctxt "UI_GB_LOADING"
+msgid "Loading..."
+msgstr "Đang tải..."
+
+msgctxt "UI_GB_NONE"
+msgid "No mods found"
+msgstr "Không tìm thấy mod nào"
+
+#. %s: the mod's author on GameBanana.
+msgctxt "UI_GB_BY"
+msgid "by %s"
+msgstr "bởi %s"
+
+#. %s: the mod's license, e.g. "CC BY-NC-ND 4.0".
+msgctxt "UI_GB_LICENSE"
+msgid "License: %s"
+msgstr "Giấy phép: %s"
+
+msgctxt "UI_GB_OPEN"
+msgid "Open its GameBanana page"
+msgstr "Mở trang GameBanana của nó"
+
+#. %s: the file's name.
+msgctxt "UI_GB_INSTALL"
+msgid "Install %s"
+msgstr "Cài đặt %s"
+
+#. First %s: the file's name; second %s: its author.
+msgctxt "UI_GB_CONFIRM"
+msgid "Download %s by %s from GameBanana and install it?"
+msgstr "Tải %s của %s từ GameBanana và cài đặt nó?"
+
+msgctxt "UI_GB_UNSAFE"
+msgid "Not offered: GameBanana's virus scan has not marked this file clean"
+msgstr "Không được cung cấp: quá trình quét virus của GameBanana chưa đánh dấu tệp này là sạch"
+
+#. %d: this page; %d: how many pages.
+msgctxt "UI_GB_PAGE"
+msgid "Page %d of %d"
+msgstr "Trang %d trên %d"
+
+#. %s: what failed (an English detail from the network).
+msgctxt "UI_GB_ERROR"
+msgid "GameBanana did not answer: %s"
+msgstr "GameBanana không trả lời: %s"
+
+#. %s: the content ratings GameBanana marks the mod with (e.g. Sexual Themes).
+msgctxt "UI_GB_RATED"
+msgid "Content rating: %s"
+msgstr "Xếp hạng nội dung: %s"
+
+msgctxt "UI_GB_MATURE"
+msgid "NSFW mods"
+msgstr "Mod NSFW"
+
+msgctxt "UI_GB_MATURE_OBFUSCATE"
+msgid "Obfuscate"
+msgstr "Làm mờ"
+
+msgctxt "UI_GB_MATURE_SHOW"
+msgid "Show"
+msgstr "Hiện"
+
+#. Under an installed mod that replaces the game's graphics settings archive (general_format).
+msgctxt "UI_MOD_WARN_GRAPHICS"
+msgid ""
+"Changes the game's graphics settings: the port's own settings (resolution, quality) go on top, so "
+"this mod may do less than on a console, look worse or misbehave"
+msgstr ""
+"Thay đổi cài đặt đồ họa của game: cài đặt của chính bản port (độ phân giải, chất lượng) được đặt "
+"lên trên, nên mod này có thể làm được ít hơn trên máy console, trông tệ hơn hoặc hoạt động sai"
+
+#. Above every mod install and import.
+msgctxt "UI_MOD_RISK"
+msgid ""
+"Mods are made by other people and are not tested by this project. A mod can crash the game or "
+"damage your save: read its page first, keep a copy of your save, and report a mod's problems to "
+"its author."
+msgstr ""
+"Các mod do người khác tạo ra và không được dự án này kiểm tra. Một mod có thể làm game sập hoặc "
+"làm hỏng bản lưu của bạn: đọc trang của nó trước, giữ một bản sao của bản lưu, và báo các vấn đề "
+"của mod cho tác giả của nó."
+
+msgctxt "UI_MOD_RISK_ACK"
+msgid "I understand"
+msgstr "Tôi hiểu"
+
+#. Under a mod that changes the game's code (its .ips): the game code is built with it.
+msgctxt "UI_MOD_PLUGIN"
+msgid ""
+"Native plugin: runs its own program on your computer alongside the game. Enable it only if you "
+"trust where it comes from"
+msgstr ""
+"Plugin nguyên bản: chạy chương trình của chính nó trên máy tính của bạn cùng với game. Chỉ bật nó "
+"nếu bạn tin tưởng nguồn của nó"
+
+#. A mod's button beside Delete: opens the options page its plugin draws (runtime/ui/launcher/mod_page.cpp).
+msgctxt "UI_MOD_OPTIONS"
+msgid "Options"
+msgstr "Tùy chọn"
+
+#. The options page of a mod whose plugin has none for this system.
+msgctxt "UI_MOD_NO_OPTIONS"
+msgid "This mod has no options"
+msgstr "Mod này không có tùy chọn"
+
+msgctxt "UI_MOD_CODE_REBUILD"
+msgid "code: turning it on or off builds the game code again before you play (a few minutes)"
+msgstr "code: bật hoặc tắt nó sẽ dựng lại mã game trước khi bạn chơi (vài phút)"
+
+#. Under an installed mod that ships shaders (Shader/ files).
+msgctxt "UI_MOD_WARN_SHADERS"
+msgid ""
+"Replaces shaders: the port translates the game's shaders during the setup, so this mod may not "
+"show, or may break the picture"
+msgstr ""
+"Thay thế các shader: bản port dịch các shader của game trong quá trình thiết lập, nên mod này có "
+"thể không hiển thị, hoặc làm hỏng hình ảnh"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_UPDATE_FETCHING"
+msgid "Downloading %s"
+msgstr "Đang tải %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_UPDATE_FAILED"
+msgid "Update failed: %s"
+msgstr "Cập nhật thất bại: %s"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_UPDATED"
+msgid "Updated to %s: setting up again what it changed"
+msgstr "Đã cập nhật lên %s: thiết lập lại những gì nó thay đổi"
+
+#. The update card's title; %s is the release (v0.1.12).
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_UPDATE_TITLE"
+msgid "Update available: %s"
+msgstr "Có bản cập nhật: %s"
+
+#. Under it: %s the version in use, %d the download in MB.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_UPDATE_DETAIL"
+msgid "You have %s · %d MB to download"
+msgstr "Bạn đang có %s · %d MB cần tải"
+
+#. The update card's button: downloads and installs it.
+msgctxt "UI_LAUNCH_UPDATE_NOW"
+msgid "Update"
+msgstr "Cập nhật"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARING"
+msgid "Setting up %s in the background. You can keep playing meanwhile."
+msgstr "Đang thiết lập %s trong nền. Bạn có thể tiếp tục chơi trong lúc đó."
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARED"
+msgid "%s is ready"
+msgstr "%s đã sẵn sàng"
+
+msgctxt "UI_LAUNCH_UPDATE_RESTART"
+msgid "Restart with it"
+msgstr "Khởi động lại với nó"
+
+msgctxt "UI_LAUNCH_UPDATE_PREPARE_FAILED"
+msgid "It could not be set up in advance (%s): it will be set up when it starts."
+msgstr "Không thể thiết lập trước (%s): nó sẽ được thiết lập khi khởi động."
+
+#. Opens the release's notes on GitHub.
+msgctxt "UI_LAUNCH_WHATS_NEW"
+msgid "What's new"
+msgstr "Có gì mới"
+
+#. After a failed download.
+msgctxt "UI_LAUNCH_RETRY"
+msgid "Try again"
+msgstr "Thử lại"
+
+#. The game files' state with the game version the setup installed.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_READY_AS"
+msgid "Game files ready (version %s)"
+msgstr "Tệp game đã sẵn sàng (phiên bản %s)"
+
+#. Under Play: %s is the first controller's name.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_PAD"
+msgid "Controller: %s"
+msgstr "Tay cầm: %s"
+
+#. Under Play when no controller is connected.
+msgctxt "UI_LAUNCH_PAD_NONE"
+msgid "No controller connected"
+msgstr "Không có tay cầm nào được kết nối"
+
+#. On the controller row: opens the Controls tab.
+msgctxt "UI_LAUNCH_CONFIGURE"
+msgid "Configure"
+msgstr "Cấu hình"
+
+#. Offered once on the start screen after the setup.
+msgctxt "UI_LAUNCH_SHORTCUT_ASK"
+msgid "Start the game from your desktop"
+msgstr "Khởi động game từ màn hình nền của bạn"
+
+#. Makes the desktop shortcut.
+msgctxt "UI_LAUNCH_SHORTCUT_MAKE"
+msgid "Create shortcut"
+msgstr "Tạo lối tắt"
+
+#. Puts the offer away; the button stays on the Game files page.
+msgctxt "UI_LAUNCH_NOT_NOW"
+msgid "Not now"
+msgstr "Để sau"
+
+#. The keys, at the lower right of the start screen.
+msgctxt "UI_LAUNCH_KEYS"
+msgid "Enter or A: select · F11: fullscreen"
+msgstr "Enter hoặc A: chọn · F11: toàn màn hình"
+
+#. Beside the Settings title on the start screen.
+msgctxt "UI_LAUNCH_SETTINGS_NOTE"
+msgid "Changes are saved and apply when you press Play"
+msgstr "Các thay đổi được lưu và áp dụng khi bạn nhấn Chơi"
+
+#. Step 1 of the setup before the player picks their copy.
+msgctxt "UI_LAUNCH_NO_SOURCE"
+msgid "No copy chosen yet"
+msgstr "Chưa chọn bản sao nào"
+
+#. Under Copy into the game folder.
+msgctxt "UI_LAUNCH_ROMFS_COPY_NOTE"
+msgid "Uses 23 GB more disk space; your copy can be deleted afterwards"
+msgstr "Dùng thêm 23 GB dung lượng đĩa; bản sao của bạn có thể xóa sau đó"
+
+#. Under Use it where it is.
+msgctxt "UI_LAUNCH_ROMFS_LINK_NOTE"
+msgid "No extra disk space; your copy has to stay where it is"
+msgstr "Không tốn thêm dung lượng đĩa; bản sao của bạn phải ở nguyên tại chỗ"
+
+#. Under Set up: %s is the game folder.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_INSTALLS_TO"
+msgid "Installs to %s"
+msgstr "Cài đặt tới %s"
+
+#. What a setup installed: label.
+msgctxt "UI_LAUNCH_INFO_VERSION"
+msgid "Game version"
+msgstr "Phiên bản game"
+
+#. What a setup installed: label; the value is MKW Recomp and its version.
+msgctxt "UI_LAUNCH_INFO_PORT"
+msgid "Set up by"
+msgstr "Được thiết lập bởi"
+
+#. What a setup installed: label; the value says how it is kept.
+msgctxt "UI_LAUNCH_INFO_ROMFS"
+msgid "RomFS"
+msgstr "RomFS"
+
+#. How the RomFS is kept, after the setup.
+msgctxt "UI_LAUNCH_ROMFS_COPIED"
+msgid "Copied into the game folder"
+msgstr "Đã sao chép vào thư mục game"
+
+#. How the RomFS is kept, after the setup.
+msgctxt "UI_LAUNCH_ROMFS_LINKED"
+msgid "Used where it is"
+msgstr "Được dùng ngay tại chỗ"
+
+#. Shows the game folder in the file manager.
+msgctxt "UI_LAUNCH_OPEN_FOLDER"
+msgid "Open folder"
+msgstr "Mở thư mục"
+
+#. Under Set up again, folded on the Game files page once the game is set up.
+msgctxt "UI_LAUNCH_SETUP_AGAIN_HINT"
+msgid "After a game update, or when the game files look damaged. The steps already done are kept."
+msgstr ""
+"Sau một bản cập nhật game, hoặc khi các tệp game trông như bị hỏng. Các bước đã làm được giữ lại."
+
+#. The start screen's page with the saves, the shortcuts, the updates and reporting a problem.
+msgctxt "UI_LAUNCH_TOOLS"
+msgid "Tools"
+msgstr "Công cụ"
+
+#. Tools page heading.
+msgctxt "UI_TOOLS_SAVES"
+msgid "Saves"
+msgstr "Bản lưu"
+
+#. Tools page row.
+msgctxt "UI_TOOLS_BACKUP"
+msgid "Back up saves"
+msgstr "Sao lưu các bản lưu"
+
+#. Under Back up saves: %s is the player's name.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_TOOLS_BACKUP_NOTE"
+msgid "A zip of %s's saves in the game folder's backups"
+msgstr "Một tệp zip các bản lưu của %s trong thư mục backups của thư mục game"
+
+#. After a backup: %s is the zip file.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_TOOLS_BACKUP_DONE"
+msgid "Saved: %s"
+msgstr "Đã lưu: %s"
+
+#. Button of Back up saves.
+msgctxt "UI_TOOLS_BACKUP_BUTTON"
+msgid "Back up"
+msgstr "Sao lưu"
+
+#. Tools page row with the two folders' buttons.
+msgctxt "UI_TOOLS_SAVES_FOLDERS"
+msgid "Saves and backups"
+msgstr "Bản lưu và bản sao lưu"
+
+#. Shows the player's saves folder.
+msgctxt "UI_TOOLS_OPEN_SAVES"
+msgid "Open saves"
+msgstr "Mở các bản lưu"
+
+#. Shows the backups folder.
+msgctxt "UI_TOOLS_OPEN_BACKUPS"
+msgid "Open backups"
+msgstr "Mở các bản sao lưu"
+
+#. Tools page heading.
+msgctxt "UI_TOOLS_SHORTCUTS"
+msgid "Shortcuts"
+msgstr "Lối tắt"
+
+#. Tools page row.
+msgctxt "UI_TOOLS_STEAM"
+msgid "Add to Steam"
+msgstr "Thêm vào Steam"
+
+#. Under Add to Steam.
+msgctxt "UI_TOOLS_STEAM_NOTE"
+msgid "As a non-Steam game, for Big Picture and the Steam Deck"
+msgstr "Như một game ngoài Steam, cho Big Picture và Steam Deck"
+
+#. Button of Add to Steam.
+msgctxt "UI_TOOLS_ADD"
+msgid "Add"
+msgstr "Thêm"
+
+#. After Add to Steam.
+msgctxt "UI_TOOLS_STEAM_DONE"
+msgid "Added to Steam"
+msgstr "Đã thêm vào Steam"
+
+#. After Add to Steam while Steam runs.
+msgctxt "UI_TOOLS_STEAM_RESTART"
+msgid "Added: restart Steam to see it"
+msgstr "Đã thêm: khởi động lại Steam để thấy nó"
+
+#. After Add to Steam, when only some profiles could be updated.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_TOOLS_STEAM_PARTIAL"
+msgid "Updated %d of %d Steam profiles"
+msgstr "Đã cập nhật %d trên %d hồ sơ Steam"
+
+#. After Add to Steam, when only some profiles could be updated and Steam is running.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_TOOLS_STEAM_PARTIAL_RESTART"
+msgid "Updated %d of %d Steam profiles. Restart Steam to see the shortcut."
+msgstr "Đã cập nhật %d trên %d hồ sơ Steam. Khởi động lại Steam để thấy lối tắt."
+
+#. Why Add to Steam failed.
+msgctxt "UI_TOOLS_STEAM_NONE"
+msgid "Steam is not installed for this user"
+msgstr "Steam chưa được cài cho người dùng này"
+
+#. Tools page heading.
+msgctxt "UI_TOOLS_UPDATES"
+msgid "Updates"
+msgstr "Cập nhật"
+
+#. The version in use: %s.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_TOOLS_VERSION"
+msgid "Version %s"
+msgstr "Phiên bản %s"
+
+#. Looks for a new version.
+msgctxt "UI_TOOLS_CHECK"
+msgid "Check now"
+msgstr "Kiểm tra ngay"
+
+#. While the check runs.
+msgctxt "UI_TOOLS_CHECKING"
+msgid "Checking for a new version..."
+msgstr "Đang kiểm tra phiên bản mới..."
+
+#. The manual update check found no newer version.
+msgctxt "UI_TOOLS_UPDATE_CURRENT"
+msgid "You're up to date."
+msgstr "Bạn đang dùng bản mới nhất."
+
+#. Tools page row: %s is the version before the last update.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_TOOLS_UNDO_ROW"
+msgid "Go back to %s"
+msgstr "Quay về %s"
+
+#. Under Go back to.
+msgctxt "UI_TOOLS_UNDO_NOTE"
+msgid "The version before the last update; the launcher starts again"
+msgstr "Phiên bản trước bản cập nhật gần nhất; trình khởi chạy khởi động lại"
+
+#. Button that puts back the version before the last update.
+msgctxt "UI_TOOLS_UNDO"
+msgid "Undo update"
+msgstr "Hoàn tác cập nhật"
+
+#. Confirmation: %s is that version.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_TOOLS_UNDO_ASK"
+msgid "Go back to %s? The launcher starts again and sets up again what differs."
+msgstr "Quay về %s? Trình khởi chạy khởi động lại và thiết lập lại những gì khác biệt."
+
+#. Tools page heading.
+msgctxt "UI_TOOLS_PROBLEMS"
+msgid "Problems"
+msgstr "Sự cố"
+
+#. Tools page row.
+msgctxt "UI_TOOLS_REPORT"
+msgid "Report a problem"
+msgstr "Báo cáo sự cố"
+
+#. Under Report a problem.
+msgctxt "UI_TOOLS_REPORT_NOTE"
+msgid "Copies your system's details and opens the bug report form, to paste them in"
+msgstr "Sao chép chi tiết hệ thống của bạn và mở biểu mẫu báo lỗi, để dán chúng vào"
+
+#. Button of Report a problem.
+msgctxt "UI_TOOLS_REPORT_BUTTON"
+msgid "Report"
+msgstr "Báo cáo"
+
+#. After Report.
+msgctxt "UI_TOOLS_REPORT_COPIED"
+msgid "Your system's details are on the clipboard: paste them in the form"
+msgstr "Chi tiết hệ thống của bạn đang ở bảng tạm: dán chúng vào biểu mẫu"
+
+#. Tools page row with the log folder's button.
+msgctxt "UI_TOOLS_LOGS"
+msgid "Logs"
+msgstr "Nhật ký"
+
+#. A Tools page action that did not work: %s says why.
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_TOOLS_FAILED"
+msgid "Failed: %s"
+msgstr "Thất bại: %s"
+
+msgctxt "UI_LAUNCH_NO_GAME_DATA"
+msgid "Your own copy of the game · No game data included"
+msgstr "Bản sao game của chính bạn · Không kèm dữ liệu game"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_LASTRUN_KNOWN"
+msgid ""
+"The last game stopped with a known problem, followed in issue #%d. No need to report it again."
+msgstr ""
+"Lần chơi trước dừng lại với một sự cố đã biết, được theo dõi trong issue #%d. Không cần báo lại."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_LASTRUN_FIXED"
+msgid "The last game stopped with a problem that %s fixes. Update to get the fix."
+msgstr "Lần chơi trước dừng lại với một sự cố mà %s khắc phục. Cập nhật để nhận bản sửa."
+
+msgctxt "UI_LAUNCH_LASTRUN_CRASH"
+msgid ""
+"The last game stopped with an error. Reporting it with logs/mkw.log attached helps to fix it."
+msgstr ""
+"Lần chơi trước dừng lại với một lỗi. Báo cáo nó kèm logs/mkw.log đính kèm giúp khắc phục nó."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_LASTRUN_OPEN"
+msgid "Open issue #%d"
+msgstr "Mở issue #%d"
+
+msgctxt "UI_LAUNCH_LASTRUN_REPORT"
+msgid "Report it"
+msgstr "Báo cáo nó"
+
+msgctxt "UI_LAUNCH_LASTRUN_DISMISS"
+msgid "Close"
+msgstr "Đóng"
+
+msgctxt "UI_MENU_UPDATE_CHECK"
+msgid "Check for updates"
+msgstr "Kiểm tra cập nhật"
+
+msgctxt "UI_MENU_UPDATE_CHECK_DESC"
+msgid ""
+"At start, ask GitHub for a newer release of the port and offer it on the start screen (a few "
+"seconds at most, nothing offline)."
+msgstr ""
+"Khi khởi động, hỏi GitHub về một bản phát hành mới hơn của bản port và đề xuất nó trên màn hình "
+"bắt đầu (tối đa vài giây, không có gì khi ngoại tuyến)."
+
+msgctxt "UI_MENU_DISCORD"
+msgid "Discord status"
+msgstr "Trạng thái Discord"
+
+msgctxt "UI_MENU_DISCORD_DESC"
+msgid ""
+"While the game runs, your Discord profile shows that you are playing, for how long, and whether "
+"you are racing or in the menus. Your Discord friends see it too."
+msgstr ""
+"Trong khi game chạy, hồ sơ Discord của bạn cho thấy bạn đang chơi, đã bao lâu, và bạn đang đua "
+"hay đang ở menu. Bạn bè Discord của bạn cũng thấy điều đó."
+
+msgctxt "UI_LAUNCH_PLAYERS"
+msgid "Profiles"
+msgstr "Hồ sơ"
+
+msgctxt "UI_PLAYER_NOTE"
+msgid ""
+"Each profile has its own name and save, like the users of a console. The game shows the name, and "
+"so do the other players' screens in LAN play."
+msgstr ""
+"Mỗi hồ sơ có tên và bản lưu riêng, như người dùng của một máy console. Game hiển thị tên, và màn "
+"hình của những người chơi khác trong chơi LAN cũng vậy."
+
+msgctxt "UI_PLAYER_NAME_HINT"
+msgid "Name (up to 10 characters)"
+msgstr "Tên (tối đa 10 ký tự)"
+
+msgctxt "UI_PLAYER_CHOOSE"
+msgid "Play as"
+msgstr "Chơi với hồ sơ"
+
+msgctxt "UI_PLAYER_CHOSEN"
+msgid "Playing"
+msgstr "Đang chơi"
+
+msgctxt "UI_PLAYER_NEW"
+msgid "New profile"
+msgstr "Hồ sơ mới"
+
+msgctxt "UI_PLAYER_REMOVE"
+msgid "Remove"
+msgstr "Xóa"
+
+msgctxt "UI_PLAYER_CONFIRM"
+msgid ""
+"Remove the profile %s? It leaves the list; its save is kept in the folder profile/players/deleted."
+msgstr ""
+"Xóa hồ sơ %s? Nó rời khỏi danh sách; bản lưu của nó được giữ trong thư mục "
+"profile/players/deleted."
+
+msgctxt "UI_PLAYER_FAILED"
+msgid "The profile could not be saved (the log says why)."
+msgstr "Không lưu được hồ sơ (nhật ký nói lý do)."
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_SETUP_ERR_SPACE"
+msgid ""
+"not enough free space: the setup needs %s. Free some space, or choose \"Use it where it is\" for "
+"the RomFS, which needs no copy"
+msgstr ""
+"không đủ dung lượng trống: quá trình thiết lập cần %s. Giải phóng bớt dung lượng, hoặc chọn "
+"\"Dùng ngay tại chỗ\" cho RomFS, vốn không cần sao chép"
+
+msgctxt "UI_MENU_START_SCREEN"
+msgid "Start screen"
+msgstr "Màn hình bắt đầu"
+
+msgctxt "UI_MENU_START_SCREEN_DESC"
+msgid ""
+"Automatic skips it when the game starts from Steam's Big Picture or Gaming Mode, as on a console. "
+"It still opens when the game files need setting up, after an error, or when you hold View / "
+"Select (Minus) at start."
+msgstr ""
+"Tự động bỏ qua nó khi game khởi động từ Big Picture hoặc Gaming Mode của Steam, như trên máy "
+"console. Nó vẫn mở khi các tệp game cần thiết lập, sau một lỗi, hoặc khi bạn giữ View / Select "
+"(Minus) lúc khởi động."
+
+msgctxt "UI_MENU_START_ALWAYS"
+msgid "Always"
+msgstr "Luôn luôn"
+
+msgctxt "UI_MENU_START_SKIP"
+msgid "Skip"
+msgstr "Bỏ qua"
+
+msgctxt "UI_LAUNCH_FILES_GONE"
+msgid "Game files not found"
+msgstr "Không tìm thấy tệp game"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_FILES_GONE_HELP"
+msgid ""
+"The setup left the game files at %s and they are not there now. If they are on a card or a drive, "
+"connect it; if you moved them, set the game up again below and pick where they are now."
+msgstr ""
+"Quá trình thiết lập để các tệp game tại %s và chúng không còn ở đó nữa. Nếu chúng ở trên thẻ hoặc "
+"ổ đĩa, hãy kết nối nó; nếu bạn đã di chuyển chúng, thiết lập lại game bên dưới và chọn nơi chúng "
+"đang ở bây giờ."
+
+msgctxt "UI_LAUNCH_FOUND"
+msgid "Found on this device"
+msgstr "Tìm thấy trên thiết bị này"
+
+msgctxt "UI_LAUNCH_FOUND_SEARCHING"
+msgid "Looking for your copy in the usual places..."
+msgstr "Đang tìm bản sao của bạn ở những nơi thường lệ..."
+
+msgctxt "UI_LAUNCH_FOUND_FOLDER"
+msgid "folder"
+msgstr "thư mục"
+
+msgctxt "UI_LAUNCH_GPU_NONE"
+msgid "No graphics card here can run the game"
+msgstr "Không card đồ họa nào ở đây chạy được game"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_OLD"
+msgid "%s: its driver offers %s, and the game needs Vulkan 1.3"
+msgstr "%s: driver của nó cung cấp %s, và game cần Vulkan 1.3"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_EXT"
+msgid "%s (%s): its driver lacks %s, which the game needs"
+msgstr "%s (%s): driver của nó thiếu %s, thứ game cần"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_QUEUE"
+msgid "%s: it has no queue that does both graphics and compute"
+msgstr "%s: nó không có hàng đợi nào làm cả đồ họa lẫn tính toán"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SKIPPED"
+msgid "%s: not the one chosen in Settings, Screen, Graphics card"
+msgstr "%s: không phải cái được chọn trong Cài đặt, Màn hình, Card đồ họa"
+
+#. printf format: keep every %... conversion, in the same order.
+msgctxt "UI_LAUNCH_GPU_SOFTWARE"
+msgid "%s draws on the processor, not on a graphics card: far too slow to play"
+msgstr "%s vẽ bằng bộ xử lý, không phải card đồ họa: quá chậm để chơi"
+
+msgctxt "UI_LAUNCH_GPU_NO_DRIVER"
+msgid "No Vulkan driver was found."
+msgstr "Không tìm thấy driver Vulkan nào."
+
+msgctxt "UI_LAUNCH_GPU_HELP"
+msgid ""
+"The game needs Vulkan 1.3. On AMD and Intel that is Mesa 22.0 or newer, newer than Debian 11 and "
+"Ubuntu 20.04 ship; on NVIDIA, its driver 510 or newer. Some older graphics cards cannot have it "
+"at all. The setup can run now: the game starts once the driver is updated."
+msgstr ""
+"Game cần Vulkan 1.3. Trên AMD và Intel đó là Mesa 22.0 hoặc mới hơn, mới hơn những gì Debian 11 "
+"và Ubuntu 20.04 cung cấp; trên NVIDIA, driver 510 hoặc mới hơn. Một số card đồ họa cũ không thể "
+"có nó chút nào. Quá trình thiết lập có thể chạy ngay: game khởi động khi driver đã được cập nhật."
+
+msgctxt "UI_LAUNCH_GPU_HELP_WIN"
+msgid ""
+"The game needs Vulkan 1.3: install the latest driver from your graphics card's maker (AMD, Intel "
+"or NVIDIA; on NVIDIA, 510 or newer). Some older graphics cards cannot have it at all. The setup "
+"can run now: the game starts once the driver is updated."
+msgstr ""
+"Game cần Vulkan 1.3: cài driver mới nhất từ hãng sản xuất card đồ họa của bạn (AMD, Intel hoặc "
+"NVIDIA; trên NVIDIA, 510 hoặc mới hơn). Một số card đồ họa cũ không thể có nó chút nào. Quá trình "
+"thiết lập có thể chạy ngay: game khởi động khi driver đã được cập nhật."
+
+msgctxt "UI_BROWSE_USE"
+msgid "Use this folder"
+msgstr "Dùng thư mục này"
+
+msgctxt "UI_BROWSE_EMPTY"
+msgid "Nothing to choose in this folder"
+msgstr "Không có gì để chọn trong thư mục này"
+
+msgctxt "UI_BROWSE_UNREADABLE"
+msgid "This folder cannot be read"
+msgstr "Không đọc được thư mục này"
