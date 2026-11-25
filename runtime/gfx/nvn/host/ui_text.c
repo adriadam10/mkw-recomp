@@ -18,7 +18,7 @@ static const Row rows[] = {
     {"en", text_en}, {"ja", text_ja}, {"fr", text_fr}, {"de", text_de}, {"it", text_it}, {"es", text_es},
     {"nl", text_nl}, {"pt", text_pt}, {"pt-BR", text_pt_br}, {"ru", text_ru}, {"zh-Hans", text_zh_hans},
     {"zh-Hant", text_zh_hant}, {"ko", text_ko}, {"es-419", text_es_419}, {"ca", text_ca}, {"gl", text_gl},
-    {"eu", text_eu}, {"pl", text_pl}, {"tr", text_tr}, {"uk", text_uk}, {"th", text_th},
+    {"eu", text_eu}, {"pl", text_pl}, {"tr", text_tr}, {"uk", text_uk}, {"th", text_th}, {"vi", text_vi},
 };
 
 const char *ui_text_lang(const char *code) {

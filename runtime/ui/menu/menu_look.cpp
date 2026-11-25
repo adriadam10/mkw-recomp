@@ -51,10 +51,11 @@ void menu_look_style(ImGuiStyle &s) {
     c[ImGuiCol_Separator] = ImVec4(0.30f, 0.36f, 0.30f, 1);
 }
 
-// Roboto Medium (Latin with Latin Extended-A for Polish, Turkish and Catalan, Cyrillic, dashes and quotes) at 26 px
+// Roboto Medium (Latin with Latin Extended-A for Polish, Turkish and Catalan, Vietnamese's horned O and U and its
+// letters of Latin Extended Additional, Cyrillic, dashes and quotes) at 26 px
 // per 1080 lines, with the glyphs of the Japanese, Korean and Chinese language names merged in from a system font when
 // there is one (each language is named in its own script).
-static const ImWchar kRanges[] = {0x0020, 0x017F, 0x0400, 0x052F, 0x2010, 0x2027, 0};
+static const ImWchar kRanges[] = {0x0020, 0x017F, 0x01A0, 0x01B0, 0x0400, 0x052F, 0x1EA0, 0x1EF9, 0x2010, 0x2027, 0};
 static const struct { const char *lang; UiTextId name; } kCjk[] = {
     {"ja", UI_MENU_LANGNAME_JA}, {"ko", UI_MENU_LANGNAME_KO}, {"zh-Hans", UI_MENU_LANGNAME_ZH_HANS},
     {"zh-Hant", UI_MENU_LANGNAME_ZH_HANT}, {"th", UI_MENU_LANGNAME_TH},

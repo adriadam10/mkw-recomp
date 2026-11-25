@@ -998,7 +998,7 @@ static void probe_fonts(void) {
 // software keyboard keeps its game-language rows, and menu_text follows MKW_MENU_LANG in each language.
 static void probe_menu_text(void) {
     static const char *const langs[] = {"en", "ja", "fr", "de", "it", "es", "nl", "pt", "pt-BR", "ru", "zh-Hans",
-                                        "zh-Hant", "ko", "es-419", "ca", "gl", "eu", "pl", "tr", "uk", "th"};
+                                        "zh-Hant", "ko", "es-419", "ca", "gl", "eu", "pl", "tr", "uk", "th", "vi"};
     enum { N = sizeof langs / sizeof *langs };
     for (size_t i = 0; i < N; i++)
         for (int id = UI_MENU_FIRST; id <= UI_MENU_LAST_ID; id++)

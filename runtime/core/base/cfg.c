@@ -125,7 +125,7 @@ static const CfgRow rows[] = {
     S("DSU", "input", "0", "0|1", LIVE),
     S("DSU_SERVER", "input", "127.0.0.1:26760", NULL, LIVE),
     S("DSU_SLOT", "input", "0", "0..3", LIVE),
-    S("MENU_LANG", "language", "", "en|ja|fr|de|it|es|nl|pt|pt-BR|ru|zh-Hans|zh-Hant|ko|es-419|ca|gl|eu|pl|tr|uk|th", LIVE),
+    S("MENU_LANG", "language", "", "en|ja|fr|de|it|es|nl|pt|pt-BR|ru|zh-Hans|zh-Hant|ko|es-419|ca|gl|eu|pl|tr|uk|th|vi", LIVE),
     S("UPDATE_CHECK", "launcher", "1", "0|1", LIVE),
     S("START_SCREEN", "launcher", "auto", "auto|always|skip", LIVE),   // ui/launcher/launcher.cpp console_start
     S("DISCORD", "launcher", "0", "0|1", LIVE),   // Discord Rich Presence (core/presence): off by default, the player's friends see it
