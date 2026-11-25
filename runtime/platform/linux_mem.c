@@ -438,7 +438,11 @@ int plat_mem_read(uint64_t addr, void *out, size_t n) {
 
 int plat_mem_readable(uint64_t addr, uint64_t n) {
     uint8_t b;
-    uint64_t end = addr + (n ? n : 1);
+    uint64_t len = n ? n : 1;
+    // A range up to or past 2^64 (no user memory up there): its end wrapped, the loop read nothing and this said yes
+    // to a frame walk's 16 bytes at 0xfffffffffffffff8.
+    if (len > UINT64_MAX - addr) return 0;
+    uint64_t end = addr + len;
     for (uint64_t a = addr; a < end; a = (a | 4095) + 1)
         if (!plat_mem_read(a, &b, 1)) return 0;
     return 1;

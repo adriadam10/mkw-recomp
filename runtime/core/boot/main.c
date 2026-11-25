@@ -492,9 +492,15 @@ static void check_memory(void) {
     CHECK(!mem_guest_readable(RT_HOSTFN_BASE + 0x40, 8) && !mem_guest_readable(g->alias.base + g->alias.size, 8) &&
               !mem_guest_readable(~0ull - 0x10, 0x100),
           "the books (mem_guest_readable) vouch for host memory");
+    // The frame walks' check (plat_mem_readable): 16 bytes at a frame pointer just below 2^64, or a size that wraps
+    // from memory that is there, are no memory.
+    uint64_t own = (uint64_t)(uintptr_t)&v;
+    CHECK(plat_mem_readable(own, 8) && !plat_mem_readable(0xfffffffffffffff8ull, 16) &&
+              !plat_mem_readable(own, ~0ull) && !plat_mem_readable(own, 0 - own),
+          "plat_mem_readable says yes to a range up to or past 2^64");
     CHECK(mem_set_heap_size(0, &heap) == 0, "SetHeapSize 0");
     CHECK(!mem_guest_readable(g->heap.base, 1), "the books (mem_guest_readable) vouch for a freed heap");
-    printf("memory: heap, physical memory, stack move, QueryMemory, GetInfo, the books: %s\n",
+    printf("memory: heap, physical memory, stack move, QueryMemory, GetInfo, the books, readable ranges: %s\n",
            failures > before ? "FAIL" : "ok");
 }
 

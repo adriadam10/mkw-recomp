@@ -238,6 +238,8 @@ int plat_mem_read(uint64_t addr, void *out, size_t n) {
 }
 
 int plat_mem_readable(uint64_t addr, uint64_t n) {
+    // A range up to or past 2^64 (no user memory up there): its end wrapped, so a committed first region said yes.
+    if ((n ? n : 1) > UINT64_MAX - addr) return 0;
     for (uint64_t a = addr, end = addr + n; a < end || a == addr;) {
         MEMORY_BASIC_INFORMATION mbi;
         if (!VirtualQuery((void *)(uintptr_t)a, &mbi, sizeof mbi) || mbi.State != MEM_COMMIT) return 0;
