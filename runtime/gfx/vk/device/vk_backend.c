@@ -77,7 +77,8 @@ static PlatCond fl_cv = PLAT_COND_INIT;
 static FlipJob fl_q[4];
 static int fl_head, fl_n, fl_images, fl_thread;   // fl_images: blitted images not flipped yet
 
-typedef struct { uint64_t first, step, previous; int clock; } FlipPace;
+// last: the flip before's call time (0: none); held: flip_pace_free held the next flip, a flag so it counts once
+typedef struct { uint64_t first, step, previous, last; int clock, held; } FlipPace;
 
 // The first call keeps the clock's old behavior because ready_slack waits at that exact time. Later pictures snap the
 // requested timestamp to the nearest predicted call: at 119.88 Hz, several hundred microseconds of live phase noise
@@ -90,20 +91,35 @@ static uint64_t flip_pace_clock(uint64_t t, int first) {
     return vk_present_flip_time(t > half ? t - half : 0);
 }
 
+// Without the vblank clock (not learned yet, MKW_FG_VBLANK=0, or MKW_VK_PRESENT=immediate, which shows each flip at
+// once: clock_has_vblanks, gfx_present.c) a picture goes at its requested time, but not within half a step of the
+// flip before it on this thread, the last game frame's included: on the clock each flip has a refresh of its own,
+// here a game frame flipped late was followed by the next one's first made frame at its time and shown for what was
+// left (review of the immediate change, 25/11/2026). A whole step would delay every later flip for good; half a step
+// lets a late flip show for at least that and the flips after it catch up by half a step each. In 6 min of races at
+// 30 fps with 2x in immediate it held 17 of 22632 flips: 11 after a late game frame, 5 where the A/B switched off the
+// clock (vbi-169-30-1).
+static uint64_t flip_pace_free(FlipPace *p, uint64_t ideal) {
+    uint64_t not_before = p->last ? p->last + p->step / 2 : 0;
+    if (ideal >= not_before) return ideal;
+    p->held = 1;
+    return not_before;
+}
+
 // The requested step, not one refresh, separates the pictures of one game frame. Each slot is placed from the same
 // start so fractional steps can alternate refresh gaps. If a slot is late or already used, advance to a future slot
 // so that mailbox does not replace a queued picture before its vblank.
 static uint64_t flip_pace_next(FlipPace *p, int k, uint64_t now, int first) {
     uint64_t ideal = p->first + (uint64_t)k * p->step;
-    if (!p->clock) return ideal;
+    if (!p->clock) return flip_pace_free(p, ideal);
     uint64_t at = flip_pace_clock(first && ideal < now ? now : ideal, first);
     if (at && !first && (at < now || at <= p->previous)) {
         uint64_t earliest = p->previous + 1;
         at = vk_present_flip_time(earliest < now ? now : earliest);
     }
-    if (!at) {   // the vblank clock is not ready, or the swapchain was renewed during the job
+    if (!at) {   // the vblank clock is not ready or off (immediate), or the swapchain was renewed during the job
         p->clock = 0;
-        return ideal;
+        return flip_pace_free(p, ideal);
     }
     if (first) p->first = at;
     p->previous = at;
@@ -124,6 +140,15 @@ static void trace_present(uint64_t frame, uint64_t t1, uint64_t t0, uint64_t tar
     last_queued = queued;
 }
 
+// MKW_TRACE=present on the flip thread: a line for each made frame too, with its call's distance to the flip before
+// it (made or the last game frame's) and how far past its target it went
+static void trace_made(uint64_t frame, int k, uint64_t t, uint64_t last, uint64_t target) {
+    if (rt_trace & RT_TRACE_PRESENT)
+        rt_log("present: made %d of frame %llu, %.3f ms after the last flip, %.3f ms past target", k,
+               (unsigned long long)frame, last ? (t - last) / 1e6 : 0.0,
+               target && t > target ? (t - target) / 1e6 : 0.0);
+}
+
 static void flip_main(void *arg) {
     (void)arg;
     plat_mutex_lock(&fl_m);
@@ -134,10 +159,13 @@ static void flip_main(void *arg) {
         uint64_t t0 = kern_now_ns();
         // On the vblank clock (gfx_present.c, from the presents' display times), each flip is half a refresh before
         // the first vblank that can carry its requested-step target. One refresh per flip was twice too fast for
-        // 60 -> 120 on a 240 Hz display and also queued a game frame's pictures back-to-back on 119.88 Hz.
+        // 60 -> 120 on a 240 Hz display and also queued a game frame's pictures back-to-back on 119.88 Hz. Without the
+        // clock each goes at its requested time, half a step after the flip before at the earliest (flip_pace_free).
         static int on_clock = -1;
+        static uint64_t last_flip;          // the last game frame's flip, for flip_pace_free
+        static unsigned jobs, flips, held;  // flip_pace_free's holds over 600 game frames
         if (on_clock < 0) on_clock = !(cfg_get("MKW_FG_VBLANK") && !strcmp(cfg_get("MKW_FG_VBLANK"), "0"));
-        FlipPace pace = {f.first, f.step, 0, on_clock};
+        FlipPace pace = {.first = f.first, .step = f.step, .last = last_flip, .clock = on_clock};
         uint64_t at = flip_pace_next(&pace, 0, t0, 1);
         // The first flip's wait is ready_slack's (it also measures MKW_LOW_LATENCY's slack), so the late test below is
         // for the flips after it: after that wait `at` has always just passed, and tested there it moved every first
@@ -147,10 +175,14 @@ static void flip_main(void *arg) {
         for (int k = 1; k < f.nf; k++) {
             if (k > 1) at = flip_pace_next(&pace, k - 1, kern_now_ns(), 0);
             wait_until(at);
+            uint64_t tm = kern_now_ns();
             uint64_t rfx = vk_rfx_oob_present_start(f.frame);
             uint64_t id = vk_present_flip();
             vk_rfx_oob_present_end(rfx);
             vk_lat_flip(f.slot, k == 1, 0, id);   // MKW_LATENCY: a made frame
+            trace_made(f.frame, k, tm, pace.last, at);
+            pace.last = tm;
+            held += (unsigned)pace.held, pace.held = 0;
             plat_mutex_lock(&fl_m);
             fl_images--;
             plat_cond_broadcast(&fl_cv);
@@ -164,6 +196,13 @@ static void flip_main(void *arg) {
         vk_lat_flip(f.slot, f.nf <= 1, 1, vk_present_flip_id(pid));   // MKW_LATENCY: the game's own picture
         vk_rfx_present_end(pid);
         trace_present(f.frame, t1, t0, target, f.queued, f.nf - 1);
+        last_flip = t1;
+        flips += (unsigned)f.nf, held += (unsigned)pace.held;   // (a job of one picture asks twice for the same flip)
+        if (++jobs == 600) {
+            if (held)
+                rt_log("present: %u of %u flips held half a step after the flip before (no vblank clock)", held, flips);
+            jobs = flips = held = 0;
+        }
         plat_mutex_lock(&fl_m);
         fl_images--;
         fl_head = (fl_head + 1) % 4, fl_n--;
@@ -261,7 +300,8 @@ static void present_main(void *arg) {
         }
         uint64_t target = nf ? first + (uint64_t)(nf - 1) * step : j.at;
         // the game's frame alone: half a refresh before a vblank on the vblank clock (gfx_present.c), so with the tick
-        // locked to the display its phase cannot sit on a vblank for the session (MKW_FG_VBLANK=0: at its time)
+        // locked to the display its phase cannot sit on a vblank for the session (MKW_FG_VBLANK=0, or immediate, which
+        // has no vblank, unless MKW_IMMEDIATE_AT_TIME=0: at its time)
         static int clock_on = -1;
         if (clock_on < 0) clock_on = !(cfg_get("MKW_FG_VBLANK") && !strcmp(cfg_get("MKW_FG_VBLANK"), "0"));
         if (!nf && clock_on && vk_fg_wanted()) {   // (without frame generation, at its time as in main)

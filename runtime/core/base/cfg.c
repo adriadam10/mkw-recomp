@@ -277,6 +277,7 @@ static const CfgRow rows[] = {
     K("HDR_FORCE"),
     K("HL_TRACE"),
     K("HUD_PROBE"),
+    K("IMMEDIATE_AT_TIME"),
     K("INPUT"),
     K("INPUT_SCRIPT"),
     K("LATENCY"),

@@ -169,7 +169,7 @@ extern VkFormat vk_fg_src_format, vk_fg_out_format;   // its picture's format, a
 VkQueue vk_fg_queue(void);   // the queue frame generation's frames are written on (their blits go there), 0: the game's
 void vk_present_queue(VkQueue q);
 uint64_t vk_present_game_id(uint64_t frame);
-uint64_t vk_present_flip_time(uint64_t t);   // a flip's call time on the vblank clock, not before t (0: unknown)   // the present id of a game frame's present (0 none): Reflex's, or for the phase   // gfx_present.c: the queue of the blits that follow (0: the game's)
+uint64_t vk_present_flip_time(uint64_t t);   // a flip's call time on the vblank clock, not before t (0: unknown, or off in immediate)   // the present id of a game frame's present (0 none): Reflex's, or for the phase   // gfx_present.c: the queue of the blits that follow (0: the game's)
 int vk_fg_wanted(void);   // MKW_FRAMEGEN is not off: the swapchain keeps spare images for it
 // One game frame: copies the crop rectangle {x, y, w, h} of src (GENERAL, all its writes submitted) into a picture of
 // its own and submits the frames made between the last game frame and it. out: what to show, in order (the made

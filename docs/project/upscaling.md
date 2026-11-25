@@ -44,7 +44,7 @@ console's 60 Hz, and NGX is not loaded. What frame generation needs is taken onl
 | Switch | Unset | What it does |
 |---|---|---|
 | `MKW_VSYNC_LOCK` | on with frame generation | The game's tick locked to the display's refresh (59.94 or 119.88 Hz: the game runs 0.1 % slower), so frames do not drift across its vblanks. `1` always, `0` never |
-| `MKW_PHASE_LOCK` | on with frame generation at start | A thread waits for each present (`VK_KHR_present_wait`) and moves the flips half a refresh away from a vblank. `1` always, `0` never |
+| `MKW_PHASE_LOCK` | on with frame generation at start | A thread waits for each present (`VK_KHR_present_wait`) and moves the flips half a refresh away from a vblank. `1` always, `0` never. Off with `MKW_VK_PRESENT=immediate`, which shows each flip at once: the flips go at their time (`MKW_IMMEDIATE_AT_TIME=0` keeps it there) |
 | `MKW_FG_QUEUE` | on with frame generation at start | Frame generation's work on a second queue of the graphics family. `1` always, `0` one queue |
 | `MKW_ACQUIRE_HIRES` | off | The wait for a swapchain image with the high-resolution timer instead of millisecond sleeps (measured on one Windows machine: waits for an A/B on more) |
 | `MKW_TEMPORAL_NGX` | with DLSS or DLSS-G at start | Load NGX. `1` always, `0` never |
