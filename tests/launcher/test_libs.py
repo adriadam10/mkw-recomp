@@ -4,6 +4,7 @@ and leaves nothing behind, and a file the player already put there is kept."""
 import hashlib
 import http.server
 import importlib.util
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -12,6 +13,25 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 GOOD = b"MZ" + bytes(range(256)) * 40
+
+
+@pytest.mark.parametrize("user", ["Zoë", "田中"])
+def test_fetch_error_is_utf8_on_legacy_windows_pipe(tmp_path, user):
+    dest = tmp_path / user
+    dest.write_bytes(b"not a directory")
+    driver = (
+        'import runpy, sys; sys.stdout.reconfigure(encoding="cp1252"); '
+        'sys.argv = [sys.argv[1], "fetch", "--features", "dlss", "--dir", sys.argv[2], "--os", "windows"]; '
+        'runpy.run_path(sys.argv[0], run_name="__main__")'
+    )
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", driver, str(ROOT / "tools/prepare/libs.py"), str(dest)],
+        capture_output=True, timeout=30,
+    )
+    assert result.returncode == 1
+    assert result.stdout.decode("utf-8").startswith("error fetch ")
+    assert user in result.stdout.decode("utf-8")
+    assert b"UnicodeEncodeError" not in result.stderr
 
 
 def load_libs():
