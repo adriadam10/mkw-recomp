@@ -307,7 +307,7 @@ static int (*watch_fn)(uint64_t addr, uint64_t rip);   // plat_mem_watch_hook: w
 static void (*crash_fn)(const PlatCrash *c);
 
 void plat_mem_watch_hook(int (*fn)(uint64_t addr, uint64_t rip)) { watch_fn = fn; }
-void plat_mem_lazy_hook(int (*fn)(uint64_t addr)) { (void)fn; }   // Linux commits on touch
+void plat_mem_lazy_hook(int (*fn)(uint64_t addr, int write)) { (void)fn; }   // Linux commits on touch
 
 _Thread_local int plat_fault_write;        // platform.h
 _Thread_local uint64_t plat_fault_pc, plat_fault_ret;

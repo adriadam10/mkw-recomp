@@ -102,7 +102,7 @@ uint64_t plat_mem_written(uint64_t addr, uint64_t n, uint64_t *pages, uint64_t m
 }
 
 static int (*fault_hook)(uint64_t addr);
-static int (*lazy_hook)(uint64_t addr);   // plat_mem_lazy_hook: reads too
+static int (*lazy_hook)(uint64_t addr, int write);   // plat_mem_lazy_hook: reads too
 static int (*watch_fn)(uint64_t addr, uint64_t rip);   // plat_mem_watch_hook: write watches set for diagnostics
 
 // A write access violation (ExceptionInformation[0] == 1) goes to the watch hook, then to the fault hook; registered
@@ -111,8 +111,9 @@ static LONG CALLBACK fault_veh(EXCEPTION_POINTERS *ep) {
     const EXCEPTION_RECORD *er = ep->ExceptionRecord;
     if (er->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || er->NumberParameters < 2) return EXCEPTION_CONTINUE_SEARCH;
     uint64_t addr = (uint64_t)er->ExceptionInformation[1];
-    if (er->ExceptionInformation[0] <= 1 && lazy_hook && lazy_hook(addr)) return EXCEPTION_CONTINUE_EXECUTION;
-    if (er->ExceptionInformation[0] != 1) return EXCEPTION_CONTINUE_SEARCH;
+    ULONG_PTR kind = er->ExceptionInformation[0];   // 0 read, 1 write, 8 execute
+    if (kind <= 1 && lazy_hook && lazy_hook(addr, kind == 1)) return EXCEPTION_CONTINUE_EXECUTION;
+    if (kind != 1) return EXCEPTION_CONTINUE_SEARCH;
     if (watch_fn && watch_fn(addr, (uint64_t)ep->ContextRecord->Rip)) return EXCEPTION_CONTINUE_EXECUTION;
     return fault_hook && fault_hook(addr) ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
 }
@@ -125,7 +126,7 @@ static void fault_install(void) {
 _Thread_local int plat_fault_write;   // platform.h: not set here (no read traps on Windows)
 _Thread_local uint64_t plat_fault_pc, plat_fault_ret;
 
-void plat_mem_lazy_hook(int (*fn)(uint64_t addr)) {
+void plat_mem_lazy_hook(int (*fn)(uint64_t addr, int write)) {
     lazy_hook = fn;
     fault_install();
 }

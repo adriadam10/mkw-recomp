@@ -267,10 +267,10 @@ uint64_t plat_mem_populated(uint64_t addr, uint64_t n, uint64_t (*runs)[2], uint
 // the write should run again, 0 to let the fault go on (to the crash handler). One hook per process. On Linux reads
 // that fault on an inaccessible page go to fn too (memory.c read traps).
 void plat_mem_fault_hook(int (*fn)(uint64_t addr));
-// A read or a write that faulted on a reserved, uncommitted page goes to fn before anything else (Windows' lazy commit,
-// memory.c lazy_fault): 1 when fn committed it and the access should run again. Not called on Linux, which commits on
-// touch by itself.
-void plat_mem_lazy_hook(int (*fn)(uint64_t addr));
+// A read or a write that faulted goes to fn before anything else (Windows' lazy commit, memory.c lazy_fault; write: 1
+// for a write): 1 when the page is committed now, by fn or by another thread's fault, and the access should run again.
+// Not called on Linux, which commits on touch by itself.
+void plat_mem_lazy_hook(int (*fn)(uint64_t addr, int write));
 // The fault the hook is called for, on its thread (Linux; MKW_EARLY_READ tells reads from writes and names the code):
 // a write, and the faulting instruction's address.
 extern _Thread_local int plat_fault_write;

@@ -440,16 +440,20 @@ static void owned_commit_locked(uint64_t a, uint64_t n) {
         if (plat_mem_state(x, hi, &end) == PLAT_MEM_RESERVED) commit(x, end - x, "the runtime's region");
 }
 
-// The platform's lazy hook (plat_mem_lazy_hook), for reads and writes: 1 when the page at a was owned and is now
-// committed, so the access is retried.
-static int lazy_fault(uint64_t a) {
+// The platform's lazy hook (plat_mem_lazy_hook), for reads and writes (write: 1 for a write): 1 when the page at a was
+// owned and is now committed, so the access is retried.
+static int lazy_fault(uint64_t a, int write) {
     if (!lazy || !watched(a, 1)) return 0;
     uint64_t end, p = a & ~(PAGE - 1);
-    // only a page still reserved: a committed one faulted for another reason (a frozen region's write, a guard)
-    if (plat_mem_state(p, p + PAGE, &end) != PLAT_MEM_RESERVED) return 0;
+    // A committed page: another thread that touched the same 2 MiB may have committed it after this access faulted,
+    // and the back end may have frozen it again since (a commit's thaw holds nothing). A read retries on a readable
+    // page, since no hook follows this one for reads (win32_mem.c fault_veh): it went to the crash handler. A write
+    // goes on to thaw_fault, which retries a read-write page and thaws a frozen one; any other fault (a guard) goes on.
+    int st = plat_mem_state(p, p + PAGE, &end);
+    if (st != PLAT_MEM_RESERVED) return !write && st >= PLAT_PROT_READ;
     plat_mutex_lock(&lock);
     owned_commit_locked(a & ~(LAZY_CHUNK - 1), LAZY_CHUNK);
-    int st = plat_mem_state(p, p + PAGE, &end);
+    st = plat_mem_state(p, p + PAGE, &end);
     plat_mutex_unlock(&lock);
     return st >= PLAT_PROT_NONE;   // not the game's page: still reserved, the fault goes on to the crash handler
 }

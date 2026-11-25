@@ -498,6 +498,52 @@ static void check_memory(void) {
            failures > before ? "FAIL" : "ok");
 }
 
+#ifdef _WIN32
+// Windows' lazy commit (memory.c lazy_fault): threads that read the same reserved 2 MiB of the heap fault together and
+// the first one commits it. A read whose hook looked only after that commit went to the crash handler, since no hook
+// follows lazy_fault for reads: the first chunk crashed in each of 5 runs (8 threads). Each reader reads its own page a
+// few µs after the round starts (0-19 µs, another stagger each round), so that some faults land while the first one's
+// commit runs. One page of each chunk per reader is touched: 512 MiB of commit, a few MiB of RAM, given back after.
+enum { RACE_CHUNKS = 256, RACE_MAX = 8 };
+static uint64_t race_heap;
+static int64_t race_round, race_done;
+
+static void race_reader(void *arg) {
+    int id = (int)(intptr_t)arg;
+    for (int64_t r = 1; r <= RACE_CHUNKS; r++) {
+        while (__atomic_load_n(&race_round, __ATOMIC_ACQUIRE) < r) plat_yield();
+        uint64_t t0 = plat_now_ns(), d = (uint64_t)((id * 7 + r * 3) % 16) * 1250;
+        while (plat_now_ns() - t0 < d) {}
+        (void)*(volatile uint8_t *)(uintptr_t)(race_heap + ((uint64_t)(r - 1) << 21) + (uint64_t)id * 0x1000 + 0x40);
+        __atomic_add_fetch(&race_done, 1, __ATOMIC_ACQ_REL);
+    }
+}
+
+static void check_lazy_race(void) {
+    int before = failures, fresh = 0, n = 0;
+    uint32_t cpus = plat_cpu_count();
+    int want = cpus > RACE_MAX ? RACE_MAX : cpus > 3 ? (int)cpus - 1 : 2;
+    if (mem_set_heap_size((uint64_t)RACE_CHUNKS << 21, &race_heap) != 0) {
+        CHECK(0, "SetHeapSize %d MiB for the lazy commit race", RACE_CHUNKS * 2);
+        return;
+    }
+    PlatThread *t[RACE_MAX];
+    while (n < want && (t[n] = plat_thread_new(race_reader, (void *)(intptr_t)n, "lazy race"))) n++;
+    CHECK(n == want, "lazy commit race: %d of %d reader threads started", n, want);
+    double t0 = now_s();
+    for (int64_t r = 1; n && r <= RACE_CHUNKS; r++) {
+        uint64_t end, c = race_heap + ((uint64_t)(r - 1) << 21);
+        fresh += plat_mem_state(c, c + 0x1000, &end) == PLAT_MEM_RESERVED;   // 0 with MKW_LAZY_COMMIT=0
+        __atomic_store_n(&race_round, r, __ATOMIC_RELEASE);
+        while (__atomic_load_n(&race_done, __ATOMIC_ACQUIRE) < r * n) plat_yield();
+    }
+    for (int i = 0; i < n; i++) plat_thread_join(t[i]);
+    CHECK(mem_set_heap_size(0, &race_heap) == 0, "SetHeapSize 0 after the lazy commit race");
+    printf("lazy commit: %d threads read %d fresh 2 MiB chunks together (%d still reserved) in %.0f ms: %s\n", n,
+           RACE_CHUNKS, fresh, (now_s() - t0) * 1e3, failures > before ? "FAIL" : "ok");
+}
+#endif
+
 static int selftest(void) {
     static RtModule mods[MAX_MODULES];
     int n = rt_linked_modules(mods, MAX_MODULES);
@@ -533,6 +579,9 @@ static int selftest(void) {
     mem_kernel_free(k1, 0x200);
     CHECK(mem_kernel_alloc(0x200, 16) == k1, "a freed kernel-region block is not reused");
     check_memory();
+#ifdef _WIN32
+    check_lazy_race();
+#endif
 
     float used, total, proc;
     plat_mem_info(&used, &total, &proc);
