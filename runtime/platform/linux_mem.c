@@ -34,8 +34,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <SDL3/SDL_clipboard.h>
-
 #include "platform.h"
 #include "linux_int.h"
 
