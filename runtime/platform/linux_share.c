@@ -36,6 +36,8 @@ static uint8_t **at;          // per guest page its view (PlatShared.map), NULL 
 static int64_t nshared;       // pages shared now: the poke's and decommit's fast way out
 
 int plat_shared_open(uint64_t size, PlatShared *s, const char **why) {
+    // Guest pages swap in one at a time: a host page larger than 4 KiB would take its neighbours along (plat_page_size)
+    if (plat_page_size() != PG) return *why = "host pages are larger than 4 KiB", 0;
     static int dev = -2;
     if (dev == -2) dev = open("/dev/udmabuf", O_RDWR | O_CLOEXEC);
     if (dev < 0) {

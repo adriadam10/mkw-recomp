@@ -214,8 +214,16 @@ static inline void *plat_casp(void *volatile *p, void *xchg, void *cmp) {
 }
 
 // ---- virtual memory: ranges reserved at fixed addresses below 2^39, their pages committed, decommitted and protected
-// at 4 KiB granularity.
+// at 4 KiB granularity (the guest's page). A host whose pages are larger (Linux on Apple silicon: 16 KiB) applies them
+// per host page, each with the most permissive protection its guest pages ask for: see plat_page_size.
 enum { PLAT_PROT_NONE, PLAT_PROT_READ, PLAT_PROT_RW };
+// The host's page size: 4 KiB on x86-64 and most AArch64 kernels, 16 KiB on Apple silicon under Linux (Asahi), 64 KiB
+// on some ARM servers. Larger than 4 KiB (Linux): a guest page may be more accessible than asked where it shares a host
+// page with a more accessible one, and a fault covers the whole host page.
+uint64_t plat_page_size(void);
+// Host pages over [addr, addr + n) whose guest pages ask for different protections, so that some guest page there is
+// more accessible than asked (plat_page_size); 0 with 4 KiB host pages.
+uint64_t plat_mem_loose_pages(uint64_t addr, uint64_t n);
 enum { PLAT_MEM_FREE = -2, PLAT_MEM_RESERVED = -1 };   // plat_mem_state besides PLAT_PROT_* for committed pages
 // Reserves [addr, addr + n) inaccessible, exactly there: 0 when any of it is taken. watch: writes to its pages are
 // tracked for plat_mem_written.

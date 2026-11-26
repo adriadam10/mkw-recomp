@@ -45,6 +45,9 @@ int plat_mem_protect(uint64_t addr, uint64_t n, int prot) {
     return VirtualProtect((void *)(uintptr_t)addr, n, p, &old) != 0;
 }
 
+uint64_t plat_page_size(void) { return 4096; }   // every Windows the runtime builds for (x64, ARM64) has 4 KiB pages
+uint64_t plat_mem_loose_pages(uint64_t addr, uint64_t n) { return (void)addr, (void)n, 0; }
+
 int plat_mem_drop(uint64_t addr, uint64_t n) { return (void)addr, (void)n, 0; }   // memory_spill.c: Linux only for now
 int plat_mem_poke(uint64_t addr, const void *src, size_t n) { return (void)addr, (void)src, (void)n, 0; }
 int plat_shared_open(uint64_t size, PlatShared *s, const char **why) { return (void)size, (void)s, *why = "not on Windows", 0; }

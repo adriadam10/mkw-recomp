@@ -512,11 +512,17 @@ int vk_texture_astc_copy(const tex_t *src, uint32_t level, uint32_t layer, uint3
     return ok;
 }
 
+// The write watch's page: the host's (plat_page_size; 16 KiB on Apple silicon under Linux), whose write marks all its
+// 4 KiB guest pages. BASE_MAX: the most bytes fills_no_page keeps and compares, two such pages up to 16 KiB ones.
+static uint64_t watch_page(void) { return plat_page_size(); }
+#define BASE_MAX 0x8000u
+
 // vk_mem_changed over the pages wholly inside e's storage (all of its pages when it fills none): a neighbour that shares
 // the first or last page does not count as a write to e. Storage that fills no page is judged by its bytes instead
 // (rewritten_since_gpu).
 int storage_rewritten(const Tex *e, uint32_t since, uint32_t *now) {
-    uint64_t lo = (e->pub.addr + 0xfff) & ~0xfffull, hi = (e->pub.addr + e->t.L.size) & ~0xfffull;
+    const uint64_t m = watch_page() - 1;
+    uint64_t lo = (e->pub.addr + m) & ~m, hi = (e->pub.addr + e->t.L.size) & ~m;
     if (hi <= lo) lo = e->pub.addr, hi = e->pub.addr + e->t.L.size;
     return vk_mem_changed(lo, hi - lo, since, now);
 }
@@ -527,10 +533,12 @@ int storage_rewritten(const Tex *e, uint32_t since, uint32_t *now) {
 // written back. In three Grand Prix races (drop2, RX 6700 XT, 21/11/2026) the page alone dropped 36 864 renders of two
 // such textures, ~0.6 a frame, and in every one the texture's own bytes were still those of the GPU write. For such
 // storage the bytes are kept at the GPU write and compared instead; under two pages, so at most 8 KiB copied on the
-// replay thread (128 bytes for those two).
+// replay thread (128 bytes for those two). With 16 KiB host pages storage up to 32 KiB can fill none: up to 32 KiB
+// then; past BASE_MAX (64 KiB host pages) the page decides, as before.
 static int fills_no_page(const Tex *e) {
-    uint64_t lo = (e->pub.addr + 0xfff) & ~0xfffull, hi = (e->pub.addr + e->t.L.size) & ~0xfffull;
-    return hi <= lo && e->t.L.size <= 0x2000;
+    const uint64_t m = watch_page() - 1;
+    uint64_t lo = (e->pub.addr + m) & ~m, hi = (e->pub.addr + e->t.L.size) & ~m;
+    return hi <= lo && e->t.L.size <= 2 * watch_page() && e->t.L.size <= BASE_MAX;
 }
 
 // MKW_TEX_WB_BYTES (default 1; 0: the page decides, as before 21/11/2026; --probe-vkexec's pitch page part fails then)
@@ -545,13 +553,14 @@ static int wb_bytes(void) {
 
 void gpu_base_note(Tex *e) {
     if (!fills_no_page(e)) return;
-    if (!e->gpu_base && !(e->gpu_base = malloc(0x2000))) rt_fatal("vk: out of memory for a texture's storage copy");
+    size_t cap = 2 * watch_page() < BASE_MAX ? 2 * watch_page() : BASE_MAX;   // 8 KiB with 4 KiB pages, as always
+    if (!e->gpu_base && !(e->gpu_base = malloc(cap))) rt_fatal("vk: out of memory for a texture's storage copy");
     mem_copy_out(e->gpu_base, e->pub.addr, e->t.L.size);
 }
 
 int gpu_base_kept(const Tex *e) {
     if (!fills_no_page(e) || !e->gpu_base) return -1;
-    uint8_t now[0x2000];
+    uint8_t now[BASE_MAX];
     mem_copy_out(now, e->pub.addr, e->t.L.size);
     return !memcmp(now, e->gpu_base, e->t.L.size);
 }
