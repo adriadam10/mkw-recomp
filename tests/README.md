@@ -11,6 +11,7 @@ Each folder holds the tests of one part of the repo, with the C sources they bui
 | [launcher/](launcher/README.md) | The setup, the installation selector and Add to Steam |
 | [runtime/](runtime/README.md) | Pieces of `runtime/` built alone: audio, controllers, memory caps, settings, menu texts |
 | [widescreen/](widescreen/README.md) | Window aspect, FOV and UI fitting |
+| [build/](build/README.md) | The Windows dependency setup (`tools/build/windeps.py`): a package member never writes outside its deps folder |
 | [github/](github/README.md) | The issue moderation bot |
 | [run/](run/README.md) | The game-run tools (`tools/run`): `run.py` against a fake `mkw`, and the A/B verdict |
 | [docs/](docs/README.md) | The pre-commit hook's own checks reading UTF-8 on a legacy code page |
