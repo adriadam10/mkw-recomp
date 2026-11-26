@@ -5,9 +5,11 @@
 // QueryMemory, physical memory in the alias region, GetInfo memory ids, and the kernel-region allocator.
 //
 // Every region is a plain reservation; pages are committed and decommitted at 4 KiB granularity. Decommitted pages
-// come back zeroed, so no stale-page bookkeeping is needed. The stack and heap block and the alias region are
-// reserved write-watched (platform.h plat_mem_reserve): mem_written_pages reports the pages the CPU wrote, which
-// the Vulkan back end uploads again.
+// come back zeroed, so no stale-page bookkeeping is needed. On a host with larger pages (Linux on Apple silicon: 16 KiB)
+// the platform gives each host page the most permissive protection its guest pages ask for (platform.h
+// plat_page_size): nothing here changes but the read traps, which need one guest page to fault alone (mem_trap_init).
+// The stack and heap block and the alias region are reserved write-watched (platform.h plat_mem_reserve):
+// mem_written_pages reports the pages the CPU wrote, which the Vulkan back end uploads again.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -220,10 +222,21 @@ int mem_trap_init(void) {   // memory_int.h
         // on Windows, 22/11/2026: 128 MiB committed, under 1 MiB resident; the same title-screen boot with and without
         // it, 23/11/2026: the allocation gone, private commit less the guest's 11061 -> 10933 MiB). Every reader checks
         // trap_ok, a count of trapped pages or trapped itself.
-        if (plat_mem_poke((uint64_t)(uintptr_t)&probe, &probe, 1)) trapped = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE);
+        // A host page larger than the guest's holds guest pages that are not trapped: an access to one of them would not
+        // fault where the trap needs it to, and one to the trapped page would only if the host page could be made
+        // inaccessible as a whole. Off there, with what builds on the map (MKW_EARLY_READ, base traps, spilled pages):
+        // the GPU's bytes are copied back at the fence, as on Windows.
+        int big = plat_page_size() != PAGE;
+        if (!big && plat_mem_poke((uint64_t)(uintptr_t)&probe, &probe, 1))
+            trapped = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE);
         trap_ok = trapped != NULL;
-        rt_log("mem: read traps %s", trap_ok ? "on: GPU writes reach guest memory when the game touches them"
-                                             : "unavailable: GPU writes are copied back at the fence");
+        if (big)
+            rt_log("mem: read traps off: host pages of %llu KiB (they need 4 KiB); GPU writes are copied back at the "
+                   "fence, and MKW_EARLY_READ, base traps and spilled pages are off with them",
+                   (unsigned long long)(plat_page_size() >> 10));
+        else
+            rt_log("mem: read traps %s", trap_ok ? "on: GPU writes reach guest memory when the game touches them"
+                                                 : "unavailable: GPU writes are copied back at the fence");
     }
     return trap_ok > 0;
 }
@@ -546,6 +559,10 @@ void mem_init(void) {
     if (!alias) reexec_or_fail("a 64 GiB alias region below 2^39");
 
     plat_mem_fault_hook(thaw_fault);   // before the crash handler
+    if (plat_page_size() != PAGE)
+        rt_log("mem: host pages of %llu KiB, guest pages of 4: each host page gets the most permissive protection of its "
+               "guest pages (the data permission lines count those left more accessible than asked)",
+               (unsigned long long)(plat_page_size() >> 10));
     alias_pages = calloc(ALIAS_PAGES, 1);
     if (!alias_pages) rt_fatal("memory: cannot allocate the alias page map");
     // mkw.ini is read here, once the address space is claimed and before the first setting: the pool size below
@@ -671,8 +688,14 @@ uint32_t mem_set_permission(uint64_t a, uint64_t n, uint32_t perm) {
     memset(t, (int)perm, n / PAGE);
     protect(a, n, perm == PERM_RW ? PLAT_PROT_RW : perm == PERM_R ? PLAT_PROT_READ : PLAT_PROT_NONE, "module data");
     plat_mutex_unlock(&lock);
-    rt_log("%s data permission +%#llx size %#llx perm %u", m->name, (unsigned long long)(a - m->base),
-           (unsigned long long)n, perm);
+    // A host page larger than 4 KiB shared with a more accessible neighbour keeps that access (plat_page_size)
+    uint64_t loose = plat_mem_loose_pages(a, n);
+    char more[96] = "";
+    if (loose)
+        snprintf(more, sizeof more, " (%llu host page%s of %llu KiB more accessible than asked)", (unsigned long long)loose,
+                 loose == 1 ? "" : "s", (unsigned long long)(plat_page_size() >> 10));
+    rt_log("%s data permission +%#llx size %#llx perm %u%s", m->name, (unsigned long long)(a - m->base),
+           (unsigned long long)n, perm, more);
     return R_OK;
 }
 

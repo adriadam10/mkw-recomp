@@ -86,9 +86,21 @@ struct pm_scan_arg {
 // clears a page's protection on the first write without a round trip to us, and PAGEMAP_SCAN lists the pages whose
 // protection was cleared and protects them again. Without it (an older kernel), plat_mem_written reports the ranges as
 // untracked and the back end uploads them in full.
+//
+// Host pages larger than the guest's 4 KiB (Apple silicon under Linux: 16 KiB). pstate stays per guest page and holds
+// what the guest asked for; mprotect takes whole host pages, so each host page gets the most permissive protection of
+// its guest pages (host_apply): a guest page can be more accessible than asked, never less, and nothing a neighbour
+// still needs is taken away (0.1.18 on an M4 Max under Arch Linux ARM died at subsdk0's data permission, 0x70038be000
+// being 4 KiB but not 16 KiB aligned). Only the guest's reservations take this path (guest_large). A decommit drops a
+// host page's memory only when none of its guest pages is committed; otherwise it zeroes the guest pages it covers,
+// which read zero when committed again as they would after MADV_DONTNEED. The written-page
+// scan reports whole host pages, each as its guest pages. Traps that rely on a single guest page faulting (memory.c
+// read traps and what builds on them) are off on such a host (mem_trap_init). With 4 KiB host pages none of this runs.
 
 #define PG 4096ull
 static uint8_t *pstate;
+static uint64_t host_pg;   // plat_page_size, set once
+static uint64_t kernel_page_size(void);
 static int ww_fd = -1, pm_fd = -1;   // userfaultfd and /proc/self/pagemap; -1 when write watch is unavailable
 static PlatMutex vm_lock = PLAT_MUTEX_INIT;
 
@@ -156,14 +168,90 @@ void plat_mem_name(const void *p, size_t n, const char *name) {
 }
 
 int64_t plat_mem_resident(const void *p, size_t n) {
-    unsigned char v[4096];   // 16 MiB of pages per call
+    unsigned char v[4096];   // one byte per host page: 16 MiB per call with 4 KiB pages
+    const size_t hp = (size_t)kernel_page_size();   // the kernel's, which mincore counts in (not MKW_HOST_PAGE_KIB)
+    // mincore wants a start on one of them: a 4 KiB-aligned range on a 16 KiB kernel counts its whole first page
+    size_t head = (uintptr_t)p & (hp - 1);
+    p = (const char *)p - head, n += head;
     int64_t in = 0;
-    for (size_t off = 0; off < n; off += sizeof v * 4096) {
-        size_t len = n - off < sizeof v * 4096 ? n - off : sizeof v * 4096;
+    for (size_t off = 0; off < n; off += sizeof v * hp) {
+        size_t len = n - off < sizeof v * hp ? n - off : sizeof v * hp;
         if (mincore((char *)p + off, len, v)) return -1;
-        for (size_t i = 0; i < (len + 4095) / 4096; i++) in += (v[i] & 1) * 4096;
+        for (size_t i = 0; i < (len + hp - 1) / hp; i++) in += (int64_t)((v[i] & 1) * hp);
     }
     return in;
+}
+
+static uint64_t kernel_page_size(void) {
+    long s = sysconf(_SC_PAGESIZE);
+    // a power of two from 4 KiB up; anything else (no answer) is taken as 4 KiB, the size the runtime was made for
+    return s >= (long)PG && !((uint64_t)s & ((uint64_t)s - 1)) ? (uint64_t)s : PG;
+}
+
+// MKW_HOST_PAGE_KIB=16 (tests): host pages taken as 16 KiB (or 8..64, a power of two, not below the kernel's) on a
+// 4 KiB kernel, so the large-page paths run on any PC (--selftest; a game run, as on Apple silicon). Anything else
+// warns and keeps the kernel's size.
+uint64_t plat_page_size(void) {
+    uint64_t v = __atomic_load_n(&host_pg, __ATOMIC_RELAXED);
+    if (!v) {
+        v = kernel_page_size();
+        const char *e = getenv("MKW_HOST_PAGE_KIB");
+        if (e && *e) {
+            char *end;
+            unsigned long k = strtoul(e, &end, 10);
+            uint64_t want = (uint64_t)k << 10;
+            if (*end || k < 4 || k > 64 || (k & (k - 1)) || want < v)
+                fprintf(stderr, "[host] platform: MKW_HOST_PAGE_KIB=%s is not 4..64 KiB, a power of two, at least the "
+                                "kernel's %llu KiB: ignored\n", e, (unsigned long long)(v >> 10));
+            else v = want;
+        }
+        __atomic_store_n(&host_pg, v, __ATOMIC_RELAXED);
+    }
+    return v;
+}
+
+// The protection the host page at h (aligned) needs: the most permissive one its guest pages ask for. *mixed: they ask
+// for different ones. vm_lock is not needed: pstate is written before the protection that follows it.
+static int host_prot(uint64_t h, int *mixed) {
+    uint64_t hp = plat_page_size();
+    int best = PROT_NONE, first = -1;
+    *mixed = 0;
+    for (uint64_t g = h; g < h + hp; g += PG) {
+        uint8_t v = g < PS_LIMIT ? pstate[g / PG] : PS_FREE;
+        int p = v == PS_RW ? PROT_READ | PROT_WRITE : v == PS_READ ? PROT_READ : PROT_NONE;
+        if (first < 0) first = p;
+        else if (p != first) *mixed = 1;
+        if (p == (PROT_READ | PROT_WRITE)) best = p;
+        else if (p == PROT_READ && best == PROT_NONE) best = p;
+    }
+    return best;
+}
+
+// The host pages over [addr, addr + n) get the protections pstate asks for, a run of equal ones per mprotect.
+static int host_apply(uint64_t addr, uint64_t n) {
+    uint64_t hp = plat_page_size(), lo = addr & ~(hp - 1), hi = (addr + n + hp - 1) & ~(hp - 1);
+    int mixed;
+    for (uint64_t x = lo, y; x < hi; x = y) {
+        int p = host_prot(x, &mixed);
+        for (y = x + hp; y < hi && host_prot(y, &mixed) == p;) y += hp;
+        if (mprotect((void *)(uintptr_t)x, y - x, p)) return 0;
+    }
+    return 1;
+}
+
+// Larger host pages and a range of the guest's reservations (pstate knows it): the per-host-page path. Anything else
+// (plat_mem_alloc's memory, the dispatch table sealed read-only) is protected as asked, as it always was: pstate holds
+// nothing there, and host_prot would make it inaccessible.
+static int guest_large(uint64_t addr, uint64_t n) {
+    return plat_page_size() != PG && pstate && addr + n <= PS_LIMIT && pstate[addr / PG] != PS_FREE;
+}
+
+uint64_t plat_mem_loose_pages(uint64_t addr, uint64_t n) {
+    uint64_t hp = plat_page_size(), got = 0;
+    if (hp == PG || !pstate || !n) return 0;
+    int mixed;
+    for (uint64_t x = addr & ~(hp - 1); x < addr + n; x += hp) got += (host_prot(x, &mixed), mixed);
+    return got;
 }
 
 void *plat_mem_alloc(size_t n) {
@@ -172,24 +260,69 @@ void *plat_mem_alloc(size_t n) {
 }
 
 int plat_mem_commit(uint64_t addr, size_t n) {
+    if (guest_large(addr, n)) {   // larger host pages: what the guest asks, then the union per host page
+        plat_mutex_lock(&vm_lock);
+        ps_set(addr, n, PS_RW);
+        int ok = host_apply(addr, n);
+        plat_mutex_unlock(&vm_lock);
+        return ok;
+    }
     if (mprotect((void *)(uintptr_t)addr, n, PROT_READ | PROT_WRITE)) return 0;
     ps_set(addr, n, PS_RW);
     return 1;
 }
 
+// Larger host pages: a host page none of whose guest pages stays committed gives its memory up; one that keeps a
+// committed guest page keeps its memory and has the decommitted guest pages zeroed (made writable for that while
+// vm_lock is held: a neighbour can only gain access meanwhile), so they read zero when committed again.
+static int decommit_large(uint64_t addr, uint64_t n) {
+    uint64_t hp = plat_page_size(), lo = addr & ~(hp - 1), hi = (addr + n + hp - 1) & ~(hp - 1);
+    ps_set(addr, n, PS_RESERVED);
+    for (uint64_t x = lo; x < hi; x += hp) {
+        int kept = 0;
+        for (uint64_t g = x; g < x + hp && !kept; g += PG) kept = g < PS_LIMIT && pstate[g / PG] >= PS_NONE;
+        if (!kept) {
+            if (madvise((void *)(uintptr_t)x, hp, MADV_DONTNEED)) return 0;
+            continue;
+        }
+        uint64_t a = x > addr ? x : addr, b = x + hp < addr + n ? x + hp : addr + n;
+        if (mprotect((void *)(uintptr_t)x, hp, PROT_READ | PROT_WRITE)) return 0;
+        memset((void *)(uintptr_t)a, 0, b - a);
+    }
+    return host_apply(addr, n);
+}
+
 // Shared pages (linux_share.c) give their memory up by leaving it: MADV_DONTNEED would keep their bytes.
 int plat_mem_decommit(uint64_t addr, uint64_t n) {
     if (!plat_mem_unshare(addr, n)) return 0;
+    if (guest_large(addr, n)) {
+        plat_mutex_lock(&vm_lock);
+        int ok = decommit_large(addr, n);
+        plat_mutex_unlock(&vm_lock);
+        return ok;
+    }
     if (madvise((void *)(uintptr_t)addr, n, MADV_DONTNEED) || mprotect((void *)(uintptr_t)addr, n, PROT_NONE)) return 0;
     ps_set(addr, n, PS_RESERVED);
     return 1;
 }
 
-int plat_mem_drop(uint64_t addr, uint64_t n) {   // shared pages leave it: only inaccessible ranges are dropped
-    return plat_mem_unshare(addr, n) && madvise((void *)(uintptr_t)addr, n, MADV_DONTNEED) == 0;
+// Shared pages leave it: only inaccessible ranges are dropped. Larger host pages: only the host pages inside the range,
+// whose bytes are all the caller's; the ends keep their memory.
+int plat_mem_drop(uint64_t addr, uint64_t n) {
+    if (!plat_mem_unshare(addr, n)) return 0;
+    uint64_t hp = plat_page_size(), lo = (addr + hp - 1) & ~(hp - 1), hi = (addr + n) & ~(hp - 1);
+    if (hp == PG) lo = addr, hi = addr + n;
+    return lo >= hi || madvise((void *)(uintptr_t)lo, hi - lo, MADV_DONTNEED) == 0;
 }
 
 int plat_mem_protect(uint64_t addr, uint64_t n, int prot) {
+    if (guest_large(addr, n)) {
+        plat_mutex_lock(&vm_lock);
+        ps_set(addr, n, (uint8_t)(PS_NONE + prot));
+        int ok = host_apply(addr, n);
+        plat_mutex_unlock(&vm_lock);
+        return ok;
+    }
     int p = prot == PLAT_PROT_RW ? PROT_READ | PROT_WRITE : prot == PLAT_PROT_READ ? PROT_READ : PROT_NONE;
     if (mprotect((void *)(uintptr_t)addr, n, p)) return 0;
     ps_set(addr, n, (uint8_t)(PS_NONE + prot));
@@ -247,31 +380,62 @@ int plat_mem_state(uint64_t addr, uint64_t limit, uint64_t *end) {
     return v == PS_FREE ? PLAT_MEM_FREE : v == PS_RESERVED ? PLAT_MEM_RESERVED : v - PS_NONE;
 }
 
-uint64_t plat_mem_written(uint64_t addr, uint64_t n, uint64_t *pages, uint64_t max, int reset) {
-    if (!max || !n) return 0;
-    if (ww_fd < 0) return UINT64_MAX;
+// Scans [at, end) (host-page aligned) for written pages, reporting the guest pages inside [lo, hi) after got in pages.
+// reset: the host pages reported become unwritten again, so each must fit whole (a host page cut short here would be
+// protected again with guest pages left unreported); with room for less than one, it is peeked instead and stays
+// written for the next scan. A peek may stop inside a host page. -1 when the scan fails.
+static int64_t scan_written(uint64_t at, uint64_t end, uint64_t lo, uint64_t hi, uint64_t *pages, uint64_t max,
+                            uint64_t got, int reset) {
     struct page_region r[256];
-    uint64_t got = 0;
-    for (uint64_t at = addr, end = addr + n; at < end && got < max;) {
+    const uint64_t per = plat_page_size() / PG, kp = kernel_page_size();
+    // the kernel's own pages bound the scan: with MKW_HOST_PAGE_KIB on a 4 KiB kernel the first written page of a host
+    // page may be a neighbour outside [lo, hi), and a peek of one page stopped there
+    if (at < (lo & ~(kp - 1))) at = lo & ~(kp - 1);
+    if (hi < UINT64_MAX - kp && end > ((hi + kp - 1) & ~(kp - 1))) end = (hi + kp - 1) & ~(kp - 1);
+    while (at < end && got < max) {
+        uint64_t room = (max - got) / per;
+        int rs = reset && room;
         // Written means: write-protection cleared, on a populated page (present or swapped out) that is not the shared
         // zero page. A page never touched since its commit has no protection marker either and counts as written to
         // the kernel; a read maps the zero page there. Neither is a write, as on Windows.
         struct pm_scan_arg arg = {.size = sizeof arg,
-                                  .flags = reset ? PM_SCAN_WP_MATCHING | PM_SCAN_CHECK_WPASYNC : 0,
+                                  .flags = rs ? PM_SCAN_WP_MATCHING | PM_SCAN_CHECK_WPASYNC : 0,
                                   .start = at, .end = end, .vec = (uint64_t)(uintptr_t)r, .vec_len = 256,
-                                  .max_pages = max - got,
+                                  .max_pages = room ? room : 1,
                                   .category_inverted = PAGE_IS_PFNZERO,
                                   .category_mask = PAGE_IS_WRITTEN | PAGE_IS_PFNZERO,
                                   .category_anyof_mask = PAGE_IS_PRESENT | PAGE_IS_SWAPPED,
                                   .return_mask = PAGE_IS_WRITTEN};
         long k = ioctl(pm_fd, PAGEMAP_SCAN, &arg);
-        if (k < 0) return UINT64_MAX;
+        if (k < 0) return -1;
         for (long i = 0; i < k; i++)
-            for (uint64_t p = r[i].start; p < r[i].end && got < max; p += PG) pages[got++] = p;
+            for (uint64_t p = r[i].start > lo ? r[i].start : lo; p < r[i].end && p < hi && got < max; p += PG)
+                pages[got++] = p;
         if (arg.walk_end <= at) break;
         at = arg.walk_end;
     }
-    return got;
+    return (int64_t)got;
+}
+
+// Larger host pages (plat_page_size): the kernel reports and protects whole host pages, each reported here as its guest
+// pages. A host page the range covers only in part is peeked, never reset: its other guest pages may belong to another
+// caller's range (two pools sharing a 16 KiB page), whose written marks a reset here would take away. It is reported
+// again until a range that covers it whole resets it: an upload too many at worst, never a write missed.
+uint64_t plat_mem_written(uint64_t addr, uint64_t n, uint64_t *pages, uint64_t max, int reset) {
+    if (!max || !n) return 0;
+    if (ww_fd < 0) return UINT64_MAX;
+    const uint64_t hp = plat_page_size(), end = addr + n;
+    const uint64_t a0 = addr & ~(hp - 1), a1 = (addr + hp - 1) & ~(hp - 1);   // the head's host page, the body's start
+    const uint64_t b1 = (end + hp - 1) & ~(hp - 1), b0 = end & ~(hp - 1);      // the tail's host page, the body's end
+    int64_t got = 0;
+    if (hp == PG) got = scan_written(addr, end, 0, UINT64_MAX, pages, max, 0, reset);   // as it always was
+    else if (a1 >= b0)   // no whole host page inside: peeked only, unless the range is exactly its host pages
+        got = scan_written(a0, b1, addr, end, pages, max, 0, reset && a0 == addr && b1 == end);
+    if (hp == PG || a1 >= b0) return got < 0 ? UINT64_MAX : (uint64_t)got;
+    if (a0 < a1 && (got = scan_written(a0, a1, addr, a1, pages, max, (uint64_t)got, 0)) < 0) return UINT64_MAX;
+    if ((got = scan_written(a1, b0, a1, b0, pages, max, (uint64_t)got, reset)) < 0) return UINT64_MAX;
+    if (b0 < b1 && (got = scan_written(b0, b1, b0, end, pages, max, (uint64_t)got, 0)) < 0) return UINT64_MAX;
+    return (uint64_t)got;
 }
 
 uint64_t plat_mem_populated(uint64_t addr, uint64_t n, uint64_t (*runs)[2], uint64_t max) {
@@ -282,7 +446,8 @@ uint64_t plat_mem_populated(uint64_t addr, uint64_t n, uint64_t (*runs)[2], uint
     if (fd < 0) return UINT64_MAX;
     struct page_region r[256];
     uint64_t got = 0;
-    for (uint64_t at = addr, end = addr + n; at < end && got < max;) {
+    // the scan starts on a kernel page (EINVAL otherwise: a 4 KiB start on a 16 KiB kernel); runs are cut to the range
+    for (uint64_t at = addr & ~(kernel_page_size() - 1), end = addr + n; at < end && got < max;) {
         struct pm_scan_arg arg = {.size = sizeof arg, .start = at, .end = end, .vec = (uint64_t)(uintptr_t)r,
                                   .vec_len = 256, .category_inverted = PAGE_IS_PFNZERO,
                                   .category_mask = PAGE_IS_PFNZERO,
@@ -290,8 +455,10 @@ uint64_t plat_mem_populated(uint64_t addr, uint64_t n, uint64_t (*runs)[2], uint
         long k = ioctl(fd, PAGEMAP_SCAN, &arg);
         if (k < 0) return UINT64_MAX;
         for (long i = 0; i < k && got < max; i++) {
-            if (got && runs[got - 1][1] == r[i].start) runs[got - 1][1] = r[i].end;
-            else runs[got][0] = r[i].start, runs[got][1] = r[i].end, got++;
+            uint64_t s0 = r[i].start > addr ? r[i].start : addr, s1 = r[i].end < end ? r[i].end : end;
+            if (s0 >= s1) continue;
+            if (got && runs[got - 1][1] == s0) runs[got - 1][1] = s1;
+            else runs[got][0] = s0, runs[got][1] = s1, got++;
         }
         if (arg.walk_end <= at) break;
         at = arg.walk_end;
@@ -458,6 +625,8 @@ void plat_aligned_free(void *p) { free(p); }
 // Fresh read-write anonymous pages over [addr, addr + n) of a reservation (a placed map undone, vk_memory.c), back
 // under the write watch like the pages they replace.
 int plat_mem_replace_anon(uint64_t addr, uint64_t n) {
+    // a fresh mapping replaces whole host pages: a range that cuts one would take a neighbour's bytes along
+    if ((addr | n) & (plat_page_size() - 1)) return 0;
     share_forget(addr, n);
     void *p = mmap((void *)(uintptr_t)addr, n, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED,
                    -1, 0);

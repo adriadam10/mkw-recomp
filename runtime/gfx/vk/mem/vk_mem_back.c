@@ -182,7 +182,8 @@ static int import_host(VkCtx *c, PoolRec *r, uint64_t addr, uint64_t size) {
     if (shadow_on) rt_log("vk: pool %#llx+%#llx: imported instead", (unsigned long long)addr, (unsigned long long)size);
     if (!p_host_props)
         p_host_props = (PFN_vkGetMemoryHostPointerPropertiesEXT)vkGetDeviceProcAddr(c->device, "vkGetMemoryHostPointerPropertiesEXT");
-    uint64_t al = c->min_imported_host_alignment ? c->min_imported_host_alignment : 0x1000;
+    // never below the host page (16 KiB on Apple silicon under Linux), whatever the driver says
+    uint64_t al = c->min_imported_host_alignment > plat_page_size() ? c->min_imported_host_alignment : plat_page_size();
     r->import_lo = addr & ~(al - 1);
     r->import_hi = (addr + size + al - 1) & ~(al - 1);
     uint64_t n = r->import_hi - r->import_lo;

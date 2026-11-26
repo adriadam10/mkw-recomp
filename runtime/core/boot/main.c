@@ -550,6 +550,49 @@ static void check_lazy_race(void) {
 }
 #endif
 
+// Guest protections on the host's pages (platform.h plat_page_size): 4 KiB ranges that do not cover whole host pages
+// (Linux on Apple silicon: 16 KiB; MKW_HOST_PAGE_KIB=16 runs the same paths on a 4 KiB kernel). As the module data
+// permissions MKW sets at boot (0.1.18 died at subsdk0's +0xbe000 size 0x2000): no failure, the guest pages sharing a
+// host page keep their access and bytes, and a decommitted guest page reads zero when committed again. In the alias
+// region far above what check_memory maps; plat_* directly, so memory.c's books never see it.
+static void check_host_pages(void) {
+    const uint64_t hp = plat_page_size(), pg = 0x1000, x = mem_layout()->alias.base + (32ull << 30);
+    volatile uint8_t *b = (volatile uint8_t *)(uintptr_t)x;
+    uint64_t end;
+    int before = failures;
+    CHECK(plat_mem_commit(x, 4 * hp), "commit of 4 host pages");
+    memset((void *)(uintptr_t)x, 0xAB, 4 * hp);
+    // one guest page read-only inside host page 0: its neighbours stay writable (a write below faults if not)
+    CHECK(plat_mem_protect(x + pg * (hp > pg), pg, PLAT_PROT_READ), "a read-only guest page inside a host page");
+    CHECK(plat_mem_state(x + pg * (hp > pg), x + hp, &end) == PLAT_PROT_READ,
+          "that guest page's state is not read-only");
+    if (hp > pg) b[0] = 1, b[2 * pg] = 2;
+    CHECK(plat_mem_loose_pages(x, hp) == (hp > pg), "host pages more accessible than asked: %llu",
+          (unsigned long long)plat_mem_loose_pages(x, hp));
+    // a whole host page read-only: nothing loose; read-write again after
+    CHECK(plat_mem_protect(x + hp, hp, PLAT_PROT_READ) && plat_mem_loose_pages(x + hp, hp) == 0 &&
+              plat_mem_readable(x + hp, hp) && plat_mem_protect(x + hp, hp, PLAT_PROT_RW),
+          "a whole host page read-only and back");
+    // subsdk0's case: 2 guest pages ending a host page, 4 KiB aligned only
+    CHECK(plat_mem_protect(x + 3 * hp - 2 * pg, 2 * pg, PLAT_PROT_READ) &&
+              plat_mem_protect(x + 3 * hp - 2 * pg, 2 * pg, PLAT_PROT_RW),
+          "protecting guest pages that end a host page");
+    b[2 * hp] = 3;
+    // a decommitted guest page shares its host page with committed ones: they keep their bytes, it reads zero after
+    CHECK(plat_mem_decommit(x + 3 * hp, pg) && plat_mem_state(x + 3 * hp, x + 4 * hp, &end) == PLAT_MEM_RESERVED,
+          "decommit of one guest page");
+    CHECK(hp == pg || b[3 * hp + pg] == 0xAB, "the decommit lost a neighbour's bytes");
+    CHECK(plat_mem_commit(x + 3 * hp, pg) && b[3 * hp] == 0 && b[3 * hp + pg - 1] == 0,
+          "a guest page decommitted inside a host page does not read zero when committed again");
+    CHECK(b[0] == (hp > pg ? 1 : 0xAB) && b[2 * hp] == 3, "the protection changes lost bytes");
+    CHECK(plat_mem_decommit(x, 4 * hp) && !plat_mem_readable(x, 1) && !plat_mem_readable(x + 4 * hp - 1, 1),
+          "decommitted host pages stay readable");
+    CHECK(plat_mem_commit(x, 4 * hp) && b[0] == 0 && b[2 * hp] == 0 && plat_mem_decommit(x, 4 * hp),
+          "host pages decommitted whole do not read zero when committed again");
+    printf("host pages: %llu KiB, guest protections and decommits per host page: %s\n", (unsigned long long)(hp >> 10),
+           failures > before ? "FAIL" : "ok");
+}
+
 static int selftest(void) {
     static RtModule mods[MAX_MODULES];
     int n = rt_linked_modules(mods, MAX_MODULES);
@@ -588,6 +631,7 @@ static int selftest(void) {
 #ifdef _WIN32
     check_lazy_race();
 #endif
+    check_host_pages();
 
     float used, total, proc;
     plat_mem_info(&used, &total, &proc);

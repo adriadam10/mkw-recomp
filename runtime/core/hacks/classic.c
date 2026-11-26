@@ -28,6 +28,7 @@
 #include <string.h>
 #ifndef _WIN32
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 #include "cfg.h"
@@ -349,15 +350,21 @@ static void live_scan(void *arg) {
             for (uint64_t c = a; (st == PLAT_PROT_RW || st == PLAT_PROT_READ) && c < b; c += 2ull << 20) {
                 uint64_t ce = c + (2ull << 20) < b ? c + (2ull << 20) : b, lo = c;
 #ifndef _WIN32
-                unsigned char vec[512];   // only the pages in memory: the rest of the heap was never touched
-                if (mincore((void *)(uintptr_t)c, ce - c, vec)) continue;
-                for (uint64_t at = c; at <= ce; at += 4096) {
-                    if (at < ce && vec[(at - c) / 4096] & 1) continue;
+                // Only the pages in memory: the rest of the heap was never touched. mincore counts the kernel's pages
+                // (16 KiB on Apple silicon) from one of them: c is a guest page, so the first may start before it.
+                const uint64_t ps = (uint64_t)sysconf(_SC_PAGESIZE), c0 = c & ~(ps - 1);
+                unsigned char vec[(2u << 20) / 4096 + 1];
+                if (ps < 4096 || (ps & (ps - 1)) || mincore((void *)(uintptr_t)c0, ce - c0, vec)) continue;
+                for (uint64_t p = c0;; p += ps) {
+                    int last = p >= ce;
+                    if (!last && vec[(p - c0) / ps] & 1) continue;
+                    uint64_t at = last ? ce : p > c ? p : c;
                     if (at > lo) {
                         scanned += at - lo;
                         nhit = live_words((const uint32_t *)(uintptr_t)lo, (at - lo) / 4, lo, sl, n, bits, hit, nhit);
                     }
-                    lo = at + 4096;
+                    if (last) break;
+                    lo = p + ps < ce ? p + ps : ce;
                 }
 #else
                 scanned += ce - c;

@@ -426,10 +426,16 @@ static int create_device(void) {
     }
     // Placed maps (vk_memory.c placed_pool): MKW_VK_PLACED=1 only, an experiment. The write watch (userfaultfd,
     // PAGEMAP_SCAN) does not see writes into the driver's mapping, so every page there counts as written and its
-    // textures would be uploaded again at every check.
-    int has_placed = 0;
+    // textures would be uploaded again at every check. Not with host pages larger than 4 KiB: a pool's map replaces its
+    // 4 KiB pages, and a host page shared with a neighbour would take the neighbour's bytes along (plat_page_size).
+    int has_placed = 0, want_placed = cfg_get("MKW_VK_PLACED") && atoi(cfg_get("MKW_VK_PLACED"));
+    if (want_placed && plat_page_size() != 0x1000) {
+        rt_log("vk: MKW_VK_PLACED off: host pages of %llu KiB (placed maps need 4)",
+               (unsigned long long)(plat_page_size() >> 10));
+        want_placed = 0;
+    }
     if (has_ext(ep, ne, VK_EXT_MAP_MEMORY_PLACED_EXTENSION_NAME) && has_ext(ep, ne, VK_KHR_MAP_MEMORY_2_EXTENSION_NAME) &&
-        cfg_get("MKW_VK_PLACED") && atoi(cfg_get("MKW_VK_PLACED"))) {
+        want_placed) {
         has_placed = 1;
         ext[n_ext++] = VK_EXT_MAP_MEMORY_PLACED_EXTENSION_NAME;
         ext[n_ext++] = VK_KHR_MAP_MEMORY_2_EXTENSION_NAME;
