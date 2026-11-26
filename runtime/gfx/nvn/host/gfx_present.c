@@ -661,10 +661,12 @@ static int create_swapchain(void) {
                    ext.height, cw, ch);
     }
     g_sc_n = MAX_IMAGES;
-    vkGetSwapchainImagesKHR(c->device, g_sc, &g_sc_n, g_sc_img);
+    VkResult gr = vkGetSwapchainImagesKHR(c->device, g_sc, &g_sc_n, g_sc_img);
+    if (gr != VK_SUCCESS && gr != VK_INCOMPLETE) rt_fatal("gfx: vkGetSwapchainImagesKHR failed (%d)", (int)gr);
     VkSemaphoreCreateInfo semi = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     for (uint32_t i = 0; i < g_sc_n; i++) {
-        vkCreateSemaphore(c->device, &semi, NULL, &g_render_done[i]);
+        if (vkCreateSemaphore(c->device, &semi, NULL, &g_render_done[i]) != VK_SUCCESS)
+            rt_fatal("gfx: no render-done semaphore for swapchain image %u", i);
         VkImageViewCreateInfo vi = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = g_sc_img[i],
                                     .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = sf.format,
                                     .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
@@ -1209,15 +1211,16 @@ void gfx_window_start(void) {
 
         VkCommandPoolCreateInfo pci = {.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                                        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, .queueFamilyIndex = c->gfx_family};
-        vkCreateCommandPool(c->device, &pci, NULL, &g_pool);
+        if (vkCreateCommandPool(c->device, &pci, NULL, &g_pool) != VK_SUCCESS) rt_fatal("gfx: no command pool for the frames");
         VkCommandBufferAllocateInfo ai = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, .commandPool = g_pool,
                                           .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, .commandBufferCount = FRAMES};
-        vkAllocateCommandBuffers(c->device, &ai, g_cb);
+        if (vkAllocateCommandBuffers(c->device, &ai, g_cb) != VK_SUCCESS) rt_fatal("gfx: no command buffers for the frames");
         VkFenceCreateInfo fi = {.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .flags = VK_FENCE_CREATE_SIGNALED_BIT};
         VkSemaphoreCreateInfo semi = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
         for (int i = 0; i < FRAMES; i++) {
-            vkCreateFence(c->device, &fi, NULL, &g_fence[i]);
-            vkCreateSemaphore(c->device, &semi, NULL, &g_acquire[i]);
+            if (vkCreateFence(c->device, &fi, NULL, &g_fence[i]) != VK_SUCCESS) rt_fatal("gfx: no fence for frame %d", i);
+            if (vkCreateSemaphore(c->device, &semi, NULL, &g_acquire[i]) != VK_SUCCESS)
+                rt_fatal("gfx: no acquire semaphore for frame %d", i);
         }
         g_frame = 0;
         g_started = 1;
