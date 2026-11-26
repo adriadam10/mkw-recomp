@@ -156,6 +156,8 @@ def unpack_deps(archives: dict[str, Path]) -> None:
                 if top == "bin" and (not rel.endswith(".dll") or Path(rel).name in SKIP_DLLS):
                     continue
                 out = dst / rel
+                if not out.resolve().is_relative_to(dst.resolve()):
+                    sys.exit(f"{m.name} would be written outside {dst}: refusing that package")
                 out.parent.mkdir(parents=True, exist_ok=True)
                 with t.extractfile(m) as src, out.open("wb") as f:
                     shutil.copyfileobj(src, f)
