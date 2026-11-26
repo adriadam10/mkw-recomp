@@ -138,7 +138,9 @@ jobs:
         run: uv run tools/build/build.py --target windows --dist --runtime-only --cpu noavx2
       - name: The -noavx2 mkw.exe holds no AVX2, BMI or FMA instruction
         run: |
+          set -o pipefail   # a failing objdump must fail the gate, not pass it with no output
           llvm=$(ls -d build/dist/dl/llvm-mingw*/bin | head -1)
+          test -n "$llvm" || { echo "llvm-mingw not found: nothing was checked"; exit 1; }
           "$llvm/llvm-objdump" -d --no-show-raw-insn build/dist/windows-noavx2/mkw.exe \
             | awk '/^[0-9a-f]+ <.*>:/ {f=$2} f !~ /^<_?(vpx|vp8|vp9)/ && $2 ~ /^(v[a-z0-9]+|andn|bextr|blsi|blsr|blsmsk|bzhi|mulx|pdep|pext|rorx|sarx|shlx|shrx)$/ {print f, $0; n++} END {if (n) {print n " forbidden instructions (libvpx picks its AVX2 code by CPU, so it is skipped)"; exit 1}}'
       - uses: actions/cache@v6
