@@ -264,6 +264,7 @@ static const CfgRow rows[] = {
     K("FLIGHT_DIR"),
     K("FLIGHT_FRAMES"),
     K("FLIGHT_THUMBS"),
+    K("FPS_AUTO_LOSS"),
     K("FREEZE_IDLE"),
     K("GLYPH_DUMP"),
     K("GPL_DRAW_BUILD"),

@@ -364,12 +364,18 @@ typedef struct {
     // trials toward a faster interval below 30 fps (fps_auto.c): the intervals that held HELD_S, frames left of the
     // trial under way (from: the interval it left), frames until the next one and its wait in seconds
     unsigned held, trial, trial_wait;
-    int trial_from;
+    int trial_from, trial_ok;   // trial_ok: one held, not yet HOLD_MIN_S without an up
     double trial_s;
+    // game time the frames lost (real time past it), decayed over about two seconds: all frames, and those run at this
+    // interval that a stall does not explain (fps_auto.c)
+    double lost, lost_held;
+    int cap;         // the slowest interval the caller uses now, 0: none (fps_auto_cap)
+    int median_up;   // 1: up on the median alone, without the game time lost (the rule before it; set by the caller)
 } FpsAuto;
-void fps_auto_reset(FpsAuto *a);                           // interval 1, no history
-int fps_auto_step(FpsAuto *a, double measured_ms, double real_ms);   // a frame's game measure and real period in,
-                                                                     // the interval to use out
+void fps_auto_reset(FpsAuto *a);   // interval 1, no history
+void fps_auto_cap(FpsAuto *a, int cap);   // the slowest interval in use now (out of a race: 30 fps), 0 none
+// A frame's game measure, real period and game time (below 0: not known, its interval's) in, the interval to use out
+int fps_auto_step(FpsAuto *a, double measured_ms, double real_ms, double game_ms);
 int probe_discord(void);                                   // discord_probe.c: Rich Presence against the local Discord
 int probe_dsu(void);                                       // dsu_probe.c: the DSU motion client against a fake server
 int probe_pads(void);                                      // pads_probe.c: players and their gamepads, traded (virtual gamepads)
