@@ -1,6 +1,7 @@
 // SPIR-V rewrites of the translated shaders that the pipeline builder (vk_pipeline.c) applies before creating a module:
-// binding and set moves for the graphics pipeline library, dual-source blending, outputs a stage lacks, and the fixups
-// every module gets. Each returns a malloc'd copy (NULL: unchanged or not in the expected layout).
+// binding and set moves for the graphics pipeline library, dual-source blending, outputs a stage lacks, -1..1 depth
+// where the device cannot take it, and the fixups every module gets. Each returns a malloc'd copy (NULL: unchanged or
+// not in the expected layout).
 #pragma once
 
 #include <stdint.h>
@@ -19,6 +20,8 @@ uint32_t *spirv_dual_source(const uint32_t *w, uint64_t n, uint64_t *out_n);
 uint32_t *spirv_add_outputs(const uint32_t *w, uint64_t n, uint32_t missing, const GfxShaderIo io[32],
                             uint64_t *out_n);
 uint32_t *spirv_alpha_test(const uint32_t *w, uint64_t n, int func, uint64_t *out_n);
+// NEAR_IS_MINUS_W depth without VK_EXT_depth_clip_control: z = (z + w) / 2 at the end (vk_spirv_depth.c)
+uint32_t *spirv_depth_minus_w(const uint32_t *w, uint64_t n, uint64_t *out_n);
 uint32_t *spirv_fixup(const uint32_t *w, uint64_t n, uint64_t *out_n);
 uint32_t *spirv_clamp_shared(const uint32_t *w, uint64_t n, uint32_t limit, uint64_t *out_n, uint32_t *from,
                              uint32_t *to);

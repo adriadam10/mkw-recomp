@@ -33,10 +33,10 @@ typedef void(VKAPI_PTR *PFN_vkCmdSetComputeOccupancyPriorityNV)(VkCommandBuffer 
 #include "nvn_obj.h"   // pool_t, tex_t, view_t, samp_par, NVNcopyRegion (memory and textures block)
 #include "gfx.h"       // GfxShader, GfxShaderRes, GfxShaderAnswers (pipelines block)
 
-// Required (device choice fails without them): Vulkan 1.3; VK_KHR_swapchain, VK_KHR_push_descriptor,
-// VK_EXT_depth_clip_control (VK_EXT_external_memory_host when offered); features timelineSemaphore, dynamicRendering,
-// synchronization2, shaderStorageImageWriteWithoutFormat, depthClipControl, shaderInt64, samplerAnisotropy,
-// independentBlend, geometryShader, textureCompressionBC.
+// Required (device choice fails without them): Vulkan 1.3; VK_KHR_swapchain, VK_KHR_push_descriptor
+// (VK_EXT_external_memory_host when offered); features timelineSemaphore, dynamicRendering, synchronization2,
+// shaderStorageImageWriteWithoutFormat, shaderInt64, samplerAnisotropy, independentBlend, geometryShader,
+// textureCompressionBC.
 // Optional (flag set in VkCtx when enabled): the has_* members.
 typedef struct VkCtx {
     VkInstance instance;
@@ -70,6 +70,8 @@ typedef struct VkCtx {
         has_nv_checkpoints,                 // VK_NV_device_diagnostic_checkpoints: the same on NVIDIA
         has_exec_stats,                     // VK_KHR_pipeline_executable_properties, with MKW_SPEC_STATS=1 only
         has_mesh,                           // VK_EXT_mesh_shader with taskShader and meshShader (MKW's 25 task/mesh)
+        has_depth_clip_control,             // VK_EXT_depth_clip_control: -1..1 depth by negativeOneToOne, else the
+                                            // vertex or mesh shader converts it (vk_spirv_depth.c)
         has_astc_ldr,                       // textureCompressionASTC_LDR (enabled when reported)
         has_calibrated,                     // VK_KHR_calibrated_timestamps, with MKW_TRACE_TL=1 only
         has_emh,                            // VK_EXT_external_memory_host: pools imported when a shadow does not fit

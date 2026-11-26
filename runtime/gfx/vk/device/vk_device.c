@@ -133,20 +133,28 @@ static int create_instance(void) {
 
 // VK_EXT_external_memory_host is optional (has_emh): pools are shadowed by default and imported only when a shadow
 // does not fit (vk_mem_back.c import_pool). Turnip (Adreno, Mesa 25-27) does not offer it.
-static const char *const k_required_ext[] = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME, VK_EXT_DEPTH_CLIP_CONTROL_EXTENSION_NAME};
+// VK_EXT_depth_clip_control is optional too (has_depth_clip_control): without it the vertex and mesh shaders convert
+// NVN's -1..1 depth themselves (vk_spirv_depth.c). Honeykrisp (Mesa 26.3.1, Apple M2) does not offer it, and with it
+// required the M2 was skipped for llvmpipe (26/11/2026).
+static const char *const k_required_ext[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME};
 
-// Name of the first missing required extension, or NULL.
-static const char *missing_required(VkPhysicalDevice pd) {
+// Appends name to the comma-separated list in buf
+static void list_add(char *buf, size_t size, const char *name) {
+    size_t l = strlen(buf);
+    snprintf(buf + l, size - l, "%s%s", l ? ", " : "", name);
+}
+
+// Every missing required extension in miss ("a, b"; empty: none), so that one run names all a driver lacks
+static int missing_required(VkPhysicalDevice pd, char *miss, size_t size) {
     uint32_t n = 0;
     vkEnumerateDeviceExtensionProperties(pd, NULL, &n, NULL);
     VkExtensionProperties *e = calloc(n ? n : 1, sizeof *e);
     vkEnumerateDeviceExtensionProperties(pd, NULL, &n, e);
-    const char *miss = NULL;
-    for (size_t i = 0; i < sizeof k_required_ext / sizeof *k_required_ext && !miss; i++)
-        if (!has_ext(e, n, k_required_ext[i])) miss = k_required_ext[i];
+    miss[0] = 0;
+    for (size_t i = 0; i < sizeof k_required_ext / sizeof *k_required_ext; i++)
+        if (!has_ext(e, n, k_required_ext[i])) list_add(miss, size, k_required_ext[i]);
     free(e);
-    return miss;
+    return miss[0] != 0;
 }
 
 // Graphics+compute family that can present to the window.
@@ -167,12 +175,12 @@ static int name_has(const char *s, const char *sub) {
 // pick_device's rules for device i, but the queue family (which needs the window to ask about presenting); shared with
 // the start screen's check (vk_gpu_report) so both say the same. want, name: MKW_GPU_INDEX and MKW_GPU_NAME.
 static VkGpuWhy gpu_why(VkPhysicalDevice pd, const VkPhysicalDeviceProperties *p, uint32_t i, int want, const char *name,
-                        const char **ext) {
-    *ext = NULL;
+                        char *ext, size_t ext_size) {
+    ext[0] = 0;
     if (want >= 0 && (int)i != want) return VK_GPU_SKIPPED;
     if (name && *name && !name_has(p->deviceName, name)) return VK_GPU_SKIPPED;
     if (p->apiVersion < VK_API_VERSION_1_3) return VK_GPU_OLD;
-    if ((*ext = missing_required(pd))) return VK_GPU_EXT;
+    if (missing_required(pd, ext, ext_size)) return VK_GPU_EXT;
     return VK_GPU_OK;
 }
 
@@ -208,7 +216,7 @@ void vk_gpu_report(VkInstance inst, VkGpuReport *r) {
             vkGetPhysicalDeviceProperties2(pd[i], &p2);
             snprintf(g->driver, sizeof g->driver, "%s %s", dp.driverName, dp.driverInfo);
         }
-        g->why = gpu_why(pd[i], &p, i, want, name, &g->ext);
+        g->why = gpu_why(pd[i], &p, i, want, name, g->ext, sizeof g->ext);
         if (g->why == VK_GPU_OK) {
             uint32_t nq = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(pd[i], &nq, NULL);
@@ -257,11 +265,11 @@ static int pick_device(void) {
         vkGetPhysicalDeviceProperties(pd[i], &p);
         rt_log("vk: gpu %u: %s (type %d, api %u.%u.%u)", i, p.deviceName, (int)p.deviceType, VK_API_VERSION_MAJOR(p.apiVersion),
                VK_API_VERSION_MINOR(p.apiVersion), VK_API_VERSION_PATCH(p.apiVersion));
-        const char *miss;
-        VkGpuWhy why = gpu_why(pd[i], &p, i, want, name, &miss);
+        char miss[VK_GPU_EXT_MAX];
+        VkGpuWhy why = gpu_why(pd[i], &p, i, want, name, miss, sizeof miss);
         if (why == VK_GPU_SKIPPED) continue;
         if (why == VK_GPU_OLD) { rt_log("vk: gpu %u skipped: Vulkan below 1.3", i); continue; }
-        if (why == VK_GPU_EXT) { rt_log("vk: gpu %u skipped: missing extension %s", i, miss); continue; }
+        if (why == VK_GPU_EXT) { rt_log("vk: gpu %u skipped: missing extensions %s", i, miss); continue; }
         uint32_t nq = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(pd[i], &nq, NULL);
         VkQueueFamilyProperties *qp = calloc(nq ? nq : 1, sizeof *qp);
@@ -349,9 +357,20 @@ static int create_device(void) {
     CHAIN(f11, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES);
     CHAIN(f12, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES);
     CHAIN(f13, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES);
-    CHAIN(clip, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_CONTROL_FEATURES_EXT);
 #define OPTIONAL_EXT(flag, name, member, stype) do { \
         if (has_ext(ep, ne, name)) { g_vk.flag = 1; ext[n_ext++] = name; CHAIN(member, stype); } } while (0)
+    // NVN's -1..1 depth: negativeOneToOne where the driver has it, else converted in the shaders (vk_spirv_depth.c).
+    // MKW_DEPTH_CLIP_CONTROL=0 takes the conversion where the extension is there too (to compare the two).
+    {
+        const char *e = cfg_get("MKW_DEPTH_CLIP_CONTROL");
+        int use = 1;
+        if (e && *e && strcmp(e, "0") && strcmp(e, "1"))
+            rt_log("vk: MKW_DEPTH_CLIP_CONTROL=%s is not 0 or 1: ignored, the extension is used where offered", e);
+        else if (e && !strcmp(e, "0")) use = 0;
+        if (use)
+            OPTIONAL_EXT(has_depth_clip_control, VK_EXT_DEPTH_CLIP_CONTROL_EXTENSION_NAME, clip,
+                         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_CONTROL_FEATURES_EXT);
+    }
     // Recent DXC gives the SDK's SPD QuadReadAcross operations explicit linear compute-quad semantics. Keep the
     // optional capability confined to source-provider experiments; ordinary shipped provider/device defaults stay.
     const char *ffx_library = cfg_get("MKW_FFX_FG_LIBRARY");
@@ -506,20 +525,25 @@ static int create_device(void) {
         rt_log("vk: mesh shaders: %s", g_vk.has_mesh ? "task and mesh" : "not supported, task/mesh draws are skipped");
     }
     const VkPhysicalDeviceFeatures *h = &c->f2.features;
-    const char *miss = NULL;
-    if (!c->f12.timelineSemaphore) miss = "timelineSemaphore";
-    else if (!c->f12.drawIndirectCount) miss = "drawIndirectCount";   // MultiDrawElementsIndirectCount
-    else if (!c->f13.dynamicRendering) miss = "dynamicRendering";
-    else if (!c->f13.synchronization2) miss = "synchronization2";
-    else if (!c->f13.shaderDemoteToHelperInvocation) miss = "shaderDemoteToHelperInvocation";   // KILL (sm86 core.py)
-    else if (!h->shaderStorageImageWriteWithoutFormat) miss = "shaderStorageImageWriteWithoutFormat";
-    else if (!c->clip.depthClipControl) miss = "depthClipControl";
-    else if (!h->shaderInt64) miss = "shaderInt64";
-    else if (!h->samplerAnisotropy) miss = "samplerAnisotropy";
-    else if (!h->independentBlend) miss = "independentBlend";
-    else if (!h->geometryShader) miss = "geometryShader";
-    else if (!h->textureCompressionBC) miss = "textureCompressionBC";
-    if (miss) { rt_log("vk: required feature missing on %s: %s", g_vk.props.deviceName, miss); free(c); return 0; }
+    // Every missing one at once, so that one run names all a driver lacks
+    char miss[512] = "";
+    if (!c->f12.timelineSemaphore) list_add(miss, sizeof miss, "timelineSemaphore");
+    if (!c->f12.drawIndirectCount) list_add(miss, sizeof miss, "drawIndirectCount");   // MultiDrawElementsIndirectCount
+    if (!c->f13.dynamicRendering) list_add(miss, sizeof miss, "dynamicRendering");
+    if (!c->f13.synchronization2) list_add(miss, sizeof miss, "synchronization2");
+    if (!c->f13.shaderDemoteToHelperInvocation) list_add(miss, sizeof miss, "shaderDemoteToHelperInvocation");   // KILL (sm86 core.py)
+    if (!h->shaderStorageImageWriteWithoutFormat) list_add(miss, sizeof miss, "shaderStorageImageWriteWithoutFormat");
+    if (!h->shaderInt64) list_add(miss, sizeof miss, "shaderInt64");
+    if (!h->samplerAnisotropy) list_add(miss, sizeof miss, "samplerAnisotropy");
+    if (!h->independentBlend) list_add(miss, sizeof miss, "independentBlend");
+    if (!h->geometryShader) list_add(miss, sizeof miss, "geometryShader");
+    if (!h->textureCompressionBC) list_add(miss, sizeof miss, "textureCompressionBC");
+    if (miss[0]) { rt_log("vk: required features missing on %s: %s", g_vk.props.deviceName, miss); free(c); return 0; }
+    if (g_vk.has_depth_clip_control && !c->clip.depthClipControl) g_vk.has_depth_clip_control = 0;
+    rt_log("vk: depth -1..1 (NVN NEAR_IS_MINUS_W): %s", g_vk.has_depth_clip_control
+               ? "by VK_EXT_depth_clip_control (negativeOneToOne)"
+               : "converted in the vertex and mesh shaders, z = (z + w) / 2 (no VK_EXT_depth_clip_control, or "
+                 "MKW_DEPTH_CLIP_CONTROL=0)");
     if (g_vk.has_present_id && !c->presentid.presentId) g_vk.has_present_id = 0;
     if (g_vk.has_occupancy && !c->occ.computeOccupancyPriority) g_vk.has_occupancy = 0;
     if (g_vk.has_present_wait && (!c->pwait.presentWait || !g_vk.has_present_id)) g_vk.has_present_wait = 0;

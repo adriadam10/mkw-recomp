@@ -211,6 +211,12 @@ int ensure_init(void);
 void pin_subgroup32(VkPipelineShaderStageCreateInfo *st, VkPipelineShaderStageRequiredSubgroupSizeCreateInfo *rq,
                            const uint32_t *w, uint64_t words);
 VkShaderModule make_module(const uint32_t *w, uint64_t words);
+// NEAR_IS_MINUS_W depth (minus_w) on a device without VK_EXT_depth_clip_control: the module of sh that writes the
+// position, converted (vk_spirv_depth.c). 0: nothing to do; 1: *code and *words are the malloc'd copy now in *owned
+// (the copy it held before freed); -1: it cannot be converted (logged): no pipeline, rather than draws at a wrong depth.
+int depth_convert(int minus_w, const GfxShader *sh, const uint32_t **code, uint64_t *words, uint32_t **owned);
+// The viewport state's pNext for minus_w: VK_EXT_depth_clip_control's struct where the device has it, else NULL
+const void *depth_clip_next(const VkPipelineViewportDepthClipControlCreateInfoEXT *clip);
 uint32_t binding_span(const GfxShader *s);
 int add_stage(Bindings *B, const GfxShader *s, uint32_t off);
 int layout_covers(const VkPipeState *s, const Layout *l, uint32_t fs_off, char *why, size_t cap);

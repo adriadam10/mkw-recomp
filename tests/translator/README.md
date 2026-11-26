@@ -6,6 +6,7 @@ The shader translator (`sm86/translate`), the SPIR-V patcher and the recompiler'
 |---|---|
 | `test_warp32.py` | Executes the translator's actual shuffle/ballot helpers and emitted signed/unsigned reductions as C++ on synthetic 32/64/128-lane subgroups, with distinct values per logical warp and partially active masks |
 | `test_spirv_images.py` | Integer image variants of synthetic compute shaders through the production patcher (`t_spirv_images.c`): signed and unsigned storage images, separate image/sampler construction, input preservation and actionable failure reasons; optional SPIR-V validation |
+| `test_spirv_depth.py` | The runtime's -1..1 depth rewrite for devices without `VK_EXT_depth_clip_control` (`t_spirv_depth.c`) on shaders shaped as the translator writes them: a vertex shader writing `gl_Position` one component at a time with an early return, the mesh-as-compute vertex shader (`MESH_CS_VS`), a mesh shader (its position store converted, a single-component store refused), a Position outside a block, a fragment shader left alone; each result passes `spirv-val` and computes z = (z + w) * 0.5 |
 | `test_translate_base.py` | `translate.py --base`: a program's outputs linked from the played version's pass, a rewrite that leaves the played file, a resumed pass that keeps what is there |
 | `test_rdx.py` | The RenoDX tone mapper: `tools/shaders/renodx.py`'s edit of spirv-cross shaped tone curve programs (PsychoV35 after the game's writes, in the HDR mode only; a channel made inside a block; programs it must leave alone; the result compiles when `glslangValidator` is on PATH) and the runtime's constant patch `gfx_rdx_patch` (`t_rdx.c`: only that constant's word, none without it, none past a truncated instruction) |
 | `test_pack.py` | `tools/shaders/pack.py`: each program's three files in `shaders.pack` by key in the runtime's order, and a folder written after the pack makes it stale |
@@ -19,4 +20,5 @@ C sources the tests here build with the compiler at hand and run:
 | File | Built by | What it checks |
 |---|---|---|
 | `t_rdx.c` | `test_rdx.py` | Runs the runtime's RenoDX constant patch (`runtime/gfx/nvn/host/gfx_rdx.c`) on a synthetic module |
+| `t_spirv_depth.c` | `test_spirv_depth.py` | Runs the runtime's -1..1 depth rewrite (`runtime/gfx/vk/pipe/vk_spirv_depth.c`) on a module and checks its input is left unchanged |
 | `t_spirv_images.c` | `test_spirv_images.py` | Runs the actual integer-image shader patcher on synthetic modules, verifies input preservation and the failure-result contract |

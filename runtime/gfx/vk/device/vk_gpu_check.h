@@ -9,12 +9,12 @@
 extern "C" {
 #endif
 
-enum { VK_GPU_REPORT_MAX = 8 };
+enum { VK_GPU_REPORT_MAX = 8, VK_GPU_EXT_MAX = 160 };
 
 typedef enum {
     VK_GPU_OK,         // the game can run on it
     VK_GPU_OLD,        // its driver offers Vulkan below 1.3
-    VK_GPU_EXT,        // its driver lacks a required extension (ext)
+    VK_GPU_EXT,        // its driver lacks required extensions (ext)
     VK_GPU_QUEUE,      // no queue family does graphics and compute
     VK_GPU_SKIPPED,    // MKW_GPU_INDEX or MKW_GPU_NAME names another
 } VkGpuWhy;
@@ -25,7 +25,7 @@ typedef struct {
     uint32_t api;                                                          // VK_MAKE_API_VERSION
     VkPhysicalDeviceType type;
     VkGpuWhy why;
-    const char *ext;                                                       // VK_GPU_EXT: the first one missing
+    char ext[VK_GPU_EXT_MAX];                                              // VK_GPU_EXT: every one missing ("a, b")
 } VkGpuInfo;
 
 typedef struct {

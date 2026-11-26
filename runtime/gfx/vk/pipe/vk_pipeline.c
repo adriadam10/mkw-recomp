@@ -588,6 +588,26 @@ VkShaderModule make_module(const uint32_t *w, uint64_t words) {
     return r == VK_SUCCESS ? m : VK_NULL_HANDLE;
 }
 
+int depth_convert(int minus_w, const GfxShader *sh, const uint32_t **code, uint64_t *words, uint32_t **owned) {
+    if (!minus_w || vk_ctx()->has_depth_clip_control) return 0;
+    uint64_t n = 0;
+    uint32_t *d = spirv_depth_minus_w(*code, *words, &n);
+    if (!d) {
+        const uint8_t *id = gfx_shader_key(sh);
+        rt_log("vk_pipeline: shader %02x%02x%02x%02x%02x%02x%02x%02x: its -1..1 depth cannot be converted (no "
+               "VK_EXT_depth_clip_control): no pipeline", id ? id[0] : 0, id ? id[1] : 0, id ? id[2] : 0,
+               id ? id[3] : 0, id ? id[4] : 0, id ? id[5] : 0, id ? id[6] : 0, id ? id[7] : 0);
+        return -1;
+    }
+    free(*owned);
+    *owned = d, *code = d, *words = n;
+    return 1;
+}
+
+const void *depth_clip_next(const VkPipelineViewportDepthClipControlCreateInfoEXT *clip) {
+    return vk_ctx()->has_depth_clip_control ? clip : NULL;
+}
+
 // ---- pipeline cache table
 
 Pipe *pipe_find(const void *key, size_t size, uint64_t h) {
@@ -774,12 +794,15 @@ static VkPipeline create_mesh(const VkPipeState *s, const GKey *k, const Layout 
     const uint32_t offs[3] = {0, mesh_off, fs_off};
     for (int i = 0; i < 3; i++) {
         if (!sh[i]) continue;
-        uint64_t w;
-        const uint32_t *code = gfx_shader_spirv(sh[i], &w);
-        uint32_t *moved = offs[i] ? spirv_rebind(code, w, offs[i]) : NULL;
-        if (offs[i] && !moved) goto out;
-        mods[i] = make_module(moved ? moved : code, w);   // same length
-        free(moved);
+        uint64_t w, mw;
+        const uint32_t *code = gfx_shader_spirv(sh[i], &w), *mcode = code;   // mcode: converted for -1..1 depth
+        uint32_t *conv = NULL;
+        mw = w;
+        if (i == 1 && depth_convert(k->minus_w, sh[i], &mcode, &mw, &conv) < 0) goto out;
+        uint32_t *moved = offs[i] ? spirv_rebind(mcode, mw, offs[i]) : NULL;
+        if (offs[i] && !moved) { free(conv); goto out; }
+        mods[i] = make_module(moved ? moved : mcode, mw);   // same length
+        free(moved), free(conv);
         if (!mods[i]) goto out;
         st[n] = (VkPipelineShaderStageCreateInfo){.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                                                   .stage = bits[i], .module = mods[i], .pName = "main"};
@@ -795,7 +818,8 @@ static VkPipeline create_mesh(const VkPipeState *s, const GKey *k, const Layout 
                 dyn[n_dyn++] = P.dyn[i];
     VkPipelineViewportDepthClipControlCreateInfoEXT clip = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_DEPTH_CLIP_CONTROL_CREATE_INFO_EXT,
                                                             .negativeOneToOne = k->minus_w};
-    VkPipelineViewportStateCreateInfo vp = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, .pNext = &clip};
+    VkPipelineViewportStateCreateInfo vp = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+                                            .pNext = depth_clip_next(&clip)};
     VkPipelineRasterizationProvokingVertexStateCreateInfoEXT pvs = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_PROVOKING_VERTEX_STATE_CREATE_INFO_EXT,
         .provokingVertexMode = VK_PROVOKING_VERTEX_MODE_LAST_VERTEX_EXT};
@@ -1023,7 +1047,8 @@ VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l,
         }
         if (fcode) fm = make_module(fcode, fw);
     }
-    vm = make_module(vcode, vw);
+    int no_depth = depth_convert(k->minus_w, s->vs, &vcode, &vw, &vpatched) < 0;
+    vm = no_depth ? VK_NULL_HANDLE : make_module(vcode, vw);
     free(vpatched), free(fpatched);
     VkPipeline pipe = VK_NULL_HANDLE;
     if (!vm || (s->fs && !fm)) goto out;
@@ -1054,7 +1079,8 @@ VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l,
                                                  .topology = class_base[k->topo_class]};
     VkPipelineViewportDepthClipControlCreateInfoEXT clip = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_DEPTH_CLIP_CONTROL_CREATE_INFO_EXT,
                                                             .negativeOneToOne = k->minus_w};
-    VkPipelineViewportStateCreateInfo vp = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, .pNext = &clip};
+    VkPipelineViewportStateCreateInfo vp = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+                                            .pNext = depth_clip_next(&clip)};
     // NVN's default is the last vertex (SetProvokingVertexMode, nvn_ext.c); Vulkan's is the first.
     VkPipelineRasterizationProvokingVertexStateCreateInfoEXT pvs = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_PROVOKING_VERTEX_STATE_CREATE_INFO_EXT,
