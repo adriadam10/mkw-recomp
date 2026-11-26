@@ -728,6 +728,15 @@ int cfg_int(const char *name) {
     return end == v || *end ? (int)default_number(name) : (int)l;
 }
 
+int cfg_int_in(const char *name, int lo, int hi) {
+    const char *value = cfg_value(name);
+    long v = strtol(value, NULL, 10);   // atoi's reading ("540p" is 540, a word is 0), without atoi's overflow
+    if (v >= lo && v <= hi) return (int)v;
+    int fallback = (int)default_number(name);
+    rt_log("cfg: %s=%s is outside %d..%d: using %d", name, value, lo, hi, fallback);
+    return fallback;
+}
+
 // "0", "off", "false", "no" are false and "1", "on", "true", "yes" true, in any case; another number is true as it was; a
 // word that is none of these gives the default, as cfg_int does. Only "0" was false before: MKW_DISCORD=off switched
 // Rich Presence on, MKW_LAN=off the LAN sockets and MKW_UPDATE_CHECK=off the update check, all rows of "0|1".
