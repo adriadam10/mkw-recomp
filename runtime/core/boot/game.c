@@ -14,6 +14,7 @@
 // fps_auto.c's 3 or 4 below that in a race; auto_want), 60, 30, 20, 15, or game (the game's own choice, 1-2: the
 // console's, for A/B).
 #include <stdatomic.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,6 +34,10 @@
 static _Atomic uint64_t ticks;   // game time since the first present, in 60 Hz ticks whatever MKW_LOGIC_HZ is
 static uint32_t ticks_acc;       // 60 Hz ticks owed times the step rate, below it (the vsync thread alone writes it)
 static int ticks_hz;
+// Game steps of 1/MKW_LOGIC_HZ s since the first present: MKW_FPS=auto's game time (auto_interval). In 60 Hz ticks a
+// frame at 120 Hz interval 1 advanced 0 or 1 tick by turns, and fps_auto.c, taking 0 for its interval's 8.3 ms, saw
+// 25 ms of game time in each 16.7: no loss, so no up from a race at 0.83x on 10 ms frames.
+static _Atomic uint64_t steps;
 
 // MKW has no save-load point: the A/B blocks (MKW_AB, perf.c rt_ab) count from the phase MKW_SEQ_UNTIL waits for
 // (the race's start in tools/run/race.sh), so both halves measure the same scene.
@@ -77,23 +82,44 @@ int frame_logic_hz(void) {
 }
 
 // Game speed, for tools/run/summary.py: game seconds per real second over each window, and how often the interval
-// changed. Below 1 the game runs in slow motion.
-static struct { uint64_t t0; uint32_t clock0; unsigned frames, changes; int interval; } sp;
+// changed. Below 1 the game runs in slow motion. With MKW_AB, each line ends with the sums of each side in races since
+// the start (real and game seconds, seconds at 30 fps or slower), for tools/run/ab.py: two decimals cannot tell 0.9989x
+// from 0.9998x, and the 5 s windows straddle the blocks (fal-219-2, 26/11/2026)
+static struct { uint64_t t0, prev; uint32_t clock0, clock_prev; unsigned frames, changes; int interval; } sp;
+static struct { double real, game, slow; } sp_ab[2];
 
 static void speed_note(int interval) {
+    static int ab = -1;
+    if (ab < 0) {
+        const char *e = cfg_get("MKW_AB");
+        ab = e && *e && atof(e) > 0;
+    }
     uint64_t now = kern_now_ns(), at = rt_main_addr(rt_version()->game_clock);
     if (!at) return;
     uint32_t clock = *(const volatile uint32_t *)(uintptr_t)at;
+    int n = frame_logic_hz();
     if (!sp.t0) {
-        sp.t0 = now, sp.clock0 = clock, sp.interval = interval;
+        sp.t0 = sp.prev = now, sp.clock0 = sp.clock_prev = clock, sp.interval = interval;
         return;
     }
     sp.frames++;
     if (interval != sp.interval) sp.changes++, sp.interval = interval;
+    if (ab && race_scene_on() && frame_step_world_us() >= 0) {
+        int b = rt_ab();
+        double dt = (double)(now - sp.prev) / 1e9;
+        sp_ab[b].real += dt, sp_ab[b].game += (double)(uint32_t)(clock - sp.clock_prev) / n;
+        if (interval * 60 >= 2 * n) sp_ab[b].slow += dt;
+    }
+    sp.prev = now, sp.clock_prev = clock;
     if (now - sp.t0 < SPEED_WINDOW_NS) return;
     double real = (double)(now - sp.t0) / 1e9;
-    rt_log("game: speed %.2fx over %.1f s (%u frames, %u interval changes, MKW_FPS %s)",
-           (double)(clock - sp.clock0) / frame_logic_hz() / real, real, sp.frames, sp.changes, cfg_value("MKW_FPS"));
+    char sides[256] = "";   // 6 numbers of up to 20 characters past 75 of text
+    if (ab && sp_ab[0].real + sp_ab[1].real > 0)
+        snprintf(sides, sizeof sides,
+                 "; in races A %.3f s game %.3f s at 30 or slower %.3f s, B %.3f s game %.3f s at 30 or slower %.3f s",
+                 sp_ab[0].real, sp_ab[0].game, sp_ab[0].slow, sp_ab[1].real, sp_ab[1].game, sp_ab[1].slow);
+    rt_log("game: speed %.2fx over %.1f s (%u frames, %u interval changes, MKW_FPS %s)%s",
+           (double)(clock - sp.clock0) / n / real, real, sp.frames, sp.changes, cfg_value("MKW_FPS"), sides);
     sp.t0 = now, sp.clock0 = clock, sp.frames = sp.changes = 0;
 }
 
@@ -108,6 +134,7 @@ void frame_step_present(uint64_t display_ns, int interval) {
     uint32_t n = (uint32_t)frame_logic_hz();
     if ((int)n != ticks_hz) ticks_hz = (int)n, ticks_acc = 0;
     ticks_acc += 60u * (interval > 0 ? (uint32_t)interval : 1u);
+    atomic_fetch_add_explicit(&steps, interval > 0 ? (uint64_t)interval : 1u, memory_order_relaxed);
     atomic_fetch_add_explicit(&ticks, ticks_acc / n, memory_order_relaxed);
     ticks_acc %= n;
     speed_note(interval);
@@ -148,14 +175,42 @@ static int auto_interval(uint64_t obj) {
     static FpsAuto a;
     static int ready;
     static uint64_t last;   // when the last frame began: the real period, which the game's measure can fall short of
+    static uint64_t last_steps;   // the game's steps then: the game time the last frame advanced (its present interval)
     int n = frame_logic_hz();   // its ticks: back to 60 in time trial starts it over
     if (!ready || a.hz != n) fps_auto_reset(&a), a.hz = n, ready = 1;
-    uint64_t now = kern_now_ns();
+    // MKW_FPS_AUTO_LOSS: 1 (default) an up needs game time lost (fps_auto.c), 0 the median alone as before, ab the
+    // median alone in MKW_AB's A blocks, for an A/B inside one run. There each block starts the controller over at
+    // interval 1: carried over, an up of A's (held until a 2 s median fits the faster interval with 15 % to spare) would
+    // decide B's block too
+    static int loss_mode = -1, side = -1;
+    if (loss_mode < 0) {
+        const char *e = cfg_get("MKW_FPS_AUTO_LOSS");
+        loss_mode = rt_knob("FPS_AUTO_LOSS", "1");
+        if (e && *e && strcmp(e, "0") && strcmp(e, "1") && strcmp(e, "ab"))
+            rt_log("game: MKW_FPS_AUTO_LOSS=%s is not 0, 1 or ab: 1", e), loss_mode = 1;
+        if (loss_mode != 1)
+            rt_log("game: auto moves up on the median alone%s (MKW_FPS_AUTO_LOSS)", loss_mode ? " in the A blocks" : "");
+    }
+    int ab = loss_mode == 2, b = ab && rt_ab();
+    if (ab && b != side) {
+        if (side >= 0) {
+            if (a.iv != 1)
+                rt_log("game: auto interval %d -> 1 (an %s block: the controller starts over)", a.iv, b ? "B" : "A");
+            fps_auto_reset(&a), a.hz = n;
+        }
+        side = b;
+    }
+    a.median_up = !RT_KNOB_ON(loss_mode);
+    fps_auto_cap(&a, race_scene_on() ? 0 : OUT_OF_RACE_MAX * n / 60);   // 20 and 15 only in a race (host_frame_update)
+    uint64_t now = kern_now_ns(), t = atomic_load_explicit(&steps, memory_order_relaxed);
     double ms = (double)*(const int64_t *)(uintptr_t)(obj + FRAME_MEASURED) * RT_TICK_NS / 1e6;
-    double real = last ? (now - last) / 1e6 / turbo_speed() : 0;
-    last = now;
-    int prev = a.iv, iv = fps_auto_step(&a, ms, real);
-    if (iv != prev) rt_log("game: auto interval %d -> %d (frame %.1f ms, real %.1f ms)", prev, iv, ms, real);
+    double real = last ? (now - last) / 1e6 / turbo_speed() : 0, game = last ? (t - last_steps) * 1000.0 / n : -1;
+    last = now, last_steps = t;
+    double lost = a.lost;   // game time lost up to the frame before (fps_auto.c): what an up answers
+    int prev = a.iv, iv = fps_auto_step(&a, ms, real, game);
+    if (iv != prev)
+        rt_log("game: auto interval %d -> %d (frame %.1f ms, real %.1f ms, game time lost %.0f ms%s)", prev, iv, ms,
+               real, lost, !ab ? "" : b ? "; B" : "; A");
     return iv;
 }
 
