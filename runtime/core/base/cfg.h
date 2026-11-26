@@ -77,6 +77,10 @@ const char *cfg_value(const char *name);
 // cfg_bool: "0", "off", "false" and "no" are false, "1", "on", "true", "yes" and any other number true (any case); a
 // word that is none of these gives the row's default (true for a row without one).
 int cfg_int(const char *name);
+// The number a setting starts with, as atoi reads it, if it lies in [lo, hi]; outside it, the row's default with a
+// warning. The sizes built from these settings (shadow pool, output lines) are unsigned or multiplied: -1 became
+// 0xffffffff for the shadow pool before.
+int cfg_int_in(const char *name, int lo, int hi);
 double cfg_double(const char *name);
 int cfg_bool(const char *name);
 

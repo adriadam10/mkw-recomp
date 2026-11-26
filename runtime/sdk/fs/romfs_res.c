@@ -212,7 +212,7 @@ static int g_scene_pm = 1000;   // romfs_resolution_scene_permille
 
 const char *romfs_resolution_overlay(void) {
     const char *v = cfg_value("MKW_RESOLUTION");
-    int lines = strcmp(v, "original") ? atoi(v) : 0;
+    int lines = strcmp(v, "original") ? cfg_int_in("MKW_RESOLUTION", 0, 4320) : 0;   // the same bounds as patches.c
     if (lines < 0) lines = 0;
     // MKW_DETAIL_DISTANCE (Graphics tab): the game's LODDistanceRatio, 2 in 1.0.0; the
     // console's value writes nothing

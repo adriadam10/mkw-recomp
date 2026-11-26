@@ -223,10 +223,10 @@ static void seed_set(const RtGame *g) {
 }
 
 static void shadow_set(const RtGame *g) {
-    shadow_size = (uint32_t)atoi(cfg_value("MKW_SHADOW_SIZE"));   // "console": 0
+    shadow_size = (uint32_t)cfg_int_in("MKW_SHADOW_SIZE", 0, 4096);   // "console": 0
     const char *extra = cfg_get("MKW_RB_EXTRA_MIB"), *res = cfg_value("MKW_RESOLUTION");
     rb_extra_mib = extra ? (uint32_t)atoi(extra) : 0;
-    scene_lines = strcmp(res, "original") ? (uint32_t)atoi(res) : 0;   // the targets' lines (romfs_res.c)
+    scene_lines = strcmp(res, "original") ? (uint32_t)cfg_int_in("MKW_RESOLUTION", 0, 4320) : 0;   // the targets' lines (romfs_res.c)
     for (int i = 0; i < g->npatch_sets; i++)
         if (!strcmp(g->patch_sets[i].name, "shadow")) g->patch_on[i] = shadow_size != 0 || second_pool_bytes() != 0;
 }
@@ -1206,7 +1206,7 @@ static void aspect_tall_target(uint32_t wh[2], int lines, float aspect, int nati
 
 static void output_size(const RtGame *g) {
     const char *res = cfg_value("MKW_RESOLUTION"), *off = cfg_get("MKW_OUTPUT_PATCH");
-    int lines = strcmp(res, "original") ? atoi(res) : 0, native = rt_version()->output_lines;
+    int lines = strcmp(res, "original") ? cfg_int_in("MKW_RESOLUTION", 0, 4320) : 0, native = rt_version()->output_lines;
     // 1.8.0 draws its last pass at the screen render's size (2560x1440 at original) whatever the output: an output
     // with fewer lines cuts the picture to its top-left corner (pr450-180b/d, vp 2560x1440 on a 1280x800 texture).
     // Its output keeps at least those lines, 16:9; the present stretches the crop to MKW_ASPECT (gfx_present.c).
