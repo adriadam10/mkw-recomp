@@ -54,8 +54,8 @@ check:
 	uv run tools/docs/check.py
 	uv run tools/git/cfg_rows.py
 	marker='MKW_RECOMP_'"GENERATED_FROM_GAME_CODE"; \
-	if git grep -l -F "$$marker" -- ':!recomp/gen.py' ':!tools/git/pre-commit'; then exit 1; fi; \
-	if git ls-files | grep -Ei '\.(nso|nca|nsp|xci|keys|bfsha|bntx|zs)$$|(^|/)(main|sdk|subsdk[0-9]|rtld)$$'; then exit 1; fi
+	rc=0; git grep -l -F "$$marker" -- ':!recomp/gen.py' ':!tools/git/pre-commit' || rc=$$?; case $$rc in 0) echo "generated-code marker found"; exit 1;; 1) ;; *) echo "git grep failed ($$rc)"; exit 1;; esac; \
+	if git ls-files | grep -Ei '\.(nso|nca|nsp|nsz|xci|xcz|ncz|keys|bfsha|bntx|zs)$$|(^|/)(main|sdk|subsdk[0-9]|rtld)$$'; then exit 1; fi
 	uv run pytest tests -q
 
 sysroot:
