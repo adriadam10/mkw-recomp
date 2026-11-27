@@ -262,6 +262,7 @@ void perf_present(uint64_t frame) {
     static int64_t win_prev[PERF_CNT_N];
     prof_render_tid = plat_thread_id();
     if (rt_trace & RT_TRACE_SCHED) kern_sched_report(frame);
+    kern_prio_frame(frame);
     seqwatch_frame(frame);
     if (!seqwatch_window()) hostfn_time_report(frame);
     uint64_t now = kern_now_ns(), d = last ? now - last : 0;

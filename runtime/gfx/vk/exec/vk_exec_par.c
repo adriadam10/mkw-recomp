@@ -127,6 +127,11 @@ static struct {
     uint64_t n_qcut;      // chunks cut at a queue switch
     uint64_t n_pre, pre_ns;   // slots checked ahead, and the time (precheck)
     uint64_t work_ns, max_work_ns;   // chunk_record on every thread, summed (atomic), and the longest chunk
+    // per chunk index (atomic): recording time, time from the job's start to its end, chunks; and its draws (walk).
+    // A Grand Prix submission's longest chunk took 4.5-6.7 ms of ~20 summed over 13 (tl-gp-1080, 27/11/2026): which
+    // index it is, and whether it holds the sends back, decides between cutting it smaller and making its ops cheaper.
+#define CH_STAT 24
+    uint64_t ch_ns[CH_STAT], ch_rdy[CH_STAT], ch_n[CH_STAT], ch_draws[CH_STAT];
     // where the first send waits (summed over submissions): chunk 0's draws, walk start to its hand-out, to its record
     uint64_t t_walk, ch0_draws, ch0_pub_ns, ch0_rdy_ns;
     int wdraws;           // the walk's draws so far
@@ -565,6 +570,11 @@ static void chunk_record(int k, int t, int again) {
     c->drops = vk_usnap_thread_drops() - d0;
     uint64_t w = kern_now_ns() - w0, m = __atomic_load_n(&P.max_work_ns, __ATOMIC_RELAXED);
     __atomic_fetch_add(&P.work_ns, w, __ATOMIC_RELAXED);
+    if (k < CH_STAT && !again) {   // MKW_TRACE=perf: which chunk of the submission is the long one, and when it is ready
+        __atomic_fetch_add(&P.ch_ns[k], w, __ATOMIC_RELAXED);
+        __atomic_fetch_add(&P.ch_rdy[k], kern_now_ns() - P.t_job, __ATOMIC_RELAXED);
+        __atomic_fetch_add(&P.ch_n[k], 1, __ATOMIC_RELAXED);
+    }
     while (w > m && !__atomic_compare_exchange_n(&P.max_work_ns, &m, w, 1, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {}
     if (t) cpuctr_tick(CPUCTR_CHUNKS), cpuctr_add(CPUCTR_CHUNKS, CPUCTR_WALL, w);   // (the replay thread's own chunk
                                                                                     // is counted with its submission)
@@ -807,6 +817,7 @@ int vk_exec_par(VkExec *ex, const uint64_t *handles, int n, int diag) {
     if (!P.pipe_now || !P.threads) take_chunks(0, P.gen);
     send_ready(1);
     uint64_t t2 = kern_now_ns();
+    for (int k = 0; k + 1 < P.nch && k < CH_STAT; k++) P.ch_draws[k] += P.ch[k + 1].op0 - P.ch[k].op0;   // (ops, really)
     // The rest of the submission continues from the state after its last op, in the command buffer of the last send.
     VkExec keep = *ex;
     *ex = P.end;
@@ -858,6 +869,19 @@ void vk_exec_par_log(void) {
                (double)__atomic_load_n(&P.work_ns, __ATOMIC_RELAXED) / 1e6 / (double)nf,
                (double)__atomic_load_n(&P.max_work_ns, __ATOMIC_RELAXED) / 1e6);
     __atomic_store_n(&P.work_ns, 0, __ATOMIC_RELAXED), __atomic_store_n(&P.max_work_ns, 0, __ATOMIC_RELAXED);
+    if (P.mode && nf && (rt_trace & RT_TRACE_PERF)) {
+        char b[1400];
+        int o = 0;
+        for (int k = 0; k < CH_STAT && o < (int)sizeof b - 64; k++) {
+            uint64_t n = __atomic_exchange_n(&P.ch_n[k], 0, __ATOMIC_RELAXED);
+            uint64_t ns = __atomic_exchange_n(&P.ch_ns[k], 0, __ATOMIC_RELAXED), rdy = __atomic_exchange_n(&P.ch_rdy[k], 0, __ATOMIC_RELAXED);
+            uint64_t ops = P.ch_draws[k];
+            P.ch_draws[k] = 0;
+            if (n) o += snprintf(b + o, sizeof b - (size_t)o, " %d:%.2f@%.2f/%llu", k, ns / 1e6 / (double)n, rdy / 1e6 / (double)n,
+                                 (unsigned long long)(ops / n));
+        }
+        if (o) rt_log("perf: replay chunks by index (ms recording @ ms ready after the job began / ops):%s", b);
+    }
     P.walk_ns = P.rec_ns = P.max_rec_ns = P.first_ns = P.n_par = P.n_chunks = P.n_draws = P.drops_early = P.w_subs = P.n_cond = P.n_again = 0;
     P.n_inpass = P.n_qcut = P.n_pre = P.pre_ns = P.n_pipe = P.ch0_draws = P.ch0_pub_ns = P.ch0_rdy_ns = 0;
     P.n_head = P.head_ndraws = P.head_ns = 0;

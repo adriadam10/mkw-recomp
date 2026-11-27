@@ -282,6 +282,12 @@ uint32_t plat_cpu_count(void) {
 // PLAT_PRIO_* are the THREAD_PRIORITY_* values.
 void plat_thread_priority(int prio) { SetThreadPriority(GetCurrentThread(), prio); }
 void plat_thread_set_priority(PlatThread *t, int prio) { SetThreadPriority(t->h, prio); }
+void plat_thread_set_priority_tid(uint32_t tid, int prio) {
+    HANDLE h = OpenThread(THREAD_SET_LIMITED_INFORMATION, FALSE, tid);
+    if (!h) return;
+    SetThreadPriority(h, prio);
+    CloseHandle(h);
+}
 int plat_thread_priority_get(void) { return GetThreadPriority(GetCurrentThread()); }
 int plat_thread_realtime(void) { return 0; }
 void plat_thread_realtime_end(void) {}

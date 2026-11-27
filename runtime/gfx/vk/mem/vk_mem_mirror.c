@@ -179,6 +179,7 @@ static void mirror_create(PoolRec *r) {
         return refuse(r, MR_BUDGET, why);
     }
     gen_lock_x();
+    ww_who = WW_MCREATE;
     mrep.sync_queries += snap_regions(r0, r1, mepoch);
     int untracked = 0;
     for (uint64_t k = r0; k <= r1; k++) untracked |= snap_untracked[k];
@@ -275,6 +276,7 @@ static void mirror_sync(PoolRec *r) {
     if (excl) {
         plat_mutex_unlock_shared(&gen_lock);
         gen_lock_x();
+        ww_who = WW_MSYNC;
         mrep.sync_queries += snap_regions(r0, r1, mepoch);
     }
     uint32_t since = r->mgen;
@@ -406,6 +408,7 @@ void vk_mem_mirror_begin(void) {
     plat_mutex_lock_shared(&pool_lock);
     gen_lock_x();
     ww_ep++;
+    ww_who = WW_MPRE;
     uint64_t b0 = ww_bytes;
     for (int i = 0; i < nm; i++) {
         const PoolRec *r = mlist[i];

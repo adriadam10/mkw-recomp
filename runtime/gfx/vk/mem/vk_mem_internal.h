@@ -124,6 +124,9 @@ extern uint8_t snap_untracked[SNAP_REGIONS];
 extern uint64_t ww_bytes, ww_pages;
 extern int ww_peek, freeze_idle;
 extern uint32_t ww_ep;
+// The write-watch consumer making the next queries (gen_lock; vk_mem_gen.c ww_log splits the cost by it)
+enum { WW_CHANGED, WW_TEX, WW_MSYNC, WW_MPRE, WW_MCREATE, WW_STAMP, WW_FREEZE, WW_N };
+extern int ww_who;
 void gen_lock_x(void);
 void gen_lock_s(void);
 uint32_t *gen_slot(uint64_t page_addr, int create);

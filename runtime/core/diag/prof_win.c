@@ -2,8 +2,15 @@
 // A host thread wakes every 1 ms and, for every other thread, suspends it, reads Rip and resumes it. The sampler never
 // allocates or takes a lock between SuspendThread and ResumeThread and never runs guest code. The profile is text:
 //   mkw-prof 1 / base <hex> / period_us / samples N / thread <tid> <samples> <in-exe samples> / module <base> <size> <path> /
-//   rip <hex> <count> <role> (the top PROF_TOP Rips per thread role: 1 main, 2 render, 3 replay, 0 any other) / stack <count> <rip> <caller> ... (MKW_PROFILE_RENDER or
-//   MKW_PROFILE_CHAINS only, the top PROF_STACKS call chains)
+//   rip <hex> <count> <role> (the top PROF_TOP Rips per thread role: 1 main, 2 render, 3 replay, 4 the replay's chunk
+//   threads, 5 the other guest threads, 6 the other vk threads, 7 MKW_PROFILE_HANDLE's guest thread, 0 any other) /
+//   stack <count> <rip> <caller> ...
+//   (MKW_PROFILE_RENDER or MKW_PROFILE_CHAINS only, the top PROF_STACKS call chains). Roles 4-6 come from the thread's
+//   name (plat_thread_new_ex's SetThreadDescription): the chunk threads record most of a race frame's submission
+//   (vk_exec_par.c) and were counted with every idle thread as "other", so the recording's own cost could not be read.
+// MKW_PROFILE_CPU=1: a thread that ran no cycle since its previous sample (QueryThreadCycleTime) is not sampled, so the
+// counts are CPU time, not wall time: the chunk threads wait for work most of a frame, and their waits in ntdll
+// otherwise outnumber their recording.
 // With MKW_PROFILE_RENDER (the render thread) or MKW_PROFILE_CHAINS=1 (every thread, chains of all threads summed: for
 // short frame ranges, as each sample copies a stack) the sampler also copies up to STK_COPY bytes of the suspended
 // thread's stack and, after
@@ -47,7 +54,8 @@
 typedef struct { uint64_t rip, n; } RipCount;
 #define PROF_DEPTH 24             // frames kept per call chain, the sampled Rip first
 // cycles, depth, last: MKW_PROFILE_SLOW only, the thread's cycle count and chain at its previous sample
-typedef struct { DWORD tid; HANDLE h; uint64_t n, in_exe, cycles; uint32_t depth; uint64_t last[PROF_DEPTH]; } ThreadSlot;
+// role: 4-6 by the thread's name (header), else 0; main, render and replay are told by their ids at each sample
+typedef struct { DWORD tid; HANDLE h; uint64_t n, in_exe, cycles; uint32_t depth; uint8_t role; uint64_t last[PROF_DEPTH]; } ThreadSlot;
 
 static RipCount table[PROF_SLOTS];
 typedef struct { uint64_t hash, n; uint32_t depth; uint64_t rip[PROF_DEPTH]; } StackCount;
@@ -67,6 +75,10 @@ static int only_replay;             // MKW_PROFILE_REPLAY=1: sample the replay t
 static int only_roles;              // MKW_PROFILE_ROLES=1: main, render and replay only. With MKW_PROFILE_SLOW the ring then
                                     // holds ~11 s of those three instead of ~0.2 s of ~140 threads (wslow1, 06/11/2026)
 static int chains;                  // call chains are kept: MKW_PROFILE_RENDER or MKW_PROFILE_CHAINS
+static int cpu_only;                // MKW_PROFILE_CPU=1: only threads that ran since their previous sample
+static uint32_t prof_handle;        // MKW_PROFILE_HANDLE=<guest handle, hex>: that guest thread is role 7 (one thread
+                                    // of the ~96 guest ones: crit_path.py names the one on the frame's critical path)
+#define CPU_IDLE_CYCLES 200000u     // MKW_PROFILE_CPU: fewer cycles since the last sample is a blocked thread (below)
 static volatile uint64_t cur_frame; // last presented frame
 static uint64_t frame_lo, frame_hi; // MKW_PROFILE_FRAMES=<lo>-<hi>: sample only while presents lo..hi-1 are pending
 static int64_t world_lo, world_hi;  // MKW_PROFILE_FRAMES=w<lo>-<hi>: only while the world clock is in [lo, hi) s (us)
@@ -146,6 +158,18 @@ static uint32_t unwind_copy(CONTEXT *c, uintptr_t lo, size_t n, uint64_t *rip) {
     return d;
 }
 
+// The role a thread's name gives it (header): "vk chunks" 4, a guest thread ("guest", "guest main") 5, another "vk "
+// thread 6, anything else (unnamed, the driver's, SDL's) 0. A name set after the thread was first seen is not seen.
+static uint8_t name_role(HANDLE h) {
+    PWSTR d = NULL;
+    uint8_t role = 0;
+    if (SUCCEEDED(GetThreadDescription(h, &d)) && d) {
+        role = !wcscmp(d, L"vk chunks") ? 4 : !wcsncmp(d, L"guest", 5) ? 5 : !wcsncmp(d, L"vk ", 3) ? 6 : 0;
+        LocalFree(d);
+    }
+    return role;
+}
+
 // Re-lists the process's threads: keeps the handle of a thread seen before, opens new ones, closes the gone ones.
 static void refresh_threads(DWORD self) {
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
@@ -164,7 +188,7 @@ static void refresh_threads(DWORD self) {
             old->h = NULL;
         } else {
             HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, te.th32ThreadID);
-            if (h) next[n++] = (ThreadSlot){.tid = te.th32ThreadID, .h = h};
+            if (h) next[n++] = (ThreadSlot){.tid = te.th32ThreadID, .h = h, .role = name_role(h)};
         }
     }
     CloseHandle(snap);
@@ -172,6 +196,9 @@ static void refresh_threads(DWORD self) {
         if (threads[i].h) CloseHandle(threads[i].h);   // exited; its counts are lost with the slot
     memcpy(threads, next, sizeof(ThreadSlot) * n);
     n_threads = n;
+    uint32_t ht = prof_handle ? kern_thread_tid(prof_handle) : 0;
+    for (int i = 0; ht && i < n_threads; i++)
+        if (threads[i].tid == ht) threads[i].role = 7;
 }
 
 static void write_modules(FILE *f) {
@@ -251,6 +278,11 @@ static DWORD WINAPI sampler_main(void *arg) {
                 (only_roles && t->tid != main_tid && t->tid != render_tid && t->tid != replay_tid))
                 continue;
             uint64_t cyc = 0;
+            // MKW_PROFILE_CPU: a thread that stayed blocked since its last sample is skipped. Suspending a thread runs a
+            // kernel APC on it, which counts cycles even when it waits: equal counts never came (prof-gp-cpu, 27/11/2026:
+            // every thread sampled at every tick), so under CPU_IDLE_CYCLES since the count read after the last
+            // ResumeThread is idle (a 1 ms period of running is ~3-4.8 million cycles on the 2.6-4.8 GHz Tiger Lake).
+            if (cpu_only && !slow_ns && QueryThreadCycleTime(t->h, &cyc) && cyc - t->cycles < CPU_IDLE_CYCLES) continue;
             if (slow_ns && t->depth && QueryThreadCycleTime(t->h, &cyc) && cyc == t->cycles) {   // still waiting
                 Sample *s = &ring[ring_n++ & (SLOW_RING - 1)];
                 s->t = now, s->tid = t->tid, s->depth = t->depth;
@@ -265,7 +297,8 @@ static DWORD WINAPI sampler_main(void *arg) {
             size_t n = 0;
             MEMORY_BASIC_INFORMATION mb;
             // a thread stopped between its sub rsp and the stack probe has Rsp in the guard page: touching it would fault
-            if (ok && chains && VirtualQuery((void *)ctx.Rsp, &mb, sizeof mb) && mb.State == MEM_COMMIT &&
+            // (MKW_PROFILE_HANDLE with MKW_PROFILE_CHAINS: that thread's chains only)
+            if (ok && chains && (!prof_handle || t->role == 7) && VirtualQuery((void *)ctx.Rsp, &mb, sizeof mb) && mb.State == MEM_COMMIT &&
                 !(mb.Protect & (PAGE_GUARD | PAGE_NOACCESS))) {
                 n = (uintptr_t)mb.BaseAddress + mb.RegionSize - ctx.Rsp;   // the committed stack above Rsp
                 size_t cap = slow_ns && (ctx.Rip < exe_lo || ctx.Rip >= exe_hi) ? 8u << 10 : STK_COPY;
@@ -273,8 +306,9 @@ static DWORD WINAPI sampler_main(void *arg) {
                 memcpy(stk_buf, (void *)ctx.Rsp, n);
             }
             ResumeThread(t->h);
+            if (cpu_only && !slow_ns) QueryThreadCycleTime(t->h, &t->cycles);   // the sample's own cycles left out
             if (!ok) continue;
-            uint64_t role = t->tid == main_tid ? 1 : t->tid == render_tid ? 2 : t->tid == replay_tid ? 3 : 0;
+            uint64_t role = t->tid == main_tid ? 1 : t->tid == render_tid ? 2 : t->tid == replay_tid ? 3 : t->role;
             count_rip(ctx.Rip | role << 56);   // user-mode addresses are below 2^47
             uint64_t chain[PROF_DEPTH] = {ctx.Rip};
             uint32_t d = n ? unwind_copy(&ctx, ctx.Rsp, n, chain) : 0;
@@ -324,7 +358,8 @@ void prof_sampler_write(void) {
     fprintf(f, "mkw-prof 1\nbase %llx\nperiod_us 1000\nsamples %llu\ndropped %llu\n", (unsigned long long)(uintptr_t)GetModuleHandleW(NULL),
             (unsigned long long)total, (unsigned long long)dropped);
     for (int i = 0; i < n_threads; i++)
-        fprintf(f, "thread %lu %llu %llu\n", threads[i].tid, (unsigned long long)threads[i].n, (unsigned long long)threads[i].in_exe);
+        fprintf(f, "thread %lu %llu %llu %u\n", threads[i].tid, (unsigned long long)threads[i].n,
+                (unsigned long long)threads[i].in_exe, threads[i].role);
     write_modules(f);
     int cnt = 0;
     for (uint32_t i = 0; i < PROF_SLOTS; i++)
@@ -356,6 +391,10 @@ int prof_sampler_start(void) {
     only_main = !only_render && cfg_get("MKW_PROFILE_MAIN") != NULL;
     only_replay = !only_render && !only_main && cfg_get("MKW_PROFILE_REPLAY") != NULL;
     only_roles = cfg_get("MKW_PROFILE_ROLES") != NULL;
+    const char *pc = cfg_get("MKW_PROFILE_CPU");
+    cpu_only = pc && *pc && strcmp(pc, "0");
+    const char *ph = cfg_get("MKW_PROFILE_HANDLE");
+    prof_handle = ph ? (uint32_t)strtoul(ph, NULL, 16) : 0;
     const char *ch = cfg_get("MKW_PROFILE_CHAINS");
     const char *sl = cfg_get("MKW_PROFILE_SLOW");
     slow_ns = sl && atoi(sl) > 0 ? (uint64_t)atoi(sl) * 1000000ull : 0;

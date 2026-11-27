@@ -7,6 +7,7 @@
 
 #include "cfg.h"
 #include "kernel_int.h"
+#include "prof.h"
 #include "platform/platform.h"
 
 
@@ -315,6 +316,45 @@ static void crit_frame(RtThread *self, uint64_t frame) {
     fclose(f);
     rt_log("crit: %u events, %u threads, frames %llu-%llu%s", g_crit_n, nt, (unsigned long long)g_crit_lo,
            (unsigned long long)g_crit_hi, g_crit_n >= CRIT_N ? " (buffer full: the last frames are incomplete)" : "");
+}
+
+// MKW_GUEST_PRIO (default 0; "ab" in the B blocks): the guest threads' host threads above normal priority. With the game
+// running ahead of the recording (MKW_FENCE_EARLY) the frame's critical path was one guest thread running (guest 0x105c
+// in a 24-kart Grand Prix, 9 ms of an 18 ms frame, fe-crit 27/11/2026) while the 7 chunk threads, the replay and the
+// driver's threads competed with it for 8 cores at the same priority. Applied at a present when the switch changes and
+// every 60 presents for threads made since. Called from perf_present.
+void kern_prio_frame(uint64_t frame) {
+    static int mode = -1, applied = -1;
+    static uint32_t n_applied;
+    if (mode < 0) {
+        mode = rt_knob("GUEST_PRIO", "0");
+        if (mode) rt_log("kernel: guest threads above normal priority%s (MKW_GUEST_PRIO)", mode == 2 ? " in the B blocks" : "");
+    }
+    if (!mode) return;
+    int on = RT_KNOB_ON(mode);
+    uint32_t tids[512], n = 0;
+    lock();
+    uint32_t all = 0;
+    for (RtThread *t = g_all; t; t = t->all) all++;
+    if (on == applied && (all == n_applied || frame % 60)) {
+        unlock();
+        return;
+    }
+    for (RtThread *t = g_all; t && n < 512; t = t->all)
+        if (t->tid) tids[n++] = t->tid;
+    unlock();
+    for (uint32_t i = 0; i < n; i++) plat_thread_set_priority_tid(tids[i], on ? PLAT_PRIO_ABOVE_NORMAL : PLAT_PRIO_NORMAL);
+    applied = on, n_applied = all;
+}
+
+// prof.h: the sampler's MKW_PROFILE_HANDLE (the guest thread tools/run/crit_path.py names, as a role of its own).
+uint32_t kern_thread_tid(uint32_t handle) {
+    uint32_t tid = 0;
+    lock();
+    for (RtThread *t = g_all; t && !tid; t = t->all)
+        if (t->handle == handle) tid = t->tid;
+    unlock();
+    return tid;
 }
 
 void kern_sched_report(uint64_t frame) {

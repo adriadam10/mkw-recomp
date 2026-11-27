@@ -582,6 +582,7 @@ static void renice(pid_t tid, int prio) {
 void plat_thread_priority(int prio) { renice((pid_t)syscall(SYS_gettid), prio); }
 
 void plat_thread_set_priority(PlatThread *t, int prio) { renice(__atomic_load_n(&t->tid, __ATOMIC_ACQUIRE), prio); }
+void plat_thread_set_priority_tid(uint32_t tid, int prio) { renice((pid_t)tid, prio); }
 
 int plat_thread_priority_get(void) {
     errno = 0;

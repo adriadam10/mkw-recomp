@@ -17,7 +17,8 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-ROLES = {1: "main", 2: "render", 3: "replay", 0: "other"}
+# prof_win.c's thread roles: 4-6 from the thread's name (vk chunks, other guest threads, other vk threads)
+ROLES = {1: "main", 2: "render", 3: "replay", 4: "vk chunks", 5: "guest", 6: "vk", 7: "MKW_PROFILE_HANDLE", 0: "other"}
 SYMBOLIZER = ROOT / "build/win/llvm-mingw/bin/llvm-symbolizer"
 OBJDUMP = ROOT / "build/win/llvm-mingw/bin/llvm-objdump"
 
@@ -143,8 +144,10 @@ def main() -> None:
             continue
         if w[0] == "samples":
             total = int(w[1])
-        elif w[0] == "thread":
+        elif w[0] == "thread":   # a fifth field: the thread's role by its name (older profiles: none)
             threads.append((int(w[1]), int(w[2]), int(w[3])))
+            if len(w) > 4 and int(w[4]) in ROLES and int(w[4]):
+                roles.setdefault(int(w[1]), ROLES[int(w[4])])
         elif w[0] == "module":
             modules.append((int(w[1], 16), int(w[2], 16), " ".join(w[3:])))
         elif w[0] == "rip":   # a fourth field: the thread role (1 main, 2 render, 3 replay, 0 other)
@@ -217,8 +220,8 @@ def main() -> None:
     for role in sorted(by_role, key=lambda r: (r == 0, r)):
         c = by_role[role]
         n_r = sum(c.values())
-        print(f"\n{ROLES[role]} thread{'s' if role == 0 else ''}: {n_r} samples (functions; other modules in [ ])")
-        for fn, n in c.most_common(min(a.top, 15)):
+        print(f"\n{ROLES.get(role, role)} thread{'s' if role in (0, 4, 5, 6) else ''}: {n_r} samples (functions; other modules in [ ])")
+        for fn, n in c.most_common(a.top if role in (3, 4) else min(a.top, 15)):   # the recording's threads in full
             print(f"  {100 * n / n_r:5.1f}%  {fn[:150]}")
 
 

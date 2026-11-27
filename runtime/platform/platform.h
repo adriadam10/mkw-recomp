@@ -80,6 +80,7 @@ enum { PLAT_PRIO_IDLE = -15, PLAT_PRIO_LOWEST = -2, PLAT_PRIO_BELOW_NORMAL = -1,
        PLAT_PRIO_ABOVE_NORMAL = 1, PLAT_PRIO_HIGHEST = 2, PLAT_PRIO_TIME_CRITICAL = 15 };
 void plat_thread_priority(int prio);
 void plat_thread_set_priority(PlatThread *t, int prio);
+void plat_thread_set_priority_tid(uint32_t tid, int prio);   // by host thread id (plat_thread_id); a gone thread: no-op
 int plat_thread_priority_get(void);       // the calling thread's level
 // Real time for the calling thread, 1 when it got it: one thread at a time, one that works for less than its period and
 // then sleeps (100 ms without sleeping end it). Linux only (linux.c says how); elsewhere 0 and HIGHEST is the way.
