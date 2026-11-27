@@ -214,7 +214,7 @@ static void gpu_written_locked(Tex *e) {
     gpu_base_note(e);
     e->gpu_seq = ++gpu_writes;
     e->gpu_fence = f;
-    if (wb_at_fence(&e->t.d, e->t.L.size)) __atomic_store_n(&small_pending, 1, __ATOMIC_RELEASE);
+    if (wb_at_fence(&e->t.d, e->t.L.size)) __atomic_store_n(&small_pending, 1, __ATOMIC_RELEASE), ewb_note_locked(e);
     own_add(e);
 }
 

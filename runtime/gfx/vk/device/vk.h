@@ -317,6 +317,7 @@ void vk_usnap_shutdown(void);                     // vk_exec_draw_shutdown: free
 void vk_usnap_summary(void);                      // the summary line now (a capture replay's end)
 void vk_mem_mirror_begin(void);
 int vk_mem_mirror_end(VkCommandBuffer cb, uint64_t fence);
+int vk_texture_eager_wb(VkCommandBuffer cb, uint64_t fence);   // vk_tex_wb.c, a submission's end: commands recorded
 int vk_mem_mirror_pending(void);
 void vk_mem_mirror_prologue(VkCommandBuffer cb);
 // Shadow storage (vk_memory.c): vk_sync.c calls vk_mem_shadow_sync right before each submit; the replay notes every GPU

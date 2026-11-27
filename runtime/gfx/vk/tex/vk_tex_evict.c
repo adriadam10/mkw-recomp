@@ -143,6 +143,7 @@ void rel_unlink(Tex *e) {
 }
 
 void destroy_tex(Tex *e) {
+    ewb_drop_locked(e);
     own_remove(e);
     tex_gen_bump(e->key.addr);
     nvn_hm_del(&by_key, &e->key);

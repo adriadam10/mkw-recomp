@@ -82,6 +82,19 @@ static int image_region(const Tex *e, const Region *g, const NVNcopyRegion *r, R
 }
 
 int image_read_record(Tex *e, const Region *g, const NVNcopyRegion *r, TexRead *rd) {
+    if (!image_read_check(e, g, r)) return 0;
+    image_read_stage(e, g, r, rd);   // before the batch opens: a staging allocation may have to send it
+    VkCommandBuffer cb = vk_upload_begin();
+    barrier(cb, ALL_RW, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT);
+    image_read_into(e, g, r, rd, cb);
+    barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_HOST_BIT,
+            VK_ACCESS_2_HOST_READ_BIT);
+    vk_upload_end();
+    return 1;
+}
+
+// Whether image_read_into can read the region (logged once per kind when not).
+int image_read_check(Tex *e, const Region *g, const NVNcopyRegion *r) {
     static volatile int32_t n_astc, n_ds;
     VkImageAspectFlags aspect;
     if (e->f.astc_bw) {
@@ -95,12 +108,29 @@ int image_read_record(Tex *e, const Region *g, const NVNcopyRegion *r, TexRead *
     }
     Region gd;
     uint32_t w, h;
-    if (image_region(e, g, r, &gd, &w, &h) <= 0) return 0;
+    return image_region(e, g, r, &gd, &w, &h) > 0;
+}
+
+// The staging buffer of a region image_read_check accepted, into rd.
+void image_read_stage(Tex *e, const Region *g, const NVNcopyRegion *r, TexRead *rd) {
+    Region gd;
+    uint32_t w, h;
+    image_region(e, g, r, &gd, &w, &h);
     rd->rgb = e->f.expand_rgb, rd->fmt = e->t.d.format, rd->w = w;
     rd->ib = rd->rgb ? (size_t)g->bpb / 3 * 4 : 0;
     rd->slice = rd->ib ? (size_t)w * h * rd->ib : g->wb * g->hb;
     rd->sa = NULL;
     rd->stg = vk_staging(rd->slice * (size_t)g->nz, &rd->sb, &rd->sa);
+}
+
+// The copy of that region into rd's staging buffer, recorded into cb without barriers (the caller puts them around one
+// or many): the upload batch (image_read_record) or a submission's end (vk_texture_eager_wb).
+void image_read_into(Tex *e, const Region *g, const NVNcopyRegion *r, TexRead *rd, VkCommandBuffer cb) {
+    VkImageAspectFlags aspect;
+    read_aspect(e, &aspect);
+    Region gd;
+    uint32_t w, h;
+    image_region(e, g, r, &gd, &w, &h);
     VkBufferImageCopy *rg = calloc((size_t)g->nz, sizeof *rg);
     if (!rg) rt_fatal("vk: out of memory for a texel read");
     for (int z = 0; z < g->nz; z++)
@@ -108,14 +138,8 @@ int image_read_record(Tex *e, const Region *g, const NVNcopyRegion *r, TexRead *
                                     .imageSubresource = {aspect, gd.level, g->is3d ? 0 : g->layer0 + (uint32_t)r->zoffset + (uint32_t)z, 1},
                                     .imageOffset = {r->xoffset, r->yoffset, g->is3d ? r->zoffset + z : 0},
                                     .imageExtent = {w, h, 1}};
-    VkCommandBuffer cb = vk_upload_begin();
-    barrier(cb, ALL_RW, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT);
     vkCmdCopyImageToBuffer(cb, e->pub.image, VK_IMAGE_LAYOUT_GENERAL, rd->sb, (uint32_t)g->nz, rg);
-    barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_HOST_BIT,
-            VK_ACCESS_2_HOST_READ_BIT);
-    vk_upload_end();
     free(rg);
-    return 1;
 }
 
 void image_read_rows(const Region *g, TexRead *rd, uint8_t *mem) {
