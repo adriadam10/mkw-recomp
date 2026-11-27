@@ -116,6 +116,7 @@ static void (*comp_cb_fn)(void *);
 
 static VkResult queue_submit(VkQueue q, const VkSubmitInfo2 *si) {
     __atomic_store_n(&qsub_since, (int64_t)kern_now_ns(), __ATOMIC_RELAXED);
+    vk_pstate_activity();
     VkSubmitInfo2 bare;
     if (vk_sim_on()) bare = *si, bare.commandBufferInfoCount = 0, si = &bare;   // MKW_GPU_SIM: only the semaphores
     VkResult r = vkQueueSubmit2(q, 1, si, VK_NULL_HANDLE);

@@ -575,7 +575,7 @@ static int create_device(void) {
                has_fbl && c->fbl.attachmentFeedbackLoopLayout, has_lr && c->lr.dynamicRenderingLocalRead);
     }
 
-    float prio = 1.0f, prios[2] = {1.0f, 1.0f};
+    float prio = 1.0f, prios[2] = {1.0f, 1.0f}, clk_prio = 0.0f;
     // Frame generation's work (its copies aside), its blits and its presents go to a second queue of the graphics
     // family (vk_framegen.c): on the game's queue each game submission waited behind the last frame's generation
     // (1.8-2.4 ms of GPU at 4K), and the game's fence waits pushed 4 % of its frames past 20 ms (ab-flip0, 15/11/2026).
@@ -583,6 +583,7 @@ static int create_device(void) {
     // start (MKW_FG_QUEUE=1 forces it, =0 never): without it the device keeps main's one queue.
     uint32_t gq = 1;
     g_vk.of_family = VK_QUEUE_FAMILY_IGNORED;
+    g_vk.clk_family = VK_QUEUE_FAMILY_IGNORED;
     {
         uint32_t nf = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(g_vk.phys, &nf, NULL);
@@ -597,6 +598,15 @@ static int create_device(void) {
                 if (qp[i].queueCount && (qp[i].queueFlags & VK_QUEUE_OPTICAL_FLOW_BIT_NV)) { g_vk.of_family = i; break; }
         }
         if (g_vk.of_family == VK_QUEUE_FAMILY_IGNORED) g_vk.has_oflow = 0;
+#ifdef _WIN32
+        for (uint32_t i = 0; i < nf; i++)
+            if (qp[i].queueCount && (qp[i].queueFlags & VK_QUEUE_COMPUTE_BIT) &&
+                !(qp[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && i != g_vk.gfx_family && i != g_vk.xfer_family &&
+                i != g_vk.of_family) {
+                g_vk.clk_family = i;
+                break;
+            }
+#endif
         // MKW_FG_QUEUE_PRIO (0..1, default 0): the game's queue goes first where both have work. The game waits for
         // its GPU work inside its frame, so generation running beside it lengthened its frames; a made frame has
         // half a game frame to be ready
@@ -605,7 +615,7 @@ static int create_device(void) {
         if (prios[1] < 0.0f) prios[1] = 0.0f;
         if (prios[1] > 1.0f) prios[1] = 1.0f;
     }
-    VkDeviceQueueCreateInfo qi[3] = {
+    VkDeviceQueueCreateInfo qi[4] = {
         {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = g_vk.gfx_family, .queueCount = gq,
          .pQueuePriorities = prios}};
     uint32_t nqi = 1;
@@ -617,6 +627,9 @@ static int create_device(void) {
     if (g_vk.has_oflow && g_vk.of_family != g_vk.gfx_family && g_vk.of_family != g_vk.xfer_family)
         qi[nqi++] = (VkDeviceQueueCreateInfo){.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
             .queueFamilyIndex = g_vk.of_family, .queueCount = 1, .pQueuePriorities = &prio};
+    if (g_vk.clk_family != VK_QUEUE_FAMILY_IGNORED)
+        qi[nqi++] = (VkDeviceQueueCreateInfo){.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueFamilyIndex = g_vk.clk_family, .queueCount = 1, .pQueuePriorities = &clk_prio};
     VkDeviceCreateInfo di = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, .pNext = &c->f2, .queueCreateInfoCount = nqi,
                              .pQueueCreateInfos = qi, .enabledExtensionCount = n_ext, .ppEnabledExtensionNames = ext};
     vk_guard_gpu_ok();
@@ -624,7 +637,6 @@ static int create_device(void) {
     free(c);
     if (r != VK_SUCCESS) { rt_log("vk: vkCreateDevice failed (%d)", (int)r); return 0; }
     vk_lat_device(g_vk.device, g_vk.has_present_wait);   // MKW_LATENCY's waiter (vk_latency.c)
-    vk_pstate_init(g_vk.phys);
     vkGetDeviceQueue(g_vk.device, g_vk.gfx_family, 0, &g_vk.gfx_queue);
     g_vk.fg_queue = g_vk.gfx_queue;
     if (gq == 2) vkGetDeviceQueue(g_vk.device, g_vk.gfx_family, 1, &g_vk.fg_queue);
@@ -635,6 +647,8 @@ static int create_device(void) {
         vkGetDeviceQueue(g_vk.device, g_vk.of_family, 0, &g_vk.of_queue);
         rt_log("vk: hardware optical-flow queue family %u (MKW_FG_NVOF)", g_vk.of_family);
     }
+    if (g_vk.clk_family != VK_QUEUE_FAMILY_IGNORED)
+        vkGetDeviceQueue(g_vk.device, g_vk.clk_family, 0, &g_vk.clk_queue);
 
     VkPhysicalDeviceExternalMemoryHostPropertiesEXT emh = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_HOST_PROPERTIES_EXT};
     VkPhysicalDeviceProperties2 p2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &emh};
@@ -740,6 +754,7 @@ static long g_errors_total;     // outlives the device so the probe can print it
 static void destroy_all(void) {
     gfx_window_release_vk();
     vk_rfx_shutdown();
+    vk_pstate_shutdown();
     if (g_vk.device) vkDeviceWaitIdle(g_vk.device);
     if (g_vk.device) vk_astc_release(), vk_crumbs_release(), vk_tmp_shutdown();
     if (g_vk.timeline) vkDestroySemaphore(g_vk.device, g_vk.timeline, NULL);
@@ -766,7 +781,7 @@ int vk_init(void) {
         memset(&g_vk, 0, sizeof g_vk);
         if (create_instance() && pick_device() && create_device())
             g_ready = 1, vk_crumbs_init(), vk_headroom_start(), vk_tex_pool_start(), vk_tmp_device_init(),
-            vk_rfx_init(g_vk.low_latency2_spec);
+            vk_rfx_init(g_vk.low_latency2_spec), vk_pstate_init(g_vk.phys);
         else destroy_all();
     }
     int ok = g_ready;

@@ -52,6 +52,8 @@ typedef struct VkCtx {
     VkQueue fg_queue;                       // frame generation's (vk_framegen.c): the graphics family's second queue,
                                             // else gfx_queue; submitted to under vk_queue_lock as well
     VkQueue of_queue;                       // dedicated optical-flow engine, NULL unless explicitly enabled
+    uint32_t clk_family;                    // dedicated compute-only family for AMD clock keeper, VK_QUEUE_FAMILY_IGNORED
+    VkQueue clk_queue;                      // dedicated compute-only queue for AMD clock keeper, NULL when absent
     int has_oflow;
     int xfer_shared;                        // 1: no separate queue; serialise with gfx_queue
     VmaAllocator vma;
@@ -155,6 +157,8 @@ void vk_lat_flip(uint64_t slot, int first, int game, uint64_t id);   // a host p
 void vk_lat_swapchain(int begin, VkSwapchainKHR sc);             // around vkCreateSwapchainKHR (it retires the old)
 void vk_pstate_init(VkPhysicalDevice phys);   // vk_pstate.c: an AMD GPU's clocks held (MKW_GPU_CLOCKS), after the device
 void vk_pstate_frame(void);                   // each present: MKW_GPU_CLOCKS=ab switches with the A/B blocks
+void vk_pstate_shutdown(void);                // before device/VMA teardown
+void vk_pstate_activity(void);                // queue submission heartbeat for idle clock keeper
 void vk_lat_device(VkDevice device, int has_present_wait);                        // after the device: starts the present wait thread
 // vk_present_blit for frame generation: presents already waiting stay waiting, so the frames of one game frame are
 // all blitted at once and each vk_present_flip then queues the next at its time.
