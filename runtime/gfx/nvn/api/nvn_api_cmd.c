@@ -219,14 +219,18 @@ static uint64_t copy_keep(void) {
 static struct { copy_prefix *pf; uint64_t bytes, used_at, replayed, at; int who; } chk[CHK_RING];
 static uint32_t chk_n;
 
-static void copy_free(copy_prefix *pf, uint64_t replayed, int who) {   // copy_lock held
+static int copy_check_on(void) {
     static int on = -1;
     if (on < 0) {
         const char *e = cfg_get("MKW_COPY_CHECK");
         on = e && atoi(e) > 0;
         if (on) rt_log("nvn: freed command copies are zeroed and kept for a while (MKW_COPY_CHECK)");
     }
-    if (!on) {
+    return on;
+}
+
+static void copy_free(copy_prefix *pf, uint64_t replayed, int who) {   // copy_lock held
+    if (!copy_check_on()) {
         free(pf);
         return;
     }
@@ -253,11 +257,18 @@ void nvn_copy_explain(const void *addr) {   // before a fatal: no lock, the proc
            (unsigned long long)__atomic_load_n(&nsubmits, __ATOMIC_RELAXED), (unsigned long long)gfx_replayed_submits());
 }
 
-static void zombie_sweep(uint64_t replayed) {   // copy_lock held
+static void defer_free(void *p, void **df, int *ndf, int cap) {
+    if (!p) return;
+    if (*ndf < cap) df[(*ndf)++] = p;
+    else free(p);
+}
+
+static void zombie_sweep(uint64_t replayed, void **df, int *ndf, int cap) {   // copy_lock held
     uint64_t keep = copy_keep();
     for (uint32_t i = 0; i < nzombies;) {
         if (zombies[i]->used_at + keep <= replayed) {
-            copy_free(zombies[i], replayed, 0);
+            if (df && !copy_check_on()) defer_free(zombies[i], df, ndf, cap);
+            else copy_free(zombies[i], replayed, 0);
             zombies[i] = zombies[--nzombies];
         } else {
             i++;
@@ -350,12 +361,19 @@ static void copy_add(uintptr_t lo, uintptr_t hi, uint8_t *copy) {
     plat_mutex_unlock(&copy_lock);
 }
 
+static void flush_deferred(void **df, int ndf) {
+    for (int i = 0; i < ndf; i++) free(df[i]);
+}
+
 // Adding control memory again retires every recording copy made in it (the driver's handle lived there).
 static void release_copies(uintptr_t lo, uintptr_t hi) {
     if (hi <= lo) return;
     uint64_t replayed = gfx_replayed_submits();
+    void *df[256];
+    int ndf = 0;
+    const int defer = !copy_check_on();
     plat_mutex_lock(&copy_lock);
-    if (nzombies) zombie_sweep(replayed);
+    if (nzombies) zombie_sweep(replayed, df, &ndf, 256);
     for (uintptr_t pg = lo >> COPY_PAGE_SHIFT; pg <= (hi - 1) >> COPY_PAGE_SHIFT; pg++) {
         copy_bucket *b = nvn_hm_get(&copy_pages, &pg);
         if (!b) continue;
@@ -369,16 +387,23 @@ static void release_copies(uintptr_t lo, uintptr_t hi) {
             copy_bytes -= pf->bytes;
             pf->magic = 0;
             if (pf->used_at + copy_keep() > replayed) zombie_add(pf);   // a queued submission still reads it
+            else if (defer) defer_free(pf, df, &ndf, 256);
             else copy_free(pf, replayed, 1);
             b->v[i] = b->v[--b->n];
         }
         if (!b->n) {
             nvn_hm_del(&copy_pages, &pg);
-            free(b->v);
-            free(b);
+            if (defer) {
+                defer_free(b->v, df, &ndf, 256);
+                defer_free(b, df, &ndf, 256);
+            } else {
+                free(b->v);
+                free(b);
+            }
         }
     }
     plat_mutex_unlock(&copy_lock);
+    flush_deferred(df, ndf);
 }
 
 // ---------- CommandBuffer: object and memory
@@ -745,8 +770,10 @@ void nvn_submit_prepare_async(const uint64_t *handles, uint64_t *out, int n) {
     nvn_subw_begin();
     uint64_t now = __atomic_add_fetch(&nsubmits, 1, __ATOMIC_RELAXED);
     uint64_t replayed = gfx_replayed_submits();
+    void *df[256];
+    int ndf = 0;
     plat_mutex_lock(&copy_lock);
-    if (nzombies) zombie_sweep(replayed);
+    if (nzombies) zombie_sweep(replayed, df, &ndf, 256);
     for (int i = 0; i < n; i++) {
         copy_prefix *pf = copy_find(handles[i]);
         if (!pf) {
@@ -770,6 +797,7 @@ void nvn_submit_prepare_async(const uint64_t *handles, uint64_t *out, int n) {
         }
     }
     plat_mutex_unlock(&copy_lock);
+    flush_deferred(df, ndf);
     uint64_t r0 = def_reads, c0 = def_changed;
     nvn_rc_submit(handles, n);
     nvn_rf_submit();

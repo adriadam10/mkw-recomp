@@ -14,6 +14,7 @@
 #include <shlobj.h>
 #include <shobjidl.h>
 #include <timeapi.h>
+#include <tlhelp32.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
@@ -34,9 +35,33 @@ struct PlatThread {
     void *arg;
 };
 
+#define BG_MAX 256
+static SRWLOCK aff_lock = SRWLOCK_INIT;
+static uint64_t aff_all, aff_cur;
+static DWORD bg_tid[BG_MAX];
+static int bg_n;
+static __thread int bg_self;
+
+static void aff_all_once_locked(void) {
+    if (aff_all) return;
+    DWORD_PTR proc, sys;
+    if (GetProcessAffinityMask(GetCurrentProcess(), &proc, &sys)) aff_all = (uint64_t)proc;
+}
+
+static void background_end(void) {
+    if (!bg_self) return;
+    DWORD tid = GetCurrentThreadId();
+    AcquireSRWLockExclusive(&aff_lock);
+    for (int i = 0; i < bg_n; i++)
+        if (bg_tid[i] == tid) bg_tid[i] = bg_tid[--bg_n];
+    ReleaseSRWLockExclusive(&aff_lock);
+    bg_self = 0;
+}
+
 static DWORD WINAPI thread_main(LPVOID p) {
     PlatThread *t = p;
     t->fn(t->arg);
+    background_end();
     return 0;
 }
 
@@ -56,6 +81,8 @@ PlatThread *plat_thread_new_ex(PlatThreadFn fn, void *arg, const char *name, siz
         wchar_t w[64];
         if (MultiByteToWideChar(CP_UTF8, 0, name, -1, w, 64)) SetThreadDescription(t->h, w);
     }
+    uint64_t m = __atomic_load_n(&aff_cur, __ATOMIC_ACQUIRE);
+    if (m && !bg_self) SetThreadAffinityMask(t->h, (DWORD_PTR)m);
     ResumeThread(t->h);
     return t;
 }
@@ -141,10 +168,52 @@ uint64_t plat_cpu_fast(void) {
     return fast;
 }
 
-int plat_process_affinity(uint64_t mask) { return SetProcessAffinityMask(GetCurrentProcess(), (DWORD_PTR)mask) != 0; }
+// Apply per-thread affinity across existing and future non-background threads instead of SetProcessAffinityMask, so
+// plat_thread_affinity (replay core isolation) can still target processors outside mask.
+int plat_process_affinity(uint64_t mask) {
+    AcquireSRWLockExclusive(&aff_lock);
+    aff_all_once_locked();
+    mask &= aff_all;
+    if (!mask) {
+        ReleaseSRWLockExclusive(&aff_lock);
+        return 0;
+    }
+    __atomic_store_n(&aff_cur, mask, __ATOMIC_RELEASE);
+    DWORD bg[BG_MAX];
+    int nb = bg_n;
+    if (nb) memcpy(bg, bg_tid, (size_t)nb * sizeof *bg);
+    ReleaseSRWLockExclusive(&aff_lock);
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (snap == INVALID_HANDLE_VALUE) return 0;
+    DWORD pid = GetCurrentProcessId();
+    THREADENTRY32 te = {.dwSize = sizeof te};
+    for (BOOL ok = Thread32First(snap, &te); ok; ok = Thread32Next(snap, &te)) {
+        if (te.dwSize < offsetof(THREADENTRY32, th32OwnerProcessID) + sizeof te.th32OwnerProcessID ||
+            te.th32OwnerProcessID != pid)
+            continue;
+        int is_bg = 0;
+        for (int i = 0; i < nb && !is_bg; i++) is_bg = bg[i] == te.th32ThreadID;
+        if (is_bg) continue;
+        HANDLE th = OpenThread(THREAD_SET_INFORMATION | THREAD_QUERY_INFORMATION, FALSE, te.th32ThreadID);
+        if (th) {
+            SetThreadAffinityMask(th, (DWORD_PTR)mask);
+            CloseHandle(th);
+        }
+    }
+    CloseHandle(snap);
+    return 1;
+}
 
-// The process mask bounds every thread's (SetThreadAffinityMask fails outside it): nothing to keep apart here.
-void plat_thread_background(void) {}
+void plat_thread_background(void) {
+    if (bg_self) return;
+    DWORD tid = GetCurrentThreadId();
+    AcquireSRWLockExclusive(&aff_lock);
+    aff_all_once_locked();
+    if (bg_n < BG_MAX) bg_tid[bg_n++] = tid, bg_self = 1;
+    uint64_t all = aff_all;
+    ReleaseSRWLockExclusive(&aff_lock);
+    if (bg_self && all) SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR)all);
+}
 
 uint64_t plat_thread_cpu_ns(uint32_t tid) {
     HANDLE th = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE, tid);

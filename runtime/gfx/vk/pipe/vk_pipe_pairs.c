@@ -62,15 +62,15 @@ static void pairs_worker(void *arg) {
     plat_mutex_lock(&P.lock);
     for (int64_t i; (i = plat_inc64(&PJ.next) - 1) < (int64_t)PJ.n;) {
         PairJob *j = &PJ.j[i];
+        if (!PJ.low && (i & 31) == 0 && pairs_low_ram()) PJ.low = 1;
+        if (PJ.low) {
+            if (j->kind != JOB_CS && j->b->building && !j->b->job) lib_drop(j->b);
+            plat_inc64(&PJ.done);
+            continue;
+        }
         if (j->kind == JOB_CS) {
             if (!vk_pipeline_compute_warm(j->cs, j->first)) plat_inc64(&PJ.cs_failed);   // releases P.lock
         } else if (j->b->building && !j->b->job) {
-            if (!PJ.low && (i & 31) == 0 && pairs_low_ram()) PJ.low = 1;   // the rest is built as the game draws
-            if (PJ.low) {
-                lib_drop(j->b);
-                plat_inc64(&PJ.done);
-                continue;
-            }
             lib_build(j->b, j->kind, &j->s, &j->k, j->l);   // releases P.lock
         }
         plat_inc64(&PJ.done);
@@ -309,11 +309,24 @@ void pairs_prewarm(void) {
     int nt = 0, cpus = (int)plat_cpu_count();
     const char *pt = cfg_get("MKW_PAIRS_THREADS");   // diagnosis: 1 makes the last MKW_PIPE_TRACE line a crash's library
     if (pt && atoi(pt) > 0) cpus = atoi(pt);
+#ifdef _WIN32
+    else if (vk_caps.driver_id == VK_DRIVER_ID_AMD_PROPRIETARY) {
+        float used, total, proc;
+        plat_mem_info(&used, &total, &proc);
+        if (total > 0 && total <= 18432.0f && cpus > 4) cpus = 4;
+    }
+#endif
     for (int i = 0; i < cpus && i < 64 && nj; i++)
         if ((t[nt] = plat_thread_new(pairs_worker, NULL, "pairs prewarm"))) nt++;
     if (!nt) pairs_worker(NULL);
     // A driver that takes minutes for one library (issue #36, AMD on Windows) must not hold the start: after
     // PAIRS_STALL_MS without one finished the rest is left to these threads and the game goes on.
+#ifdef _WIN32
+    const uint32_t stall_ms = PJ.no_stall && vk_caps.driver_id == VK_DRIVER_ID_AMD_PROPRIETARY ? 60000u :
+                              PJ.no_stall ? 0u : PAIRS_STALL_MS;
+#else
+    const uint32_t stall_ms = PJ.no_stall ? 0u : PAIRS_STALL_MS;
+#endif
     int64_t last = 0;
     double last_t = (double)plat_now_ns() / 1e6;
     int stalled = 0, i = 0;
@@ -322,7 +335,7 @@ void pairs_prewarm(void) {
             double now = (double)plat_now_ns() / 1e6;
             if (PJ.done != last) last = PJ.done, last_t = now;
             rt_log("vk_pipeline: pairs prewarm: %lld of %zu shader libraries, %.0f ms", (long long)PJ.done, nj, now - t1);
-            if ((stalled = !PJ.no_stall && now - last_t >= PAIRS_STALL_MS)) break;
+            if ((stalled = stall_ms && now - last_t >= stall_ms)) break;
         }
     gfx_shader_spirv_quiet(0);
     PJ.finished = !stalled;
