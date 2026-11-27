@@ -36,15 +36,30 @@ import versions  # noqa: E402
 
 def profdata() -> str:
     tool = os.environ.get("MKW_LLVM_PROFDATA") or shutil.which("llvm-profdata")
+    if not tool and os.name == "nt":
+        cand = ROOT / "build/win/llvm-mingw/bin/llvm-profdata.exe"
+        if cand.is_file():
+            tool = str(cand)
     if not tool:
         sys.exit("llvm-profdata not found (the distribution's llvm package; MKW_LLVM_PROFDATA to name it)")
     return tool
 
 
+def git_exe() -> str:
+    if g := shutil.which("git"):
+        return g
+    if os.name == "nt":
+        cand = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/MinGit/cmd/git.exe"
+        if cand.is_file():
+            return str(cand)
+    return "git"
+
+
 def fit_record() -> dict[str, str]:
     """What a profile's fit depends on: the generator's tree, the headers every generated function inlines."""
-    tree = subprocess.run(["git", "rev-parse", "HEAD:recomp"], cwd=ROOT, capture_output=True, text=True, check=True)
-    dirty = subprocess.run(["git", "status", "--porcelain", "--", "recomp"], cwd=ROOT, capture_output=True, text=True,
+    git = git_exe()
+    tree = subprocess.run([git, "rev-parse", "HEAD:recomp"], cwd=ROOT, capture_output=True, text=True, check=True)
+    dirty = subprocess.run([git, "status", "--porcelain", "--", "recomp"], cwd=ROOT, capture_output=True, text=True,
                            check=True).stdout.strip()  # fmt: skip
     heads = {p.name: hashlib.sha256(p.read_bytes().replace(b"\r\n", b"\n")).hexdigest()[:16]
              for p in sorted((ROOT / "runtime/cpu").glob("*.h"))}  # fmt: skip

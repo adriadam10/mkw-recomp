@@ -23,8 +23,15 @@
 
 // ---- process
 
+#ifdef MKW_PGO_GEN
+extern int __llvm_profile_write_file(void);
+#endif
+
 void plat_exit(int code) {
     renhdrum_shutdown();   // RenHDrum's worker and the DualSense's haptics stream must stop before ExitProcess (no atexit runs)
+#ifdef MKW_PGO_GEN
+    __llvm_profile_write_file();
+#endif
     fflush(stdout);
     fflush(stderr);
     ExitProcess((UINT)code);
