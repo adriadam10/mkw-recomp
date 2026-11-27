@@ -257,6 +257,8 @@ void *plat_mem_alloc(size_t n) {
     return p == MAP_FAILED ? NULL : p;
 }
 
+void *plat_mem_alloc_lazy(size_t n) { return plat_mem_alloc(n); }   // the mapping is backed on touch already
+
 int plat_mem_commit(uint64_t addr, size_t n) {
     if (guest_large(addr, n)) {   // larger host pages: what the guest asks, then the union per host page
         plat_mutex_lock(&vm_lock);

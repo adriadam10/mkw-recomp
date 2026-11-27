@@ -5,7 +5,8 @@
 // frame. Here the destinations a submit lists (nvn_api_cmd.c resolve_deferred) are made inaccessible at the submit, with
 // that submit's fence; the first access to such a page puts its protection back and is counted: early when the GPU has
 // not finished the submit, late when it has, by a game thread or by the runtime. Nothing waits: it only measures where a
-// wait would be needed. Linux only (read traps, memory.c). One summary line every 600 frames with the first early reads.
+// wait would be needed. Linux and Windows (the watch map, memory.c mem_watch_init). One summary line every 600 frames
+// with the first early reads.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,28 +60,37 @@ static struct { uint64_t addr, pc; } ring[EW_RING];   // the byte read: told aga
 static uint32_t nring;
 static struct { uint64_t pc, n; } rt_pc[8];   // frz_lock: where the runtime's own touches come from (a fault each)
 
-// MKW_EARLY_READ: 3 by default on Linux, where with MKW_SHADOW_CPU_WINS it stands for MKW_SUBMIT_CATCHUP (mc1:
-// as few cacti and cheaper); off on Windows, which has no read traps (win32.c).
+// MKW_EARLY_READ: 3 by default, where with MKW_SHADOW_CPU_WINS it stands for MKW_SUBMIT_CATCHUP (mc1: as few cacti and
+// cheaper). Windows has no read traps but has the watches since 27/11/2026 (memory.c mem_watch_init, win32_mem.c
+// fault_veh): with them the game's submits no longer wait for their replay and GPU work, and MKW_FENCE_EARLY can let the
+// game build its next frame while the GPU finishes the last one (the frame was the three in a row there, 18-19 ms in a
+// 24-kart Grand Prix on an RX 6600M). A value outside 0-3 warns and takes the default.
 static int early_cfg(void) {
     const char *e = cfg_get("MKW_EARLY_READ");
-#ifndef _WIN32
-    if (!e) e = "3";
-#endif
-    return e ? atoi(e) : 0;
+    int v = e && *e ? atoi(e) : 3;
+    if (v < 0 || v > 3) {
+        static int warned;
+        if (!warned++) rt_log("mem: MKW_EARLY_READ=%s is not 0-3: 3", e);
+        v = 3;
+    }
+    return v;
 }
 
 int mem_early_on(void) {
     static int on = -1;
     if (on < 0) {
-        on = early_cfg() && mem_trap_init();
+        on = early_cfg() && mem_watch_init();
         wait_mode = on ? early_cfg() - 1 : 0;   // 1 for N, 2 for the previous writer
         if (wait_mode < 0 || wait_mode > 2) wait_mode = 0;
-        if (on && (!(meta = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE * sizeof *meta)) ||
-                   !(gpu_wrote = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE * sizeof *gpu_wrote)) ||
-                   !(mem_lastf = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE * sizeof *mem_lastf)) ||
-                   !(mem_prevf = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE * sizeof *mem_prevf)) ||
-                   !(wmask = plat_mem_alloc(RT_ADDRESS_LIMIT / PAGE * sizeof *wmask))))
+        // Per guest page over the whole guest range (~6 GiB in all): lazily backed, a few MiB are ever touched
+        if (on && (!(meta = plat_mem_alloc_lazy(RT_ADDRESS_LIMIT / PAGE * sizeof *meta)) ||
+                   !(gpu_wrote = plat_mem_alloc_lazy(RT_ADDRESS_LIMIT / PAGE * sizeof *gpu_wrote)) ||
+                   !(mem_lastf = plat_mem_alloc_lazy(RT_ADDRESS_LIMIT / PAGE * sizeof *mem_lastf)) ||
+                   !(mem_prevf = plat_mem_alloc_lazy(RT_ADDRESS_LIMIT / PAGE * sizeof *mem_prevf)) ||
+                   !(wmask = plat_mem_alloc_lazy(RT_ADDRESS_LIMIT / PAGE * sizeof *wmask)))) {
+            rt_log("mem: early-read watch off: its page tables could not be reserved");
             on = 0;
+        }
         if (on) rt_log("mem: early-read watch on (MKW_EARLY_READ=%d): what a submit's GPU work writes is watched until touched%s",
                        wait_mode + 1, wait_mode == 1 ? "; an early read of bytes the GPU writes waits for that submit"
                                       : wait_mode == 2 ? "; an early read waits for the previous submit writing them" : "");

@@ -231,6 +231,9 @@ int plat_mem_reserve(uint64_t addr, uint64_t n, int watch);
 // n bytes of read-write memory anywhere, zero, backed only as pages are first written (plat_mem_protect may seal them);
 // NULL on failure. Kept until exit.
 void *plat_mem_alloc(size_t n);
+// The same, for large tables of which little is ever touched: on Windows reserved only and committed 64 KiB at a time on
+// first touch (plat_mem_alloc commits the whole size there); on Linux plat_mem_alloc, which is lazy already.
+void *plat_mem_alloc_lazy(size_t n);
 int plat_mem_commit(uint64_t addr, size_t n);             // read-write pages inside a reserved range; 1 on success
 int plat_mem_decommit(uint64_t addr, uint64_t n);          // contents dropped: committed again, the pages read zero
 int plat_mem_protect(uint64_t addr, uint64_t n, int prot); // committed pages only; 1 on success
