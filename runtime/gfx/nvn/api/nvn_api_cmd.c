@@ -70,6 +70,56 @@ static void memory_event(Cpu *c, cmd_t *o, int event, uint64_t min) {
             (uint64_t)(uintptr_t)o->cb_data);
 }
 
+// ---------- large blocks: the recording buffers, recording copies, clones and queue-order streams
+// Blocks of BIG_MIN or more are kept by power-of-two class when freed and handed out again. Windows' heap gives a block
+// over ~512 KiB its own VirtualAlloc and returns it to the system at free: the critical game thread of a 24-kart Grand
+// Prix (the one that records the race frame, guest 0x105c) spent 2.4 % of its wall time in ZwFreeVirtualMemory under
+// CommandBufferFinalize, AddControlMemory and CallCommands, a TLB shootdown to every core each time, plus the zero-fill
+// faults of the fresh pages, and its realloc copies (fe-chains105c, 27/11/2026). A small block is a plain malloc behind
+// the same header. Every block of these kinds goes through big_alloc/big_free.
+#define BIG_HDR 16
+#define BIG_MIN_SHIFT 16
+#define BIG_MAX_SHIFT 28
+static PlatMutex big_lock = PLAT_MUTEX_INIT;
+static void *big_cache[BIG_MAX_SHIFT + 1][32];
+static int big_n[BIG_MAX_SHIFT + 1];
+
+static int big_keep(int s) { return s <= 21 ? 32 : s <= 24 ? 8 : 2; }   // up to ~150 MiB kept in all
+
+static void *big_alloc(size_t n) {
+    size_t need = n + BIG_HDR;
+    int s = 0;
+    if (need >= (1u << BIG_MIN_SHIFT)) {
+        s = BIG_MIN_SHIFT;
+        while (s <= BIG_MAX_SHIFT && ((size_t)1 << s) < need) s++;
+        if (s > BIG_MAX_SHIFT) s = 0;
+    }
+    uint8_t *b = NULL;
+    if (s) {
+        plat_mutex_lock(&big_lock);
+        if (big_n[s]) b = big_cache[s][--big_n[s]];
+        plat_mutex_unlock(&big_lock);
+        if (!b) b = malloc((size_t)1 << s);
+    } else {
+        b = malloc(need);
+    }
+    if (!b) return NULL;
+    *(uint32_t *)b = (uint32_t)s;
+    return b + BIG_HDR;
+}
+
+static void big_free(void *p) {
+    if (!p) return;
+    uint8_t *b = (uint8_t *)p - BIG_HDR;
+    int s = (int)*(const uint32_t *)b;
+    if (s) {
+        plat_mutex_lock(&big_lock);
+        if (big_n[s] < big_keep(s)) big_cache[s][big_n[s]++] = b, b = NULL;
+        plat_mutex_unlock(&big_lock);
+    }
+    free(b);
+}
+
 // ---------- recording buffer
 static void put_hdr(uint8_t *p, uint32_t op, uint32_t size) {
     op_hdr h = {op, size};
@@ -82,10 +132,12 @@ static void cmd_reserve(cmd_t *o, size_t need) {
     size_t cap = o->seg ? (size_t)(o->end - o->seg) : 0;
     if (!cap) cap = 64 << 10;
     while (used + need + OP_RESERVE > cap) cap *= 2;
-    uint8_t *b = realloc(o->seg, cap);
+    uint8_t *b = big_alloc(cap);
     if (!b)  // a few MiB at most: only a process out of memory refuses it (#749, #773: Windows, RAM and page file used up)
         rt_fatal("nvn: command recording buffer of %zu bytes: the system is out of memory (turn on the Windows page file "
                  "or close other programs)", cap);
+    if (used) memcpy(b, o->seg, used);
+    big_free(o->seg);
     o->seg = b;
     o->cur = b + used;
     o->end = b + cap;
@@ -180,9 +232,8 @@ typedef struct { uint64_t magic, bytes, made_at, used_at, deferred; } copy_prefi
 _Static_assert(sizeof(copy_prefix) % 8 == 0, "records stay 8-byte aligned");
 typedef struct { uintptr_t lo, hi; uint8_t *copy; } cmd_copy;
 typedef struct { cmd_copy *v; uint32_t n, cap; } copy_bucket;
-static PlatMutex copy_lock = PLAT_MUTEX_INIT;    // guards the two maps, the counters and every prefix
+static PlatMutex copy_lock = PLAT_MUTEX_INIT;    // guards the page map, the counters and every prefix
 static nvn_hmap copy_pages = {.klen = 8};   // page -> copy_bucket
-static nvn_hmap copy_live = {.klen = 8};    // handle -> copy_prefix of a live copy
 static uint64_t ncopies, copy_bytes, copies_made, nsubmits;
 // Asynchronous replay: copies released by the game, and per-submission clones, that a queued submission still reads.
 // Freed once gfx_replayed_submits() reaches their used_at. Empty with synchronous replay.
@@ -227,11 +278,11 @@ static void copy_free(copy_prefix *pf, uint64_t replayed, int who) {   // copy_l
         if (on) rt_log("nvn: freed command copies are zeroed and kept for a while (MKW_COPY_CHECK)");
     }
     if (!on) {
-        free(pf);
+        big_free(pf);
         return;
     }
     uint32_t i = chk_n++ % CHK_RING;
-    free(chk[i].pf);
+    big_free(chk[i].pf);
     chk[i].pf = pf, chk[i].bytes = pf->bytes, chk[i].used_at = pf->used_at, chk[i].replayed = replayed;
     chk[i].at = __atomic_load_n(&nsubmits, __ATOMIC_RELAXED), chk[i].who = who;
     memset(pf + 1, 0, pf->bytes);
@@ -265,8 +316,15 @@ static void zombie_sweep(uint64_t replayed) {   // copy_lock held
     }
 }
 
+// A live copy's prefix holds COPY_MAGIC until release_copies clears it (clones and streams never hold it). Read from the
+// prefix instead of a map of live handles: the map held tens of thousands of copies, and its lookup at each
+// CallCommands, EndRecording and submit missed the caches, 3.7 % of the wall time of the thread that records a 24-kart
+// race frame (memcmp in nvn_hm_get, fe-chains105c, 27/11/2026). A handle that never was a copy reads whatever lies
+// before it instead of failing the lookup: the game passes only handles EndRecording returned.
 static copy_prefix *copy_find(uint64_t handle) {   // copy_lock held
-    return nvn_hm_get(&copy_live, &handle);
+    if (!handle || (handle & 7)) return NULL;
+    copy_prefix *pf = (copy_prefix *)(uintptr_t)handle - 1;
+    return __atomic_load_n(&pf->magic, __ATOMIC_ACQUIRE) == COPY_MAGIC ? pf : NULL;
 }
 
 int nvn_handle_live(uint64_t handle) {
@@ -304,7 +362,7 @@ static uint64_t copy_touch(uint64_t handle, uint64_t now, const char *what) {
 // into one host block of its exact size. One allocation and one copy: growing the copy record by record cost the
 // game's main thread about 1 ms a frame in reallocations and small copies (1.4.3, field).
 static uint8_t *flatten_recording(const uint8_t *p, size_t n) {
-    uint8_t *out = malloc(sizeof(copy_prefix) + n);
+    uint8_t *out = big_alloc(sizeof(copy_prefix) + n);
     if (!out) rt_fatal("nvn: command copy allocation");
     memcpy(out + sizeof(copy_prefix), p, n);
     for (size_t at = 0;;) {   // the records stay checked: a corrupt one stops here, not in the replay
@@ -341,7 +399,7 @@ static void copy_add(uintptr_t lo, uintptr_t hi, uint8_t *copy) {
         if (!b->v) rt_fatal("nvn: command copy index");
     }
     b->v[b->n++] = (cmd_copy){lo, hi, copy};
-    nvn_hm_put(&copy_live, &handle, pf);
+    (void)handle;   // live by its prefix's magic (copy_find)
     ncopies++;
     copy_bytes += pf->bytes;
     if (++copies_made % 20000 == 0)
@@ -362,12 +420,10 @@ static void release_copies(uintptr_t lo, uintptr_t hi) {
         for (uint32_t i = 0; i < b->n;) {
             cmd_copy *k = &b->v[i];
             if (!(k->lo < hi && lo < k->hi)) { i++; continue; }
-            uint64_t handle = (uintptr_t)k->copy;
             copy_prefix *pf = (copy_prefix *)k->copy - 1;
-            nvn_hm_del(&copy_live, &handle);
             ncopies--;
             copy_bytes -= pf->bytes;
-            pf->magic = 0;
+            __atomic_store_n(&pf->magic, 0, __ATOMIC_RELEASE);   // no longer live (copy_find)
             if (pf->used_at + copy_keep() > replayed) zombie_add(pf);   // a queued submission still reads it
             else copy_free(pf, replayed, 1);
             b->v[i] = b->v[--b->n];
@@ -397,7 +453,7 @@ NVN_API(nvnCommandBufferInitialize) {
 // void nvnCommandBufferFinalize(NVNcommandBuffer *cmd): handles outlive their recorder
 NVN_API(nvnCommandBufferFinalize) {
     cmd_t *o = cmd_of(c);
-    free(o->seg);
+    big_free(o->seg);
     o->seg = o->cur = o->end = NULL;
     o->magic = 0;
     cb_set_disabled(o, CB_NO_COMMAND | CB_NO_CONTROL, 0);
@@ -757,7 +813,7 @@ void nvn_submit_prepare_async(const uint64_t *handles, uint64_t *out, int n) {
         out[i] = handles[i];
         if (pf->used_at > replayed && pf->used_at != now && pf->deferred != 1) {
             size_t sz = sizeof *pf + pf->bytes;
-            copy_prefix *cl = malloc(sz);
+            copy_prefix *cl = big_alloc(sz);
             if (!cl) rt_fatal("nvn: out of memory (recording clone, %zu bytes)", sz);
             memcpy(cl, pf, sz);
             cl->magic = 0;   // not a live handle: the game never sees it
@@ -789,7 +845,7 @@ uint64_t nvn_submit_count(void) { return __atomic_load_n(&nsubmits, __ATOMIC_REL
 // A recording made of ops [ops, ops + n) (no OP_BEGIN or OP_END among them) for the replay alone (nvn_qorder.c's
 // streams): freed once the replay reached the newest submission, as the clones are.
 uint8_t *nvn_stream_alloc(size_t n) {   // where the n bytes of ops go (nvn_stream_commit makes the recording)
-    copy_prefix *pf = malloc(sizeof *pf + n + 16);
+    copy_prefix *pf = big_alloc(sizeof *pf + n + 16);
     if (!pf) rt_fatal("nvn: out of memory (queue order stream, %zu bytes)", n);
     return (uint8_t *)(pf + 1) + 8;
 }
