@@ -240,6 +240,9 @@ static void flips_wait_room(int n) {
 
 static void present_main(void *arg) {
     (void)arg;
+#ifdef _WIN32
+    plat_thread_priority(PLAT_PRIO_HIGHEST);
+#endif
     uint64_t last = 0, last_queued = 0;
     plat_mutex_lock(&pl);
     for (;;) {
@@ -623,7 +626,12 @@ static void replay_core(void) {
     uint64_t base = fon ? fast : all, others = on ? base & ~plat_cpu_core_of(c) : base;
     if (state != applied) {
         plat_process_affinity(others);
-        plat_thread_affinity(NULL, on ? own : base);
+        uint64_t prev = plat_thread_affinity(NULL, on ? own : base);
+        if (!prev) {
+            static int aff_logged;
+            if (!aff_logged++)
+                rt_log("vk: replay core: plat_thread_affinity(%#llx) failed", (unsigned long long)(on ? own : base));
+        }
     }
     if (mode) helpers_place(on && !son ? own : others);
     applied = state, placed = helpers;

@@ -55,8 +55,8 @@ static uint32_t mepoch;                // replay: its write-watch snapshot epoch
 typedef struct { PoolRec *r; uint64_t off, size; } MRange;
 // The replay's chunks record on several threads (MKW_REPLAY_PAR): a pool's first access of the submission (creation,
 // sync) and the lists go under use_lock; a pool already synced in this submission is read without it.
-static PlatMutex use_lock = PLAT_MUTEX_INIT;
-static MRange *pend, *wbl;             // use_lock: copies for the next prologue; GPU writes into mirrors this submission
+static PlatMutex use_lock = PLAT_MUTEX_INIT, wbl_lock = PLAT_MUTEX_INIT;
+static MRange *pend, *wbl;             // pend under use_lock; wbl under wbl_lock
 static int npend, cpend, nwbl, cwbl;
 // The list a prologue records, swapped with pend under use_lock: the parts of a submission are sent while its later
 // chunks are still being recorded (vk_exec_par.c send_ready), and those threads add to pend meanwhile. Read in place
@@ -358,10 +358,10 @@ int vk_mem_mirror_probe(uint64_t addr) {
 void vk_mem_gpu_wrote(const VkMemSpan *sp, uint64_t size) {
     PoolRec *r = sp->pool;
     if (!r || r->mstate != MS_ON || sp->buffer != r->mbuf || !size) return;
-    plat_mutex_lock(&use_lock);
+    plat_mutex_lock(&wbl_lock);
     range_add(&wbl, &nwbl, &cwbl, r, sp->offset, size);
+    plat_mutex_unlock(&wbl_lock);
     if (merged(r)) mmerge_note(r, sp->offset, size);
-    plat_mutex_unlock(&use_lock);
 }
 
 void nvn_pool_flushed(const pool_t *p, uint64_t off, uint64_t size) {

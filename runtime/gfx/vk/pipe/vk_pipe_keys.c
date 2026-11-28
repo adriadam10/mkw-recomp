@@ -718,6 +718,15 @@ static void prewarm_run(void) {
     for (size_t i = 0; i < m; i++)
         if (!u || memcmp(ids[u - 1], ids[i], 32)) memcpy(ids[u++], ids[i], 32);
     int cpus = (int)plat_cpu_count();
+    const char *pt = cfg_get("MKW_PAIRS_THREADS");
+    if (pt && atoi(pt) > 0) cpus = atoi(pt);
+#ifdef _WIN32
+    else if (vk_caps.driver_id == VK_DRIVER_ID_AMD_PROPRIETARY) {
+        float used, total, proc;
+        plat_mem_info(&used, &total, &proc);
+        if (total > 0 && total <= 18432.0f && cpus > 4) cpus = 4;
+    }
+#endif
     gfx_shader_prewarm((const uint8_t(*)[32])ids, u, sh);
     double t1 = now_ms();
 
