@@ -298,6 +298,7 @@ void kern_host_left(void *thread);                         // back at depth 0 wi
 void kern_core_diag_frame(uint64_t frame, uint64_t interval_ns);   // perf_present, every present (also logs the
                                                            // asynchronous preemption counters)
 void kern_sched_report(uint64_t frame);                    // MKW_TRACE=sched: per-thread time split, on present
+void kern_prio_frame(uint64_t frame);                      // MKW_GUEST_PRIO, on present (kernel_diag.c)
 void kern_dump_threads(void);                              // ctl threads: each guest thread's wait and return addresses
 uint32_t kern_handle_new(int kind, void *obj);             // kind: KERN_TMEM (svc.c)
 void *kern_handle_get(uint32_t h, int kind);

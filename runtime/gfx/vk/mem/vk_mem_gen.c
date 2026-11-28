@@ -36,12 +36,23 @@ static uint64_t ww_calls, ww_ticks, ww_dirty_calls, ww_dirty_ticks;
 
 int ww_peek;   // gen_lock: ww_query leaves the written pages unprotected (a hot shadow pool, MKW_SHADOW_HOT)
 
+// Which consumer made each query (gen_lock: the caller sets ww_who before), for ww_log's split: on Windows a query that
+// finds written pages resets their bits, ~15 us against ~5 for a clean one, and ~150 of them a frame cost the replay
+// thread ~2.3 ms of a Grand Prix frame (prof-gp-cpu2, 27/11/2026: ZwGetWriteWatch 14 % of its samples), so which
+// consumer makes them decides what to batch.
+int ww_who;
+static const char *const ww_names[WW_N] = {"changed", "texture snap", "mirror sync", "mirror pre-snap", "mirror create",
+                                           "stamp", "freeze"};
+static uint64_t ww_c[WW_N], ww_dc[WW_N], ww_t[WW_N], ww_b[WW_N];
+
 static uint64_t ww_query(uint64_t addr, uint64_t size) {
     uint64_t t0 = qpc();
     uint64_t n = (ww_peek ? mem_written_peek : mem_written_pages)(addr, size, gen_pages, sizeof gen_pages / sizeof *gen_pages);
     uint64_t dt = qpc() - t0;
     ww_ticks += dt, ww_calls++, ww_bytes += size;
     if (n && n != UINT64_MAX) ww_dirty_calls++, ww_dirty_ticks += dt, ww_pages += n;
+    int w = ww_who >= 0 && ww_who < WW_N ? ww_who : WW_STAMP;
+    ww_c[w]++, ww_t[w] += dt, ww_b[w] += size, ww_dc[w] += n && n != UINT64_MAX;
     return n;
 }
 
@@ -151,6 +162,7 @@ int vk_mem_changed(uint64_t addr, uint64_t size, uint32_t since, uint32_t *now) 
     if (!size) { *now = since; return 0; }
     uint64_t lo = addr & ~0xfffull, hi = (addr + size + 0xfff) & ~0xfffull;
     gen_lock_x();
+    ww_who = WW_CHANGED;
     uint32_t g = ++gen_now;
     int tracked = 1, frozen = 1;
     for (uint64_t a = lo & ~((1ull << REG_SHIFT) - 1); a < hi && frozen; a += 1ull << REG_SHIFT) frozen = mem_frozen(a);
@@ -229,6 +241,7 @@ int vk_mem_changed_snap(uint64_t addr, uint64_t size, uint32_t since, uint32_t e
     if (excl) {
         plat_mutex_unlock_shared(&gen_lock);
         gen_lock_x();
+        ww_who = WW_TEX;
         n_snap_calls += snap_regions(r0, r1, epoch);
     }
     int untracked = 0, changed = 0;
@@ -259,6 +272,7 @@ void vk_mem_snap_stats(uint64_t *checks, uint64_t *calls, uint64_t *untracked) {
 
 // gen_lock held exclusively. 0: the range is not write-watched.
 int query_stamp(uint64_t lo, uint64_t hi, uint32_t g) {
+    if (ww_who != WW_FREEZE) ww_who = WW_STAMP;   // (the capture, the dirty list, the shadow)
     for (;;) {
         uint64_t n = ww_query(lo, hi - lo);
         if (n == UINT64_MAX) return 0;
@@ -275,7 +289,10 @@ void freeze_pass(void) {
         if (ww_ep - reg_last[j] < (uint32_t)freeze_idle || mem_frozen(a)) continue;
         done++;
         if (!mem_freeze(a)) { n_frz_refused++; continue; }
+        int who = ww_who;
+        ww_who = WW_FREEZE;
         query_stamp(a, a + (1ull << REG_SHIFT), ++gen_now);
+        ww_who = who;
     }
 }
 
@@ -287,9 +304,17 @@ void ww_log(uint64_t frame) {
     ww_pages = 0;
     uint64_t nr = n_frz_refused;
     ww_calls = ww_bytes = ww_ticks = ww_dirty_calls = ww_dirty_ticks = n_frz_refused = 0;
-    plat_mutex_unlock(&gen_lock);
+    char by[512];
+    int o = 0;
     double wf = frame > ww_last ? (double)(frame - ww_last) : 1.0;
+    for (int i = 0; i < WW_N && o < (int)sizeof by - 96; i++)
+        if (ww_c[i])
+            o += snprintf(by + o, sizeof by - (size_t)o, "%s %s %.1f (%.1f found pages) %.1f MiB %.3f ms", o ? ";" : "",
+                          ww_names[i], ww_c[i] / wf, ww_dc[i] / wf, ww_b[i] / wf / 1048576.0, qpc_ms(ww_t[i]) / wf);
+    memset(ww_c, 0, sizeof ww_c), memset(ww_dc, 0, sizeof ww_dc), memset(ww_t, 0, sizeof ww_t), memset(ww_b, 0, sizeof ww_b);
+    plat_mutex_unlock(&gen_lock);
     ww_last = frame;
+    if (o && (rt_trace & RT_TRACE_PERF)) rt_log("mem: write-watch frame %llu by consumer, per frame:%s", (unsigned long long)frame, by);
     uint64_t fz, ff, ft, fo;
     mem_freeze_stats(&fz, &ff, &ft, &fo);
     if (rt_trace & RT_TRACE_PERF)

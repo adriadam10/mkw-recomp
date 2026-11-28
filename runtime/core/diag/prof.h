@@ -6,6 +6,8 @@ extern volatile uint32_t prof_render_tid;   // the thread that presents (perf_pr
 extern volatile uint32_t prof_main_tid;     // the guest main thread (perf_main_thread)
 extern volatile uint32_t prof_replay_tid;   // the asynchronous replay (perf_replay_thread): its waits hold up the frame too
 
+// The host thread id of the guest thread with that handle, 0 when there is none (kernel_diag.c; MKW_PROFILE_HANDLE).
+uint32_t kern_thread_tid(uint32_t handle);
 // The sampler; perf.c's weak versions do nothing.
 int prof_sampler_start(void);               // MKW_PROFILE: starts sampling; 1 when it runs
 void prof_sampler_write(void);              // writes the profile once (prof_write)
