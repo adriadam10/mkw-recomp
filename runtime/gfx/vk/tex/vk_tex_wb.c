@@ -2,6 +2,7 @@
 // CPU reads it (an invalidate, a memcpy, ReadTexels) or waits for their fence (the small ones). From vk_tex_texel.c.
 #include <stdlib.h>
 
+#include "cfg.h"
 #include "gfx.h"
 #include "host.h"
 #include "nvn_api.h"
@@ -37,6 +38,101 @@ typedef struct {
     int ok;
 } WbRead;
 
+// ---------------------------------------------------------------- eager write-backs
+// MKW_EAGER_WB (default 1; "ab"): the readback of a pitch or small target (wb_at_fence) the CPU has had written back
+// before is recorded at the end of the submission that renders it, into staging memory, so the write-back after the
+// CPU's fence wait copies rows from there without a GPU round trip. That round trip (the copy in an upload batch, sent
+// and waited for) went behind every submission already queued: with the game running ahead of the GPU (MKW_FENCE_EARLY,
+// MKW_FENCE_AHEAD) the game's main thread waited 27 % of its wall time there, in vk_upload_flush under
+// vk_texture_write_back_small, for the animation textures of MKW's instanced characters (ahead-chains1001, 24-kart
+// Grand Prix, 27/11/2026).
+typedef struct { Region g; NVNcopyRegion r; TexRead rd; } EwbItem;
+struct TexEwb { uint64_t fence, seq; int n; EwbItem it[]; };
+static Tex **ew_pend;   // tex lock: rendered in the submission being recorded, to read back at its end
+static int new_pend, cew_pend;
+static int ewb_mode = -1;
+static uint64_t ewb_made, ewb_used, ewb_stale;
+
+static void ewb_free(void *arg) {   // completion thread, or the consumer: the staging buffers and the record
+    TexEwb *w = arg;
+    VkCtx *c = vk_ctx();
+    for (int i = 0; i < w->n; i++)
+        if (w->it[i].rd.sa) vmaDestroyBuffer(c->vma, w->it[i].rd.sb, w->it[i].rd.sa);
+    free(w);
+}
+
+void ewb_note_locked(Tex *e) {
+    if (ewb_mode < 0) {
+        ewb_mode = rt_knob("EAGER_WB", "1");
+        rt_log("vk: pitch and small render targets the CPU reads are read back at their submission's end%s (MKW_EAGER_WB)",
+               !ewb_mode ? ": off" : ewb_mode == 2 ? " in the B blocks" : "");
+    }
+    if (!e->wb_seen || e->ewb_noted || !RT_KNOB_ON(ewb_mode)) return;
+    if (new_pend == cew_pend && !(ew_pend = realloc(ew_pend, sizeof *ew_pend * (size_t)(cew_pend = cew_pend ? 2 * cew_pend : 64))))
+        rt_fatal("vk: out of memory for eager write-backs");
+    ew_pend[new_pend++] = e;
+    e->ewb_noted = 1;
+}
+
+void ewb_drop_locked(Tex *e) {
+    if (e->ewb_noted)
+        for (int i = 0; i < new_pend; i++)
+            if (ew_pend[i] == e) {
+                ew_pend[i] = ew_pend[--new_pend];
+                break;
+            }
+    e->ewb_noted = 0;
+    if (e->ewb) vk_completion_add(e->ewb->fence, ewb_free, e->ewb), e->ewb = NULL;   // its copy may still run
+}
+
+// The replay thread at the end of the submission of value fence (vk_exec.c), its last command buffer outside a pass:
+// the readbacks of the noted targets this submission rendered last. Returns the commands recorded.
+int vk_texture_eager_wb(VkCommandBuffer cb, uint64_t fence) {
+    if (!__atomic_load_n(&new_pend, __ATOMIC_RELAXED)) return 0;
+    int rec = 0;
+    lock();
+    for (int i = 0; i < new_pend; i++) {
+        Tex *e = ew_pend[i];
+        e->ewb_noted = 0;
+        if (!e->gpu_dirty || e->gpu_fence != fence || !e->pub.image) continue;
+        const nvn_texdesc *d = &e->t.d;
+        int linear = nvn_tex_is_linear(d), is3d = d->target == NVN_TEXTURE_TARGET_3D;
+        uint32_t levels = linear ? 1 : e->pub.levels, layers = linear || is3d ? 1 : e->pub.layers;
+        TexEwb *w = malloc(sizeof *w + sizeof *w->it * (size_t)levels * layers);
+        if (!w) rt_fatal("vk: out of memory for an eager write-back");
+        w->fence = fence, w->seq = e->gpu_seq, w->n = 0;
+        for (uint32_t lv = 0; lv < levels; lv++)
+            for (uint32_t ly = 0; ly < layers; ly++) {
+                uint32_t nl = lv + e->pub.drop;
+                view_t v = {.set_levels = 1, .set_layers = 1, .base_level = (uint8_t)nl, .min_layer = (uint16_t)ly};
+                EwbItem *it = &w->it[w->n];
+                it->r = (NVNcopyRegion){.width = (int)mip(d->width, nl),
+                                        .height = d->target == 0 || d->target == 3 ? 1 : (int)mip(d->height, nl),
+                                        .depth = is3d ? (int)mip(d->depth, nl) : 1};
+                if (!region_of(&e->t, &v, &it->r, 0, 0, &it->g) || !image_read_check(e, &it->g, &it->r)) continue;
+                image_read_stage(e, &it->g, &it->r, &it->rd);
+                if (!rec++) barrier(cb, ALL_RW, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT);
+                image_read_into(e, &it->g, &it->r, &it->rd, cb);
+                w->n++;
+            }
+        if (!w->n) {
+            free(w);
+            continue;
+        }
+        if (e->ewb) vk_completion_add(e->ewb->fence, ewb_free, e->ewb);   // an older one never used
+        e->ewb = w;
+        ewb_made++;
+    }
+    new_pend = 0;
+    if (rec) barrier(cb, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_HOST_BIT,
+                     VK_ACCESS_2_HOST_READ_BIT), rec++;
+    if ((ewb_made & 4095) == 4095)
+        rt_log("vk: eager write-backs: %llu recorded, %llu used, %llu stale", (unsigned long long)ewb_made,
+               (unsigned long long)ewb_used, (unsigned long long)ewb_stale);
+    unlock();
+    return rec;
+}
+
 static int still_listed(const Tex *e, uint64_t addr) {
     for (int i = owned_lower(addr); i < nowned && owned[i]->pub.addr == addr; i++)
         if (owned[i] == e) return 1;
@@ -46,10 +142,30 @@ static int still_listed(const Tex *e, uint64_t addr) {
 // hit: oldest render first. Called holding the texture lock once (lock()), which it leaves and takes again.
 static void write_back_hits(Tex **hit, int k) {
     WbRead *rs = NULL;
-    int n = 0, cap = 0;
+    int n = 0, cap = 0, flush = 0;
+    TexEwb **took = NULL;   // eager readbacks used here, freed at the end
+    int ntook = 0;
+    uint64_t done = vk_sync_fence_done();
     for (int i = 0; i < k; i++) {
         Tex *e = hit[i];
         int n0 = n;
+        e->wb_seen = 1;   // its next renders are read back at their submission's end (ewb_note_locked)
+        TexEwb *ew = e->ewb;
+        if (ew && (ew->seq != e->gpu_seq || ew->fence > done)) ewb_stale++, ew = NULL;   // an older render, or not done
+        if (ew) {   // the rows are in staging memory already: no copy, no GPU round trip
+            e->ewb = NULL;
+            if (!(took = realloc(took, sizeof *took * (size_t)(ntook + 1)))) rt_fatal("vk: out of memory for a texture write-back");
+            took[ntook++] = ew;
+            for (int j = 0; j < ew->n; j++) {
+                if (n == cap && !(rs = realloc(rs, sizeof *rs * (size_t)(cap = cap ? 2 * cap : 16))))
+                    rt_fatal("vk: out of memory for a texture write-back");
+                rs[n++] = (WbRead){.e = e, .addr = e->pub.addr, .seq = e->gpu_seq, .g = ew->it[j].g, .r = ew->it[j].r,
+                                   .rd = ew->it[j].rd};
+                ew->it[j].rd.sa = NULL;   // image_read_rows frees it
+            }
+            ewb_used++;
+            continue;
+        }
         const nvn_texdesc *d = &e->t.d;
         int linear = nvn_tex_is_linear(d), is3d = d->target == NVN_TEXTURE_TARGET_3D;
         uint32_t levels = linear ? 1 : e->pub.levels, layers = linear || is3d ? 1 : e->pub.layers;
@@ -64,17 +180,21 @@ static void write_back_hits(Tex **hit, int k) {
                 w->r = (NVNcopyRegion){.width = (int)mip(d->width, nl),
                                        .height = d->target == 0 || d->target == 3 ? 1 : (int)mip(d->height, nl),
                                        .depth = is3d ? (int)mip(d->depth, nl) : 1};
-                if (region_of(&e->t, &v, &w->r, 0, 0, &w->g) && image_read_record(e, &w->g, &w->r, &w->rd)) n++;
+                if (region_of(&e->t, &v, &w->r, 0, 0, &w->g) && image_read_record(e, &w->g, &w->r, &w->rd)) n++, flush = 1;
             }
         if (n == n0) e->gpu_dirty = 0;   // nothing of it can be read back (ASTC, packed depth-stencil)
     }
     if (!n) {
         free(rs);
+        for (int i = 0; i < ntook; i++) ewb_free(took[i]);
+        free(took);
         return;
     }
-    unlock();
-    vk_upload_flush(1);
-    lock();
+    if (flush) {
+        unlock();
+        vk_upload_flush(1);
+        lock();
+    }
     for (int i = 0; i < n; i++) {   // all checked first: the writes below are CPU writes to the storage
         WbRead *w = &rs[i];
         if (!still_listed(w->e, w->addr)) continue;   // destroyed meanwhile
@@ -89,6 +209,8 @@ static void write_back_hits(Tex **hit, int k) {
         if (buf) storage_texels(&w->e->t, &w->g, &w->r, buf, 1), free(buf);
     }
     free(rs);
+    for (int i = 0; i < ntook; i++) ewb_free(took[i]);   // (their staging went with image_read_rows)
+    free(took);
 }
 
 // Mirrored textures overlapping [addr, addr+size) that the GPU wrote since their last write-back.

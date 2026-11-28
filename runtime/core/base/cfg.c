@@ -241,6 +241,7 @@ static const CfgRow rows[] = {
     K("DUMP_DRAWS_SKIP"),
     K("DUMP_LOG"),
     K("DYN_DIFF"),
+    K("EAGER_WB"),
     K("EXEFS"),
     K("FEEDBACK"),
     K("FG_AB"),

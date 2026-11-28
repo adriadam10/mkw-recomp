@@ -853,6 +853,7 @@ int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint64_t 
     if (sd_t0) sd_e = kern_now_ns();
     if (n) ex->recorded += vk_mem_mirror_end(ex->cb, fence), vk_usnap_end(fence);   // VRAM mirror bytes the GPU wrote go back to guest memory
     if (sd_t0) sd_e = kern_now_ns() - sd_e;
+    if (n) ex->recorded += vk_texture_eager_wb(ex->cb, fence);   // targets the CPU reads at the fence, into staging
     if (n && rec_diff_on > 0) rec_diff_end();
     views_release(ex);
     ex->cb = VK_NULL_HANDLE;

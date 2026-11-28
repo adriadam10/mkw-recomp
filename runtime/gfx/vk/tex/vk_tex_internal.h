@@ -50,6 +50,9 @@ typedef struct Tex {
     uint8_t pf;                   // made by vk_tex_prefetch.c and not looked up by a draw yet
     VkTexImage dtwin;             // vk_tex_twin.c: its D32_SFLOAT copy for depth-compare sampling (image NULL: none)
     VmaAllocation dtwin_alloc;
+    struct TexEwb *ewb;           // vk_tex_wb.c: the readback recorded at the end of a submission that rendered it
+    uint8_t wb_seen;              // the CPU has had it written back at a fence: its later renders are read back eagerly
+    uint8_t ewb_noted;            // in the list of the submission being recorded (ewb_note_locked)
 } Tex;
 
 // A slot keeps what vk_texture_by_id resolved for it, so a draw binding skips the key lookup and the address chain: the
@@ -196,5 +199,15 @@ int image_texels(Tex *e, const Region *g, const NVNcopyRegion *r, uint8_t *mem, 
 // done (vk_upload_flush(1)), its rows into mem (NULL: only the staging freed). Nothing between needs the texture lock.
 typedef struct { VkBuffer sb; VmaAllocation sa; uint8_t *stg; size_t slice, ib; uint32_t w; int rgb, fmt; } TexRead;
 int image_read_record(Tex *e, const Region *g, const NVNcopyRegion *r, TexRead *rd);   // 0: nothing to read
+// image_read_record's steps, for a copy into another command buffer: whether the region can be read, its staging into
+// rd, and the copy recorded into cb without barriers
+int image_read_check(Tex *e, const Region *g, const NVNcopyRegion *r);
+void image_read_stage(Tex *e, const Region *g, const NVNcopyRegion *r, TexRead *rd);
+void image_read_into(Tex *e, const Region *g, const NVNcopyRegion *r, TexRead *rd, VkCommandBuffer cb);
 void image_read_rows(const Region *g, TexRead *rd, uint8_t *mem);
+// Eager write-backs (vk_tex_wb.c): the readback of a pitch or small target recorded at the end of the submission that
+// rendered it (gpu_fence), so the CPU's wait at its fence finds the texels in staging memory already
+typedef struct TexEwb TexEwb;
+void ewb_note_locked(Tex *e);       // gpu_written_locked: e was rendered in the submission being recorded
+void ewb_drop_locked(Tex *e);       // destroy_tex: its pending note and readback go
 int storage_texels(const tex_t *t, const Region *g, const NVNcopyRegion *r, uint8_t *mem, int write);
