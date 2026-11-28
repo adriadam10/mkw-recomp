@@ -195,7 +195,7 @@ def clean(args: argparse.Namespace) -> None:
     keep = game / PREVIOUS
     if args.previous and olds:
         shutil.rmtree(keep, ignore_errors=True)
-        keep.mkdir()
+        keep.mkdir(exist_ok=True)  # rmtree skips what Windows still holds: that folder can be here already
         (keep / "version").write_text(f"{args.previous}\n", encoding="utf-8")
     for p in olds:
         for _ in range(CLEAN_WAIT):
