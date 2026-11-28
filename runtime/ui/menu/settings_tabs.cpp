@@ -678,7 +678,10 @@ static void tab_advanced(float scale) {
     static const UiTextId preempt[] = {UI_MENU_PREEMPT_OFF, UI_MENU_PREEMPT_ON, UI_MENU_PREEMPT_INHERIT};   // 0|1|2
     opt_choice("MKW_ASYNC_PREEMPT", UI_MENU_ASYNC_PREEMPT, preempt, 3, UI_MENU_ASYNC_PREEMPT_DESC);
     opt_toggle("MKW_REPLAY_ASYNC", UI_MENU_REPLAY_ASYNC, UI_MENU_REPLAY_ASYNC_DESC);
-    opt_toggle("MKW_FREE_CORES", UI_MENU_FREE_CORES, UI_MENU_FREE_CORES_DESC);
+    // "Virtual core gate": on is MKW_FREE_CORES=0. Shown straight, the row read off at the default and its "on" turned
+    // the gate off, where the game crashes in its first frames (kernel_cores.c; 28/11/2026, 1.8.0 on Windows: a
+    // null read at main+0x17f68a0 on every start with free_cores = 1).
+    opt_toggle("MKW_FREE_CORES", UI_MENU_FREE_CORES, UI_MENU_FREE_CORES_DESC, true);
     opt_toggle("MKW_TIMER_1MS", UI_MENU_TIMER_1MS, UI_MENU_TIMER_1MS_DESC);
 
     opt_group(UI_MENU_GROUP_SHADERS);
