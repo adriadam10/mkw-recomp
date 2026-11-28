@@ -54,6 +54,8 @@ GEN_ARCH_FLAGS = {"x86_64": [], "aarch64": ["-ffixed-x18"]}
 # --cpu noavx2 (x86-64 only): SSE4.2 without AVX2, FMA or BMI2, for an AMD FX or an Intel Core before Haswell (#82). Its own
 # object and dist folders (build/dist/<target>-noavx2); runtime/cpu/fma.c then supplies the correctly rounded fma.
 NOAVX2_FLAGS = ["-march=x86-64-v2"]
+# --cpu tigerlake (x86-64 only): Tiger Lake ISA/tuning without 512-bit SIMD frequency throttling.
+TIGERLAKE_FLAGS = ["-march=tigerlake", "-mtune=tigerlake", "-mprefer-vector-width=256"]
 HOST_ARCH = {"amd64": "x86_64", "x64": "x86_64", "arm64": "aarch64"}.get(platform.machine().lower(),
                                                                           platform.machine().lower())  # fmt: skip
 ARCH = HOST_ARCH if HOST_ARCH in ARCH_FLAGS else "x86_64"
@@ -97,13 +99,13 @@ def check_gen(gen: Path, exefs: Path) -> None:
                  f"`uv run recomp/gen.py --exefs {exefs}` first (only the changed chunks recompile)")
 
 
-def set_arch(arch: str, noavx2: bool = False) -> None:
+def set_arch(arch: str, cpu: str = "v3") -> None:
     """Builds for arch from here on (GEN_FLAGS, RT_FLAGS and game_id() follow; the lists change in place)."""
     global ARCH
     ARCH = arch
-    flags = NOAVX2_FLAGS if noavx2 else ARCH_FLAGS[arch]
-    GEN_FLAGS[len(GEN_BASE_FLAGS):] = [*flags, *GEN_ARCH_FLAGS[arch]]
-    RT_FLAGS[len(RT_BASE_FLAGS):] = flags
+    flags = NOAVX2_FLAGS if cpu == "noavx2" else TIGERLAKE_FLAGS if cpu == "tigerlake" else ARCH_FLAGS[arch]
+    GEN_FLAGS[:] = [*GEN_BASE_FLAGS, *flags, *GEN_ARCH_FLAGS[arch]]
+    RT_FLAGS[:] = [*RT_BASE_FLAGS, *flags]
 
 
 # Built on Windows itself (not cross-compiled from Linux): Ninja runs each command with CreateProcess, no shell, and
@@ -202,36 +204,36 @@ def game_id() -> str:
     return h.hexdigest()[:16]
 
 
-def profile_runtime() -> Path:
-    """clang's profile runtime (libclang_rt.profile.a): MKW_PROFILE_RT, else clang's resource directory, else
-    build/toolchain/compiler-rt/lib (extracted from the distribution's compiler-rt package without installing it)."""
+def profile_runtime(target: Target) -> Path:
+    """clang's profile runtime (libclang_rt.profile.a / libclang_rt.profile-x86_64.a): MKW_PROFILE_RT, else toolchain/resource dir."""
     cands = [Path(os.environ["MKW_PROFILE_RT"])] if os.environ.get("MKW_PROFILE_RT") else []
-    rd = subprocess.run(["clang", "-print-resource-dir"], capture_output=True, text=True, check=False).stdout.strip()
-    if rd:
-        # this machine's only: a multilib clang lists lib/i386-pc-linux-gnu first, which lld rejects (26/11/2026)
-        cands += sorted(Path(rd).glob(f"lib/{platform.machine()}*/libclang_rt.profile.a"))
-    cands.append(ROOT / "build/toolchain/compiler-rt/lib/libclang_rt.profile.a")
+    if target is WINDOWS:
+        cands += sorted((WIN / "llvm-mingw/lib/clang").glob("*/lib/windows/libclang_rt.profile-x86_64.a"))
+    else:
+        rd = subprocess.run(["clang", "-print-resource-dir"], capture_output=True, text=True, check=False).stdout.strip()
+        if rd:
+            # this machine's only: a multilib clang lists lib/i386-pc-linux-gnu first, which lld rejects (26/11/2026)
+            cands += sorted(Path(rd).glob(f"lib/{platform.machine()}*/libclang_rt.profile.a"))
+        cands.append(ROOT / "build/toolchain/compiler-rt/lib/libclang_rt.profile.a")
     for c in cands:
         if c.is_file():
             return c
-    sys.exit("--pgo gen: no libclang_rt.profile.a (install compiler-rt, or set MKW_PROFILE_RT to it)")
+    sys.exit("--pgo gen: no libclang_rt.profile library (install compiler-rt, or set MKW_PROFILE_RT to it)")
 
 
-def pgo_flags(pgo: str, target: "Target") -> list[str]:
-    """--pgo: the game code's flags (GEN_FLAGS, in place, so game_id() follows) and the link flags it needs.
-    gen: instrumented (-fprofile-instr-generate), each run writing build/pgo/raw/mkw-<pid>.profraw at exit (plat_exit
-    calls __llvm_profile_write_file: it ends with _exit, which skips the atexit handler that would). The driver puts
-    its own runtime path on the link line, absent without compiler-rt installed, so only the compiles carry the flag
-    and the link names the runtime itself. A profile: -O2 with it (totk-pc-recomp docs/pgo.md: -O2 and a trained
-    profile, 11-12 % a frame there), from a copy named after its digest, so a new profile changes the flags and Ninja
-    rebuilds every chunk (a function whose code changed loses its counts silently: the warnings say so, and are off)."""
-    if target is not LINUX:
-        sys.exit("--pgo: Linux builds only for now")
+def pgo_flags(pgo: str, target: "Target", pgo_rt: bool = False) -> tuple[list[str], list[str]]:
+    """--pgo: the game code's (and optionally runtime's with pgo_rt) flags and the link flags/libs it needs."""
     if pgo == "gen":
         raw = ROOT / "build/pgo/raw"
         raw.mkdir(parents=True, exist_ok=True)
-        GEN_FLAGS.append(f"-fprofile-instr-generate={raw}/mkw-%p.profraw")
-        return ["-u", "__llvm_profile_runtime", str(profile_runtime())]
+        flag = f"-fprofile-instr-generate={(raw / 'mkw-%p.profraw').as_posix()}"
+        GEN_FLAGS.append(flag)
+        if pgo_rt:
+            RT_FLAGS.append(flag)
+        if target is WINDOWS:
+            RT_FLAGS.append("-DMKW_PGO_GEN=1")
+            return ["-Wl,-u,__llvm_profile_runtime"], [str(profile_runtime(target))]
+        return ["-u", "__llvm_profile_runtime", str(profile_runtime(target))], []
     src = Path(pgo)
     if not src.is_file():
         sys.exit(f"--pgo: {src} not found")
@@ -241,9 +243,12 @@ def pgo_flags(pgo: str, target: "Target") -> list[str]:
     if not dst.exists():
         dst.write_bytes(data)
     GEN_FLAGS[0] = "-O2"
-    GEN_FLAGS.extend([f"-fprofile-instr-use={dst}", "-Wno-profile-instr-unprofiled", "-Wno-profile-instr-out-of-date",
-                      "-Wno-backend-plugin"])  # fmt: skip
-    return []
+    use = [f"-fprofile-instr-use={dst.as_posix()}", "-Wno-profile-instr-unprofiled",
+           "-Wno-profile-instr-out-of-date", "-Wno-backend-plugin"]  # fmt: skip
+    GEN_FLAGS.extend(use)
+    if pgo_rt:
+        RT_FLAGS.extend(use)
+    return [], []
 
 
 def module_glue(gen: Path, exefs: Path, library: bool) -> str:
@@ -311,7 +316,7 @@ RT_EXPORTS = ("rt_dispatch", "rt_sj_owner", "rt_svc", "rt_udf", "rt_ticks", "rt_
 
 def ninja_file(target: Target, gen: Path | None, out: Path, rt_extra: list[str], dist: Path | None,
                runtime_only: bool = False, ld_extra: list[str] | None = None,
-               sys_flags: list[str] | None = None) -> str:  # fmt: skip
+               sys_flags: list[str] | None = None, extra_libs: list[str] | None = None) -> str:  # fmt: skip
     """dist: the player's build into that folder, the runtime (mkw, mkw.exe) and the game code apart (mkwgame.so,
     mkwgame.dll); else build/mkw with the game code linked in. runtime_only (with dist): the runtime alone, what a
     release ships and the CI builds, without the game's generated C."""
@@ -331,6 +336,7 @@ def ninja_file(target: Target, gen: Path | None, out: Path, rt_extra: list[str],
     # and a comment in runtime/cpu recompiles all the game code; ninja rebuilds both, ccache hands back the objects
     # (07/11/2026: ~12 min per step of a bisection). Not for C++: menu_look.cpp #embeds a file ccache may not track.
     cc = f"ccache {target.cc}" if os.environ.get("MKW_CCACHE", "1") != "0" and shutil.which("ccache") else target.cc
+    ext_l = " ".join(extra_libs or [])
     lines = [
         f"builddir = {out}",
         f"genflags = {' '.join(GEN_FLAGS + pic + (sys_flags or []))} -I{RUNTIME / 'cpu'}",
@@ -354,7 +360,7 @@ def ninja_file(target: Target, gen: Path | None, out: Path, rt_extra: list[str],
             "  depfile = $out.d\n  deps = gcc\n  description = cc $in"
         ),
         *(
-            windows_host_rules(target)
+            windows_host_rules(target, extra_libs)
             if HOST_WINDOWS
             else [
                 f"rule ar\n  command = rm -f $out && {target.ar} rcs $out $in\n  description = ar $out",
@@ -363,7 +369,7 @@ def ninja_file(target: Target, gen: Path | None, out: Path, rt_extra: list[str],
                     "\n  description = link $out"
                 ),
                 (
-                    f"rule link\n  command = {target.cxx} $ldflags -o $out $in {' '.join(target.link_libs)}"
+                    f"rule link\n  command = {target.cxx} $ldflags -o $out $in {ext_l} {' '.join(target.link_libs)}"
                     "\n  description = link $out"
                 ),
             ]
@@ -418,13 +424,14 @@ def ninja_file(target: Target, gen: Path | None, out: Path, rt_extra: list[str],
     return "\n".join(lines) + "\n"
 
 
-def windows_host_rules(target: Target) -> list[str]:
+def windows_host_rules(target: Target, extra_libs: list[str] | None = None) -> list[str]:
     """ar, solink and link when Ninja runs on Windows. No shell: "rm -f $out && ..." would hand rm the "&&", the
     archiver and every object as files to delete. The object lists go through response files (the game's archive and
     the link pass the 32 K command-line limit); clang reads a response file the GNU way by default, where a backslash
     escapes, so the links ask for Windows quoting. llvm-ar replaces members by name, so without the rm a chunk that
     disappears stays in its archive until build/obj-win is cleaned."""
     rsp = "\n  rspfile = $out.rsp\n  rspfile_content = $in"
+    ext_l = " ".join(extra_libs or [])
     return [
         f"rule ar\n  command = {target.ar} rcs $out @$out.rsp{rsp}\n  description = ar $out",
         (
@@ -433,7 +440,7 @@ def windows_host_rules(target: Target) -> list[str]:
         ),
         (
             f"rule link\n  command = {target.cxx} $ldflags --rsp-quoting=windows -o $out @$out.rsp"
-            f" {' '.join(target.link_libs)}{rsp}\n  description = link $out"
+            f" {ext_l} {' '.join(target.link_libs)}{rsp}\n  description = link $out"
         ),
     ]
 
@@ -450,8 +457,8 @@ def main() -> None:
                     help="generated C dir (default: the dump's version: build/generated, build/generated-180)")
     ap.add_argument("--target", choices=("linux", "windows"), default="linux")
     ap.add_argument("--arch", choices=tuple(ARCH_FLAGS), default=ARCH, help="Linux: the CPU (default: this machine's)")
-    ap.add_argument("--cpu", choices=("v3", "noavx2"), default="v3",
-                    help="x86-64: v3 (AVX2, the default) or noavx2 (x86-64-v2: the package for CPUs without AVX2, #82)")  # fmt: skip
+    ap.add_argument("--cpu", choices=("v3", "noavx2", "tigerlake"), default="v3",
+                    help="x86-64: v3 (AVX2, default), noavx2 (x86-64-v2, #82), or tigerlake (Tiger Lake 256-bit tuning)")  # fmt: skip
     ap.add_argument("--out", type=Path, help="object directory (default build/obj, build/obj-win for windows)")
     ap.add_argument(
         "--dist", action="store_true",
@@ -474,15 +481,21 @@ def main() -> None:
     ap.add_argument("--gen-opt", choices=("1", "2", "3"), default="1",
                     help="optimization level of the generated C (a measurement; with its own --out: the default "
                          "objects stay for the next default build)")  # fmt: skip
+    ap.add_argument("--rt-opt", choices=("2", "3"), default="2", help="optimization level of the runtime (-O2 or -O3)")
+    ap.add_argument("--rt-lto", action="store_true", help="enable ThinLTO for the runtime")
     ap.add_argument("--dry-run", action="store_true", help="write build.ninja and show what would run")
     ap.add_argument(
         "--frame-pointers",
         action="store_true",
         help="runtime with frame pointers: perf call graphs (-g) of where threads block, e.g. -e cs",
     )
-    ap.add_argument("--pgo", help="gen: game code instrumented for a profile; FILE.profdata: compiled with it (-O2)")
+    ap.add_argument("--pgo", help="gen: instrumented for a profile; FILE.profdata: compiled with it (-O2)")
+    ap.add_argument("--pgo-rt", action="store_true", help="with --pgo: instrument/optimize runtime code too")
     args = ap.parse_args()
     GEN_BASE_FLAGS[0] = GEN_FLAGS[0] = f"-O{args.gen_opt}"
+    RT_BASE_FLAGS[0] = RT_FLAGS[0] = f"-O{args.rt_opt}"
+    if args.rt_lto:
+        RT_BASE_FLAGS.append("-flto=thin")
     if args.gen is None and not args.runtime_only:
         try:
             args.gen = versions.default_gen(args.exefs)
@@ -500,22 +513,27 @@ def main() -> None:
     target = WINDOWS if args.target == "windows" else LINUX
     if args.arch != "x86_64" and target is WINDOWS:
         ap.error("--target windows is x86_64 only")
-    if args.cpu == "noavx2" and args.arch != "x86_64":
-        ap.error("--cpu noavx2 is x86_64 only")
-    set_arch(args.arch, args.cpu == "noavx2")
-    pgo_ld = pgo_flags(args.pgo, target) if args.pgo else []
+    if args.cpu != "v3" and args.arch != "x86_64":
+        ap.error(f"--cpu {args.cpu} is x86_64 only")
+    set_arch(args.arch, args.cpu)
+    pgo_ld, pgo_libs = pgo_flags(args.pgo, target, args.pgo_rt) if args.pgo else ([], [])
+    cross = ARCH != HOST_ARCH and target is LINUX  # another CPU's build: its own dist and object folders
+    nov = "-noavx2" if args.cpu == "noavx2" else "-tl" if args.cpu == "tigerlake" else ""
+    win_sfx = "-win" if target is WINDOWS else ""
     if args.pgo and not args.out:  # its own objects: the plain -O1 ones stay for the next plain build
-        args.out = ROOT / ("build/obj-pgogen" if args.pgo == "gen" else "build/obj-pgo")
+        args.out = ROOT / f"build/obj{win_sfx}{nov}-{'pgogen' if args.pgo == 'gen' else 'pgo'}"
     if args.sysroot and target is WINDOWS:
         ap.error("--sysroot is for Linux")
     # zstd and xxhash.h of the sysroot sit in its usr/local (tools/build/sysroot.py), whose include clang already reads
     sys_flags = [f"--target={ARCH}-linux-gnu", f"--sysroot={args.sysroot.resolve()}"] if args.sysroot else []
     sys_ld = [*sys_flags, f"-L{args.sysroot.resolve()}/usr/local/lib"] if args.sysroot else []
+    if args.rt_lto:
+        sys_ld.append("-flto=thin")
+        if args.rt_opt == "3":
+            sys_ld.append("-Wl,--lto-O3")
     sys_ld += pgo_ld
-    cross = ARCH != HOST_ARCH and target is LINUX  # another CPU's build: its own dist and object folders
-    nov = "-noavx2" if args.cpu == "noavx2" else ""
     dist = ROOT / "build/dist" / (args.target + (f"-{ARCH}" if cross else "") + nov) if args.dist else None
-    args.out = args.out or ROOT / ("build/obj" + ("-dist" if dist else "") + ("-win" if target is WINDOWS else "")
+    args.out = args.out or ROOT / ("build/obj" + ("-dist" if dist else "") + win_sfx
                                    + (f"-{ARCH}" if cross else "") + nov)  # fmt: skip
     if HOST_WINDOWS and not shutil.which("ninja") and (MSYS2_UCRT64_BIN / "ninja.exe").is_file():
         # at the end, as windeps.py does: what PATH already has stays first
@@ -547,7 +565,8 @@ def main() -> None:
     ninja = (
         # the lifted code and its library take the sysroot only for another CPU: an x86-64 release's stay as they were
         ninja_file(
-            target, args.gen, args.out, fp + sys_flags, dist, args.runtime_only, sys_ld, sys_flags if cross else None
+            target, args.gen, args.out, fp + sys_flags, dist, args.runtime_only, sys_ld,
+            sys_flags if cross else None, pgo_libs,
         )
     )
     (args.out / "build.ninja").write_text(windows_host_ninja(ninja) if HOST_WINDOWS else ninja)
