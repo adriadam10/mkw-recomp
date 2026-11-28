@@ -245,7 +245,212 @@ void vk_pstate_frame(void) {
     if (S.mode < 0 && S.ctx) apply(rt_ab() ? PSTATE_PEAK : PSTATE_NONE);
     if (P.dir[0] && ++P.frames % 300 == 0) power_check();
 }
+
+void vk_pstate_shutdown(void) {}
+void vk_pstate_activity(void) {}
+#elif defined(_WIN32)
+#include <stdio.h>
+#include "platform/platform.h"
+#include "../spv/clk_busy_spv.h"
+
+#define WIN_CLK_GROUPS 2048u
+
+static struct {
+    int mode;                    // 0 off, 1 hold/fill, -1 ab (active in B blocks)
+    volatile int active, stop;
+    volatile uint64_t last_act_ns;
+    uint32_t pulse_us, idle_us, gap_us, iters;
+    VkDevice device;
+    VmaAllocator vma;
+    VkQueue queue;
+    VkBuffer buf;
+    VmaAllocation alloc;
+    VkDescriptorSetLayout dsl;
+    VkPipelineLayout layout;
+    VkPipeline pipe;
+    VkDescriptorPool dp;
+    VkDescriptorSet set;
+    VkCommandPool cp;
+    VkCommandBuffer cb;
+    VkFence fence;
+    PlatThread *thr;
+} W;
+
+static uint32_t u32_cfg(const char *name, uint32_t def, uint32_t lo, uint32_t hi) {
+    const char *e = cfg_get(name);
+    if (!e || !*e) return def;
+    long long v = atoll(e);
+    if (v < (long long)lo) return lo;
+    if (v > (long long)hi) return hi;
+    return (uint32_t)v;
+}
+
+static int win_mode_from_cfg(const char *e, int discrete) {
+    if (!e || !*e || !strcmp(e, "auto")) return discrete ? 1 : 0;
+    if (!strcmp(e, "peak") || !strcmp(e, "fill") || !strcmp(e, "standard") || !strcmp(e, "1")) return 1;
+    if (!strcmp(e, "ab")) return -1;
+    return 0;
+}
+
+static int submit_pulse(uint32_t iters, double *out_ms) {
+    uint64_t t0 = plat_now_ns();
+    vkResetCommandBuffer(W.cb, 0);
+    VkCommandBufferBeginInfo bi = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                                   .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
+    if (vkBeginCommandBuffer(W.cb, &bi) != VK_SUCCESS) return 0;
+    vkCmdBindPipeline(W.cb, VK_PIPELINE_BIND_POINT_COMPUTE, W.pipe);
+    vkCmdBindDescriptorSets(W.cb, VK_PIPELINE_BIND_POINT_COMPUTE, W.layout, 0, 1, &W.set, 0, NULL);
+    vkCmdPushConstants(W.cb, W.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 4, &iters);
+    vkCmdDispatch(W.cb, WIN_CLK_GROUPS, 1, 1);
+    if (vkEndCommandBuffer(W.cb) != VK_SUCCESS) return 0;
+    vkResetFences(W.device, 1, &W.fence);
+    VkSubmitInfo si = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1, .pCommandBuffers = &W.cb};
+    if (vkQueueSubmit(W.queue, 1, &si, W.fence) != VK_SUCCESS) return 0;
+    if (vkWaitForFences(W.device, 1, &W.fence, VK_TRUE, 200000000ull) != VK_SUCCESS) return 0;
+    if (out_ms) *out_ms = (double)(plat_now_ns() - t0) / 1e6;
+    return 1;
+}
+
+static void pstate_worker(void *arg) {
+    (void)arg;
+    plat_thread_priority(-1);   // below normal: never preempt game or replay threads
+    uint32_t iters = 2048;
+    double target_ms = (double)W.pulse_us / 1000.0;
+    for (int k = 0; k < 4 && !__atomic_load_n(&W.stop, __ATOMIC_ACQUIRE); k++) {
+        double ms = 0;
+        if (!submit_pulse(iters, &ms)) break;
+        if (ms > 0.05) {
+            double next = (double)iters * (target_ms / ms) * 0.6 + (double)iters * 0.4;
+            iters = next < 64.0 ? 64u : next > 65536.0 ? 65536u : (uint32_t)next;
+        }
+    }
+    W.iters = iters;
+    int err_logged = 0;
+    while (!__atomic_load_n(&W.stop, __ATOMIC_ACQUIRE)) {
+        if (!__atomic_load_n(&W.active, __ATOMIC_ACQUIRE)) {
+            plat_wait_ns(5000000ull);
+            continue;
+        }
+        uint64_t last = __atomic_load_n(&W.last_act_ns, __ATOMIC_RELAXED);
+        uint64_t now = plat_now_ns();
+        if (last && now >= last && (now - last) < (uint64_t)W.idle_us * 1000ull) {
+            plat_wait_ns(400000ull);
+            continue;
+        }
+        if (!submit_pulse(W.iters, NULL)) {
+            if (!err_logged++) rt_log("vk: GPU clock keeper stopped after async compute submit/wait error");
+            break;
+        }
+        if (W.gap_us) plat_wait_ns((uint64_t)W.gap_us * 1000ull);
+    }
+}
+
+static void destroy_win_objects(void) {
+    if (!W.device) return;
+    if (W.fence) vkDestroyFence(W.device, W.fence, NULL);
+    if (W.cp) vkDestroyCommandPool(W.device, W.cp, NULL);
+    if (W.dp) vkDestroyDescriptorPool(W.device, W.dp, NULL);
+    if (W.pipe) vkDestroyPipeline(W.device, W.pipe, NULL);
+    if (W.layout) vkDestroyPipelineLayout(W.device, W.layout, NULL);
+    if (W.dsl) vkDestroyDescriptorSetLayout(W.device, W.dsl, NULL);
+    if (W.buf && W.vma) vmaDestroyBuffer(W.vma, W.buf, W.alloc);
+    memset(&W, 0, sizeof W);
+}
+
+void vk_pstate_init(VkPhysicalDevice phys) {
+    VkPhysicalDeviceProperties p;
+    vkGetPhysicalDeviceProperties(phys, &p);
+    if (p.vendorID != 0x1002) return;
+    const char *e = cfg_get("MKW_GPU_CLOCKS");
+    int discrete = p.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+    W.mode = win_mode_from_cfg(e, discrete);
+    if (!W.mode) {
+        rt_log("vk: GPU clocks chosen by AMD driver (MKW_GPU_CLOCKS=%s%s)", e && *e ? e : "auto",
+               discrete ? "" : ": off on an integrated GPU");
+        return;
+    }
+    VkCtx *c = vk_ctx();
+    if (!c || c->clk_queue == VK_NULL_HANDLE || c->clk_family == VK_QUEUE_FAMILY_IGNORED) {
+        rt_log("vk: GPU clocks: no dedicated async compute queue; AMD driver chooses them");
+        return;
+    }
+    W.device = c->device, W.vma = c->vma, W.queue = c->clk_queue;
+    W.pulse_us = u32_cfg("MKW_CLK_PULSE_US", 500, 100, 5000);
+    W.idle_us = u32_cfg("MKW_CLK_IDLE_US", 1500, 100, 20000);
+    W.gap_us = W.pulse_us / 2;
+
+    VkBufferCreateInfo bi = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size = 4096,
+                             .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT};
+    VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
+    if (vmaCreateBuffer(W.vma, &bi, &ai, &W.buf, &W.alloc, NULL) != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkDescriptorSetLayoutBinding lb = {.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                       .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT};
+    VkDescriptorSetLayoutCreateInfo li = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                                          .bindingCount = 1, .pBindings = &lb};
+    if (vkCreateDescriptorSetLayout(W.device, &li, NULL, &W.dsl) != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkPushConstantRange pr = {VK_SHADER_STAGE_COMPUTE_BIT, 0, 4};
+    VkPipelineLayoutCreateInfo pli = {.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1,
+                                      .pSetLayouts = &W.dsl, .pushConstantRangeCount = 1, .pPushConstantRanges = &pr};
+    if (vkCreatePipelineLayout(W.device, &pli, NULL, &W.layout) != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkShaderModuleCreateInfo mi = {.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof clk_busy_spv,
+                                   .pCode = clk_busy_spv};
+    VkShaderModule m = VK_NULL_HANDLE;
+    if (vkCreateShaderModule(W.device, &mi, NULL, &m) != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkComputePipelineCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+                                      .stage = {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                                                .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = m, .pName = "main"},
+                                      .layout = W.layout};
+    VkResult r = vkCreateComputePipelines(W.device, VK_NULL_HANDLE, 1, &ci, NULL, &W.pipe);
+    vkDestroyShaderModule(W.device, m, NULL);
+    if (r != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkDescriptorPoolSize ps = {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1};
+    VkDescriptorPoolCreateInfo dpi = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = 1,
+                                      .poolSizeCount = 1, .pPoolSizes = &ps};
+    if (vkCreateDescriptorPool(W.device, &dpi, NULL, &W.dp) != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkDescriptorSetAllocateInfo dai = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, .descriptorPool = W.dp,
+                                       .descriptorSetCount = 1, .pSetLayouts = &W.dsl};
+    if (vkAllocateDescriptorSets(W.device, &dai, &W.set) != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkDescriptorBufferInfo dbi = {W.buf, 0, 4096};
+    VkWriteDescriptorSet w = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = W.set, .descriptorCount = 1,
+                              .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &dbi};
+    vkUpdateDescriptorSets(W.device, 1, &w, 0, NULL);
+    VkCommandPoolCreateInfo cpi = {.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                                   .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                                   .queueFamilyIndex = c->clk_family};
+    if (vkCreateCommandPool(W.device, &cpi, NULL, &W.cp) != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkCommandBufferAllocateInfo cai = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, .commandPool = W.cp,
+                                       .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, .commandBufferCount = 1};
+    if (vkAllocateCommandBuffers(W.device, &cai, &W.cb) != VK_SUCCESS) { destroy_win_objects(); return; }
+    VkFenceCreateInfo fci = {.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+    if (vkCreateFence(W.device, &fci, NULL, &W.fence) != VK_SUCCESS) { destroy_win_objects(); return; }
+
+    W.stop = 0;
+    W.active = W.mode > 0 ? 1 : 0;
+    W.thr = plat_thread_new(pstate_worker, NULL, "vk pstate");
+    if (!W.thr) { destroy_win_objects(); return; }
+    rt_log("vk: GPU clock keeper active on async compute family %u (pulse %u us, idle %u us%s; MKW_GPU_CLOCKS)",
+           c->clk_family, W.pulse_us, W.idle_us, W.mode < 0 ? ", in the B blocks" : "");
+}
+
+void vk_pstate_frame(void) {
+    if (W.mode < 0 && W.thr) __atomic_store_n(&W.active, rt_ab() ? 1 : 0, __ATOMIC_RELEASE);
+}
+
+void vk_pstate_activity(void) {
+    if (W.thr) __atomic_store_n(&W.last_act_ns, plat_now_ns(), __ATOMIC_RELAXED);
+}
+
+void vk_pstate_shutdown(void) {
+    if (W.thr) {
+        __atomic_store_n(&W.stop, 1, __ATOMIC_RELEASE);
+        plat_thread_join(W.thr);
+        W.thr = NULL;
+    }
+    destroy_win_objects();
+}
 #else
 void vk_pstate_init(VkPhysicalDevice phys) { (void)phys; }
 void vk_pstate_frame(void) {}
+void vk_pstate_shutdown(void) {}
+void vk_pstate_activity(void) {}
 #endif
