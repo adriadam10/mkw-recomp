@@ -241,6 +241,29 @@ int mem_trap_init(void) {   // memory_int.h
     return trap_ok > 0;
 }
 
+// The map for MKW_EARLY_READ's watches only (trapped 2): a watch makes a page no-access and gives its protection back
+// at the first touch, which needs no write through a protection (plat_mem_poke). Where read traps work it is their
+// map; on Windows (no plat_mem_poke) the map is allocated for the watches alone, lazily committed (plat_mem_alloc_lazy:
+// 128 MiB for the whole guest range, of which a few MiB are touched), and read traps, base traps and spilled pages stay
+// off (mem_trap_init answers 0 there). The game running a frame ahead of the recording (MKW_FENCE_EARLY) needs the
+// watches: on Windows the frame was game, recording and GPU in a row, 18-19 ms in a 24-kart Grand Prix (tl-gp-1080,
+// 27/11/2026), with the GPU idle half of it.
+static int watch_ok = -1;
+
+int mem_watch_init(void) {   // memory_int.h
+    if (watch_ok < 0) {
+        if (mem_trap_init()) watch_ok = 1;   // (first: it decides trap_ok while the map is still unallocated)
+        else {
+#ifdef _WIN32
+            if (plat_page_size() == PAGE) trapped = plat_mem_alloc_lazy(RT_ADDRESS_LIMIT / PAGE);
+#endif
+            watch_ok = trapped != NULL;
+            if (watch_ok) rt_log("mem: early-read watches on without read traps (no-access pages, faults routed back)");
+        }
+    }
+    return watch_ok > 0;
+}
+
 int mem_trap(uint64_t a, uint64_t n, const void *src) {
     if (!n || !watched(a, n)) return 0;
     if (!mem_trap_init()) return 0;

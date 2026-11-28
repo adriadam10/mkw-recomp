@@ -32,6 +32,37 @@ int plat_mem_reserve(uint64_t addr, uint64_t n, int watch) {
 
 void *plat_mem_alloc(size_t n) { return VirtualAlloc(NULL, n, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); }
 
+// plat_mem_alloc_lazy: reserved only, each 64 KiB committed (zero) by fault_veh at its first touch, as Linux backs an
+// anonymous mapping. MKW_EARLY_READ's per-guest-page tables span the guest's 512 GiB of address space (about 6 GiB in
+// all) and a few MiB of them are ever touched: committed whole, they would take that much of RAM plus the page file
+// (a 16 GB machine with the game at ~13 GB private bytes has no room for it).
+#define LZ_MAX 32
+#define LZ_CHUNK 0x10000ull
+static struct { volatile uintptr_t lo, hi; } lz[LZ_MAX];   // hi set last: a slot with hi 0 is not ready
+static volatile LONG nlz;
+
+void *plat_mem_alloc_lazy(size_t n) {
+    LONG i = InterlockedIncrement(&nlz) - 1;
+    if (i >= LZ_MAX) return NULL;
+    void *p = VirtualAlloc(NULL, n, MEM_RESERVE, PAGE_READWRITE);
+    if (!p) return NULL;
+    lz[i].lo = (uintptr_t)p;
+    MemoryBarrier();
+    lz[i].hi = (uintptr_t)p + ((n + 0xfff) & ~(size_t)0xfff);
+    return p;
+}
+
+// fault_veh: a fault in a lazy allocation commits its 64 KiB (the reservation is 64 KiB aligned, its end page aligned).
+static int lazy_table_fault(uintptr_t a) {
+    for (int i = 0; i < LZ_MAX; i++) {
+        uintptr_t hi = lz[i].hi, lo = lz[i].lo;
+        if (!hi || a < lo || a >= hi) continue;
+        uintptr_t c = lo + ((a - lo) & ~(LZ_CHUNK - 1)), e = c + LZ_CHUNK < hi ? c + LZ_CHUNK : hi;
+        return VirtualAlloc((void *)c, e - c, MEM_COMMIT, PAGE_READWRITE) != NULL;
+    }
+    return 0;
+}
+
 int plat_mem_commit(uint64_t addr, size_t n) {
     return VirtualAlloc((void *)(uintptr_t)addr, n, MEM_COMMIT, PAGE_READWRITE) != NULL;
 }
@@ -108,17 +139,29 @@ static int (*fault_hook)(uint64_t addr);
 static int (*lazy_hook)(uint64_t addr, int write);   // plat_mem_lazy_hook: reads too
 static int (*watch_fn)(uint64_t addr, uint64_t rip);   // plat_mem_watch_hook: write watches set for diagnostics
 
-// A write access violation (ExceptionInformation[0] == 1) goes to the watch hook, then to the fault hook; registered
-// first, before the crash handler. Reads are not trapped here (plat_mem_poke cannot, so memory.c sets no read traps).
+// A lazy table's first touch commits it; a guest page's goes to the lazy hook. Then a write access violation
+// (ExceptionInformation[0] == 1) goes to the watch hook, and a read or a write to the fault hook, with plat_fault_write,
+// plat_fault_pc and plat_fault_ret set as Linux's SIGSEGV handler sets them: MKW_EARLY_READ's watches (memory.c,
+// trapped 2) are no-access pages whose first read waits for the GPU work that writes them. Read traps that fill a page
+// (trapped 1) stay off here: plat_mem_poke cannot write through a protection. Registered first, before the crash handler.
 static LONG CALLBACK fault_veh(EXCEPTION_POINTERS *ep) {
     const EXCEPTION_RECORD *er = ep->ExceptionRecord;
     if (er->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || er->NumberParameters < 2) return EXCEPTION_CONTINUE_SEARCH;
     uint64_t addr = (uint64_t)er->ExceptionInformation[1];
     ULONG_PTR kind = er->ExceptionInformation[0];   // 0 read, 1 write, 8 execute
-    if (kind <= 1 && lazy_hook && lazy_hook(addr, kind == 1)) return EXCEPTION_CONTINUE_EXECUTION;
-    if (kind != 1) return EXCEPTION_CONTINUE_SEARCH;
-    if (watch_fn && watch_fn(addr, (uint64_t)ep->ContextRecord->Rip)) return EXCEPTION_CONTINUE_EXECUTION;
-    return fault_hook && fault_hook(addr) ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
+    if (kind > 1) return EXCEPTION_CONTINUE_SEARCH;
+    if (lazy_table_fault((uintptr_t)addr)) return EXCEPTION_CONTINUE_EXECUTION;
+    if (lazy_hook && lazy_hook(addr, kind == 1)) return EXCEPTION_CONTINUE_EXECUTION;
+    if (kind == 1 && watch_fn && watch_fn(addr, (uint64_t)ep->ContextRecord->Rip)) return EXCEPTION_CONTINUE_EXECUTION;
+    if (!fault_hook) return EXCEPTION_CONTINUE_SEARCH;
+    int w = plat_fault_write;
+    uint64_t pc = plat_fault_pc, ret = plat_fault_ret;   // a fault inside the hook (a nested one) keeps the outer's
+    plat_fault_write = kind == 1;
+    plat_fault_pc = (uint64_t)ep->ContextRecord->Rip;
+    plat_fault_ret = *(const uint64_t *)(uintptr_t)ep->ContextRecord->Rsp;   // the stack top is always mapped
+    int ok = fault_hook(addr);
+    plat_fault_write = w, plat_fault_pc = pc, plat_fault_ret = ret;
+    return ok ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
 }
 
 static void fault_install(void) {
@@ -126,7 +169,7 @@ static void fault_install(void) {
     if (!InterlockedExchange(&done, 1)) AddVectoredExceptionHandler(1, fault_veh);
 }
 
-_Thread_local int plat_fault_write;   // platform.h: not set here (no read traps on Windows)
+_Thread_local int plat_fault_write;   // platform.h: set by fault_veh around the fault hook
 _Thread_local uint64_t plat_fault_pc, plat_fault_ret;
 
 void plat_mem_lazy_hook(int (*fn)(uint64_t addr, int write)) {

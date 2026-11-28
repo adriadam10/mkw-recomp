@@ -11,6 +11,7 @@ extern uint8_t *trapped;                  // per guest page: 1 a read trap (memo
 extern int64_t mem_early_pages;           // frz_lock: pages watched now
 int watched(uint64_t addr, uint64_t size);
 int mem_trap_init(void);                  // the trap map; 0 when traps are unavailable (Windows)
+int mem_watch_init(void);                 // the map for early-read watches (trapped 2) only: also on Windows
 uint64_t mem_early_release_locked(uint64_t a, int access);   // the fence to wait for once unlocked, 0 none
 void mem_thaw_regions_locked(uint64_t a, uint64_t n);   // frz_lock held: no region over [a, a+n) stays frozen
 void mem_base_fill_locked(uint64_t p);   // frz_lock held: a base-trapped page copied to its base, then writable
